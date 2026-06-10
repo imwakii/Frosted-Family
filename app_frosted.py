@@ -502,6 +502,7 @@ with tab_sb:
             sb_clan = sb_df[sb_df["sb_clan"]==clan].copy()
             sb_clan["_sr"] = sb_clan["sb_slot"].map({"CORE":0,"SUB":1}).fillna(2)
             sb_clan = sb_clan.sort_values(["_sr","final_score"], ascending=[True,False]).drop(columns="_sr")
+            sb_clan = sb_clan.drop(columns=["clan","cwl_slot"], errors="ignore")
             sb_clan = sb_clan.rename(columns={"sb_clan":"clan","sb_slot":"cwl_slot"})
             sb_clan["moved"] = sb_clan["name"].apply(lambda n: "🔄" if n in moved_names else "")
             with col_sb:
