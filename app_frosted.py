@@ -19,18 +19,18 @@ CLAN_ICONS  = {"Fire": "🔥", "Cake": "🎂", "Flakes": "🥣"}
 
 # Discrete colour map — sampled directly from the official TH legend asset
 TH_COLOR_MAP = {
-    "7":  "#8D5E2E",  # TH7  — warm brown
-    "8":  "#614631",  # TH8  — dark brown
-    "9":  "#31353D",  # TH9  — slate grey
-    "10": "#731C18",  # TH10 — crimson
-    "11": "#8D8C95",  # TH11 — silver grey
-    "12": "#18446F",  # TH12 — navy blue
-    "13": "#1F7886",  # TH13 — teal
-    "14": "#21745B",  # TH14 — forest green
-    "15": "#4B4360",  # TH15 — deep purple
-    "16": "#9F8836",  # TH16 — golden yellow
-    "17": "#2D3D4F",  # TH17 — steel blue-grey
-    "18": "#5D89A2",  # TH18 — sky blue
+    "7":  "#E07100",  # TH7  — warm brown
+    "8":  "#9B5A28",  # TH8  — dark brown
+    "9":  "#444E61",  # TH9  — slate grey
+    "10": "#B80800",  # TH10 — crimson
+    "11": "#CECCE0",  # TH11 — silver grey
+    "12": "#0059B1",  # TH12 — navy blue
+    "13": "#00B9D6",  # TH13 — teal
+    "14": "#00B981",  # TH14 — forest green
+    "15": "#675499",  # TH15 — deep purple
+    "16": "#E0AF02",  # TH16 — golden yellow
+    "17": "#2C537E",  # TH17 — steel blue-grey
+    "18": "#51ACE0",  # TH18 — sky blue
 }
 
 DISPLAY_COLS = [
