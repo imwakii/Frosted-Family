@@ -96,7 +96,7 @@ def _parse(item: str) -> str:
     return item.split(" (TH")[0]
 
 def _init_sandbox():
-    """Populate session_state with the official allocation order."""
+    """Populate session_state with the original allocation order."""
     for clan in ["Fire", "Cake", "Flakes"]:
         clan_df  = df_full[df_full["clan"] == clan].copy()
         core     = clan_df[clan_df["cwl_slot"] == "CORE"].sort_values("final_score", ascending=False)
@@ -170,21 +170,50 @@ def _delete_snapshot(snap_id: str):
 
 
 
+# Map from raw column names → display names (mirrors COL_CFG labels)
+_COL_RENAME = {
+    "name":           "Name",
+    "clan":           "Clan",
+    "cwl_slot":       "Slot",
+    "current_th":     "TH",
+    "attack_count":   "Atks",
+    "three_star_pct": "3★%",
+    "miss_pct":       "Miss%",
+    "th_attack_diff": "TH Δ",
+    "offense_score":  "Offense",
+    "defense_score":  "Defense",
+    "final_score":    "Final",
+    "flags":          "Flags",
+    "moved":          "Move",
+}
+_COL_FMT = {
+    "3★%":    "{:.1f}",
+    "Miss%":  "{:.1f}",
+    "TH Δ":   "{:+.2f}",
+    "Offense": "{:.1f}",
+    "Defense": "{:.1f}",
+    "Final":   "{:.1f}",
+}
+
 def display_sandbox_table(data: pd.DataFrame, moved_names: set, height: int = 500):
-    """Render a sandbox clan table with moved rows highlighted in amber."""
+    """Render a sandbox clan table with proper column names, number formatting,
+    and amber highlighting on rows where the player has moved clans."""
     cols = [c for c in DISPLAY_COLS + ["moved"] if c in data.columns]
-    show = data[cols].reset_index(drop=True)
+    show = data[cols].copy().reset_index(drop=True)
+    # Cast integer-ish columns before rename to avoid formatting issues
+    for c in ["current_th", "attack_count"]:
+        if c in show.columns:
+            show[c] = show[c].apply(lambda v: int(v) if pd.notna(v) else "?")
+    show = show.rename(columns=_COL_RENAME)
     show.index += 1
 
     def _highlight(row):
-        name = row.get("name", "")
-        if name in moved_names:
-            return [
-                "background-color: #D97706; color: #FFFFFF; font-weight: bold"
-            ] * len(row)
+        if row.get("Name", "") in moved_names:
+            return ["background-color: #D97706; color: #FFFFFF; font-weight: bold"] * len(row)
         return [""] * len(row)
 
-    styled = show.style.apply(_highlight, axis=1)
+    active_fmt = {k: v for k, v in _COL_FMT.items() if k in show.columns}
+    styled = show.style.apply(_highlight, axis=1).format(active_fmt, na_rep="N/A")
     st.dataframe(styled, use_container_width=True, height=height)
 
 # ── Sidebar ────────────────────────────────────────────────────────────────────
@@ -452,7 +481,7 @@ with tab_sb:
 
     reset_col, _ = st.columns([1,5])
     with reset_col:
-        if st.button("🔄 Reset to official", use_container_width=True):
+        if st.button("🔄 Reset to original", use_container_width=True):
             _init_sandbox()
             st.rerun()
 
@@ -487,12 +516,12 @@ with tab_sb:
     sb_df = _sandbox_df(result)
 
     if sb_df.empty:
-        st.warning("Sandbox is empty — hit Reset to reload the official allocation.")
+        st.warning("Sandbox is empty — hit Reset to reload the original allocation.")
         st.stop()
 
     # ── Comparison metrics ────────────────────────────────────────────────────
     st.divider()
-    st.subheader("Sandbox vs Official")
+    st.subheader("Sandbox vs Original")
 
     off_avgs = _core_avg(df_full, "clan", "cwl_slot")
     sb_avgs  = _core_avg(sb_df,   "sb_clan", "sb_slot")
@@ -510,7 +539,7 @@ with tab_sb:
                 delta=delta_str,
             )
             sb_core_n = ((sb_df["sb_clan"]==clan)&(sb_df["sb_slot"]=="CORE")).sum()
-            st.caption(f"Official: {off_v:.1f}  ·  Sandbox core size: {sb_core_n}")
+            st.caption(f"Original: {off_v:.1f}  ·  Sandbox core size: {sb_core_n}")
 
     # ── Changes table ─────────────────────────────────────────────────────────
     merged = sb_df[["name","sb_clan","sb_slot"]].merge(
@@ -520,33 +549,33 @@ with tab_sb:
     changed = merged[merged["sb_clan"] != merged["clan"]].copy()
 
     if changed.empty:
-        st.info("No players have moved from the official allocation yet.")
+        st.info("No players have moved from the original allocation yet.")
     else:
         st.markdown(f"#### {len(changed)} player{'s' if len(changed)>1 else ''} moved")
         ch_show = changed.rename(columns={
-            "name":"Name","clan":"Official Clan","sb_clan":"Sandbox Clan",
-            "cwl_slot":"Official Slot","sb_slot":"Sandbox Slot",
+            "name":"Name","clan":"Original Clan","sb_clan":"Sandbox Clan",
+            "cwl_slot":"Original Slot","sb_slot":"Sandbox Slot",
             "current_th":"TH","final_score":"Final",
-        })[["Name","TH","Final","Official Clan","Official Slot","Sandbox Clan","Sandbox Slot"]]
+        })[["Name","TH","Final","Original Clan","Original Slot","Sandbox Clan","Sandbox Slot"]]
         ch_show = ch_show.reset_index(drop=True)
         ch_show.index += 1
         st.dataframe(ch_show, use_container_width=True)
 
     # ── Side-by-side clan tables ───────────────────────────────────────────────
     st.divider()
-    st.markdown("#### Clan rosters — Official ↔ Sandbox")
+    st.markdown("#### Clan rosters — Original ↔ Sandbox")
     st.caption("Players who moved clans are marked with 🔄 in the Sandbox column.")
 
     for clan in ["Fire","Cake","Flakes"]:
         with st.expander(f"{CLAN_ICONS[clan]} {clan}", expanded=True):
             col_off, col_sb = st.columns(2)
 
-            # Official side
+            # Original side
             off_clan = df_full[df_full["clan"]==clan].copy()
             off_clan["_sr"] = off_clan["cwl_slot"].map({"CORE":0,"SUB":1,"TUNDRA":2}).fillna(3)
             off_clan = off_clan.sort_values(["_sr","final_score"], ascending=[True,False]).drop(columns="_sr")
             with col_off:
-                st.markdown("**Official**")
+                st.markdown("**Original**")
                 display_table(off_clan, height=min(80+len(off_clan)*35, 550))
 
             # Sandbox side — add move indicator
