@@ -3,6 +3,8 @@ import pandas as pd
 import numpy as np
 import plotly.express as px
 from streamlit_sortables import sort_items
+import json, os, uuid
+from datetime import datetime
 
 # ── Page config ────────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -134,6 +136,56 @@ def _core_avg(df: pd.DataFrame, clan_col: str = "clan", slot_col: str = "cwl_slo
         ].dropna()
         out[clan] = vals.mean() if not vals.empty else float("nan")
     return out
+
+# ── Snapshot persistence ───────────────────────────────────────────────────────
+SNAPSHOTS_FILE = "frosted_cwl_snapshots.json"
+
+def _load_snapshots() -> list:
+    if not os.path.exists(SNAPSHOTS_FILE):
+        return []
+    try:
+        with open(SNAPSHOTS_FILE, "r") as f:
+            return json.load(f).get("snapshots", [])
+    except Exception:
+        return []
+
+def _save_snapshot(author: str, comment: str, state: dict) -> str:
+    snaps = _load_snapshots()
+    snap  = {
+        "id":        str(uuid.uuid4())[:8].upper(),
+        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M"),
+        "author":    author,
+        "comment":   comment,
+        "state":     state,
+    }
+    snaps.append(snap)
+    with open(SNAPSHOTS_FILE, "w") as f:
+        json.dump({"snapshots": snaps}, f, indent=2)
+    return snap["id"]
+
+def _delete_snapshot(snap_id: str):
+    snaps = [s for s in _load_snapshots() if s["id"] != snap_id]
+    with open(SNAPSHOTS_FILE, "w") as f:
+        json.dump({"snapshots": snaps}, f, indent=2)
+
+
+
+def display_sandbox_table(data: pd.DataFrame, moved_names: set, height: int = 500):
+    """Render a sandbox clan table with moved rows highlighted in amber."""
+    cols = [c for c in DISPLAY_COLS + ["moved"] if c in data.columns]
+    show = data[cols].reset_index(drop=True)
+    show.index += 1
+
+    def _highlight(row):
+        name = row.get("name", "")
+        if name in moved_names:
+            return [
+                "background-color: #D97706; color: #FFFFFF; font-weight: bold"
+            ] * len(row)
+        return [""] * len(row)
+
+    styled = show.style.apply(_highlight, axis=1)
+    st.dataframe(styled, use_container_width=True, height=height)
 
 # ── Sidebar ────────────────────────────────────────────────────────────────────
 with st.sidebar:
@@ -506,5 +558,68 @@ with tab_sb:
             sb_clan = sb_clan.rename(columns={"sb_clan":"clan","sb_slot":"cwl_slot"})
             sb_clan["moved"] = sb_clan["name"].apply(lambda n: "🔄" if n in moved_names else "")
             with col_sb:
-                st.markdown("**Sandbox**")
-                display_table(sb_clan, height=min(80+len(sb_clan)*35, 550), extra_cols=["moved"])
+                st.markdown("**Sandbox** — amber rows have moved clans")
+                display_sandbox_table(sb_clan, moved_names, height=min(80+len(sb_clan)*35, 550))
+
+    # ── Save / Load / Delete snapshots ───────────────────────────────────────
+    st.divider()
+    st.subheader("💾 Snapshots")
+    st.caption(
+        "Save the current sandbox to share with co-leaders. "
+        "Snapshots are stored in `frosted_cwl_snapshots.json` alongside `app.py`."
+    )
+
+    save_tab, load_tab = st.tabs(["Save new snapshot", "Load / Delete snapshots"])
+
+    with save_tab:
+        col_a, col_b = st.columns([1, 2])
+        with col_a:
+            snap_author = st.text_input("Your name", placeholder="e.g. Waki")
+        with col_b:
+            snap_comment = st.text_area("Comment / notes", placeholder="Describe this allocation…", height=80)
+        if st.button("💾 Save snapshot", use_container_width=False):
+            if snap_author.strip() and snap_comment.strip():
+                state = {
+                    "Fire":   st.session_state.get("sb_Fire",   []),
+                    "Cake":   st.session_state.get("sb_Cake",   []),
+                    "Flakes": st.session_state.get("sb_Flakes", []),
+                }
+                snap_id = _save_snapshot(snap_author.strip(), snap_comment.strip(), state)
+                st.success(f"Saved — ID: **{snap_id}**")
+            else:
+                st.error("Please fill in both your name and a comment before saving.")
+
+    with load_tab:
+        snaps = _load_snapshots()
+        if not snaps:
+            st.info("No snapshots saved yet.")
+        else:
+            # Build display labels
+            labels = [
+                f"[{s['id']}]  {s['timestamp']}  —  {s['author']}:  {s['comment'][:60]}"
+                for s in snaps
+            ]
+            selected_idx = st.selectbox("Select a snapshot", range(len(labels)),
+                                        format_func=lambda i: labels[i])
+            selected_snap = snaps[selected_idx]
+
+            # Show full detail
+            with st.container():
+                dc1, dc2, dc3 = st.columns(3)
+                dc1.markdown(f"**ID:** `{selected_snap['id']}`")
+                dc2.markdown(f"**Saved:** {selected_snap['timestamp']}")
+                dc3.markdown(f"**By:** {selected_snap['author']}")
+                st.markdown(f"**Notes:** {selected_snap['comment']}")
+
+            btn_load, btn_del, _ = st.columns([1, 1, 4])
+            with btn_load:
+                if st.button("📂 Load this snapshot", use_container_width=True):
+                    for clan in ["Fire", "Cake", "Flakes"]:
+                        st.session_state[f"sb_{clan}"] = selected_snap["state"].get(clan, [])
+                    st.success(f"Snapshot {selected_snap['id']} loaded — sandbox updated.")
+                    st.rerun()
+            with btn_del:
+                if st.button("🗑️ Delete this snapshot", use_container_width=True):
+                    _delete_snapshot(selected_snap["id"])
+                    st.warning(f"Snapshot {selected_snap['id']} deleted.")
+                    st.rerun()
