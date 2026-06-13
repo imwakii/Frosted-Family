@@ -1,13 +1,11 @@
 # Frosted Family CWL Dashboard
 
-Interactive Streamlit app for exploring CWL roster data, scores, and allocations.
-
 ## Files
 
 | File | Purpose |
 |------|---------|
-| `app.py` | Main Streamlit application |
-| `frosted_cwl_members.csv` | Player data — place in the same directory as `app.py` |
+| `app.py` | Streamlit application |
+| `frosted_cwl_members.csv` | Player data — keep in the same directory |
 | `requirements.txt` | Python dependencies |
 
 ## Running locally
@@ -17,33 +15,33 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
-## Deploying to Streamlit Community Cloud
+## Deploying (free) on Streamlit Community Cloud
 
-1. Push all three files to a GitHub repository (public or private).
-2. Go to [share.streamlit.io](https://share.streamlit.io) and sign in with GitHub.
-3. Click **New app**, select your repo, set the main file to `app.py`.
-4. Click **Deploy** — the app will be live at a shareable URL.
+1. Push all three files to a GitHub repo.
+2. Go to [share.streamlit.io](https://share.streamlit.io), connect GitHub, point at `app.py`.
+3. Click **Deploy** — you get a shareable URL for all clan members.
 
-## Updating data
+## Data source
 
-When you run a new CWL cycle:
-1. Regenerate `frosted_cwl_members.csv` from the planning notebook.
-2. Replace the file in the repo and push.
-3. Streamlit Cloud redeploys automatically.
+All statistics come from **clashspot.net**, covering **1 March 2026 – 10 June 2026**.
+This is shown at the top of the Overview tab.
 
 ## Tabs
 
-| Tab | What it shows |
-|-----|---------------|
-| **Overview** | Per-clan KPIs, core averages, bar charts, scoring formula |
-| **Rosters** | Full clan tables with CORE / SUB labels and progress bars |
-| **Explorer** | Searchable, sortable table of all members with download |
-| **Charts** | Offense vs Defense scatter, Top 25 ranking, score distributions, TH breakdown |
-| **TH Directory** | All members grouped and ranked by TH level |
+| Tab | What it does |
+|-----|--------------|
+| **Overview** | Per-clan KPIs, core-avg bar charts, transfer log, scoring formula explainer |
+| **Rosters** | Full CORE / SUB tables for all three clans |
+| **Explorer** | Search, sort, filter across all members; CSV download |
+| **Charts** | Offense vs Defense scatter coloured by TH (toggle TH levels); Top 25 leaderboard sorted highest→lowest; distributions |
+| **TH Directory** | All members grouped by TH level |
 
 ## Sidebar filters
 
-- **Clan** — show Fire, Cake, Flakes individually or together
-- **CWL Slot** — filter to CORE only, or include SUBs
-- **TH Range** — slider to narrow by townhall level
-- **Hide HM / ND / LTD** — toggle out flagged players from the Explorer
+Clan, CWL Slot (CORE / SUB / Turtle Kingdom), TH Range, and flag-hide toggles apply to
+**Overview, Explorer, Charts, and TH Directory**. The **Rosters** tab always shows the
+full roster regardless of filters.
+
+## Updating data
+
+Replace `frosted_cwl_members.csv`, push to GitHub — Streamlit Cloud redeploys automatically.
