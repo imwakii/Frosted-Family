@@ -130,7 +130,7 @@ tab_ov, tab_ros, tab_exp, tab_ch, tab_th = st.tabs([
 with tab_ov:
     st.subheader("Clan Snapshot")
     st.caption(
-        "Data source: stats pulled from **clashspot.com**, covering "
+        "Data source: stats pulled from **clashspot.net**, covering "
         "**1 March 2026 – 10 June 2026**."
     )
 
