@@ -185,36 +185,93 @@ with tab_ov:
     st.divider()
     with st.expander("📐 How scores are calculated", expanded=False):
         st.markdown("""
-**Every player gets three numbers — Offense, Defense, and Final (= Offense + Defense).**
+Each player is given three numbers: an **Offense Score**, a **Defense Score**, and a
+**Final Score** (which is just the two added together). All three are visible in every
+table so you can see exactly what is driving someone's ranking.
 
 ---
 
-**Offense** asks: *how reliably does this player 3-star their attacks?*
+### Offense Score
 
-| Ingredient | Role |
-|---|---|
-| **3-star rate** | Core signal — what fraction of attacks ended in 3 stars |
-| **Miss penalty** `(1 − miss%)` | Discounts every wasted attack |
-| **Confidence** `min(atks ÷ 25, 1)` | Scales down players with fewer than 25 tracked attacks |
-| **TH attack mult** `1 + 0.05 × (target TH − player TH)` | ±5% bonus/penalty for punching up or down |
+> *How reliably does this player get 3 stars when they attack?*
 
-`Offense = 3★% × (1 − miss%) × confidence × TH_atk_mult × 100`
+The Offense Score is built from three ingredients multiplied together, then scaled to a 0–100 base:
+
+**1. Three-star rate** — the percentage of attacks where the player got all three stars.
+This is the core of the score. A player getting 80% three-stars is clearly more valuable
+than one getting 50%.
+
+**2. Miss penalty** — `(1 − miss rate)`. A missed attack is a wasted attack. If a player
+misses 20% of their attacks, only 80% of their effort is actually contributing. This term
+directly discounts the score for every missed attack.
+
+**3. Confidence weight** — `min(attack count ÷ 25, 1.0)`. A player who went 3-for-3 looks
+like 100% three-star rate, but three attacks tells us very little. This weight scales the
+score down for small sample sizes — a player with 5 attacks only gets 20% confidence,
+while someone with 25+ attacks gets full credit. It prevents players with almost no data
+from appearing elite.
+
+Put together: `Offense = 3★% × (1 − miss%) × confidence × 100`
+
+A perfect offense score of 100 means: 100% three-star rate, 0% miss rate, 25+ attacks.
+
+**4. TH attack multiplier** — `1 + 0.05 × (avg target TH − player's avg TH)`. This adjusts
+the Offense Score upward if a player consistently attacks bases *above* their own TH level,
+and downward if they attack below it. Attacking a higher TH base is genuinely harder — a
+TH16 player consistently three-starring TH17 bases is more impressive than the same rate
+at equal level. The effect is intentionally modest: each full TH level of difference
+adjusts the score by ±5%.
+
+> **Example:** A TH18 player attacking TH18 targets → multiplier ≈ 1.0, no change. A TH16
+> in Flakes who attacks TH17 targets → multiplier ≈ 1.05, a 5% bonus.
 
 ---
 
-**Defense** asks: *how hard is this base to crack, and does TH level back it up?*
+### Defense Score
 
-| Ingredient | Role |
-|---|---|
-| **Stars conceded** `(3 − avg stars) ÷ 3 × 100` | Fewer stars given up = higher score |
-| **Def confidence** `min(def_count ÷ 20, 1)` | Same reliability idea as attack confidence |
-| **TH def mult** `1 + 0.05 × (current TH − 15)` | TH18 ×1.15 · TH17 ×1.10 · TH15 ×1.00 · TH14 ×0.95 |
+> *How hard is this player's base to crack, and does their TH level support that?*
 
-`Defense = base_defense × def_confidence × TH_def_mult`
+The Defense Score has the same structure as Offense — a base rate, a confidence weight,
+and a TH multiplier:
+
+**1. Stars conceded rate** — `(3 − avg stars conceded) ÷ 3 × 100`. If a player's base gives
+up an average of 1.5 stars per defense, their base score is `(3 − 1.5) ÷ 3 × 100 = 50`.
+Giving up 0 stars every time scores 100; being three-starred every time scores 0. Note
+that in practice almost everyone concedes between 2.0–2.9 stars, so most raw defense
+scores sit in the 5–35 range — defense scores are naturally lower than offense scores.
+
+**2. Defense confidence weight** — `min(defense count ÷ 20, 1.0)`. Same logic as for
+attacks: a player who has only been defended against twice doesn't give us reliable data.
+
+**3. TH defense multiplier** — `1 + 0.05 × (current TH − 15)`. A TH18 base is structurally
+harder to three-star than a TH15 base, regardless of layout. We reward higher-TH players
+in the defense score to reflect this: TH18 gets a ×1.15 boost, TH17 gets ×1.10, TH15 is
+neutral at ×1.00, and lower THs get a slight penalty. This is why you generally want TH18s
+over TH17s in a Masters CWL roster even when their attack stats look similar.
+
+> **Example:** Two players both concede 2.5 stars per defense with 20 defenses each. The
+> TH18 scores `(0.5÷3 × 100) × 1.0 × 1.15 = 19.2`. The TH17 scores
+> `(0.5÷3 × 100) × 1.0 × 1.10 = 18.3`. Small difference, but it accumulates across the
+> roster.
 
 ---
 
-**Final = Offense + Defense** · Elite: 110+ · Solid core: 80–110 · Borderline: 50–80
+### Final Score
+
+> *The complete picture.*
+
+`Final = Offense + Defense`
+
+Both components are additive and both are shown, so you can always see the breakdown. A
+player with a great attack record but a leaky base will show high Offense and low Defense.
+A TH18 who also defends well will have both numbers elevated. The Final Score is what
+determines ranking within each clan.
+
+Typical ranges in this pool:
+- **Elite:** Final 110+
+- **Solid core:** Final 80–110
+- **Borderline:** Final 50–80
+- **Weak / needs monitoring:** Final below 50
 
 ---
 
