@@ -300,7 +300,7 @@ with tab_ch:
     with left:
         st.markdown("#### Top 25 by Final Score")
         # Highest score first (top of chart), still coloured by clan.
-        top25 = plot_base.nlargest(25, "final_score").sort_values("final_score", ascending=True)
+        top25 = plot_base.nlargest(25, "final_score").sort_values("final_score", ascending=False)
         name_order = top25["name"].tolist()  # ascending -> last item (highest) ends up at top
         fig_b = px.bar(top25, x="final_score", y="name", orientation="h",
                        color="clan", color_discrete_map=CLAN_COLORS,
