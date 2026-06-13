@@ -2,9 +2,6 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.express as px
-from streamlit_sortables import sort_items
-import json, os, uuid
-from datetime import datetime
 
 # ── Page config ────────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -16,10 +13,9 @@ st.set_page_config(
 
 # ── Constants ──────────────────────────────────────────────────────────────────
 CLAN_COLORS = {"Fire": "#FF6B35", "Cake": "#4A90D9", "Flakes": "#7B68EE"}
-CORE_SIZES  = {"Fire": 15, "Cake": 15, "Flakes": 30}
 CLAN_ICONS  = {"Fire": "🔥", "Cake": "🎂", "Flakes": "🥣"}
 
-# Discrete colour map — sampled directly from the official TH legend asset
+# Discrete colour map — sampled from the official TH legend, then brightened
 TH_COLOR_MAP = {
     "7":  "#E07100",  # TH7  — warm brown
     "8":  "#9B5A28",  # TH8  — dark brown
@@ -54,7 +50,6 @@ COL_CFG = {
     "defense_score":  st.column_config.ProgressColumn("Defense", format="%.1f", min_value=0, max_value=50),
     "final_score":    st.column_config.ProgressColumn("Final",   format="%.1f", min_value=0, max_value=175),
     "flags":          st.column_config.TextColumn("Flags", width="small"),
-    "moved":          st.column_config.TextColumn("Move", width="small"),
 }
 
 # ── Data ───────────────────────────────────────────────────────────────────────
@@ -79,143 +74,6 @@ except FileNotFoundError:
     st.error("⚠️ `frosted_cwl_members.csv` not found — place it alongside `app.py`.")
     st.stop()
 
-# ── Sandbox helpers ────────────────────────────────────────────────────────────
-def _fmt(name: str) -> str:
-    """Format a player name into a sortable item string: 'Name (TH18) 124'"""
-    rows = df_full[df_full["name"] == name]
-    if rows.empty:
-        return f"{name} (TH?) —"
-    r   = rows.iloc[0]
-    th  = int(r["current_th"]) if pd.notna(r.get("current_th")) else "?"
-    sc  = r.get("final_score", np.nan)
-    sc_str = f"{sc:.0f}" if pd.notna(sc) else "—"
-    return f"{name} (TH{th}) {sc_str}"
-
-def _parse(item: str) -> str:
-    """Extract player name from item string 'Name (TH18) 124'"""
-    return item.split(" (TH")[0]
-
-def _init_sandbox():
-    """Populate session_state with the original allocation order."""
-    for clan in ["Fire", "Cake", "Flakes"]:
-        clan_df  = df_full[df_full["clan"] == clan].copy()
-        core     = clan_df[clan_df["cwl_slot"] == "CORE"].sort_values("final_score", ascending=False)
-        subs     = clan_df[clan_df["cwl_slot"] != "CORE"].sort_values("final_score", ascending=False)
-        ordered  = pd.concat([core, subs])
-        st.session_state[f"sb_{clan}"] = [_fmt(n) for n in ordered["name"]]
-
-def _sandbox_df(result: list) -> pd.DataFrame:
-    """Build a working DataFrame from sort_items result."""
-    records = []
-    for entry in result:
-        raw_clan = entry["header"]
-        clan     = raw_clan.split(" ")[1].replace("🔥","Fire").replace("🎂","Cake").replace("🥣","Flakes")
-        # strip emoji from header to get clan name
-        for k in ["Fire","Cake","Flakes"]:
-            if k in raw_clan:
-                clan = k
-                break
-        core_size = CORE_SIZES[clan]
-        for i, item in enumerate(entry["items"]):
-            name = _parse(item)
-            slot = "CORE" if i < core_size else "SUB"
-            match = df_full[df_full["name"] == name]
-            if not match.empty:
-                row = match.iloc[0].to_dict()
-                row["sb_clan"] = clan
-                row["sb_slot"] = slot
-                records.append(row)
-    return pd.DataFrame(records) if records else pd.DataFrame()
-
-def _core_avg(df: pd.DataFrame, clan_col: str = "clan", slot_col: str = "cwl_slot") -> dict:
-    """Return {clan: avg_final} for CORE players."""
-    out = {}
-    for clan in ["Fire", "Cake", "Flakes"]:
-        vals = df.loc[
-            (df[clan_col] == clan) & (df[slot_col] == "CORE"), "final_score"
-        ].dropna()
-        out[clan] = vals.mean() if not vals.empty else float("nan")
-    return out
-
-# ── Snapshot persistence ───────────────────────────────────────────────────────
-SNAPSHOTS_FILE = "frosted_cwl_snapshots.json"
-
-def _load_snapshots() -> list:
-    if not os.path.exists(SNAPSHOTS_FILE):
-        return []
-    try:
-        with open(SNAPSHOTS_FILE, "r") as f:
-            return json.load(f).get("snapshots", [])
-    except Exception:
-        return []
-
-def _save_snapshot(author: str, comment: str, state: dict) -> str:
-    snaps = _load_snapshots()
-    snap  = {
-        "id":        str(uuid.uuid4())[:8].upper(),
-        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M"),
-        "author":    author,
-        "comment":   comment,
-        "state":     state,
-    }
-    snaps.append(snap)
-    with open(SNAPSHOTS_FILE, "w") as f:
-        json.dump({"snapshots": snaps}, f, indent=2)
-    return snap["id"]
-
-def _delete_snapshot(snap_id: str):
-    snaps = [s for s in _load_snapshots() if s["id"] != snap_id]
-    with open(SNAPSHOTS_FILE, "w") as f:
-        json.dump({"snapshots": snaps}, f, indent=2)
-
-
-
-# Map from raw column names → display names (mirrors COL_CFG labels)
-_COL_RENAME = {
-    "name":           "Name",
-    "clan":           "Clan",
-    "cwl_slot":       "Slot",
-    "current_th":     "TH",
-    "attack_count":   "Atks",
-    "three_star_pct": "3★%",
-    "miss_pct":       "Miss%",
-    "th_attack_diff": "TH Δ",
-    "offense_score":  "Offense",
-    "defense_score":  "Defense",
-    "final_score":    "Final",
-    "flags":          "Flags",
-    "moved":          "Move",
-}
-_COL_FMT = {
-    "3★%":    "{:.1f}",
-    "Miss%":  "{:.1f}",
-    "TH Δ":   "{:+.2f}",
-    "Offense": "{:.1f}",
-    "Defense": "{:.1f}",
-    "Final":   "{:.1f}",
-}
-
-def display_sandbox_table(data: pd.DataFrame, moved_names: set, height: int = 500):
-    """Render a sandbox clan table with proper column names, number formatting,
-    and amber highlighting on rows where the player has moved clans."""
-    cols = [c for c in DISPLAY_COLS + ["moved"] if c in data.columns]
-    show = data[cols].copy().reset_index(drop=True)
-    # Cast integer-ish columns before rename to avoid formatting issues
-    for c in ["current_th", "attack_count"]:
-        if c in show.columns:
-            show[c] = show[c].apply(lambda v: int(v) if pd.notna(v) else "?")
-    show = show.rename(columns=_COL_RENAME)
-    show.index += 1
-
-    def _highlight(row):
-        if row.get("Name", "") in moved_names:
-            return ["background-color: #D97706; color: #FFFFFF; font-weight: bold"] * len(row)
-        return [""] * len(row)
-
-    active_fmt = {k: v for k, v in _COL_FMT.items() if k in show.columns}
-    styled = show.style.apply(_highlight, axis=1).format(active_fmt, na_rep="N/A")
-    st.dataframe(styled, use_container_width=True, height=height)
-
 # ── Sidebar ────────────────────────────────────────────────────────────────────
 with st.sidebar:
     st.markdown("## ❄️ Frosted Family")
@@ -224,7 +82,9 @@ with st.sidebar:
 
     st.subheader("Filters")
     sel_clans = st.multiselect("Clan",     ["Fire","Cake","Flakes"], default=["Fire","Cake","Flakes"])
-    sel_slots = st.multiselect("CWL Slot", ["CORE","SUB","TUNDRA"],  default=["CORE","SUB"])
+    sel_slots = st.multiselect(
+        "CWL Slot", ["CORE","SUB","Turtle Kingdom"], default=["CORE","SUB"]
+    )
     th_min    = int(df_full["current_th"].min())
     th_max    = int(df_full["current_th"].max())
     th_range  = st.slider("TH Range", th_min, th_max, (th_min, th_max))
@@ -257,9 +117,9 @@ def display_table(data: pd.DataFrame, height: int = 420, extra_cols: list | None
     st.dataframe(show, column_config=COL_CFG, use_container_width=True, height=height)
 
 # ── Tabs ───────────────────────────────────────────────────────────────────────
-tab_ov, tab_ros, tab_exp, tab_ch, tab_th, tab_sb = st.tabs([
+tab_ov, tab_ros, tab_exp, tab_ch, tab_th = st.tabs([
     "📊 Overview", "🏠 Rosters", "🔍 Explorer",
-    "📈 Charts",   "🏗️ TH Directory", "🧪 Sandbox",
+    "📈 Charts",   "🏗️ TH Directory",
 ])
 
 # ════════════════════════════════════════════════════════════════════════════════
@@ -267,6 +127,10 @@ tab_ov, tab_ros, tab_exp, tab_ch, tab_th, tab_sb = st.tabs([
 # ════════════════════════════════════════════════════════════════════════════════
 with tab_ov:
     st.subheader("Clan Snapshot")
+    st.caption(
+        "Data source: stats pulled from **clashspot.com**, covering "
+        "**1 March 2026 – 10 June 2026**."
+    )
 
     c_f, c_c, c_fl = st.columns(3)
     for col, clan, fmt_str in [(c_f,"Fire","15v15"), (c_c,"Cake","15v15"), (c_fl,"Flakes","30v30")]:
@@ -296,6 +160,25 @@ with tab_ov:
                                   showlegend=False, yaxis_tickfont_size=9,
                                   xaxis_title="Final Score")
                 st.plotly_chart(fig, use_container_width=True)
+
+    st.divider()
+
+    # ── Transfer Log ──────────────────────────────────────────────────────────
+    st.subheader("🔁 Transfers This Cycle")
+    transfers = df_full[df_full["transferred_from"] != ""].copy()
+    tk = df_full[df_full["cwl_slot"] == "Turtle Kingdom"]
+
+    rows = []
+    if not transfers.empty:
+        for (src, dst), grp in transfers.groupby(["transferred_from", "clan"]):
+            rows.append({"From → To": f"{src} → {dst}", "Players": ", ".join(grp["name"])})
+    for _, r in tk.iterrows():
+        rows.append({"From → To": f"{r['clan']} → Turtle Kingdom", "Players": r["name"]})
+
+    if rows:
+        st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+    else:
+        st.caption("No transfers recorded.")
 
     st.divider()
     with st.expander("📐 How scores are calculated", expanded=False):
@@ -333,12 +216,12 @@ with tab_ov:
         """)
 
 # ════════════════════════════════════════════════════════════════════════════════
-# ROSTERS  (always uses df_full — shows official plan)
+# ROSTERS  (always uses df_full — shows full roster plan)
 # ════════════════════════════════════════════════════════════════════════════════
 with tab_ros:
     for clan, fmt_str in [("Fire","15v15"), ("Cake","15v15"), ("Flakes","30v30")]:
         cdf  = df_full[df_full["clan"] == clan].copy()
-        slot_rank = {"CORE":0, "SUB":1, "TUNDRA":2}
+        slot_rank = {"CORE":0, "SUB":1, "Turtle Kingdom":2}
         cdf["_sr"] = cdf["cwl_slot"].map(slot_rank).fillna(3)
         cdf = cdf.sort_values(["_sr","final_score"], ascending=[True,False]).drop(columns="_sr")
         n_core = (cdf["cwl_slot"]=="CORE").sum()
@@ -416,14 +299,18 @@ with tab_ch:
 
     with left:
         st.markdown("#### Top 25 by Final Score")
-        top25 = plot_base.nlargest(25,"final_score").sort_values("final_score")
+        # Highest score first (top of chart), still coloured by clan.
+        top25 = plot_base.nlargest(25, "final_score").sort_values("final_score", ascending=True)
+        name_order = top25["name"].tolist()  # ascending -> last item (highest) ends up at top
         fig_b = px.bar(top25, x="final_score", y="name", orientation="h",
                        color="clan", color_discrete_map=CLAN_COLORS,
+                       category_orders={"name": name_order},
                        hover_data={"offense_score":":.1f","defense_score":":.1f",
                                    "cwl_slot":True,"clan":False,"name":False},
                        labels={"final_score":"Final Score","name":""})
-        fig_b.update_layout(height=560, showlegend=False,
-                            yaxis_tickfont_size=9, margin=dict(l=0,t=10))
+        fig_b.update_layout(height=560, showlegend=True,
+                            yaxis_tickfont_size=9, margin=dict(l=0,t=10),
+                            legend_title_text="")
         st.plotly_chart(fig_b, use_container_width=True)
 
     with right:
@@ -462,193 +349,3 @@ with tab_th:
                   + (f" · avg {avg:.1f}" if not np.isnan(avg) else ""))
         with st.expander(label, expanded=(th == th_levels[0])):
             display_table(th_df, height=min(80 + len(th_df)*35, 600))
-
-# ════════════════════════════════════════════════════════════════════════════════
-# SANDBOX
-# ════════════════════════════════════════════════════════════════════════════════
-with tab_sb:
-    st.subheader("Roster Sandbox")
-    st.caption(
-        "Drag players between clans to explore hypothetical allocations. "
-        "The first **15 / 15 / 30** players in each list count as the CWL core. "
-        "No rules are enforced — free-form exploration only. "
-        "Resets automatically when you close this tab or start a new session."
-    )
-
-    # ── Initialise (once per session) ────────────────────────────────────────
-    if not all(f"sb_{c}" in st.session_state for c in ["Fire","Cake","Flakes"]):
-        _init_sandbox()
-
-    reset_col, _ = st.columns([1,5])
-    with reset_col:
-        if st.button("🔄 Reset to original", use_container_width=True):
-            _init_sandbox()
-            st.rerun()
-
-    st.divider()
-
-    # ── Sortable containers ───────────────────────────────────────────────────
-    for clan in ["Fire","Cake","Flakes"]:
-        n = len(st.session_state[f"sb_{clan}"])
-        core_cnt = min(CORE_SIZES[clan], n)
-        st.session_state[f"sb_{clan}_header"] = (
-            f"{CLAN_ICONS[clan]} {clan}  —  top {core_cnt} = CORE  ({n} total)"
-        )
-
-    containers = [
-        {"header": st.session_state["sb_Fire_header"],   "items": st.session_state["sb_Fire"]},
-        {"header": st.session_state["sb_Cake_header"],   "items": st.session_state["sb_Cake"]},
-        {"header": st.session_state["sb_Flakes_header"], "items": st.session_state["sb_Flakes"]},
-    ]
-
-    result = sort_items(
-        containers,
-        multi_containers=True,
-        direction="horizontal",
-        key="sandbox_main",
-    )
-
-    # Persist new order
-    for i, clan in enumerate(["Fire","Cake","Flakes"]):
-        st.session_state[f"sb_{clan}"] = result[i]["items"]
-
-    # ── Build sandbox DataFrame ───────────────────────────────────────────────
-    sb_df = _sandbox_df(result)
-
-    if sb_df.empty:
-        st.warning("Sandbox is empty — hit Reset to reload the original allocation.")
-        st.stop()
-
-    # ── Comparison metrics ────────────────────────────────────────────────────
-    st.divider()
-    st.subheader("Sandbox vs Original")
-
-    off_avgs = _core_avg(df_full, "clan", "cwl_slot")
-    sb_avgs  = _core_avg(sb_df,   "sb_clan", "sb_slot")
-
-    mc1, mc2, mc3 = st.columns(3)
-    for col, clan in [(mc1,"Fire"), (mc2,"Cake"), (mc3,"Flakes")]:
-        off_v = off_avgs.get(clan, float("nan"))
-        sb_v  = sb_avgs.get(clan,  float("nan"))
-        delta = sb_v - off_v if not (np.isnan(sb_v) or np.isnan(off_v)) else None
-        delta_str = f"{delta:+.1f}" if delta is not None else None
-        with col:
-            st.metric(
-                label=f"{CLAN_ICONS[clan]} {clan} — Core Avg",
-                value=f"{sb_v:.1f}" if not np.isnan(sb_v) else "—",
-                delta=delta_str,
-            )
-            sb_core_n = ((sb_df["sb_clan"]==clan)&(sb_df["sb_slot"]=="CORE")).sum()
-            st.caption(f"Original: {off_v:.1f}  ·  Sandbox core size: {sb_core_n}")
-
-    # ── Changes table ─────────────────────────────────────────────────────────
-    merged = sb_df[["name","sb_clan","sb_slot"]].merge(
-        df_full[["name","clan","cwl_slot","current_th","final_score"]],
-        on="name", how="left"
-    )
-    changed = merged[merged["sb_clan"] != merged["clan"]].copy()
-
-    if changed.empty:
-        st.info("No players have moved from the original allocation yet.")
-    else:
-        st.markdown(f"#### {len(changed)} player{'s' if len(changed)>1 else ''} moved")
-        ch_show = changed.rename(columns={
-            "name":"Name","clan":"Original Clan","sb_clan":"Sandbox Clan",
-            "cwl_slot":"Original Slot","sb_slot":"Sandbox Slot",
-            "current_th":"TH","final_score":"Final",
-        })[["Name","TH","Final","Original Clan","Original Slot","Sandbox Clan","Sandbox Slot"]]
-        ch_show = ch_show.reset_index(drop=True)
-        ch_show.index += 1
-        st.dataframe(ch_show, use_container_width=True)
-
-    # ── Side-by-side clan tables ───────────────────────────────────────────────
-    st.divider()
-    st.markdown("#### Clan rosters — Original ↔ Sandbox")
-    st.caption("Players who moved clans are marked with 🔄 in the Sandbox column.")
-
-    for clan in ["Fire","Cake","Flakes"]:
-        with st.expander(f"{CLAN_ICONS[clan]} {clan}", expanded=True):
-            col_off, col_sb = st.columns(2)
-
-            # Original side
-            off_clan = df_full[df_full["clan"]==clan].copy()
-            off_clan["_sr"] = off_clan["cwl_slot"].map({"CORE":0,"SUB":1,"TUNDRA":2}).fillna(3)
-            off_clan = off_clan.sort_values(["_sr","final_score"], ascending=[True,False]).drop(columns="_sr")
-            with col_off:
-                st.markdown("**Original**")
-                display_table(off_clan, height=min(80+len(off_clan)*35, 550))
-
-            # Sandbox side — add move indicator
-            moved_names = set(changed["name"].tolist())
-            sb_clan = sb_df[sb_df["sb_clan"]==clan].copy()
-            sb_clan["_sr"] = sb_clan["sb_slot"].map({"CORE":0,"SUB":1}).fillna(2)
-            sb_clan = sb_clan.sort_values(["_sr","final_score"], ascending=[True,False]).drop(columns="_sr")
-            sb_clan = sb_clan.drop(columns=["clan","cwl_slot"], errors="ignore")
-            sb_clan = sb_clan.rename(columns={"sb_clan":"clan","sb_slot":"cwl_slot"})
-            sb_clan["moved"] = sb_clan["name"].apply(lambda n: "🔄" if n in moved_names else "")
-            with col_sb:
-                st.markdown("**Sandbox** — amber rows have moved clans")
-                display_sandbox_table(sb_clan, moved_names, height=min(80+len(sb_clan)*35, 550))
-
-    # ── Save / Load / Delete snapshots ───────────────────────────────────────
-    st.divider()
-    st.subheader("💾 Snapshots")
-    st.caption(
-        "Save the current sandbox to share with co-leaders. "
-        "Snapshots are stored in `frosted_cwl_snapshots.json` alongside `app.py`."
-    )
-
-    save_tab, load_tab = st.tabs(["Save new snapshot", "Load / Delete snapshots"])
-
-    with save_tab:
-        col_a, col_b = st.columns([1, 2])
-        with col_a:
-            snap_author = st.text_input("Your name", placeholder="e.g. Waki")
-        with col_b:
-            snap_comment = st.text_area("Comment / notes", placeholder="Describe this allocation…", height=80)
-        if st.button("💾 Save snapshot", use_container_width=False):
-            if snap_author.strip() and snap_comment.strip():
-                state = {
-                    "Fire":   st.session_state.get("sb_Fire",   []),
-                    "Cake":   st.session_state.get("sb_Cake",   []),
-                    "Flakes": st.session_state.get("sb_Flakes", []),
-                }
-                snap_id = _save_snapshot(snap_author.strip(), snap_comment.strip(), state)
-                st.success(f"Saved — ID: **{snap_id}**")
-            else:
-                st.error("Please fill in both your name and a comment before saving.")
-
-    with load_tab:
-        snaps = _load_snapshots()
-        if not snaps:
-            st.info("No snapshots saved yet.")
-        else:
-            # Build display labels
-            labels = [
-                f"[{s['id']}]  {s['timestamp']}  —  {s['author']}:  {s['comment'][:60]}"
-                for s in snaps
-            ]
-            selected_idx = st.selectbox("Select a snapshot", range(len(labels)),
-                                        format_func=lambda i: labels[i])
-            selected_snap = snaps[selected_idx]
-
-            # Show full detail
-            with st.container():
-                dc1, dc2, dc3 = st.columns(3)
-                dc1.markdown(f"**ID:** `{selected_snap['id']}`")
-                dc2.markdown(f"**Saved:** {selected_snap['timestamp']}")
-                dc3.markdown(f"**By:** {selected_snap['author']}")
-                st.markdown(f"**Notes:** {selected_snap['comment']}")
-
-            btn_load, btn_del, _ = st.columns([1, 1, 4])
-            with btn_load:
-                if st.button("📂 Load this snapshot", use_container_width=True):
-                    for clan in ["Fire", "Cake", "Flakes"]:
-                        st.session_state[f"sb_{clan}"] = selected_snap["state"].get(clan, [])
-                    st.success(f"Snapshot {selected_snap['id']} loaded — sandbox updated.")
-                    st.rerun()
-            with btn_del:
-                if st.button("🗑️ Delete this snapshot", use_container_width=True):
-                    _delete_snapshot(selected_snap["id"])
-                    st.warning(f"Snapshot {selected_snap['id']} deleted.")
-                    st.rerun()
