@@ -56,7 +56,7 @@ COL_CFG = {
 @st.cache_data
 def load_data() -> pd.DataFrame:
     df = pd.read_csv("frosted_cwl_members.csv", index_col="row")
-    for c in ["flag_high_miss", "flag_ltd_data", "flag_no_data", "flag_prev_data"]:
+    for c in ["flag_high_miss", "flag_ltd_data", "flag_no_data", "flag_prev_data", "flag_alt"]:
         df[c] = df[c].fillna(False).astype(bool)
     for c in ["offense_score", "defense_score", "final_score",
               "current_th", "avg_war_th", "attack_count",
@@ -94,6 +94,7 @@ with st.sidebar:
     hide_hm  = st.checkbox("Hide HM (miss >20%)",  value=False)
     hide_nd  = st.checkbox("Hide ND (no war data)", value=False)
     hide_ltd = st.checkbox("Hide LTD (<10 atks)",   value=False)
+    hide_alt = st.checkbox("Hide ALT (alt accounts)", value=False)
 
     mask = (
         df_full["clan"].isin(sel_clans)
@@ -103,6 +104,7 @@ with st.sidebar:
     if hide_hm:  mask &= ~df_full["flag_high_miss"]
     if hide_nd:  mask &= ~df_full["flag_no_data"]
     if hide_ltd: mask &= ~df_full["flag_ltd_data"]
+    if hide_alt: mask &= ~df_full["flag_alt"]
 
     df = df_full[mask].copy()
     st.divider()
@@ -213,6 +215,12 @@ with tab_ov:
 ---
 
 **Final = Offense + Defense** · Elite: 110+ · Solid core: 80–110 · Borderline: 50–80
+
+---
+
+**Flags:** HM = miss rate >20% · LTD = fewer than 10 attacks · ND = no war data ·
+prev = prior-season data · **ALT = alt account — always a SUB regardless of score**,
+so the main account gets the CWL slot.
         """)
 
 # ════════════════════════════════════════════════════════════════════════════════
@@ -301,7 +309,7 @@ with tab_ch:
         st.markdown("#### Top 25 by Final Score")
         # Highest score first (top of chart), still coloured by clan.
         top25 = plot_base.nlargest(25, "final_score").sort_values("final_score", ascending=False)
-        name_order = top25["name"].tolist()  # ascending -> last item (highest) ends up at top
+        name_order = top25["name"].tolist()
         fig_b = px.bar(top25, x="final_score", y="name", orientation="h",
                        color="clan", color_discrete_map=CLAN_COLORS,
                        category_orders={"name": name_order},
