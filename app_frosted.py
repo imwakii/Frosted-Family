@@ -83,7 +83,7 @@ with st.sidebar:
     st.subheader("Filters")
     sel_clans = st.multiselect("Clan",     ["Fire","Cake","Flakes"], default=["Fire","Cake","Flakes"])
     sel_slots = st.multiselect(
-        "CWL Slot", ["CORE","SUB","Turtle Kingdom"], default=["CORE","SUB"]
+        "CWL Slot", ["CORE","SUB","Sitting Out"], default=["CORE","SUB"]
     )
     th_min    = int(df_full["current_th"].min())
     th_max    = int(df_full["current_th"].max())
@@ -168,14 +168,14 @@ with tab_ov:
     # ── Transfer Log ──────────────────────────────────────────────────────────
     st.subheader("🔁 Transfers This Cycle")
     transfers = df_full[df_full["transferred_from"] != ""].copy()
-    tk = df_full[df_full["cwl_slot"] == "Turtle Kingdom"]
+    tk = df_full[df_full["cwl_slot"] == "Sitting Out"]
 
     rows = []
     if not transfers.empty:
         for (src, dst), grp in transfers.groupby(["transferred_from", "clan"]):
             rows.append({"From → To": f"{src} → {dst}", "Players": ", ".join(grp["name"])})
     for _, r in tk.iterrows():
-        rows.append({"From → To": f"{r['clan']} → Turtle Kingdom", "Players": r["name"]})
+        rows.append({"From → To": f"{r['clan']} → Sitting Out", "Players": r["name"]})
 
     if rows:
         st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
@@ -286,7 +286,7 @@ so the main account gets the CWL slot.
 with tab_ros:
     for clan, fmt_str in [("Fire","15v15"), ("Cake","15v15"), ("Flakes","30v30")]:
         cdf  = df_full[df_full["clan"] == clan].copy()
-        slot_rank = {"CORE":0, "SUB":1, "Turtle Kingdom":2}
+        slot_rank = {"CORE":0, "SUB":1, "Sitting Out":2}
         cdf["_sr"] = cdf["cwl_slot"].map(slot_rank).fillna(3)
         cdf = cdf.sort_values(["_sr","final_score"], ascending=[True,False]).drop(columns="_sr")
         n_core = (cdf["cwl_slot"]=="CORE").sum()
