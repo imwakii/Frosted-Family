@@ -131,7 +131,7 @@ with tab_ov:
     st.subheader("Clan Snapshot")
     st.caption(
         "Data source: stats pulled from **clashspot.net**, covering "
-        "**1 March 2026 – 10 June 2026**."
+        "**1 April 2026 – 28 July 2026**."
     )
 
     c_f, c_c, c_fl = st.columns(3)
