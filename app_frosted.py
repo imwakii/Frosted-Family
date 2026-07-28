@@ -135,7 +135,7 @@ with tab_ov:
     )
 
     c_f, c_c, c_fl = st.columns(3)
-    for col, clan, fmt_str in [(c_f,"Fire","15v15"), (c_c,"Cake","15v15"), (c_fl,"Flakes","30v30")]:
+    for col, clan, fmt_str in [(c_f,"Fire","15v15"), (c_c,"Cake","15v15"), (c_fl,"Flakes","15v15")]:
         cdf  = df[df["clan"] == clan]   # filtered
         core = cdf[cdf["cwl_slot"] == "CORE"]
         avg_fin = core["final_score"].dropna().mean()
