@@ -11,110 +11,108 @@ row,name,clan,cwl_slot,transferred_from,current_th,avg_war_th,attack_count,three
 10,hagar,Fire,CORE,Cake,18,18.0,63,65.08,3.08,-0.1,62.8,24.9,87.7,False,False,False,False,← Cake,False
 11,Calpis,Fire,CORE,,18,18.0,82,71.95,15.46,-0.2,60.2,22.2,82.4,False,False,False,False,,False
 12,Pulkit,Fire,CORE,,18,18.0,50,68.0,15.25,-0.1,57.3,24.9,82.2,False,False,False,False,,False
-13,Calsedy,Fire,CORE,,18,18.0,62,50.0,11.43,-0.0,44.3,22.2,66.5,False,False,False,False,,False
-14,Magic,Fire,CORE,,18,18.0,75,40.0,13.79,-0.1,34.3,28.0,62.3,False,False,False,False,,False
-15,Acorn,Fire,CORE,,18,18.0,61,52.46,6.15,-0.1,49.0,12.7,61.7,False,False,False,False,,False
-16,Snipe789,Fire,SUB,Cake,17,15.81,40,55.0,2.44,1.1,56.6,35.9,92.5,False,False,False,False,← Cake,False
-17,LeGeNd IORI,Fire,SUB,,18,18.0,43,37.21,4.44,-0.1,35.4,22.6,58.0,False,False,False,False,,False
-18,Cxlvxn187,Fire,SUB,,18,18.0,9,77.78,10.0,-0.1,25.1,27.6,52.7,False,True,False,False,LTD,False
-19,Craxix,Fire,SUB,,18,18.0,13,61.54,31.58,0.0,21.9,23.0,44.9,True,False,False,False,HM,False
-20,bukoy,Fire,SUB,,18,18.0,0,0.0,100.0,,0.0,0.0,0.0,True,False,True,False,HM ND,False
-21,Caliber,Fire,SUB,,15,15.0,2,0.0,50.0,3.0,0.0,0.0,0.0,True,True,False,False,HM LTD,False
-22,Superdogg,Fire,SUB,,13,12.43,7,0.0,50.0,2.1,0.0,0.0,0.0,True,True,False,False,HM LTD,False
-23,"Leoclasher,Ph.D",Fire,SUB,,18,18.0,0,0.0,100.0,,0.0,0.0,0.0,True,False,True,False,HM ND,False
-24,DHRUV,Fire,SUB,,18,,0,,,,,,,False,False,True,False,ND,False
-25,War Chantu,Fire,SUB,,18,,0,,,,,,,False,False,True,False,ND,False
-26,bísq,Fire,SUB,,18,,0,,,,,,,False,False,True,False,ND,False
-27,Sigtryggr,Fire,SUB,,11,,0,,,,,,,False,False,True,False,ND,False
-28,Osiris,Fire,SUB,,13,,0,,,,,,,False,False,True,False,ND,False
-29,i'm Astonish,Fire,SUB,,17,,0,,,,,,,False,False,True,False,ALT ND,True
-30,Shohel Rana,Fire,SUB,,17,,0,,,,,,,False,False,True,False,ND,False
-31,Maki,Cake,CORE,,18,18.0,88,87.5,0.0,-0.1,87.1,23.0,110.1,False,False,False,False,,False
-32,SaUcYGrAnDpA1,Cake,CORE,,18,18.0,88,78.41,0.0,-0.1,78.0,31.4,109.4,False,False,False,False,,False
-33,Vadim,Cake,CORE,,18,16.48,94,78.72,0.0,1.0,82.7,21.5,104.2,False,False,False,False,,False
-34,SubZeroDomain,Cake,CORE,,18,16.96,50,84.0,0.0,0.2,84.8,18.0,102.8,False,False,False,False,,False
-35,Grozbolt,Cake,CORE,,18,17.45,101,86.14,1.94,0.3,85.7,15.7,101.4,False,False,False,False,,False
-36,Blaze,Cake,CORE,,18,18.0,44,68.18,0.0,-0.1,67.8,25.7,93.5,False,False,False,False,,False
-37,RR,Cake,CORE,,18,18.0,55,78.18,0.0,-0.3,77.0,16.5,93.5,False,False,False,False,,False
-38,XBrazyX,Cake,CORE,,18,17.86,104,82.69,1.89,-0.3,79.9,12.7,92.6,False,False,False,False,,False
-39,shyla,Cake,CORE,,18,18.0,34,67.65,10.53,-0.0,60.5,31.0,91.5,False,False,False,False,,False
-40,ZiggyTheGreat,Cake,CORE,,18,17.64,63,69.84,0.0,-0.1,69.5,21.1,90.6,False,False,False,False,,False
-41,Frosty_Ivy❤,Cake,CORE,,18,18.0,84,69.05,1.18,-0.5,66.5,23.4,89.9,False,False,False,False,,False
-42,Death 3,Cake,CORE,Flakes,18,18.0,44,81.82,8.33,-0.4,73.5,15.7,89.2,False,False,False,False,ALT ← Flakes,True
-43,✨Mr Epyk✨,Cake,CORE,,18,18.0,43,83.72,4.44,-0.1,79.6,8.0,87.6,False,False,False,False,,False
-44,Chappybumpits,Cake,CORE,,18,17.87,94,67.02,5.05,-0.1,63.3,16.1,79.4,False,False,False,False,,False
-45,⚡️-Shock-⚡️,Cake,CORE,,18,18.0,73,60.27,8.75,-0.2,54.4,21.1,75.5,False,False,False,False,,False
-46,juna the great,Cake,SUB,,17,17.0,92,92.39,0.0,0.4,94.2,10.6,104.8,False,False,False,False,,False
-47,Dr. Demolition,Cake,SUB,,18,17.33,55,67.27,8.33,-0.1,61.4,15.7,77.1,False,False,False,False,,False
-48,Rodrigo,Cake,SUB,,18,18.0,60,45.0,7.69,-0.2,41.1,34.9,76.0,False,False,False,False,,False
-49,Chaengiiee,Cake,SUB,,18,17.1,71,66.2,7.79,0.1,61.3,13.8,75.1,False,False,False,False,,False
-50,JayDogg,Cake,SUB,,18,17.98,63,60.32,5.97,-0.2,56.2,16.9,73.1,False,False,False,False,,False
-51,Deathly Knight,Cake,SUB,,18,17.33,68,51.47,4.23,0.2,49.8,14.2,64.0,False,False,False,False,ALT,True
-52,⚡️GRIZZLE⚡️,Cake,SUB,,16,16.0,42,50.0,8.7,0.8,47.5,13.7,61.2,False,False,False,False,,False
-53,Abyssal_Witch❤️,Cake,SUB,,18,17.03,42,50.0,14.29,0.3,43.5,17.3,60.8,False,False,False,False,,False
-54,pvp,Cake,SUB,,17,16.62,40,45.0,13.04,0.6,40.3,20.2,60.5,False,False,False,False,,False
-55,Oscar,Cake,SUB,,18,18.0,50,48.0,21.88,-0.3,36.9,15.0,51.9,True,False,False,False,HM,False
-56,%99,Cake,SUB,,18,17.26,40,35.0,13.04,0.4,31.0,20.3,51.3,False,False,False,False,,False
-57,APHRODITE ✨,Cake,SUB,,18,17.0,43,41.86,14.0,0.5,36.9,11.9,48.8,False,False,False,False,,False
-58,H1TM4CHINE☠,Cake,SUB,,16,15.8,44,31.82,12.0,0.1,28.1,19.9,48.0,False,False,False,False,ALT,True
-59,TheLionHeart,Cake,SUB,,17,16.11,11,81.82,0.0,1.2,38.2,7.3,45.5,False,False,False,False,,False
-60,Spei_Angkor,Cake,SUB,,18,18.0,10,90.0,16.67,-0.1,29.8,11.6,41.4,False,False,False,False,,False
-61,PAUL,Cake,SUB,,17,17.0,14,57.14,12.5,-0.6,27.2,3.6,30.8,False,False,False,False,,False
-62,BenderX01,Cake,SUB,,17,17.0,11,54.55,42.11,0.8,14.5,10.9,25.4,True,False,False,False,HM,False
-63,TJ,Cake,SUB,,18,18.0,14,50.0,22.22,-0.7,21.0,1.9,22.9,True,False,False,False,HM,False
-64,Lucky,Cake,SUB,,18,17.12,19,15.79,5.0,0.7,11.8,9.5,21.3,False,False,False,False,,False
-65,slightlyaroused,Cake,SUB,,18,17.6,28,10.71,20.0,-0.1,8.5,11.1,19.6,False,False,False,False,,False
-66,Kubs,Cake,SUB,,18,18.0,6,0.0,25.0,0.0,0.0,15.4,15.4,True,True,False,False,HM LTD,False
-67,Sushii,Cake,SUB,,18,18.0,9,44.44,65.38,-0.6,5.4,5.6,11.0,True,True,False,False,HM LTD,False
-68,HitMachine☣,Cake,SUB,,15,15.0,6,33.33,0.0,0.3,8.1,1.7,9.8,False,True,False,False,ALT LTD,True
-69,Rambo,Cake,SUB,,18,18.0,2,50.0,0.0,0.0,4.0,0.0,4.0,False,True,False,False,LTD,False
-70,saro,Cake,SUB,,18,18.0,2,50.0,0.0,-1.5,3.7,0.0,3.7,False,True,False,False,LTD,False
-71,H.F35,Cake,SUB,,18,18.0,2,0.0,66.67,-0.5,0.0,1.9,1.9,True,True,False,False,HM LTD,False
-72,Ziad El_Giar,Cake,Sitting Out,,18,18.0,68,69.12,8.11,-0.0,63.5,31.4,94.9,False,False,False,False,,False
-73,Jules,Flakes,CORE,,16,15.66,89,91.01,0.0,0.9,95.1,16.8,111.9,False,False,False,False,,False
-74,wamr,Flakes,CORE,,17,15.81,25,72.0,0.0,-0.1,71.6,40.0,111.6,False,False,False,False,,False
-75,Watermark:),Flakes,CORE,Cake,17,16.43,46,82.61,0.0,0.4,84.3,23.5,107.8,False,False,False,False,← Cake,False
-76,Hallelou,Flakes,CORE,Cake,17,16.9,50,88.0,0.0,0.4,89.8,15.4,105.2,False,False,False,False,← Cake,False
-77,Grozbolt III,Flakes,CORE,,16,15.21,88,80.68,5.38,0.6,78.6,16.1,94.7,False,False,False,False,ALT,True
-78,Genjey,Flakes,CORE,,17,16.63,90,84.44,3.23,-0.4,80.1,12.1,92.2,False,False,False,False,,False
-79,Yaki,Flakes,CORE,,16,15.28,63,74.6,16.0,0.8,65.2,17.8,83.0,False,False,False,False,,False
-80,DEATH EATERS jr,Flakes,CORE,,17,16.64,49,79.59,3.92,-0.1,76.1,6.6,82.7,False,False,False,False,ALT,True
-81,Grozbolt II,Flakes,CORE,,18,17.89,73,76.71,3.95,-0.6,71.5,11.1,82.6,False,False,False,False,ALT,True
-82,Ale,Flakes,CORE,,16,15.1,76,61.84,0.0,0.7,64.0,17.2,81.2,False,False,False,False,,False
-83,_Aka_math,Flakes,CORE,,16,15.47,62,72.58,8.82,0.2,66.8,14.0,80.8,False,False,False,False,,False
-84,Happy,Flakes,CORE,Cake,17,16.52,68,60.29,8.11,0.6,57.1,21.6,78.7,False,False,False,False,← Cake,False
-85,Vader,Flakes,CORE,Cake,17,17.0,59,66.1,0.0,-0.1,65.8,12.8,78.6,False,False,False,False,← Cake,False
-86,Denmark,Flakes,CORE,Cake,17,17.0,54,72.22,14.29,0.3,62.8,14.3,77.1,False,False,False,False,← Cake,False
-87,Death Eaters 3,Flakes,CORE,,16,15.42,35,68.57,10.26,0.8,64.0,7.7,71.7,False,False,False,False,ALT,True
-88,Projectsnipe2,Flakes,SUB,,15,14.11,27,81.48,3.57,0.6,80.9,11.7,92.6,False,False,False,False,,False
-89,DemonJuan,Flakes,SUB,,14,13.48,47,68.09,0.0,0.8,70.8,17.7,88.5,False,False,False,False,,False
-90,twistedtiger,Flakes,SUB,,13,12.13,26,80.77,18.75,0.2,66.3,12.0,78.3,False,False,False,False,,False
-91,Death Eaters RS,Flakes,SUB,,18,17.54,60,73.33,14.29,-0.1,62.5,6.9,69.4,False,False,False,False,ALT,True
-92,Death Dealer,Flakes,SUB,,17,16.21,55,52.73,9.84,-0.2,47.1,18.0,65.1,False,False,False,False,,False
-93,Death Eaters 2,Flakes,SUB,,17,15.97,43,55.81,12.24,0.4,50.0,15.0,65.0,False,False,False,False,ALT,True
-94,LordDavid,Flakes,SUB,,16,15.31,86,45.35,5.49,0.1,43.1,21.7,64.8,False,False,False,False,,False
-95,JayDogg II,Flakes,SUB,,15,14.68,29,55.17,0.0,0.6,56.8,7.0,63.8,False,False,False,False,ALT,True
-96,Grozbolt V,Flakes,SUB,,15,14.7,54,48.15,10.0,0.7,44.9,14.0,58.9,False,False,False,False,ALT,True
-97,Grozbolt IV,Flakes,SUB,,15,14.69,41,48.78,12.77,1.1,44.9,12.3,57.2,False,False,False,False,ALT,True
-98,SilentKnight71,Flakes,SUB,,14,13.45,28,46.43,24.32,1.2,37.2,19.6,56.8,True,False,False,False,HM,False
-99,DadOfAllTrolls,Flakes,SUB,,16,15.55,19,78.95,13.64,-1.8,47.2,1.7,48.9,False,False,False,False,,False
-100,Shadow Assasin,Flakes,SUB,,15,15.0,10,100.0,0.0,0.9,41.8,5.0,46.8,False,False,False,False,,False
-101,LOGAN,Flakes,SUB,,17,16.29,32,43.75,5.88,-0.1,41.0,4.8,45.8,False,False,False,False,,False
-102,Seth The Great,Flakes,SUB,,14,14.0,10,80.0,0.0,1.4,34.2,1.6,35.8,False,False,False,False,,False
-103,Mojahed,Flakes,SUB,,18,18.0,15,20.0,71.15,-1.3,3.2,21.1,24.3,True,False,False,False,HM,False
-104,caley,Flakes,SUB,,16,15.76,17,17.65,50.0,-0.2,5.9,13.3,19.2,True,False,False,False,HM,False
-105,ZiggyTheGreat5,Flakes,SUB,,13,13.0,6,66.67,57.14,1.2,7.3,7.5,14.8,True,True,False,False,ALT HM LTD,True
-106,"Ar,sohel",Flakes,SUB,,16,15.33,4,75.0,33.33,-0.1,8.0,1.8,9.8,True,True,False,False,HM LTD,False
-107,Clowned Prince,Flakes,SUB,,12,12.0,6,33.33,0.0,2.5,9.0,0.0,9.0,False,True,False,False,LTD,False
-108,Rødbetsalat,Flakes,SUB,,18,18.0,7,14.29,22.22,-1.6,2.9,3.8,6.7,True,True,False,False,HM LTD,False
-109,Epyk’s LostSon,Flakes,SUB,,14,14.0,3,33.33,0.0,2.7,4.5,0.0,4.5,False,True,False,False,ALT LTD,True
-110,tun tun,Flakes,SUB,,16,16.0,6,50.0,78.57,-1.0,2.4,1.7,4.1,True,True,False,False,HM LTD,False
-111,crismel143,Flakes,SUB,,16,15.29,3,0.0,66.67,0.0,0.0,3.5,3.5,True,True,False,False,HM LTD,False
-112,MISTER JOKER,Flakes,SUB,,16,16.0,0,0.0,100.0,,0.0,1.7,1.7,True,False,True,False,HM ND,False
-113,ཉིཔིོེིུDREADཉི,Flakes,SUB,,14,13.0,7,0.0,0.0,2.3,0.0,1.6,1.6,False,True,False,False,LTD,False
-114,Sara Ahmed,Flakes,SUB,,13,13.0,0,0.0,100.0,,0.0,1.5,1.5,True,False,True,False,HM ND,False
-115,*={ROMPER}=*,Flakes,SUB,,16,15.5,2,0.0,50.0,-0.5,0.0,0.0,0.0,True,True,False,False,HM LTD,False
-116,Dragon Slayer �,Flakes,SUB,,16,16.0,0,0.0,100.0,,0.0,0.0,0.0,True,False,True,False,HM ND,False
-117,ProjectSnipe3,Flakes,SUB,,14,14.0,2,0.0,50.0,2.5,0.0,0.0,0.0,True,True,False,False,ALT HM LTD,True
-118,ZiggyTheGreat2,Flakes,SUB,,11,11.0,1,0.0,50.0,3.0,0.0,0.0,0.0,True,True,False,False,ALT HM LTD,True
-119,Evil Nugget Man,Flakes,SUB,,12,,0,,,,,,,False,False,True,False,ND,False
+13,Dr. Demolition,Fire,CORE,Cake,18,17.33,55,67.27,8.33,-0.1,61.4,15.7,77.1,False,False,False,False,← Cake,False
+14,Chaengiiee,Fire,CORE,Cake,18,17.1,71,66.2,7.79,0.1,61.3,13.8,75.1,False,False,False,False,← Cake,False
+15,Calsedy,Fire,CORE,,18,18.0,62,50.0,11.43,-0.0,44.3,22.2,66.5,False,False,False,False,,False
+16,Magic,Fire,SUB,,18,18.0,75,40.0,13.79,-0.1,34.3,28.0,62.3,False,False,False,False,,False
+17,Acorn,Fire,SUB,,18,18.0,61,52.46,6.15,-0.1,49.0,12.7,61.7,False,False,False,False,,False
+18,LeGeNd IORI,Fire,SUB,,18,18.0,43,37.21,4.44,-0.1,35.4,22.6,58.0,False,False,False,False,,False
+19,Cxlvxn187,Fire,SUB,,18,18.0,9,77.78,10.0,-0.1,25.1,27.6,52.7,False,True,False,False,LTD,False
+20,Craxix,Fire,SUB,,18,18.0,13,61.54,31.58,0.0,21.9,23.0,44.9,True,False,False,False,HM,False
+21,Rambo,Fire,SUB,Cake,18,18.0,2,50.0,0.0,0.0,4.0,0.0,4.0,False,True,False,False,LTD ← Cake,False
+22,bukoy,Fire,SUB,,18,18.0,0,0.0,100.0,,0.0,0.0,0.0,True,False,True,False,HM ND,False
+23,Caliber,Fire,SUB,,15,15.0,2,0.0,50.0,3.0,0.0,0.0,0.0,True,True,False,False,HM LTD,False
+24,Superdogg,Fire,SUB,,13,12.43,7,0.0,50.0,2.1,0.0,0.0,0.0,True,True,False,False,HM LTD,False
+25,"Leoclasher,Ph.D",Fire,SUB,,18,18.0,0,0.0,100.0,,0.0,0.0,0.0,True,False,True,False,HM ND,False
+26,DHRUV,Fire,SUB,,18,,0,,,,,,,False,False,True,False,ND,False
+27,War Chantu,Fire,SUB,,18,,0,,,,,,,False,False,True,False,ND,False
+28,bísq,Fire,SUB,,18,,0,,,,,,,False,False,True,False,ND,False
+29,Sigtryggr,Fire,SUB,,11,,0,,,,,,,False,False,True,False,ND,False
+30,Osiris,Fire,SUB,,13,,0,,,,,,,False,False,True,False,ND,False
+31,i'm Astonish,Fire,SUB,,17,,0,,,,,,,False,False,True,False,ALT ND,True
+32,Shohel Rana,Fire,SUB,,17,,0,,,,,,,False,False,True,False,ND,False
+33,Ziad El_Giar,Fire,Sitting Out,,18,18.0,68,69.12,8.11,-0.0,63.5,31.4,94.9,False,False,False,False,,False
+34,Maki,Cake,CORE,,18,18.0,88,87.5,0.0,-0.1,87.1,23.0,110.1,False,False,False,False,,False
+35,SaUcYGrAnDpA1,Cake,CORE,,18,18.0,88,78.41,0.0,-0.1,78.0,31.4,109.4,False,False,False,False,,False
+36,Vadim,Cake,CORE,,18,16.48,94,78.72,0.0,1.0,82.7,21.5,104.2,False,False,False,False,,False
+37,SubZeroDomain,Cake,CORE,,18,16.96,50,84.0,0.0,0.2,84.8,18.0,102.8,False,False,False,False,,False
+38,Grozbolt,Cake,CORE,,18,17.45,101,86.14,1.94,0.3,85.7,15.7,101.4,False,False,False,False,,False
+39,Blaze,Cake,CORE,,18,18.0,44,68.18,0.0,-0.1,67.8,25.7,93.5,False,False,False,False,,False
+40,RR,Cake,CORE,,18,18.0,55,78.18,0.0,-0.3,77.0,16.5,93.5,False,False,False,False,,False
+41,XBrazyX,Cake,CORE,,18,17.86,104,82.69,1.89,-0.3,79.9,12.7,92.6,False,False,False,False,,False
+42,shyla,Cake,CORE,,18,18.0,34,67.65,10.53,-0.0,60.5,31.0,91.5,False,False,False,False,,False
+43,ZiggyTheGreat,Cake,CORE,,18,17.64,63,69.84,0.0,-0.1,69.5,21.1,90.6,False,False,False,False,,False
+44,Frosty_Ivy❤,Cake,CORE,,18,18.0,84,69.05,1.18,-0.5,66.5,23.4,89.9,False,False,False,False,,False
+45,✨Mr Epyk✨,Cake,CORE,,18,18.0,43,83.72,4.44,-0.1,79.6,8.0,87.6,False,False,False,False,,False
+46,Chappybumpits,Cake,CORE,,18,17.87,94,67.02,5.05,-0.1,63.3,16.1,79.4,False,False,False,False,,False
+47,Rodrigo,Cake,CORE,,18,18.0,60,45.0,7.69,-0.2,41.1,34.9,76.0,False,False,False,False,,False
+48,⚡️-Shock-⚡️,Cake,CORE,,18,18.0,73,60.27,8.75,-0.2,54.4,21.1,75.5,False,False,False,False,,False
+49,JayDogg,Cake,SUB,,18,17.98,63,60.32,5.97,-0.2,56.2,16.9,73.1,False,False,False,False,,False
+50,Deathly Knight,Cake,SUB,,18,17.33,68,51.47,4.23,0.2,49.8,14.2,64.0,False,False,False,False,ALT,True
+51,Abyssal_Witch❤️,Cake,SUB,,18,17.03,42,50.0,14.29,0.3,43.5,17.3,60.8,False,False,False,False,,False
+52,pvp,Cake,SUB,,17,16.62,40,45.0,13.04,0.6,40.3,20.2,60.5,False,False,False,False,,False
+53,%99,Cake,SUB,,18,17.26,40,35.0,13.04,0.4,31.0,20.3,51.3,False,False,False,False,,False
+54,APHRODITE ✨,Cake,SUB,,18,17.0,43,41.86,14.0,0.5,36.9,11.9,48.8,False,False,False,False,,False
+55,Spei_Angkor,Cake,SUB,,18,18.0,10,90.0,16.67,-0.1,29.8,11.6,41.4,False,False,False,False,,False
+56,TJ,Cake,SUB,,18,18.0,14,50.0,22.22,-0.7,21.0,1.9,22.9,True,False,False,False,HM,False
+57,Lucky,Cake,SUB,,18,17.12,19,15.79,5.0,0.7,11.8,9.5,21.3,False,False,False,False,,False
+58,slightlyaroused,Cake,SUB,,18,17.6,28,10.71,20.0,-0.1,8.5,11.1,19.6,False,False,False,False,,False
+59,Kubs,Cake,SUB,,18,18.0,6,0.0,25.0,0.0,0.0,15.4,15.4,True,True,False,False,HM LTD,False
+60,Sushii,Cake,SUB,,18,18.0,9,44.44,65.38,-0.6,5.4,5.6,11.0,True,True,False,False,HM LTD,False
+61,saro,Cake,SUB,,18,18.0,2,50.0,0.0,-1.5,3.7,0.0,3.7,False,True,False,False,LTD,False
+62,wamr,Flakes,CORE,,17,15.81,25,72.0,0.0,-0.1,71.6,40.0,111.6,False,False,False,False,,False
+63,Watermark:),Flakes,CORE,Cake,17,16.43,46,82.61,0.0,0.4,84.3,23.5,107.8,False,False,False,False,← Cake,False
+64,Hallelou,Flakes,CORE,Cake,17,16.9,50,88.0,0.0,0.4,89.8,15.4,105.2,False,False,False,False,← Cake,False
+65,juna the great,Flakes,CORE,Cake,17,17.0,92,92.39,0.0,0.4,94.2,10.6,104.8,False,False,False,False,← Cake,False
+66,Grozbolt III,Flakes,CORE,,16,15.21,88,80.68,5.38,0.6,78.6,16.1,94.7,False,False,False,False,ALT,True
+67,Snipe789,Flakes,CORE,Cake,17,15.81,40,55.0,2.44,1.1,56.6,35.9,92.5,False,False,False,False,← Cake,False
+68,Genjey,Flakes,CORE,,17,16.63,90,84.44,3.23,-0.4,80.1,12.1,92.2,False,False,False,False,,False
+69,Death 3,Flakes,CORE,,18,18.0,44,81.82,8.33,-0.4,73.5,15.7,89.2,False,False,False,False,ALT,True
+70,DEATH EATERS jr,Flakes,CORE,,17,16.64,49,79.59,3.92,-0.1,76.1,6.6,82.7,False,False,False,False,ALT,True
+71,Grozbolt II,Flakes,CORE,,18,17.89,73,76.71,3.95,-0.6,71.5,11.1,82.6,False,False,False,False,ALT,True
+72,Happy,Flakes,CORE,Cake,17,16.52,68,60.29,8.11,0.6,57.1,21.6,78.7,False,False,False,False,← Cake,False
+73,Vader,Flakes,CORE,Cake,17,17.0,59,66.1,0.0,-0.1,65.8,12.8,78.6,False,False,False,False,← Cake,False
+74,Denmark,Flakes,CORE,Cake,17,17.0,54,72.22,14.29,0.3,62.8,14.3,77.1,False,False,False,False,← Cake,False
+75,Death Eaters RS,Flakes,CORE,,18,17.54,60,73.33,14.29,-0.1,62.5,6.9,69.4,False,False,False,False,ALT,True
+76,Death Dealer,Flakes,CORE,,17,16.21,55,52.73,9.84,-0.2,47.1,18.0,65.1,False,False,False,False,,False
+77,Jules,Flakes,SUB,,16,15.66,89,91.01,0.0,0.9,95.1,16.8,111.9,False,False,False,False,,False
+78,Projectsnipe2,Flakes,SUB,,15,14.11,27,81.48,3.57,0.6,80.9,11.7,92.6,False,False,False,False,,False
+79,DemonJuan,Flakes,SUB,,14,13.48,47,68.09,0.0,0.8,70.8,17.7,88.5,False,False,False,False,,False
+80,Yaki,Flakes,SUB,,16,15.28,63,74.6,16.0,0.8,65.2,17.8,83.0,False,False,False,False,,False
+81,Ale,Flakes,SUB,,16,15.1,76,61.84,0.0,0.7,64.0,17.2,81.2,False,False,False,False,,False
+82,_Aka_math,Flakes,SUB,,16,15.47,62,72.58,8.82,0.2,66.8,14.0,80.8,False,False,False,False,,False
+83,twistedtiger,Flakes,SUB,,13,12.13,26,80.77,18.75,0.2,66.3,12.0,78.3,False,False,False,False,,False
+84,Death Eaters 3,Flakes,SUB,,16,15.42,35,68.57,10.26,0.8,64.0,7.7,71.7,False,False,False,False,ALT,True
+85,Death Eaters 2,Flakes,SUB,,17,15.97,43,55.81,12.24,0.4,50.0,15.0,65.0,False,False,False,False,ALT,True
+86,LordDavid,Flakes,SUB,,16,15.31,86,45.35,5.49,0.1,43.1,21.7,64.8,False,False,False,False,,False
+87,JayDogg II,Flakes,SUB,,15,14.68,29,55.17,0.0,0.6,56.8,7.0,63.8,False,False,False,False,ALT,True
+88,⚡️GRIZZLE⚡️,Flakes,SUB,Cake,16,16.0,42,50.0,8.7,0.8,47.5,13.7,61.2,False,False,False,False,← Cake,False
+89,Grozbolt V,Flakes,SUB,,15,14.7,54,48.15,10.0,0.7,44.9,14.0,58.9,False,False,False,False,ALT,True
+90,Grozbolt IV,Flakes,SUB,,15,14.69,41,48.78,12.77,1.1,44.9,12.3,57.2,False,False,False,False,ALT,True
+91,SilentKnight71,Flakes,SUB,,14,13.45,28,46.43,24.32,1.2,37.2,19.6,56.8,True,False,False,False,HM,False
+92,DadOfAllTrolls,Flakes,SUB,,16,15.55,19,78.95,13.64,-1.8,47.2,1.7,48.9,False,False,False,False,,False
+93,H1TM4CHINE☠,Flakes,SUB,Cake,16,15.8,44,31.82,12.0,0.1,28.1,19.9,48.0,False,False,False,False,ALT ← Cake,True
+94,Shadow Assasin,Flakes,SUB,,15,15.0,10,100.0,0.0,0.9,41.8,5.0,46.8,False,False,False,False,,False
+95,LOGAN,Flakes,SUB,,17,16.29,32,43.75,5.88,-0.1,41.0,4.8,45.8,False,False,False,False,,False
+96,TheLionHeart,Flakes,SUB,Cake,17,16.11,11,81.82,0.0,1.2,38.2,7.3,45.5,False,False,False,False,← Cake,False
+97,Seth The Great,Flakes,SUB,,14,14.0,10,80.0,0.0,1.4,34.2,1.6,35.8,False,False,False,False,,False
+98,PAUL,Flakes,SUB,Cake,17,17.0,14,57.14,12.5,-0.6,27.2,3.6,30.8,False,False,False,False,← Cake,False
+99,BenderX01,Flakes,SUB,Cake,17,17.0,11,54.55,42.11,0.8,14.5,10.9,25.4,True,False,False,False,HM ← Cake,False
+100,Mojahed,Flakes,SUB,,18,18.0,15,20.0,71.15,-1.3,3.2,21.1,24.3,True,False,False,False,HM,False
+101,caley,Flakes,SUB,,16,15.76,17,17.65,50.0,-0.2,5.9,13.3,19.2,True,False,False,False,HM,False
+102,ZiggyTheGreat5,Flakes,SUB,,13,13.0,6,66.67,57.14,1.2,7.3,7.5,14.8,True,True,False,False,ALT HM LTD,True
+103,HitMachine☣,Flakes,SUB,Cake,15,15.0,6,33.33,0.0,0.3,8.1,1.7,9.8,False,True,False,False,ALT LTD ← Cake,True
+104,"Ar,sohel",Flakes,SUB,,16,15.33,4,75.0,33.33,-0.1,8.0,1.8,9.8,True,True,False,False,HM LTD,False
+105,Clowned Prince,Flakes,SUB,,12,12.0,6,33.33,0.0,2.5,9.0,0.0,9.0,False,True,False,False,LTD,False
+106,Rødbetsalat,Flakes,SUB,,18,18.0,7,14.29,22.22,-1.6,2.9,3.8,6.7,True,True,False,False,HM LTD,False
+107,Epyk’s LostSon,Flakes,SUB,,14,14.0,3,33.33,0.0,2.7,4.5,0.0,4.5,False,True,False,False,ALT LTD,True
+108,tun tun,Flakes,SUB,,16,16.0,6,50.0,78.57,-1.0,2.4,1.7,4.1,True,True,False,False,HM LTD,False
+109,crismel143,Flakes,SUB,,16,15.29,3,0.0,66.67,0.0,0.0,3.5,3.5,True,True,False,False,HM LTD,False
+110,MISTER JOKER,Flakes,SUB,,16,16.0,0,0.0,100.0,,0.0,1.7,1.7,True,False,True,False,HM ND,False
+111,ཉིཔིོེིུDREADཉི,Flakes,SUB,,14,13.0,7,0.0,0.0,2.3,0.0,1.6,1.6,False,True,False,False,LTD,False
+112,Sara Ahmed,Flakes,SUB,,13,13.0,0,0.0,100.0,,0.0,1.5,1.5,True,False,True,False,HM ND,False
+113,*={ROMPER}=*,Flakes,SUB,,16,15.5,2,0.0,50.0,-0.5,0.0,0.0,0.0,True,True,False,False,HM LTD,False
+114,Dragon Slayer �,Flakes,SUB,,16,16.0,0,0.0,100.0,,0.0,0.0,0.0,True,False,True,False,HM ND,False
+115,ProjectSnipe3,Flakes,SUB,,14,14.0,2,0.0,50.0,2.5,0.0,0.0,0.0,True,True,False,False,ALT HM LTD,True
+116,ZiggyTheGreat2,Flakes,SUB,,11,11.0,1,0.0,50.0,3.0,0.0,0.0,0.0,True,True,False,False,ALT HM LTD,True
+117,Evil Nugget Man,Flakes,SUB,,12,,0,,,,,,,False,False,True,False,ND,False
