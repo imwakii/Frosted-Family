@@ -13,11 +13,14 @@ EDIT EACH CYCLE: CLAN_FORMAT below (leagues change on promotion/demotion).
 """
 
 import argparse
-from pathlib import Path
 
 import pandas as pd
-from PIL import Image, ImageDraw, ImageFont
-from fontTools.ttLib import TTFont
+from PIL import Image, ImageDraw
+
+from frosted.config import (BG, CLAN_COLORS, DASHBOARD_URL, DIM, DIVIDER_BG, GOLD,
+                            GOLD_DIM, LINK_BLUE, PANEL_BG, ROW_ALT, SUBTITLE,
+                            TH_COLOR_MAP, TITLE_BLUE, WHITE)
+from frosted.fonts import build_charset, clean, sized
 
 # ─── per-cycle config ─────────────────────────────────────────────────────────
 CLAN_ORDER  = ["Fire", "Cake"]          # Flakes sits out this cycle
@@ -27,30 +30,6 @@ CLAN_FORMAT = {
 }
 N_SUBS_SHOWN = 14
 DASHBOARD_URL = "frosted-family.streamlit.app"
-
-# ─── palette ──────────────────────────────────────────────────────────────────
-CLAN_COLORS = {
-    "Fire":   (255, 107,  53),
-    "Cake":   ( 74, 144, 217),
-    "Flakes": (123, 104, 238),
-}
-TH_COLOR_MAP = {
-    7:  (224, 113,   0),  8:  (155,  90,  40),  9:  ( 68,  78,  97),
-    10: (184,   8,   0),  11: (206, 204, 224),  12: (  0,  89, 177),
-    13: (  0, 185, 214),  14: (  0, 185, 129),  15: (103,  84, 153),
-    16: (224, 175,   2),  17: ( 44,  83, 126),  18: ( 81, 172, 224),
-}
-BG          = ( 14,  25,  44)
-PANEL_BG    = ( 22,  34,  56)
-ROW_ALT     = ( 27,  41,  65)
-DIVIDER_BG  = ( 17,  28,  48)
-TITLE_BLUE  = ( 93, 173, 236)
-SUBTITLE    = (146, 163, 188)
-WHITE       = (255, 255, 255)
-DIM         = (150, 165, 188)
-GOLD        = (247, 201,  72)
-GOLD_DIM    = (188, 155,  72)
-LINK_BLUE   = (120, 200, 255)
 
 # ─── geometry ─────────────────────────────────────────────────────────────────
 CANVAS_W     = 1700
@@ -64,45 +43,19 @@ DIVIDER_H    = 34
 FOOTER_GAP   = 30
 FOOTER_H     = 112
 
-# Display aliases for names DejaVu cannot render at all (pure CJK etc).
-# Without these clean() falls back to "?" and the row becomes unusable.
-NAME_ALIAS = {
-    "ジェイ": "Jay",
-}
-
-FONT_DIR = Path("/usr/share/fonts/truetype/dejavu")
-BOLD, REG = FONT_DIR / "DejaVuSans-Bold.ttf", FONT_DIR / "DejaVuSans.ttf"
 
 
 def load_fonts():
-    f = lambda p, s: ImageFont.truetype(str(p), s)
-    return {
-        "title":    f(BOLD, 68), "subtitle": f(REG, 25),
-        "clan":     f(BOLD, 44), "format":   f(REG, 19),
-        "avg_lbl":  f(REG, 15),  "avg":      f(BOLD, 40),
-        "colhead":  f(REG, 16),  "rank":     f(REG, 19),
-        "name":     f(BOLD, 22), "name_sub": f(REG, 21),
-        "score":    f(BOLD, 23), "th":       f(BOLD, 16),
-        "pill":     f(BOLD, 13), "divider":  f(BOLD, 15),
-        "foot_b":   f(BOLD, 26), "foot_l":   f(BOLD, 22), "note": f(REG, 18),
-    }
-
-
-def build_charset():
-    """Codepoints DejaVu Sans can actually render."""
-    cps = set()
-    for path in (BOLD, REG):
-        for table in TTFont(str(path))["cmap"].tables:
-            cps |= set(table.cmap.keys())
-    return cps
-
-
-def clean(text, charset):
-    """Drop glyphs DejaVu lacks (emoji, CJK, Tibetan...) and tidy whitespace."""
-    text = NAME_ALIAS.get(str(text).strip(), text)
-    out = "".join(c for c in str(text) if ord(c) in charset)
-    out = " ".join(out.split()).strip(" -_·.")
-    return out or "?"
+    return sized({
+        "title":   ("b", 68), "subtitle": ("r", 25),
+        "clan":    ("b", 44), "format":   ("r", 19),
+        "avg_lbl": ("r", 15), "avg":      ("b", 40),
+        "colhead": ("r", 16), "rank":     ("r", 19),
+        "name":    ("b", 22), "name_sub": ("r", 21),
+        "score":   ("b", 23), "th":       ("b", 16),
+        "pill":    ("b", 13), "divider":  ("b", 15),
+        "foot_b":  ("b", 26), "foot_l":   ("b", 22), "note": ("r", 18),
+    })
 
 
 def text_color_for(bg):

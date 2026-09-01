@@ -1,8 +1,12 @@
+from pathlib import Path
+
 import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
+
+from frosted.config import CLAN_COLORS_HEX as CLAN_COLORS, SLOT_COLORS_HEX as SLOT_COLORS
 
 # ── Page config ────────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -13,14 +17,14 @@ st.set_page_config(
 )
 
 # ── Theme tokens ───────────────────────────────────────────────────────────────
-CLAN_COLORS  = {"Fire": "#FF6B35", "Cake": "#4A90D9", "Flakes": "#7B68EE"}
-SLOT_COLORS  = {"CORE": "#27AE60", "SUB": "#E67E22", "Sitting Out": "#95A5A6"}
+# CLAN_COLORS and SLOT_COLORS come from frosted.config so the app and the two
+# poster scripts cannot drift apart. Do not redefine them here.
 SCORE_MAX    = {"offense_score": 120, "defense_score": 50, "final_score": 175}
 
 DISPLAY_COLS = [
     "name", "clan", "cwl_slot", "current_th", "attack_count",
     "three_star_pct", "miss_pct", "th_attack_diff",
-    "offense_score", "defense_score", "final_score", "flags",
+    "offense_score", "defense_score", "final_score", "tier", "flags",
 ]
 
 COL_CFG = {
@@ -41,13 +45,22 @@ COL_CFG = {
     "final_score":    st.column_config.ProgressColumn(
         "Final", format="%.1f", min_value=0, max_value=SCORE_MAX["final_score"]
     ),
+    "tier":           st.column_config.TextColumn("Record", width="small"),
     "flags":          st.column_config.TextColumn("Flags", width="small"),
 }
 
 # ── Data ───────────────────────────────────────────────────────────────────────
 @st.cache_data
-def load_data() -> pd.DataFrame:
-    df = pd.read_csv("frosted_cwl_members.csv", index_col="row")
+def load_data(path: str = "frosted_cwl_members.csv") -> pd.DataFrame:
+    # Anchored on this file's directory so the app runs from anywhere, not only
+    # from the repo root.
+    csv = Path(path)
+    if not csv.is_absolute():
+        csv = Path(__file__).resolve().parent / csv
+    df = pd.read_csv(csv, index_col="row")
+    if "tier" not in df.columns:
+        df["tier"] = "NO DATA"
+    df["tag"] = df.get("tag", pd.Series("", index=df.index)).fillna("")
     bool_cols = ["flag_high_miss", "flag_ltd_data", "flag_no_data", "flag_prev_data"]
     for c in bool_cols:
         df[c] = df[c].fillna(False).astype(bool)
@@ -63,7 +76,7 @@ def load_data() -> pd.DataFrame:
 try:
     df_full = load_data()
 except FileNotFoundError:
-    st.error("⚠️ `frosted_cwl_members.csv` not found. Place it in the same directory as `app.py`.")
+    st.error("⚠️ `frosted_cwl_members.csv` not found. Run `python build_cycle.py --cycle <YYYY-MM>` to build it.")
     st.stop()
 
 # ── Helpers ────────────────────────────────────────────────────────────────────

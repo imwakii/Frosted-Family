@@ -14,12 +14,15 @@ EDIT EACH CYCLE: CLAN_STATUS below.
 """
 
 import argparse
-from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from PIL import Image, ImageDraw, ImageFont
-from fontTools.ttLib import TTFont
+from PIL import Image, ImageDraw
+
+from frosted.config import (BG, CLAN_COLORS, DIM, DIMMER, DIVIDER_BG, GOLD, GOLD_DIM,
+                            PANEL_BG, ROW_ALT, STATUS_STYLE, SUBTITLE, TH_COLOR_MAP,
+                            TITLE_BLUE, WHITE)
+from frosted.fonts import build_charset, clean, sized
 
 # ─── per-cycle config ─────────────────────────────────────────────────────────
 CLAN_ORDER  = ["Fire", "Cake", "Flakes"]
@@ -34,38 +37,6 @@ SECTIONS_AFTER = [("CORE", "STARTING FIFTEEN"),
 SECTIONS_BEFORE = [("ACTIVE", "ACTIVE"), ("THIN", "THIN RECORD"),
                    ("HIGH MISS", "HIGH MISS"), ("INACTIVE", "INACTIVE")]
 
-# ─── palette (shared with make_poster.py) ─────────────────────────────────────
-CLAN_COLORS = {
-    "Fire":   (255, 107,  53),
-    "Cake":   ( 74, 144, 217),
-    "Flakes": (123, 104, 238),
-}
-TH_COLOR_MAP = {
-    7:  (224, 113,   0),  8:  (155,  90,  40),  9:  ( 68,  78,  97),
-    10: (184,   8,   0),  11: (206, 204, 224),  12: (  0,  89, 177),
-    13: (  0, 185, 214),  14: (  0, 185, 129),  15: (103,  84, 153),
-    16: (224, 175,   2),  17: ( 44,  83, 126),  18: ( 81, 172, 224),
-}
-STATUS_STYLE = {                       # tier -> (label, pill colour)
-    "PROVEN":          ("ACTIVE",    ( 39, 174,  96)),
-    "THIN RECORD":     ("THIN",      ( 52, 130, 190)),
-    "UNRELIABLE (HM)": ("HIGH MISS", (211, 120,  32)),
-    "LAPSING":         ("INACTIVE",  ( 88,  96, 112)),
-    "DORMANT":         ("INACTIVE",  ( 88,  96, 112)),
-    "NO DATA":         ("INACTIVE",  ( 88,  96, 112)),
-}
-BG         = ( 14,  25,  44)
-PANEL_BG   = ( 22,  34,  56)
-ROW_ALT    = ( 27,  41,  65)
-DIVIDER_BG = ( 17,  28,  48)
-TITLE_BLUE = ( 93, 173, 236)
-SUBTITLE   = (146, 163, 188)
-WHITE      = (255, 255, 255)
-DIM        = (150, 165, 188)
-DIMMER     = (108, 122, 145)
-GOLD       = (247, 201,  72)
-GOLD_DIM   = (188, 155,  72)
-
 # ─── geometry ─────────────────────────────────────────────────────────────────
 CANVAS_W    = 2400
 MARGIN      = 44
@@ -78,42 +49,18 @@ DIVIDER_H   = 30
 FOOTER_GAP  = 30
 FOOTER_H    = 92
 
-# Display aliases for names DejaVu cannot render at all (pure CJK etc).
-# Without these clean() falls back to "?" and the row becomes unusable.
-NAME_ALIAS = {
-    "ジェイ": "Jay",
-}
-
-FONT_DIR = Path("/usr/share/fonts/truetype/dejavu")
-BOLD, REG = FONT_DIR / "DejaVuSans-Bold.ttf", FONT_DIR / "DejaVuSans.ttf"
 
 
 def load_fonts():
-    f = lambda p, s: ImageFont.truetype(str(p), s)
-    return {
-        "title":   f(BOLD, 68), "subtitle": f(REG, 25),
-        "clan":    f(BOLD, 42), "format":   f(REG, 18),
-        "avg_lbl": f(REG, 14),  "avg":      f(BOLD, 34),
-        "colhead": f(REG, 14),  "name":     f(BOLD, 18),
-        "name_d":  f(REG, 18),  "score":    f(BOLD, 18),
-        "th":      f(BOLD, 14), "pill":     f(BOLD, 11),
-        "divider": f(BOLD, 14), "foot_b":   f(BOLD, 24), "note": f(REG, 19),
-    }
-
-
-def build_charset():
-    cps = set()
-    for path in (BOLD, REG):
-        for table in TTFont(str(path))["cmap"].tables:
-            cps |= set(table.cmap.keys())
-    return cps
-
-
-def clean(text, charset):
-    text = NAME_ALIAS.get(str(text).strip(), text)
-    out = "".join(c for c in str(text) if ord(c) in charset)
-    out = " ".join(out.split()).strip(" -_·.")
-    return out or "?"
+    return sized({
+        "title":   ("b", 68), "subtitle": ("r", 25),
+        "clan":    ("b", 42), "format":   ("r", 18),
+        "avg_lbl": ("r", 14), "avg":      ("b", 34),
+        "colhead": ("r", 14), "name":     ("b", 18),
+        "name_d":  ("r", 18), "score":    ("b", 18),
+        "th":      ("b", 14), "pill":     ("b", 11),
+        "divider": ("b", 14), "foot_b":   ("b", 24), "note": ("r", 19),
+    })
 
 
 def text_color_for(bg):
@@ -227,8 +174,6 @@ def draw_panel(img, draw, px, py, pw, clan, groups, core_avg, subtitle, fonts, c
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--csv",  default="frosted_cwl_members.csv")
-    ap.add_argument("--diag", default="september_pool_diagnostic.csv",
-                    help="diagnostic file supplying the activity tier per player")
     ap.add_argument("--out",  default="frosted-family-directory.png")
     ap.add_argument("--date", required=True)
     ap.add_argument("--title", default="FROSTED FAMILY")
@@ -240,8 +185,12 @@ def main():
 
     df = pd.read_csv(args.csv)
     df["transferred_from"] = df["transferred_from"].fillna("")
-    tiers = pd.read_csv(args.diag)[["Name", "tier"]].rename(columns={"Name": "name"})
-    df = df.merge(tiers, on="name", how="left")
+    if "tier" not in df.columns:
+        raise SystemExit(
+            f"{args.csv} has no `tier` column. Run build_cycle.py to produce it. "
+            "This used to come from a *_pool_diagnostic.csv joined on name; that "
+            "file is a working artefact that must not be committed, and joining "
+            "on name misreads a rename as a departure plus an arrival.")
     df["tier"] = df["tier"].fillna("NO DATA")
     df["status"] = df["tier"].map(lambda t: STATUS_STYLE.get(t, ("?", None))[0])
     df["origin"] = df.apply(
