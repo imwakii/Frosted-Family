@@ -171,7 +171,7 @@ with tab_ov:
     st.divider()
 
     # Scoring formula card
-    with st.expander("📐 How scores are calculated", expanded=False):
+    with st.expander("📐 How scores are calculated", expanded=True):
         st.markdown("""
 **Every player gets three numbers — Offense, Defense, and Final (= Offense + Defense).**
 
