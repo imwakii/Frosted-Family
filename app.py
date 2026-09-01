@@ -389,5 +389,6 @@ with tab_th:
             + (f" · avg {avg:.1f}" if not np.isnan(avg) else "")
         )
 
-        with st.expander(label, expanded=(th == th_levels[0])):
+        # bool() because th_levels is a numpy array: st.expander rejects np.bool_.
+        with st.expander(label, expanded=bool(th == th_levels[0])):
             display_table(th_df, height=min(80 + len(th_df) * 35, 600))
