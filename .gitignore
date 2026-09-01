@@ -1,0 +1,19 @@
+# Working artefacts — never committed. They go stale within days and they name
+# who is being benched or pruned.
+*_pool_diagnostic.csv
+*_move_checklist.csv
+*_moves.md
+
+# Archive: posters, superseded rosters, ad-hoc exports, notes. Kept on disk in
+# one place, deliberately out of git so the repo stays small and nothing here
+# ever reaches GitHub.
+archive/
+
+# Generated posters land at the repo root before being filed into archive/.
+frosted-cwl-roster-*.png
+frosted-family-*.png
+
+__pycache__/
+*.pyc
+.pytest_cache/
+.DS_Store
