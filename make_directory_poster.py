@@ -6,9 +6,14 @@ Companion to make_poster.py. Where that renders the CWL lineup (CORE + top subs
 for participating clans only), this renders EVERY member of all three clans,
 grouped by CWL slot, with an activity status tag and the 50-member cap per clan.
 
-    python3 make_directory_poster.py --csv frosted_cwl_members.csv \
-        --diag september_pool_diagnostic.csv --date "2 SEPTEMBER 2026" \
+    python make_directory_poster.py --csv frosted_cwl_members.csv \
+        --date "2 SEPTEMBER 2026" --mode after \
         --out frosted-family-directory.png
+
+The activity tier comes from the `tier` column of the roster, written by
+build_cycle.py. It used to come from a *_pool_diagnostic.csv joined on name:
+that file is a working artefact that must not be committed, and joining on
+name misreads a rename as one departure plus one arrival.
 
 EDIT EACH CYCLE: CLAN_STATUS below.
 """
