@@ -7,6 +7,8 @@ import plotly.express as px
 import plotly.graph_objects as go
 
 from frosted.config import CLAN_COLORS_HEX as CLAN_COLORS, SLOT_COLORS_HEX as SLOT_COLORS
+from frosted.config import TREND_CONTEXT_HEX, TREND_SERIES_HEX
+from frosted.history import movers
 
 # ── Page config ────────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -79,6 +81,14 @@ except FileNotFoundError:
     st.error("⚠️ `frosted_cwl_members.csv` not found. Run `python build_cycle.py --cycle <YYYY-MM>` to build it.")
     st.stop()
 
+@st.cache_data
+def load_history(path: str = "data/score_history.csv") -> pd.DataFrame:
+    # Written by build_cycle.py. One row per player per cycle, keyed on tag.
+    csv = Path(__file__).resolve().parent / path
+    if not csv.exists():
+        return pd.DataFrame()
+    return pd.read_csv(csv, dtype={"cycle": str})
+
 # ── Helpers ────────────────────────────────────────────────────────────────────
 def core_avg(df: pd.DataFrame) -> float:
     vals = df.loc[df["cwl_slot"] == "CORE", "final_score"].dropna()
@@ -127,12 +137,13 @@ with st.sidebar:
     st.caption(f"Showing **{len(df)}** of **{len(df_full)}** members")
 
 # ── Tabs ───────────────────────────────────────────────────────────────────────
-tab_ov, tab_ros, tab_exp, tab_ch, tab_th = st.tabs([
+tab_ov, tab_ros, tab_exp, tab_ch, tab_th, tab_tr = st.tabs([
     "📊 Overview",
     "🏠 Rosters",
     "🔍 Explorer",
     "📈 Charts",
     "🏗️ TH Directory",
+    "📉 Trends",
 ])
 
 # ════════════════════════════════════════════════════════════════════════════════
@@ -184,7 +195,7 @@ with tab_ov:
     st.divider()
 
     # Scoring formula card
-    with st.expander("📐 How scores are calculated", expanded=False):
+    with st.expander("📐 How scores are calculated", expanded=True):
         st.markdown("""
 **Every player gets three numbers — Offense, Defense, and Final (= Offense + Defense).**
 
@@ -392,3 +403,141 @@ with tab_th:
         # bool() because th_levels is a numpy array: st.expander rejects np.bool_.
         with st.expander(label, expanded=bool(th == th_levels[0])):
             display_table(th_df, height=min(80 + len(th_df) * 35, 600))
+
+# ════════════════════════════════════════════════════════════════════════════════
+# TAB 6 — TRENDS
+# ════════════════════════════════════════════════════════════════════════════════
+with tab_tr:
+    st.subheader("Score Over Time")
+    hist = load_history()
+
+    if hist.empty or hist["cycle"].nunique() < 2:
+        st.info("Needs at least two cycles in `data/score_history.csv`. "
+                "Run `python build_cycle.py --cycle <YYYY-MM>` to write it.")
+    else:
+        st.caption(
+            "One point per monthly export. Each export covers roughly the previous "
+            "three to four months, so neighbouring points share most of their wars. "
+            "Read this as a rolling score that moves slowly, not as one month's form. "
+            "Every cycle is re-scored with today's formula, so a line only moves "
+            "when the player's record did."
+        )
+
+        cyc = sorted(hist["cycle"].unique())
+        cyc_label = {c: pd.Timestamp(c + "-01").strftime("%b %Y") for c in cyc}
+        # A player's clan and name are as of the last cycle they appear in.
+        last_seen = hist.sort_values("cycle").groupby("tag").last()
+
+        f1, f2, f3 = st.columns([2, 3, 2])
+        with f1:
+            who = st.radio("Members", ["Current members", "Include former members"],
+                           horizontal=True, key="tr_who")
+        with f2:
+            tr_clans = st.multiselect("Clan (latest)", ["Fire", "Cake", "Flakes"],
+                                      default=["Fire", "Cake", "Flakes"], key="tr_clans")
+        with f3:
+            metric = st.radio("Show", ["Score", "Family rank"], horizontal=True,
+                              key="tr_metric")
+
+        pool = last_seen[last_seen["clan"].isin(tr_clans)]
+        if who == "Current members":
+            pool = pool[pool["is_current_member"]]
+        view = hist[hist["tag"].isin(pool.index)]
+
+        # Default highlight: the three biggest risers and fallers between the
+        # two latest cycles, among players in view.
+        mv = movers(hist, cyc[-2], cyc[-1])
+        mv = mv[mv["tag"].isin(pool.index)].sort_values("score_change")
+        default_tags = list(mv["tag"].tail(3)[::-1]) + list(mv["tag"].head(3))
+
+        options = pool.sort_values("final_score", ascending=False).index.tolist()
+        fmt = lambda t: (f"{pool.at[t, 'name']} · {pool.at[t, 'clan']}"
+                         + ("" if pool.at[t, "is_current_member"] else " · left"))
+        picked = st.multiselect(
+            f"Highlight players (up to {len(TREND_SERIES_HEX)})", options,
+            default=[t for t in default_tags if t in options],
+            format_func=fmt, max_selections=len(TREND_SERIES_HEX), key="tr_pick",
+        )
+
+        # Colour follows the player, not their position in the list: removing
+        # one highlight must not repaint the others.
+        cmap = st.session_state.setdefault("tr_colors", {})
+        for t in list(cmap):
+            if t not in picked:
+                del cmap[t]
+        for t in picked:
+            if t not in cmap:
+                free = [c for c in TREND_SERIES_HEX if c not in cmap.values()]
+                cmap[t] = free[0]
+
+        y = "final_score" if metric == "Score" else "family_rank"
+        fig = go.Figure()
+        for tag, g in view[~view["tag"].isin(picked)].groupby("tag"):
+            g = g.sort_values("cycle")
+            fig.add_trace(go.Scatter(
+                x=[cyc_label[c] for c in g["cycle"]], y=g[y], mode="lines",
+                line=dict(color=TREND_CONTEXT_HEX, width=1), opacity=0.5,
+                name=g["name"].iloc[-1], showlegend=False,
+                hovertemplate="%{fullData.name}<br>%{x}: %{y:.1f}<extra></extra>",
+            ))
+        for tag in picked:
+            g = view[view["tag"] == tag].sort_values("cycle")
+            name = pool.at[tag, "name"]
+            former = not pool.at[tag, "is_current_member"]
+            fig.add_trace(go.Scatter(
+                x=[cyc_label[c] for c in g["cycle"]], y=g[y],
+                mode="lines+markers+text",
+                line=dict(color=cmap[tag], width=2, dash="dot" if former else "solid"),
+                marker=dict(size=8, color=cmap[tag],
+                            line=dict(color="white", width=2)),
+                text=[""] * (len(g) - 1) + [f"  {name}"], textposition="middle right",
+                textfont=dict(size=11),
+                name=name + (" (left)" if former else ""),
+                customdata=g[["clan", "tier", "family_rank", "final_score"]],
+                hovertemplate=(f"<b>{name}</b><br>%{{x}} · %{{customdata[0]}}"
+                               "<br>Score %{customdata[3]:.1f} · rank #%{customdata[2]:.0f}"
+                               "<br>%{customdata[1]}<extra></extra>"),
+            ))
+        fig.update_layout(
+            height=520, margin=dict(l=0, r=140, t=10, b=0),
+            legend=dict(orientation="h", y=-0.12, title_text=""),
+            hovermode="closest",
+            xaxis=dict(categoryorder="array", categoryarray=[cyc_label[c] for c in cyc],
+                       showgrid=False),
+            yaxis=dict(title="Final score" if metric == "Score" else "Family rank (1 = top)",
+                       autorange="reversed" if metric == "Family rank" else True,
+                       gridcolor="rgba(128,128,128,0.15)", zeroline=False),
+        )
+        st.plotly_chart(fig, use_container_width=True)
+        st.caption(f"Grey lines: the other {view['tag'].nunique() - len(picked)} players "
+                   "in view, for context. Dotted: no longer in the family.")
+
+        if picked:
+            with st.expander("Highlighted players as a table"):
+                tbl = (view[view["tag"].isin(picked)]
+                       .pivot_table(index="name", columns="cycle", values=y))
+                tbl.columns = [cyc_label[c] for c in tbl.columns]
+                st.dataframe(tbl.round(1), use_container_width=True)
+
+        st.divider()
+        st.markdown(f"#### Biggest moves, {cyc_label[cyc[-2]]} → {cyc_label[cyc[-1]]}")
+        st.caption("Players in view who appear in both exports. Rank change is "
+                   "positive when a player climbed.")
+        mcfg = {
+            "name": st.column_config.TextColumn("Name"),
+            "clan": st.column_config.TextColumn("Clan", width="small"),
+            "final_score_was": st.column_config.NumberColumn(cyc_label[cyc[-2]], format="%.1f"),
+            "final_score": st.column_config.NumberColumn(cyc_label[cyc[-1]], format="%.1f"),
+            "score_change": st.column_config.NumberColumn("Change", format="%+.1f"),
+            "rank_change": st.column_config.NumberColumn("Rank Δ", format="%+d"),
+        }
+        mcols = list(mcfg)
+        up, down = st.columns(2)
+        with up:
+            st.markdown("**Risers**")
+            st.dataframe(mv.sort_values("score_change", ascending=False)[mcols].head(10),
+                         column_config=mcfg, hide_index=True, use_container_width=True)
+        with down:
+            st.markdown("**Fallers**")
+            st.dataframe(mv[mcols].head(10), column_config=mcfg, hide_index=True,
+                         use_container_width=True)

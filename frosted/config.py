@@ -76,4 +76,10 @@ def hex_of(rgb):
 CLAN_COLORS_HEX = {k: hex_of(v) for k, v in CLAN_COLORS.items()}
 SLOT_COLORS_HEX = {"CORE": "#27AE60", "SUB": "#E67E22", "Sitting Out": "#95A5A6"}
 
+# Trends tab: highlighted players take these in fixed order, never cycled, so the
+# cap on highlighted players is len(TREND_SERIES_HEX). Everyone else is context.
+TREND_SERIES_HEX = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100",
+                    "#e87ba4", "#008300", "#4a3aa7", "#e34948"]
+TREND_CONTEXT_HEX = "#c3c7cf"
+
 DASHBOARD_URL = "frosted-family.streamlit.app"

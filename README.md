@@ -20,7 +20,7 @@ python make_poster.py --csv frosted_cwl_members.csv \
     --date "2 OCTOBER 2026" --time "18:00 UTC"      # the CWL lineup poster
 python make_directory_poster.py --csv frosted_cwl_members.csv \
     --date "2 OCTOBER 2026" --mode after            # the full membership directory
-streamlit run app.py                                 # the dashboard, locally
+streamlit run app_frosted.py                                # the dashboard, locally
 python -m pytest                                     # the tests
 ```
 
@@ -33,7 +33,7 @@ Both poster scripts have a per-cycle config block at the top (`CLAN_FORMAT`, `CL
 | `frosted_cwl_members.csv` | The canonical roster. Keyed on player tag. |
 | `frosted/` | `config` (palette and thresholds, defined exactly once), `scoring`, `tiering`, `ingest`, `fonts` |
 | `build_cycle.py` | Six raw exports in, canonical roster out |
-| `app.py` | The Streamlit dashboard |
+| `app_frosted.py` | The Streamlit dashboard |
 | `make_poster.py`, `make_directory_poster.py` | The two posters |
 | `data/raw/YYYY-MM/` | Archived exports, one folder per cycle, each with a `manifest.md` |
 | `docs/specs/` | How the scoring works, and why |

@@ -21,7 +21,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from frosted import ingest, scoring, tiering
+from frosted import history, ingest, scoring, tiering
 
 # Columns Ka Wai owns. Carried forward on tag, never computed.
 HUMAN_COLUMNS = ["cwl_slot", "transferred_from", "flag_prev_data", "flag_alt"]
@@ -144,6 +144,9 @@ def main():
     ap.add_argument("--root", default="data/raw")
     ap.add_argument("--dry-run", action="store_true", help="report without writing")
     args = ap.parse_args()
+    # Player names carry emoji and non-Latin scripts; the Windows console
+    # defaults to cp1252 and crashed on them mid-report in October 2026.
+    sys.stdout.reconfigure(encoding="utf-8")
 
     try:
         new, rep = build(args.cycle, args.roster, args.root)
@@ -165,7 +168,9 @@ def main():
     (d / "manifest.md").write_text(
         manifest(args.cycle, ingest.window_summary(wars), args.roster, len(new)),
         encoding="utf-8")
-    print(f"\nWrote {args.roster} and {d / 'manifest.md'}.")
+    hist_path = Path(args.root).parent / "score_history.csv"
+    history.build_history(args.root).to_csv(hist_path, index=False)
+    print(f"\nWrote {args.roster}, {d / 'manifest.md'} and {hist_path}.")
     print("Allocation is yours: fill cwl_slot for anyone blank, then run the posters.")
     return 0
 

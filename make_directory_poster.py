@@ -33,12 +33,11 @@ from frosted.fonts import build_charset, clean, sized
 CLAN_ORDER  = ["Fire", "Cake", "Flakes"]
 CLAN_STATUS = {
     "Fire":   "15v15 · CHAMPION 3 · PRIORITY CLAN",
-    "Cake":   "15v15 · CHAMPION 3 · BACKFILL",
-    "Flakes": "NOT IN CWL · HOLDING PEN",
+    "Cake":   "15v15 · MASTERS 1 · BACKFILL",
+    "Flakes": "NOT IN CWL",
 }
 SECTIONS_AFTER = [("CORE", "STARTING FIFTEEN"),
-                  ("SUB", "SUBSTITUTES"),
-                  ("Sitting Out", "NOT ON CWL ROSTER")]
+                  ("SUB", "SUBSTITUTES")]   # Sitting Out is shown as a substitute
 SECTIONS_BEFORE = [("ACTIVE", "ACTIVE"), ("THIN", "THIN RECORD"),
                    ("HIGH MISS", "HIGH MISS"), ("INACTIVE", "INACTIVE")]
 
@@ -181,6 +180,7 @@ def main():
     ap.add_argument("--csv",  default="frosted_cwl_members.csv")
     ap.add_argument("--out",  default="frosted-family-directory.png")
     ap.add_argument("--date", required=True)
+    ap.add_argument("--time", default="", help='CWL start time, e.g. "18:00 UTC"')
     ap.add_argument("--title", default="FROSTED FAMILY")
     ap.add_argument("--mode", choices=["before", "after"], default="after",
                     help="before = clans as they stand today, grouped by status; "
@@ -209,6 +209,8 @@ def main():
         df["panel"] = df["clan"]
         df["move_label"] = np.where(moved, "← " + df["origin"].str.upper(), "")
         df["move_clan"]  = df["origin"]
+        # Everyone outside CORE reads as a substitute; the CSV keeps Sitting Out.
+        df["cwl_slot"] = df["cwl_slot"].replace("Sitting Out", "SUB")
 
     fonts, charset = load_fonts(), build_charset()
 
@@ -222,6 +224,8 @@ def main():
             recs = sub[sub[key] == slot].sort_values(
                 "final_score", ascending=False, na_position="last").to_dict("records")
             if recs:
+                if slot == "SUB" and not before and not (sub.cwl_slot == "CORE").any():
+                    heading = "MEMBERS"   # a clan with no CWL has no substitutes
                 groups.append((slot, heading, recs))
         if before:
             avg = None
@@ -240,8 +244,9 @@ def main():
     tw = draw.textlength(args.title, font=fonts["title"])
     draw.text(((CANVAS_W - tw) / 2, MARGIN + 6), args.title,
               font=fonts["title"], fill=TITLE_BLUE)
+    when = f"{args.date}, {args.time}" if args.time else args.date
     sub = ("MEMBERSHIP BEFORE MOVES" if before
-           else f"MEMBERSHIP AFTER MOVES  —  {args.date}")
+           else f"ROSTER  —  {when}")
     sw = draw.textlength(sub, font=fonts["subtitle"])
     draw.text(((CANVAS_W - sw) / 2, MARGIN + 92), sub,
               font=fonts["subtitle"], fill=SUBTITLE)

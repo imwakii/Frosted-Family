@@ -6,9 +6,11 @@ Data pipeline and dashboard for monthly Clan War League roster allocation across
 
 **Never push to `main`.** This repo auto-deploys to https://frosted-family.streamlit.app on push, and that URL is printed on the roster poster handed to ~100 clan members. Work on a branch, verify locally, and stop. Ka Wai merges.
 
-**Never commit working artefacts.** `*_pool_diagnostic.csv`, `*_move_checklist.csv`, `*_moves.md` and anything else naming who is being benched or pruned stay out of the repo. They go stale within days and they publish decisions that are not meant to be public. What belongs here: `frosted_cwl_members.csv`, `app.py`, `build_cycle.py`, the two poster scripts, the `frosted/` package, `tests/`, `docs/`, `data/raw/`, and the two requirements files. `archive/` holds past posters, superseded rosters and ad-hoc exports; it lives on disk and is git-ignored.
+**Never commit working artefacts.** `*_pool_diagnostic.csv`, `*_move_checklist.csv`, `*_moves.md` and anything else naming who is being benched or pruned stay out of the repo. They go stale within days and they publish decisions that are not meant to be public. What belongs here: `frosted_cwl_members.csv`, `app_frosted.py`, `build_cycle.py`, the two poster scripts, the `frosted/` package, `tests/`, `docs/`, `data/raw/`, and the two requirements files. `archive/` holds past posters, superseded rosters and ad-hoc exports; it lives on disk and is git-ignored.
 
 **Allocation is a human decision.** Which player lands in which clan and slot is Ka Wai's call, informed by things absent from the data: co-leader status, retention risk, who actually moves when told to. Never infer, adjust, or "improve" `clan`, `cwl_slot`, or `transferred_from`. Compute scores, surface implications, stop.
+
+The standing constraints he has already settled -- the one-way valve, Maki's lock, TH18-first and its exceptions, move sequencing against the 50 cap, and why Cake's demotion is deliberate -- are in `docs/specs/02-allocation-rules.md`. Read it before proposing any move, and do not re-litigate what it records as settled or promote what it records as open.
 
 **Ten rows have no `tag`.** They joined Cake between the 27 August export pull and the 30 August roster build, so they appear in no archived export and their tags cannot be recovered. `build_cycle.py` adopts a tag for them by name match on the next cycle and reports each one for verification. Until then it also reports them as dropped rather than losing them silently -- one of them, `rudra`, is a Cake CORE placement.
 
@@ -24,9 +26,13 @@ Data pipeline and dashboard for monthly Clan War League roster allocation across
 
 **Alts** are secondary accounts. They compete on merit like any other account. An older rule forcing alts to `SUB` was retired in July 2026.
 
+**Flakes sits out CWL by choice**, and Cake's expected demotion to Masters 1 is a deliberate two-tier outcome, not a failure. `docs/specs/02-allocation-rules.md` carries the reasoning and the roster evidence behind both.
+
 ## Data flow
 
-Six raw exports from clashspot.net per cycle, one members file and one war-statistics file per clan, land in `data/raw/YYYY-MM/`. `build_cycle.py` ingests and scores them into `frosted_cwl_members.csv`, which is canonical and drives three consumers: `app.py`, `make_poster.py`, and `make_directory_poster.py`. Nothing downstream reads the raw exports.
+Six raw exports from clashspot.net per cycle, one members file and one war-statistics file per clan, land in `data/raw/YYYY-MM/`. `build_cycle.py` ingests and scores them into `frosted_cwl_members.csv`, which is canonical and drives three consumers: `app_frosted.py`, `make_poster.py`, and `make_directory_poster.py`. Nothing downstream reads the raw exports.
+
+`build_cycle.py` also writes `data/score_history.csv`: every cycle folder under `data/raw/` re-scored with today's formula, one row per player per cycle, keyed on tag and labelled with each player's latest name. The app's Trends tab reads it. Each export is a 3-to-4-month window and consecutive windows overlap, so a history point is a rolling score sampled monthly, not one month's form. `is_current_member` means present in the latest export.
 
 **`data/raw/` folders are named by the cycle they fed, not by the month they were pulled.** These differ: the exports that produced the August roster were pulled on 27 July. Each folder carries a `manifest.md`, written by `build_cycle.py`, recording the pull date, the window and the roster it produced. Getting this wrong is how the archive became ambiguous in the first place.
 
@@ -49,7 +55,7 @@ The confidence weights (attacks capped at 25, defenses at 20) are load-bearing. 
 ```bash
 python build_cycle.py --cycle 2026-10   # six raw exports -> canonical roster
 python build_cycle.py --cycle 2026-10 --dry-run   # report only, writes nothing
-streamlit run app.py                    # dashboard
+streamlit run app_frosted.py                   # dashboard
 python -m pytest                        # all tests
 python make_poster.py --csv frosted_cwl_members.csv --date "2 SEPTEMBER 2026" --time "18:00 UTC"
 python make_directory_poster.py --csv frosted_cwl_members.csv --date "2 SEPTEMBER 2026"

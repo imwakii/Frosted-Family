@@ -26,7 +26,7 @@ from frosted.fonts import build_charset, clean, sized
 CLAN_ORDER  = ["Fire", "Cake"]          # Flakes sits out this cycle
 CLAN_FORMAT = {
     "Fire":   "15v15 · CHAMPION 3 · TH18",
-    "Cake":   "15v15 · CHAMPION 3 · TH16-18",
+    "Cake":   "15v15 · MASTERS 1 · TH13-18",
 }
 N_SUBS_SHOWN = 14
 DASHBOARD_URL = "frosted-family.streamlit.app"

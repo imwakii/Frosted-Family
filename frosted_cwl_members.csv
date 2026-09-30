@@ -1,111 +1,115 @@
 row,tag,name,clan,cwl_slot,transferred_from,current_th,avg_war_th,attack_count,three_star_pct,miss_pct,th_attack_diff,offense_score,defense_score,final_score,flag_high_miss,flag_ltd_data,flag_no_data,flag_prev_data,flags,flag_alt,tier
-1,#R2PPV8CL,Waki,Fire,CORE,,18,18.0,100,96.0,3.8,-0.11,91.8,32.2,124.0,False,False,False,False,,False,PROVEN
-2,#8Y99LCLQ,juna the great,Fire,CORE,,18,17.29,62,87.1,0.0,0.34,88.6,19.2,107.7,False,False,False,False,,False,PROVEN
-3,#YJGG9LVJQ,Game Changer,Fire,CORE,,18,17.87,90,83.3,2.2,-0.07,81.2,21.8,103.1,False,False,False,False,,False,PROVEN
-4,#J8LJUQUV,RR,Fire,CORE,Cake,18,18.0,62,74.2,0.0,-0.27,73.2,27.6,100.8,False,False,False,False,← Cake,False,PROVEN
-5,#8VQJ0Q2YP,Ziad El_Giar,Fire,CORE,,18,18.0,96,77.1,9.4,-0.03,69.7,29.9,99.6,False,False,False,False,,False,PROVEN
-6,#2PQU82Y82,Grozbolt,Fire,CORE,Cake,18,17.64,85,84.7,2.3,0.22,83.7,13.8,97.5,False,False,False,False,← Cake,False,PROVEN
-7,#8U09GPLRU,Night fury,Fire,CORE,,18,18.0,114,79.0,0.9,-0.01,78.2,18.4,96.6,False,False,False,False,,False,PROVEN
-8,#9L02LJ9P,Vadim,Fire,CORE,Cake,18,17.03,100,74.0,0.0,0.7,76.6,19.9,96.5,False,False,False,False,← Cake,False,PROVEN
-9,#2YJC8C8L,Chaengiiee,Fire,CORE,Cake,18,17.38,72,80.6,5.3,0.12,76.8,19.2,95.9,False,False,False,False,← Cake,False,PROVEN
-10,#YCPJ9UYG,Potetsalat,Fire,CORE,,18,18.0,101,84.2,10.6,-0.14,74.7,20.7,95.4,False,False,False,False,,False,PROVEN
-11,#J9V9GR,AstonishGaming,Fire,CORE,,18,18.0,83,73.5,12.6,-0.02,64.1,26.8,91.0,False,False,False,False,,False,PROVEN
-12,#2R8P92JYP,Blaze,Fire,CORE,,18,18.0,33,60.6,8.3,-0.12,55.2,31.8,87.0,False,False,False,False,,False,LAPSING
-13,#8929PCL,JayDogg,Fire,CORE,,18,18.0,48,70.8,7.7,-0.27,64.5,22.2,86.7,False,False,False,False,,False,PROVEN
-14,#9G9Y280QJ,Calsedy,Fire,CORE,,18,18.0,62,58.1,11.4,-0.02,51.4,21.8,73.2,False,False,False,False,,False,PROVEN
-15,#8YUYULG0V,Pulkit,Fire,CORE,,18,18.0,37,59.5,19.6,-0.08,47.6,16.1,63.7,False,False,False,False,,False,PROVEN
-16,#2C8RV02U,ZiggyTheGreat,Fire,SUB,Cake,18,17.97,43,74.4,0.0,-0.27,73.4,23.8,97.2,False,False,False,False,← Cake,False,DORMANT
-17,#28QP0RUL0,Brazy.,Fire,SUB,,18,17.8,92,84.8,14.0,-0.1,72.5,16.5,89.0,False,False,False,False,,False,PROVEN
-18,#PG9U0CV2J,Calpis,Fire,SUB,,18,18.0,83,75.9,14.4,-0.18,64.4,23.0,87.4,False,False,False,False,,False,PROVEN
-19,#2YVPP8PL,Raspberri,Fire,SUB,,17,16.62,24,87.5,7.7,-0.83,74.3,11.0,85.4,False,False,False,False,,False,PROVEN
-20,#2VGQLPVP0,LOGAN,Fire,SUB,,17,16.8,19,84.2,5.0,-0.38,59.6,9.1,68.7,False,False,False,False,,False,PROVEN
-21,#2UUJGLL8R,Acorn,Fire,SUB,,18,18.0,67,49.2,11.8,-0.03,43.4,11.9,55.2,False,False,False,False,,False,PROVEN
-22,#9P0Y0GU02,gobinda,Fire,SUB,,18,18.0,40,27.5,4.8,-0.15,26.0,17.6,43.6,False,False,False,False,,False,PROVEN
-23,#Y0QQYJ08,✨Mr Epyk✨,Fire,SUB,,18,18.0,10,60.0,16.7,0.0,20.0,1.9,21.9,False,False,False,False,,False,PROVEN
-24,#PLJRGVJLR,TheLionHeart,Fire,Sitting Out,Cake,17,16.11,11,81.8,0.0,1.16,38.1,7.3,45.3,False,False,False,False,← Cake,False,DORMANT
-25,#29RL9PY8U,Cxlvxn187,Fire,Sitting Out,Cake,18,18.0,7,85.7,12.5,0.0,21.0,15.3,36.3,False,True,False,False,← Cake LTD,False,DORMANT
-26,#2LR28L0J,Craxix,Fire,Sitting Out,,18,18.0,6,66.7,40.0,0.0,9.6,17.2,26.9,True,True,False,False,HM LTD,False,DORMANT
-27,#L29YQPYPC,aaditya,Fire,Sitting Out,,16,16.0,5,0.0,58.3,-0.4,0.0,6.9,6.9,True,True,False,False,HM LTD,False,LAPSING
-28,#LUV8J0Q8L,killerboy,Fire,Sitting Out,,18,17.75,1,0.0,87.5,-2.75,0.0,1.9,1.9,True,True,False,False,HM LTD,False,UNRELIABLE (HM)
-29,#2CU0J8C8L,bukoy,Fire,Sitting Out,,18,18.0,0,0.0,100.0,-18.0,0.0,0.0,0.0,True,False,False,False,HM,False,UNRELIABLE (HM)
-30,#PGGUP02C9,Caliber,Fire,Sitting Out,,15,15.0,2,0.0,50.0,3.0,0.0,0.0,0.0,True,True,False,False,HM LTD,False,LAPSING
-31,#2PVGLGLR,"Leoclasher,Ph.D",Fire,Sitting Out,,18,18.0,0,0.0,100.0,-18.0,0.0,0.0,0.0,True,False,False,False,HM,False,DORMANT
-32,#LLU2URVPP,Nugget Man,Fire,Sitting Out,Cake,17,17.0,4,0.0,0.0,-0.25,0.0,0.0,0.0,False,True,False,False,← Cake LTD,False,THIN RECORD
-33,#QY088898,War Chantu,Fire,Sitting Out,,18,,0,0.0,0.0,0.0,,,,False,False,True,False,ND,False,NO DATA
-34,#8P89L9VG2,DHRUV,Fire,Sitting Out,,18,,0,0.0,0.0,0.0,,,,False,False,True,False,ND,False,NO DATA
-35,#28UG0U0Q,bísq,Fire,Sitting Out,,18,,0,0.0,0.0,0.0,,,,False,False,True,False,ND,False,NO DATA
-36,#2YVYCQPYY,i'm Astonish,Fire,Sitting Out,,17,,0,0.0,0.0,0.0,,,,False,False,True,False,ALT ND,True,NO DATA
-37,#CGJ8YR8J,Maki,Cake,CORE,,18,18.0,98,86.7,2.0,-0.07,84.7,24.5,109.2,False,False,False,False,,False,PROVEN
-38,#20G28UPQG,juna the zealot,Cake,CORE,,16,15.96,54,88.9,0.0,0.74,92.2,13.0,105.1,False,False,False,False,,False,PROVEN
-39,#QV2V0JL8R,Death Eaters 3,Cake,CORE,Flakes,16,15.94,26,92.3,0.0,0.06,92.6,5.4,97.9,False,False,False,False,← Flakes,False,PROVEN
-40,#2C2RCG089,Death 3,Cake,CORE,,18,18.0,45,75.6,4.3,-0.42,70.8,26.1,96.9,False,False,False,False,,False,PROVEN
-41,#9VJQLVRGJ,Hallelou,Cake,CORE,,18,17.06,38,84.2,5.0,0.39,81.6,12.7,94.2,False,False,False,False,,False,PROVEN
-42,#P22QQ99Y0,DEATH EATERS jr,Cake,CORE,Flakes,17,17.0,53,77.4,0.0,-0.04,77.2,12.1,89.3,False,False,False,False,← Flakes ALT,True,PROVEN
-43,#2L8VGL0YC,XBrazyX,Cake,CORE,,18,18.0,100,84.0,8.3,-0.31,75.9,13.0,88.9,False,False,False,False,,False,PROVEN
-44,#GJGCGVQYV,wamr,Cake,CORE,,17,16.57,28,57.1,0.0,0.57,58.8,29.3,88.0,False,False,False,False,,False,PROVEN
-45,#PY99GV0JC,Genjey,Cake,CORE,Flakes,17,16.84,79,86.1,13.2,-0.68,72.2,11.0,83.2,False,False,False,False,← Flakes,False,PROVEN
-46,#80YVU9J8U,shyla,Cake,CORE,,18,18.0,52,67.3,11.9,-0.04,59.2,22.6,81.8,False,False,False,False,,False,PROVEN
-47,#GY0RQRPVG,Death Eaters RS,Cake,CORE,Flakes,18,17.81,68,80.9,8.1,-0.5,72.5,8.4,80.9,False,False,False,False,← Flakes,False,PROVEN
-48,#LYRQQUPC,Rodrigo,Cake,CORE,,18,18.0,50,48.0,15.2,-0.2,40.3,37.2,77.5,False,False,False,False,,False,PROVEN
-49,#QJPPV0GU8,Death Eaters 2,Cake,CORE,Flakes,17,16.76,43,55.8,4.4,-0.29,52.6,11.4,63.9,False,False,False,False,← Flakes,False,PROVEN
-50,#L9LCLYPRP,Deathly Knight,Cake,CORE,,18,17.39,72,51.4,6.5,0.17,48.5,13.8,62.3,False,False,False,False,,False,PROVEN
-51,,rudra,Cake,CORE,,18,17.5,48,43.8,7.7,-0.67,39.0,19.9,59.0,False,False,False,False,,False,NO DATA
-52,#GR0V20YRY,DemonJuan,Cake,SUB,Flakes,14,13.69,43,72.1,2.3,0.64,72.7,20.9,93.6,False,False,False,False,← Flakes,False,PROVEN
-53,#YLYJP80RC,Yaki,Cake,SUB,Flakes,16,15.57,79,78.5,9.2,1.02,74.9,18.2,93.1,False,False,False,False,← Flakes,False,PROVEN
-54,#9R0Y2828C,Grozbolt III,Cake,SUB,Flakes,16,15.38,70,75.7,9.1,0.66,71.1,15.8,86.8,False,False,False,False,← Flakes ALT,True,PROVEN
-55,#V8VRQ2RV,Ale,Cake,SUB,,16,15.44,50,60.0,0.0,0.62,61.9,22.4,84.3,False,False,False,False,,False,PROVEN
-56,#288RCPP92,LordDavid,Cake,SUB,Flakes,16,15.53,87,47.1,3.3,0.0,45.6,22.0,67.6,False,False,False,False,← Flakes,False,PROVEN
-57,,ジェイ,Cake,SUB,,18,18.0,40,37.5,9.1,-0.3,33.6,18.4,52.0,False,False,False,False,,False,NO DATA
-58,#L9U0VGRV,PAUL,Cake,SUB,,18,17.4,19,52.6,5.0,-0.56,36.9,3.8,40.7,False,False,False,False,,False,PROVEN
-59,#8P928R29,™️Gazo™️,Cake,SUB,,18,18.0,9,55.6,18.2,-0.33,16.1,13.5,29.6,False,True,False,False,LTD,False,PROVEN
-60,#PLCJCQRPG,246,Cake,SUB,,18,18.0,10,10.0,0.0,0.0,4.0,2.0,6.0,False,False,False,False,,False,PROVEN
-61,#PRPUQYG9Q,#SONY MAD NKK#.,Cake,Sitting Out,,18,18.0,24,58.3,25.0,-1.08,39.7,33.4,73.1,True,False,False,False,HM,False,UNRELIABLE (HM)
-62,,Cnghia,Cake,Sitting Out,,18,18.0,24,54.2,7.7,-2.29,42.5,21.1,63.6,False,False,False,False,,False,NO DATA
-63,,paree,Cake,Sitting Out,,18,18.0,14,28.6,30.0,-1.0,10.6,32.5,43.1,True,False,False,False,HM,False,NO DATA
-64,#PVGUG2C2,memoo,Cake,Sitting Out,,18,18.0,25,20.0,47.9,-0.6,10.1,25.3,35.4,True,False,False,False,HM,False,UNRELIABLE (HM)
-65,,Subh,Cake,Sitting Out,,18,18.0,21,19.0,30.0,-0.14,11.1,17.3,28.4,True,False,False,False,HM,False,NO DATA
-66,#PVQU8CG9J,Aarav Tyagi,Cake,Sitting Out,,18,18.0,10,30.0,37.5,-1.0,7.1,15.4,22.5,True,False,False,False,HM,False,UNRELIABLE (HM)
-67,,Bill Fettuccine,Cake,Sitting Out,,17,16.25,6,83.3,50.0,0.58,10.3,11.1,21.4,True,True,False,False,HM LTD,False,NO DATA
-68,,beejae1997,Cake,Sitting Out,,18,17.78,10,20.0,44.4,-0.68,4.3,13.5,17.8,True,False,False,False,HM,False,NO DATA
-69,#YJUQ00VPL,Bigmon,Cake,Sitting Out,,18,18.0,4,100.0,66.7,0.0,5.3,11.5,16.8,True,True,False,False,HM LTD,False,DORMANT
-70,#JJ8PYJYV,Rambo,Cake,Sitting Out,,18,18.0,6,50.0,0.0,0.0,12.0,3.8,15.8,False,True,False,False,LTD,False,LAPSING
-71,#JQJUYLJR,JayDogg II,Cake,Sitting Out,,16,15.0,8,50.0,20.0,1.25,13.6,1.8,15.4,False,True,False,False,ALT LTD,True,LAPSING
-72,#QLG2V0RRY,Blaziken,Cake,Sitting Out,Flakes,16,15.8,5,100.0,50.0,-1.4,9.3,5.2,14.5,True,True,False,False,← Flakes HM LTD,False,UNRELIABLE (HM)
-73,,GABRIIEL57,Cake,Sitting Out,,18,18.0,8,25.0,20.0,-1.37,6.0,5.7,11.7,False,True,False,False,LTD,False,NO DATA
-74,#GGJJ0U92Q,Guru,Cake,Sitting Out,Flakes,16,16.0,0,0.0,100.0,-16.0,0.0,10.5,10.5,True,False,False,False,← Flakes HM,False,UNRELIABLE (HM)
-75,#2UL2YL2GP,bluemo_24,Cake,Sitting Out,,18,18.0,8,37.5,60.0,0.0,4.8,3.7,8.5,True,True,False,False,HM LTD,False,UNRELIABLE (HM)
-76,,hama jasim,Cake,Sitting Out,,18,18.0,2,50.0,0.0,0.0,4.0,3.9,7.9,False,True,False,False,LTD,False,NO DATA
-77,#922RP2PV,Kubs,Cake,Sitting Out,,18,18.0,2,0.0,50.0,0.0,0.0,7.7,7.7,True,True,False,False,HM LTD,False,LAPSING
-78,#9CYCJJCJR,saro,Cake,Sitting Out,,18,18.0,2,50.0,0.0,-1.5,3.7,0.0,3.7,False,True,False,False,LTD,False,LAPSING
-79,#LC0992YLQ,silent killer,Cake,Sitting Out,Flakes,16,15.67,0,0.0,100.0,-15.67,0.0,1.8,1.8,True,False,False,False,← Flakes HM,False,UNRELIABLE (HM)
-80,#GVYLV9G2Y,Wai Yan,Cake,Sitting Out,Flakes,16,15.33,1,100.0,96.7,-6.33,0.1,0.0,0.1,True,True,False,False,← Flakes HM LTD,False,UNRELIABLE (HM)
-81,,Malik,Cake,Sitting Out,,18,18.0,0,0.0,100.0,-18.0,0.0,0.0,0.0,True,False,False,False,HM,False,NO DATA
-82,#90CV0JJ9L,Ms.DHana⚔️⚔️,Cake,Sitting Out,,18,18.0,6,0.0,25.0,-0.17,0.0,0.0,0.0,True,True,False,False,HM LTD,False,UNRELIABLE (HM)
-83,#QYYY20LR9,mohd mohsin,Cake,Sitting Out,,18,18.0,0,0.0,100.0,-18.0,0.0,0.0,0.0,True,False,False,False,HM,False,LAPSING
-84,#QYRL0LQQC,Alok yadav,Cake,Sitting Out,,18,18.0,5,0.0,58.3,-0.4,0.0,0.0,0.0,True,True,False,False,HM LTD,False,UNRELIABLE (HM)
-85,#Q82VYJ8JU,tuhyss,Cake,Sitting Out,Flakes,16,16.0,1,0.0,87.5,0.0,0.0,0.0,0.0,True,True,False,False,← Flakes HM LTD,False,UNRELIABLE (HM)
-86,#L2PUR2CC2,Epyk’s LostSon,Cake,Sitting Out,,15,,0,0.0,0.0,0.0,,,,False,False,True,False,ALT ND,True,NO DATA
-87,#8JCLQ80Y,Snipe789,Flakes,Sitting Out,,17,16.3,43,69.8,4.4,0.61,68.7,36.7,105.4,False,False,False,False,,False,LAPSING
-88,#RJRQQJ2C,Shadow Assasin,Flakes,Sitting Out,,15,15.0,10,100.0,0.0,0.9,41.8,5.0,46.8,False,False,False,False,,False,LAPSING
-89,#CUUC9VPG,twistedtiger,Flakes,Sitting Out,,13,12.36,16,81.2,27.3,0.58,38.9,7.4,46.3,True,False,False,False,HM,False,LAPSING
-90,#GPPR0V2Y,H1TM4CHINE☠,Flakes,Sitting Out,,16,16.0,31,32.3,8.8,0.03,29.5,15.1,44.5,False,False,False,False,,False,DORMANT
-91,#8PL0UCY2Y,Clowned Prince,Flakes,Sitting Out,,13,12.33,12,33.3,0.0,2.42,17.9,0.0,17.9,False,False,False,False,,False,LAPSING
-92,#PLQYRCVRJ,ZiggyTheGreat5,Flakes,Sitting Out,,13,13.0,6,66.7,57.1,1.17,7.3,7.5,14.8,True,True,False,False,ALT HM LTD,True,LAPSING
-93,#G008L0JG,InFeRNo,Flakes,Sitting Out,,16,15.14,6,50.0,57.1,0.03,5.2,8.8,13.9,True,True,False,False,HM LTD,False,DORMANT
-94,#UJGQ2YRV,HitMachine☣,Flakes,Sitting Out,,15,15.0,6,33.3,0.0,0.33,8.1,1.7,9.8,False,True,False,False,LTD,False,DORMANT
-95,#2QVYPC22J,Seth The Great,Flakes,Sitting Out,,14,14.0,2,100.0,0.0,0.5,8.2,1.6,9.8,False,True,False,False,LTD,False,DORMANT
-96,#Y9CCQVPQV,Yuki,Flakes,Sitting Out,,14,13.75,8,12.5,0.0,2.88,4.6,4.7,9.3,False,True,False,False,LTD,False,THIN RECORD
-97,#QQUUYQCR2,Rødbetsalat,Flakes,Sitting Out,,18,18.0,7,14.3,22.2,-1.57,2.9,3.8,6.7,True,True,False,False,HM LTD,False,DORMANT
-98,#9PP80QGG0,shuvo munshi,Flakes,Sitting Out,,16,16.0,7,28.6,41.7,-0.14,4.6,0.0,4.6,True,True,False,False,HM LTD,False,LAPSING
-99,#9G2JUUY8P,⚡⚡khiladi⚡⚡,Flakes,Sitting Out,,16,15.67,2,100.0,66.7,-0.17,2.6,1.8,4.4,True,True,False,False,HM LTD,False,LAPSING
-100,#GR8G9JV0P,YASEENKHAN,Flakes,Sitting Out,,16,14.2,5,20.0,50.0,0.2,2.0,1.7,3.7,True,True,False,False,HM LTD,False,LAPSING
-101,#YULVCJC0R,CRAZY,Flakes,Sitting Out,,16,16.0,2,0.0,0.0,0.0,0.0,3.5,3.5,False,True,False,False,LTD,False,DORMANT
-102,#G089UJJQQ,crismel143,Flakes,Sitting Out,,16,16.0,0,0.0,100.0,-16.0,0.0,3.5,3.5,True,False,False,False,HM,False,LAPSING
-103,#Q98LCCQ89,Mr.Black,Flakes,Sitting Out,,16,16.0,2,100.0,75.0,-3.0,1.7,1.8,3.4,True,True,False,False,HM LTD,False,DORMANT
-104,#G2GUCJVPU,Dragon Slayer �,Flakes,Sitting Out,,16,16.0,0,0.0,100.0,-16.0,0.0,1.8,1.8,True,False,False,False,HM,False,LAPSING
-105,#LCR22PUQQ,Sara Ahmed,Flakes,Sitting Out,,13,13.0,0,0.0,100.0,-13.0,0.0,1.5,1.5,True,False,False,False,HM,False,LAPSING
-106,#Y0VVLG82Y,ARYA'S BRO,Flakes,Sitting Out,,16,16.0,0,0.0,100.0,-16.0,0.0,0.0,0.0,True,False,False,False,HM,False,LAPSING
-107,#82PR9GY9V,MR.DELIG √,Flakes,Sitting Out,,16,,0,0.0,0.0,0.0,,,,False,False,True,False,ND,False,NO DATA
-108,#Y8R2JC98Q,KIYO (J.C),Flakes,Sitting Out,,16,,0,0.0,0.0,0.0,,,,False,False,True,False,ND,False,NO DATA
-109,#GY0C0CP29,hot,Flakes,Sitting Out,,16,,0,0.0,0.0,0.0,,,,False,False,True,False,ND,False,NO DATA
-110,#8JC9C22C,ProjectSnipe3,Flakes,Sitting Out,,14,,0,0.0,0.0,0.0,,,,False,False,True,False,ALT ND,True,NO DATA
+1,#R2PPV8CL,Waki,Fire,CORE,,18,18.0,98.0,94.9,3.92,-0.11,90.68,27.98,118.66,False,False,False,False,,False,PROVEN
+2,#CGJ8YR8J,Maki,Cake,CORE,,18,18.0,96.0,87.5,2.04,-0.11,85.24,24.92,110.16,False,False,False,False,,False,PROVEN
+3,#8Y99LCLQ,juna the great,Fire,CORE,,18,17.69,58.0,86.21,0.0,-0.17,85.48,21.85,107.33,False,False,False,False,,False,PROVEN
+4,#20G28UPQG,juna the zealot,Cake,CORE,,16,16.0,52.0,86.54,0.0,0.98,90.78,16.45,107.23,False,False,False,False,,False,PROVEN
+5,#2YJC8C8L,Chaengiiee,Fire,CORE,,18,17.9,71.0,84.51,1.39,-0.11,82.88,18.02,100.89,False,False,False,False,,False,PROVEN
+6,#J8LJUQUV,RR,Fire,CORE,,18,18.0,59.0,71.19,0.0,-0.17,70.58,30.28,100.87,False,False,False,False,,False,PROVEN
+7,#YJGG9LVJQ,Game Changer,Fire,CORE,,18,18.0,75.0,80.0,5.06,-0.13,75.46,22.23,97.69,False,False,False,False,,False,PROVEN
+8,#YLYJP80RC,Yaki,Flakes,Sitting Out,,16,15.86,77.0,85.71,8.33,0.6,80.93,16.45,97.38,False,False,False,False,,False,PROVEN
+9,#8VQJ0Q2YP,Ziad El_Giar,Fire,CORE,,18,18.0,97.0,73.2,6.73,-0.03,68.17,27.6,95.77,False,False,False,False,,False,PROVEN
+10,#8929PCL,JayDogg,Fire,CORE,,18,18.0,75.0,77.33,2.6,-0.17,74.68,19.93,94.61,False,False,False,False,,False,PROVEN
+11,#2C2RCG089,Death 3,Fire,CORE,,18,18.0,58.0,67.24,3.33,-0.28,64.09,29.52,93.61,False,False,False,False,,False,PROVEN
+12,#LRUVVVV0Y,LYNX,Cake,CORE,,18,18.0,50.0,68.0,21.88,-0.42,52.01,41.4,93.41,True,False,False,,HIGH MISS,,UNRELIABLE (HM)
+13,#8U09GPLRU,Night fury,Fire,CORE,,18,18.0,112.0,75.0,0.88,-0.03,74.23,18.4,92.63,False,False,False,False,,False,PROVEN
+14,#PG9U0CV2J,Calpis,Fire,SUB,,18,18.0,60.0,81.67,14.29,-0.12,69.58,22.62,92.2,False,False,False,False,,False,LAPSING
+15,#YCPJ9UYG,Potetsalat,Fire,CORE,,18,18.0,88.0,82.95,11.11,-0.14,73.22,18.78,92.0,False,False,False,False,,False,PROVEN
+16,#2R8P92JYP,Blaze,Fire,CORE,,18,18.0,27.0,74.07,10.0,-0.11,66.3,23.0,89.3,False,False,False,False,,False,LAPSING
+17,#80YVU9J8U,shyla,Cake,CORE,,18,18.0,64.0,68.75,9.86,-0.03,61.88,27.22,89.09,False,False,False,False,,False,PROVEN
+18,#GVYJULUQC,Vortex,Cake,CORE,,18,18.0,26.0,92.31,23.53,-2.08,63.25,25.68,88.93,True,False,False,,HIGH MISS,,UNRELIABLE (HM)
+19,#9L02LJ9P,Vadim,Fire,CORE,,18,17.73,75.0,68.0,0.0,-0.09,67.69,20.7,88.39,False,False,False,False,,False,PROVEN
+20,#9G9Y280QJ,Calsedy,Fire,CORE,,18,18.0,72.0,69.44,2.7,-0.04,67.43,20.7,88.13,False,False,False,False,,False,PROVEN
+21,#V8VRQ2RV,Ale,Cake,CORE,,16,15.84,38.0,63.16,0.0,0.58,64.99,23.1,88.09,False,False,False,False,,False,PROVEN
+22,#P22QQ99Y0,DEATH EATERS jr,Cake,CORE,Fire,17,17.0,52.0,71.15,0.0,0.15,71.68,16.13,87.82,False,False,False,False,,True,PROVEN
+23,#2YVPP8PL,Raspberri,Fire,SUB,,17,16.92,26.0,84.62,0.0,-0.58,82.17,5.48,87.65,False,False,False,False,,False,PROVEN
+24,#QV2V0JL8R,Death Eaters 3,Cake,CORE,Fire,17,16.29,34.0,85.29,0.0,-0.94,81.28,5.61,86.89,False,False,False,False,,False,PROVEN
+25,#20Q0V8LCL,Charlie,Fire,SUB,,18,18.0,73.0,75.34,6.41,-0.03,70.4,16.48,86.89,False,False,False,,,,LAPSING
+26,#2VLRPGGY,hagar,Fire,SUB,,18,18.0,71.0,69.01,5.33,-0.03,65.23,20.7,85.93,False,False,False,,,,LAPSING
+27,#GY0RQRPVG,Death Eaters RS,Cake,CORE,Fire,18,18.0,52.0,71.15,3.7,-0.79,65.81,18.78,84.59,False,False,False,False,,False,PROVEN
+28,#8PQG2UR9,deshuchaan,Fire,CORE,,18,18.0,32.0,78.13,17.95,0.0,64.11,18.02,82.12,False,False,False,,,,PROVEN
+29,#2VGQLPVP0,LOGAN,Fire,CORE,,18,17.1,40.0,75.0,0.0,-1.05,71.06,10.35,81.41,False,False,False,False,,False,PROVEN
+30,#28QP0RUL0,Brazy.,Fire,SUB,,18,17.97,80.0,81.25,19.19,-0.06,65.46,14.57,80.03,False,False,False,False,,False,PROVEN
+31,#GR0V20YRY,DemonJuan,Flakes,Sitting Out,,14,14.0,44.0,61.36,2.22,0.45,61.35,17.73,79.08,False,False,False,False,,False,PROVEN
+32,#2L8VGL0YC,XBrazyX,Cake,CORE,,18,18.0,80.0,77.5,13.98,-0.17,66.1,11.12,77.22,False,False,False,False,,False,PROVEN
+33,#Y9CCQVPQV,Yuki,Flakes,Sitting Out,,14,14.0,24.0,54.17,7.69,1.21,50.91,23.81,74.72,False,False,False,False,,False,PROVEN
+34,#PY99GV0JC,Genjey,Flakes,Sitting Out,,17,17.0,50.0,82.0,19.35,-0.62,64.08,10.27,74.35,False,False,False,False,,False,LAPSING
+35,#GJGCGVQYV,wamr,Fire,SUB,,17,16.69,32.0,56.25,0.0,0.47,57.57,14.67,72.24,False,False,False,False,,False,PROVEN
+36,#J9V9GR,AstonishGaming,Fire,SUB,,18,18.0,65.0,58.46,19.75,-0.06,46.77,24.53,71.31,False,False,False,False,,False,PROVEN
+37,#LYRQQUPC,Rodrigo,Cake,CORE,,18,18.0,35.0,45.71,27.08,-0.17,33.05,34.88,67.93,True,False,False,False,HIGH MISS,False,UNRELIABLE (HM)
+38,#JQJUYLJR,JayDogg II,Fire,SUB,,17,15.77,22.0,81.82,15.38,-0.41,59.68,7.48,67.16,False,False,False,False,,True,PROVEN
+39,#QJPPV0GU8,Death Eaters 2,Cake,CORE,Fire,17,16.95,40.0,55.0,4.76,-0.65,50.68,15.77,66.45,False,False,False,False,,False,PROVEN
+40,#9VJQLVRGJ,Hallelou,Fire,SUB,,18,17.75,20.0,85.0,16.67,-0.15,56.24,9.49,65.73,False,False,False,False,,False,PROVEN
+41,#2PQU82Y82,Grozbolt,Fire,SUB,,18,17.92,24.0,58.33,0.0,-0.04,55.88,9.49,65.37,False,False,False,False,,False,DORMANT
+42,#8YUYULG0V,Pulkit,Fire,SUB,,18,18.0,26.0,65.38,25.71,-0.08,48.38,16.87,65.24,True,False,False,False,HIGH MISS,False,LAPSING
+43,#GL2UR9CQG,up coming 2.0,Flakes,Sitting Out,,16,16.0,17.0,76.47,34.62,-0.53,33.1,27.93,61.03,True,False,False,,HIGH MISS,,UNRELIABLE (HM)
+44,#LCCY8VR2V,Nino,Cake,SUB,,13,13.0,25.0,60.0,26.47,1.92,48.35,10.5,58.85,True,False,False,,HIGH MISS,,UNRELIABLE (HM)
+45,#8QYU80UCC,LeGeNd IORI,Fire,Sitting Out,,18,18.0,37.0,40.54,7.5,-0.05,37.41,15.72,53.12,False,False,False,,,,DORMANT
+46,#8PL0UCY2Y,Clowned Prince,Flakes,Sitting Out,,13,12.71,26.0,42.31,7.14,0.96,41.17,11.88,53.05,False,False,False,False,,False,PROVEN
+47,#QC80QJRGV,bapu,Cake,CORE,,18,18.0,42.0,35.71,16.0,-1.24,28.14,24.92,53.05,False,False,False,,,,PROVEN
+48,#9LPRQRYJ9,Darknight999,Flakes,Sitting Out,,16,16.0,15.0,53.33,6.25,0.07,30.1,19.36,49.46,False,False,False,,,,PROVEN
+49,#288RCPP92,LordDavid,Cake,CORE,,16,15.93,54.0,38.89,6.9,-0.15,35.94,13.3,49.24,False,False,False,False,,False,PROVEN
+50,#GC0U0YRVR,Nayeon,Flakes,Sitting Out,,14,12.7,16.0,68.75,20.0,-1.19,33.11,15.91,49.02,False,False,False,,,,LAPSING
+51,#G09QL99GQ,lonelyknight,Cake,CORE,,18,16.57,28.0,35.71,0.0,-2.39,31.44,17.12,48.56,False,False,False,,,,PROVEN
+52,#8G88VRYV9,yang,Cake,SUB,,18,17.9,31.0,58.06,46.55,-0.29,30.58,11.5,42.08,True,False,False,,HIGH MISS,,UNRELIABLE (HM)
+53,#PVGUG2C2,memoo,Cake,SUB,,18,18.0,29.0,24.14,27.5,-0.52,17.05,23.77,40.81,True,False,False,False,HIGH MISS,False,UNRELIABLE (HM)
+54,#9V28R2G89,Changez khan,Flakes,Sitting Out,,16,15.53,30.0,36.67,21.05,-1.1,27.36,12.34,39.7,True,False,False,,HIGH MISS,,UNRELIABLE (HM)
+55,#9PP2L9GQ,Vindogg,Cake,SUB,,18,17.41,49.0,22.45,9.26,-1.86,18.48,19.17,37.64,False,False,False,,,,PROVEN
+56,#GGP2Q8UQL,Taker,Flakes,Sitting Out,,16,15.89,22.0,59.09,38.89,-1.45,29.47,5.35,34.83,True,False,False,,HIGH MISS,,UNRELIABLE (HM)
+57,#L9U0VGRV,PAUL,Cake,SUB,,18,17.5,15.0,53.33,6.25,-0.93,28.6,3.8,32.4,False,False,False,False,,False,LAPSING
+58,#LVCJU9U9V,Göbekli Patates,Flakes,Sitting Out,,16,16.0,10.0,90.0,44.44,-0.7,19.3,12.32,31.62,True,False,False,,HIGH MISS,,UNRELIABLE (HM)
+59,#LJG0RV9Q,Ne0npaint,Cake,SUB,,18,18.0,26.0,15.38,31.58,-0.35,10.34,17.63,27.97,True,False,False,,HIGH MISS,,UNRELIABLE (HM)
+60,#9CJURCR8U,paree,Cake,SUB,,18,18.0,17.0,11.76,10.53,-0.41,7.01,17.27,24.28,False,False,False,False,,False,PROVEN
+61,#GQPPGR0PP,dutchmeister,Flakes,Sitting Out,,16,16.0,7.0,57.14,70.83,-1.57,4.3,19.36,23.66,True,True,False,,HIGH MISS · LTD DATA,,LAPSING
+62,#QVQRVJR9G,Yunjin,Flakes,Sitting Out,,16,16.0,13.0,46.15,18.75,-2.77,16.8,5.27,22.07,False,False,False,,,,PROVEN
+63,#9Y8L8GU0V,⚡️GRIZZLE⚡️,Cake,Sitting Out,,17,16.0,10.0,70.0,16.67,-1.1,22.05,0.0,22.05,False,False,False,,,,DORMANT
+64,#V2J2VVQ,Bill Fettuccine,Cake,SUB,,17,16.83,7.0,71.43,41.67,0.14,11.75,7.33,19.08,True,True,False,False,HIGH MISS · LTD DATA,False,UNRELIABLE (HM)
+65,#2UJYC0JQ,Big Country,Cake,SUB,,15,15.0,5.0,80.0,16.67,1.0,14.0,5.0,19.0,False,True,False,,LTD DATA,,THIN RECORD
+66,#2C8RV02U,ZiggyTheGreat,Fire,SUB,,18,18.0,6.0,66.67,0.0,-0.33,15.74,1.9,17.63,False,True,False,False,LTD DATA,False,LAPSING
+67,#P8U9RP8GG,2017,Cake,SUB,,18,18.0,12.0,16.67,0.0,-0.08,7.97,9.49,17.46,False,False,False,,,,PROVEN
+68,#JJ8PYJYV,Rambo,Cake,Sitting Out,,18,18.0,6.0,50.0,0.0,0.0,12.0,3.83,15.83,False,True,False,False,LTD DATA,False,DORMANT
+69,#JUQJRLP8,KingAj,Cake,SUB,,18,18.0,6.0,16.67,50.0,-1.67,1.83,13.34,15.17,True,True,False,,HIGH MISS · LTD DATA,,LAPSING
+70,#QLG2V0RRY,Blaziken,Flakes,Sitting Out,,16,15.86,5.0,100.0,64.29,-1.6,6.57,7.0,13.57,True,True,False,False,HIGH MISS · LTD DATA,False,LAPSING
+71,#9CYCJJCJR,saro,Cake,Sitting Out,,18,18.0,4.0,50.0,0.0,-0.75,7.7,5.75,13.45,False,True,False,False,LTD DATA,False,THIN RECORD
+72,#QULC8RVGJ,Reyna,Cake,SUB,,18,18.0,6.0,66.67,40.0,0.0,9.6,3.8,13.4,True,True,False,,HIGH MISS · LTD DATA,,UNRELIABLE (HM)
+73,#GPPR0V2Y,H1TM4CHINE☠,Flakes,Sitting Out,,16,16.0,9.0,11.11,25.0,0.89,3.13,8.66,11.8,True,True,False,False,HIGH MISS · LTD DATA,False,DORMANT
+74,#22988L0U8,ƓƦɅƝƉΜɅȘȚȄƦ,Cake,SUB,,18,18.0,11.0,18.18,50.0,0.0,4.0,7.78,11.78,True,False,False,,HIGH MISS,,UNRELIABLE (HM)
+75,#PLJRGVJLR,TheLionHeart,Fire,Sitting Out,,17,17.0,2.0,100.0,0.0,1.0,8.4,1.83,10.23,False,True,False,False,LTD DATA,False,DORMANT
+76,#92CGVYRUP,Rakib,Cake,SUB,,18,18.0,2.0,50.0,75.0,0.0,1.0,7.7,8.7,True,True,False,,HIGH MISS · LTD DATA,,UNRELIABLE (HM)
+77,#PG8V2JQVP,Malik,Cake,SUB,,18,18.0,3.0,33.33,78.57,-1.0,0.81,7.67,8.48,True,True,False,False,HIGH MISS · LTD DATA,False,UNRELIABLE (HM)
+78,#PYRPG2CQP,zaib,Flakes,Sitting Out,,16,15.17,10.0,10.0,16.67,-2.2,2.97,5.25,8.22,False,False,False,,,,PROVEN
+79,#922RP2PV,Kubs,Cake,Sitting Out,,18,18.0,5.0,0.0,28.57,0.0,0.0,7.67,7.67,True,True,False,False,HIGH MISS · LTD DATA,False,DORMANT
+80,#9G2JCVV29,DEAD SHOOTER,Flakes,Sitting Out,,16,15.33,1.0,0.0,83.33,1.0,0.0,7.03,7.03,True,True,False,,HIGH MISS · LTD DATA,,UNRELIABLE (HM)
+81,#2CRL8YVLU,Legend Muksidul,Cake,Sitting Out,,18,18.0,2.0,50.0,83.33,0.0,0.67,5.67,6.34,True,True,False,,HIGH MISS · LTD DATA,,DORMANT
+82,#LR0PQPQRG,decomposejim,Cake,SUB,,18,18.0,14.0,7.14,30.0,-0.93,2.67,1.9,4.57,True,False,False,,HIGH MISS,,UNRELIABLE (HM)
+83,#2QVYPC22J,Seth The Great,Flakes,Sitting Out,,14,14.0,2.0,50.0,0.0,2.0,4.4,0.0,4.4,False,True,False,False,LTD DATA,False,LAPSING
+84,#PLCJCQRPG,246,Cake,SUB,,18,18.0,6.0,16.67,0.0,0.0,4.0,0.0,4.0,False,True,False,False,LTD DATA,False,LAPSING
+85,#L9PLP2UP2,Md Muktar,Cake,Sitting Out,,18,18.0,2.0,0.0,50.0,-0.5,0.0,3.85,3.85,True,True,False,,HIGH MISS · LTD DATA,,LAPSING
+86,#9QJLYYLLJ,viki,Cake,Sitting Out,,18,18.0,0.0,0.0,100.0,-18.0,0.0,3.85,3.85,True,False,False,,HIGH MISS,,UNRELIABLE (HM)
+87,#QVJCRQR0J,Entiy god is ba,Flakes,Sitting Out,,16,16.0,6.0,16.67,0.0,-1.0,3.8,0.0,3.8,False,True,False,,LTD DATA,,THIN RECORD
+88,#QJQ2GPVPQ,Double G,Cake,Sitting Out,,18,18.0,2.0,100.0,66.67,-1.0,2.53,0.0,2.53,True,True,False,,HIGH MISS · LTD DATA,,UNRELIABLE (HM)
+89,#LR9YYGVGQ,Ƭᴏᴍ࿐,Cake,Sitting Out,,18,18.0,0.0,0.0,100.0,-18.0,0.0,1.92,1.92,True,False,False,,HIGH MISS,,DORMANT
+90,#LLCVVYC8U,Rahul,Fire,Sitting Out,,18,18.0,0.0,0.0,100.0,-18.0,0.0,1.92,1.92,True,False,False,,HIGH MISS,,DORMANT
+91,#LRPL8P0YG,Obaidul,Flakes,Sitting Out,,17,16.0,1.0,100.0,50.0,-1.0,1.9,0.0,1.9,True,True,False,,HIGH MISS · LTD DATA,,UNRELIABLE (HM)
+92,#G2GUCJVPU,Dragon Slayer �,Flakes,Sitting Out,,17,16.0,0.0,0.0,100.0,-17.0,0.0,1.83,1.83,True,False,False,False,HIGH MISS,False,DORMANT
+93,#G8U2GGJPP,mkamisama,Flakes,Sitting Out,,16,15.5,0.0,0.0,100.0,-16.0,0.0,1.75,1.75,True,False,False,,HIGH MISS,,LAPSING
+94,#9G2JUUY8P,⚡⚡khiladi⚡⚡,Flakes,Sitting Out,,16,16.0,0.0,0.0,100.0,-16.0,0.0,1.75,1.75,True,False,False,False,HIGH MISS,False,UNRELIABLE (HM)
+95,#Q98LCCQ89,Mr.Black,Flakes,Sitting Out,,16,16.0,0.0,0.0,100.0,-16.0,0.0,1.75,1.75,True,False,False,False,HIGH MISS,False,DORMANT
+96,#QQ2028J2U,"""mr.sai""",Flakes,Sitting Out,,16,15.75,3.0,0.0,81.25,-0.33,0.0,1.68,1.68,True,True,False,,HIGH MISS · LTD DATA,,UNRELIABLE (HM)
+97,#UJGQ2YRV,HitMachine☣,Flakes,Sitting Out,,15,15.0,2.0,0.0,0.0,0.0,0.0,1.67,1.67,False,True,False,False,LTD DATA,False,DORMANT
+98,#8P928R29,™️Gazo™️,Fire,Sitting Out,,18,18.0,2.0,50.0,66.67,0.0,1.33,0.0,1.33,True,True,False,False,HIGH MISS · LTD DATA,False,UNRELIABLE (HM)
+99,#U9JYQJRY,Strawberri,Flakes,Sitting Out,,14,13.0,2.0,100.0,87.5,-1.0,0.95,0.0,0.95,True,True,False,,HIGH MISS · LTD DATA,,LAPSING
+100,#PGGUP02C9,Caliber,Fire,Sitting Out,,15,15.0,2.0,0.0,50.0,3.0,0.0,0.0,0.0,True,True,False,False,HIGH MISS · LTD DATA,False,DORMANT
+101,#QP2Y0U8J2,Sam,Cake,Sitting Out,,18,17.5,0.0,0.0,100.0,-18.0,0.0,0.0,0.0,True,False,False,,HIGH MISS,,UNRELIABLE (HM)
+102,#L0QYPGLY8,កូនអ្នកស្ទឹងង,Cake,Sitting Out,,18,18.0,0.0,0.0,100.0,-18.0,0.0,0.0,0.0,True,False,False,,HIGH MISS,,DORMANT
+103,#PYVUJQG8J,sharik,Cake,Sitting Out,,18,18.0,0.0,0.0,100.0,-18.0,0.0,0.0,0.0,True,False,False,,HIGH MISS,,UNRELIABLE (HM)
+104,#GQCGQR2YJ,Santu,Flakes,Sitting Out,,16,16.0,0.0,0.0,100.0,-16.0,0.0,0.0,0.0,True,False,False,,HIGH MISS,,UNRELIABLE (HM)
+105,#9YV0U2JP,Zeter Pilaitis,Fire,Sitting Out,,13,13.0,4.0,0.0,0.0,5.0,0.0,0.0,0.0,False,True,False,,LTD DATA,,THIN RECORD
+106,#UPYLQQ8U,MOHIT_MØ,Cake,Sitting Out,,18,,,,,,,,,False,False,True,,NO DATA,,NO DATA
+107,#LQ9UJVL0L,weyaa,Cake,Sitting Out,,18,,,,,,,,,False,False,True,,NO DATA,,NO DATA
+108,#GYCGY8LCG,BinCali,Cake,Sitting Out,,18,,,,,,,,,False,False,True,,NO DATA,,NO DATA
+109,#80JCGP0J0,Gigi,Flakes,Sitting Out,,17,,,,,,,,,False,False,True,,NO DATA,,NO DATA
+110,#8JC9C22C,ProjectSnipe3,Flakes,Sitting Out,,14,,,,,,,,,False,False,True,False,NO DATA,True,NO DATA
+111,#2Y8RUR2YG,churvalou,Flakes,Sitting Out,,16,,,,,,,,,False,False,True,,NO DATA,,NO DATA
+112,#28UG0U0Q,bísq,Fire,Sitting Out,,18,,,,,,,,,False,False,True,False,NO DATA,False,NO DATA
+113,#8P89L9VG2,DHRUV,Fire,Sitting Out,,18,,,,,,,,,False,False,True,False,NO DATA,False,NO DATA
+114,#2YVYCQPYY,i'm Astonish,Fire,Sitting Out,,17,,,,,,,,,False,False,True,False,NO DATA,True,NO DATA
