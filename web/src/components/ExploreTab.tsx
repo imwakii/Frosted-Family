@@ -279,7 +279,7 @@ function MatrixBoard({ cat, q, setQ, wide }: BoardProps & { cat: Cat }) {
   )
 }
 
-type WarCol = { key: string; label: string; value: (r: WarRow) => number | null; fmt: (v: number) => string; low?: boolean }
+type WarCol = { key: string; label: string; value: (r: WarRow) => number | null; fmt: (v: number) => string; low?: boolean; recordedOnly?: boolean }
 
 const pct = (v: number) => `${Math.round(v)}%`
 const WAR_COLS: WarCol[] = [
@@ -288,7 +288,7 @@ const WAR_COLS: WarCol[] = [
   { key: 'missed', label: 'Missed', value: (r) => (r.war ? r.war.missed : null), fmt: String, low: true },
   { key: 'triple', label: '3★ rate', value: (r) => (r.war?.attacks ? (100 * r.war.three_stars) / r.war.attacks : null), fmt: pct },
   { key: 'avg', label: 'Avg ★', value: (r) => (r.war?.attacks ? r.war.stars / r.war.attacks : null), fmt: (v) => v.toFixed(1) },
-  { key: 'dest', label: 'Avg dest.', value: (r) => r.war?.avg_destruction ?? null, fmt: pct },
+  { key: 'dest', label: 'Avg dest.', value: (r) => r.war?.avg_destruction ?? null, fmt: pct, recordedOnly: true },
 ]
 
 // Green once a member has attacked with misses at or under the line, amber above it.
@@ -326,7 +326,9 @@ function WarBoardView({ q, setQ, wide }: BoardProps) {
   const placeCol = cols.find((c) => c.key === 'stars') ?? cols[0]
   const place = useMemo(() => competitionRanks(ranked.map((x) => x.r), (r) => (wide ? placeCol : col)?.value(r) ?? null, !wide && !!col?.low), [ranked, placeCol, col, wide])
   const shown = ranked.filter(({ r }) => !nq || norm(r.name).includes(nq) || r.tag.toLowerCase().includes(nq))
-  const since = sinceLabel(data?.since ?? null)
+  const since = sinceLabel(data?.windowFrom ?? data?.since ?? null)
+  // Destruction comes from recorded wars only, which can start later than the window.
+  const recordedTip = data?.windowFrom && data.since && data.windowFrom !== data.since ? `Recorded ${sinceLabel(data.since)}` : undefined
 
   const scopeToggle = scoped && (
     <div role="group" aria-label="Wars" className="inline-grid flex-none auto-cols-max grid-flow-col gap-1 rounded-xl bg-well p-1">
@@ -361,7 +363,7 @@ function WarBoardView({ q, setQ, wide }: BoardProps) {
                   <th className="sticky left-12 z-[2] min-w-[220px] border-b border-line bg-white px-2 font-bold">PLAYER</th>
                   {cols.map((c) => (
                     <th key={c.key} className={`border-b border-line p-0 text-right ${c.key === sort.key ? 'bg-[#EEF2FF]' : ''}`} aria-sort={c.key === sort.key ? (sort.asc ? 'ascending' : 'descending') : undefined}>
-                      <button type="button" onClick={() => pick(c)}
+                      <button type="button" onClick={() => pick(c)} title={c.recordedOnly ? recordedTip : undefined}
                         className={`min-h-12 w-full cursor-pointer whitespace-nowrap border-0 bg-transparent px-4 text-right text-xs font-bold hover:bg-[#EEF2FF] ${c.key === sort.key ? 'text-ink' : 'text-faint'}`}>
                         {c.label}{c.key === sort.key ? (sort.asc ? ' ↑' : ' ↓') : ''}
                       </button>
@@ -412,7 +414,7 @@ function WarBoardView({ q, setQ, wide }: BoardProps) {
         <>
           <div role="group" aria-label="Sort by" className="-mb-1 flex gap-1 overflow-x-auto px-4 [scrollbar-width:none]">
             {cols.map((c) => (
-              <button key={c.key} type="button" aria-pressed={c.key === sort.key} onClick={() => pick(c)}
+              <button key={c.key} type="button" aria-pressed={c.key === sort.key} onClick={() => pick(c)} title={c.recordedOnly ? recordedTip : undefined}
                 className={`flex min-h-8 flex-none cursor-pointer items-center whitespace-nowrap rounded-lg border px-2.5 text-[13px] font-bold ${c.key === sort.key ? 'border-ink-2 bg-white text-ink' : 'border-transparent bg-transparent text-faint'}`}>
                 {c.label}{c.key === sort.key ? (sort.asc ? ' ↑' : ' ↓') : ''}
               </button>
