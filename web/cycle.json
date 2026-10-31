@@ -1,0 +1,8 @@
+{
+  "cwlStart": "2026-11-02T18:00:00Z",
+  "clans": {
+    "Fire": { "league": "Champion 3", "inCwl": true },
+    "Cake": { "league": "Masters 2", "inCwl": true },
+    "Flakes": { "league": null, "inCwl": false }
+  }
+}
