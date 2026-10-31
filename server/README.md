@@ -22,8 +22,9 @@ War collector and read API for the Frosted Family site, on the bots droplet unde
 - `profiles.py` stores every member's `/players` profile (each level change kept in `player_unit_history`) and each
   clan's latest raid weekend every 2 hours, and serves `/explore/matrix?cat=heroes|equipment|troops|spells|pets|sieges` and
   `/explore/{heroes|equipment|army|donations|capital}`, one row per current member. `/explore/war?scope=all|cwl` is all-time war
-  stars from the profile plus the record over the wars this collector saw (`since`, the earliest recorded war), or the current CWL season:
-  recorded history starts 31 Oct 2026. Each unit has `max` (the game's max level) and `cap` (the max at the player's town hall),
+  stars from the profile plus the war record: the latest cycle's clashspot war-statistics export (`baseline.py`) and,
+  on top, the recorded wars whose battle started after each clan's `pull_date` in that cycle's manifest, so nothing
+  counts twice. scope=cwl is the current season's recorded CWL wars only. Each unit has `max` (the game's max level) and `cap` (the max at the player's town hall),
   which is always null: no source for per-TH caps is both official and current, so there is no rushed check yet.
   Pets, siege machines and super troops are told apart by the name lists in `data/unit_kinds.json`.
 

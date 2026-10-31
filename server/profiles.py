@@ -14,6 +14,7 @@ from importlib import resources
 from fastapi import HTTPException
 
 from frosted.config import TAG_TO_CLAN
+from server import baseline
 
 PROFILE_HOURS = 2  # about 115 calls a pass, well inside the API's limits
 KINDS = json.loads(resources.files("server").joinpath("data/unit_kinds.json").read_text(encoding="utf-8"))
@@ -146,31 +147,64 @@ def army(conn, ms):
     return ranked(rows, to_max)
 
 
-def war_stats(conn, where: str = "1", args: tuple = ()) -> dict[str, dict]:
-    """Per player, over the recorded wars that match `where` (a condition on wars w): wars on the lineup, attacks,
-    missed attacks (ended wars only), three-star rate and averages per attack. Rates are fractions, 0 to 1."""
-    played = {r["player_tag"]: r["n"] for r in conn.execute(
-        f"""SELECT m.player_tag, COUNT(*) AS n FROM war_members m JOIN wars w USING (war_key)
-            WHERE {where} GROUP BY m.player_tag""", args)}
-    hits = {r["attacker_tag"]: r for r in conn.execute(
-        f"""SELECT a.attacker_tag, COUNT(*) AS n, SUM(a.stars) AS stars, SUM(a.stars = 3) AS threes,
-                   AVG(a.destruction) AS destruction
-            FROM attacks a JOIN wars w USING (war_key) WHERE {where} GROUP BY a.attacker_tag""", args)}
-    missed = {r["player_tag"]: r["n"] for r in conn.execute(
-        f"""SELECT x.player_tag, SUM(x.missed) AS n FROM missed_attacks x JOIN wars w USING (war_key)
-            WHERE {where} GROUP BY x.player_tag""", args)}
-    out = {}
-    for tag, n in played.items():
-        h = hits.get(tag)
-        used = h["n"] if h else 0
-        out[tag] = {
-            "wars": n, "attacks": used, "stars": h["stars"] if h else 0, "three_stars": h["threes"] if h else 0,
-            "missed": missed.get(tag, 0),
-            "avg_destruction": round(h["destruction"], 1) if used else None,
-            "avg_stars": round(h["stars"] / used, 2) if used else None,
-            "three_star_rate": round(h["threes"] / used, 3) if used else None,
-        }
+def recorded_counts(conn, where: str = "1", args: tuple = (), cutoffs: dict[str, str] | None = None) -> dict:
+    """Raw counts per player over the recorded wars matching `where` (a condition on wars w). With cutoffs (clan tag
+    -> YYYY-MM-DD), a war counts for a clan only if its battle started after that date: the export covers the rest."""
+    def scoped(clan_expr: str) -> tuple[str, tuple]:
+        if not cutoffs:
+            return where, args
+        cases = " ".join("WHEN ? THEN ?" for _ in cutoffs)
+        flat = tuple(x for tag, d in cutoffs.items() for x in (tag, d.replace("-", "")))
+        return (f"({where}) AND substr(w.start_time, 1, 8) > CASE {clan_expr} {cases} ELSE '' END", args + flat)
+
+    out: dict[str, dict] = {}
+    blank = lambda: {"wars": 0, "attacks": 0, "three": 0, "two": 0, "one": 0, "missed": 0, "destruction": 0.0,
+                     "defenses": 0, "d_three": 0, "d_two": 0, "d_one": 0}
+    w_, a_ = scoped("m.clan_tag")
+    for r in conn.execute(f"""SELECT m.player_tag AS t, COUNT(*) AS n FROM war_members m JOIN wars w USING (war_key)
+                              WHERE {w_} GROUP BY m.player_tag""", a_):
+        out.setdefault(r["t"], blank())["wars"] = r["n"]
+    w_, a_ = scoped("a.attacker_clan_tag")
+    for r in conn.execute(f"""SELECT a.attacker_tag AS t, COUNT(*) AS n, SUM(a.stars = 3) AS three,
+                                     SUM(a.stars = 2) AS two, SUM(a.stars = 1) AS one, SUM(a.destruction) AS d
+                              FROM attacks a JOIN wars w USING (war_key) WHERE {w_} GROUP BY a.attacker_tag""", a_):
+        o = out.setdefault(r["t"], blank())
+        o.update(attacks=r["n"], three=r["three"], two=r["two"], one=r["one"], destruction=r["d"])
+    w_, a_ = scoped("x.clan_tag")
+    for r in conn.execute(f"""SELECT x.player_tag AS t, SUM(x.missed) AS n FROM missed_attacks x
+                              JOIN wars w USING (war_key) WHERE {w_} GROUP BY x.player_tag""", a_):
+        out.setdefault(r["t"], blank())["missed"] = r["n"]
+    # A defense is an attack on the player; their clan is the side that did not attack.
+    w_, a_ = scoped("CASE WHEN a.attacker_clan_tag = w.clan_tag THEN w.opponent_tag ELSE w.clan_tag END")
+    for r in conn.execute(f"""SELECT a.defender_tag AS t, COUNT(*) AS n, SUM(a.stars = 3) AS three,
+                                     SUM(a.stars = 2) AS two, SUM(a.stars = 1) AS one
+                              FROM attacks a JOIN wars w USING (war_key) WHERE {w_} GROUP BY a.defender_tag""", a_):
+        o = out.setdefault(r["t"], blank())
+        o.update(defenses=r["n"], d_three=r["three"], d_two=r["two"], d_one=r["one"])
     return out
+
+
+def war_view(base: dict | None, rec: dict | None) -> dict | None:
+    """Export counts plus recorded counts, with rates and averages worked out from the sums. Destruction and the
+    war count exist only in recorded wars, so their field names say so."""
+    if not base and not rec:
+        return None
+    z = {"attacks": 0, "three": 0, "two": 0, "one": 0, "missed": 0, "defenses": 0, "d_three": 0, "d_two": 0,
+         "d_one": 0}
+    b, r = base or z, rec or {**z, "wars": 0, "destruction": 0.0}
+    s = {k: b[k] + r[k] for k in z}
+    stars = 3 * s["three"] + 2 * s["two"] + s["one"]
+    conceded = 3 * s["d_three"] + 2 * s["d_two"] + s["d_one"]
+    att, ra = s["attacks"], r["attacks"]
+    return {
+        "attacks": att, "stars": stars, "three_stars": s["three"], "missed": s["missed"],
+        "avg_stars": round(stars / att, 2) if att else None,
+        "three_star_rate": round(s["three"] / att, 3) if att else None,
+        "recorded_wars": r["wars"],
+        "recorded_avg_destruction": round(r["destruction"] / ra, 1) if ra else None,
+        "defense": {"defenses": s["defenses"], "stars_conceded": conceded, "three_stars_conceded": s["d_three"],
+                    "avg_stars_conceded": round(conceded / s["defenses"], 2) if s["defenses"] else None},
+    }
 
 
 def api_day(t: str | None) -> str | None:
@@ -178,24 +212,43 @@ def api_day(t: str | None) -> str | None:
 
 
 def war_record(conn, scope: str = "all") -> dict:
-    """GET /explore/war?scope=all|cwl: every current member's all-time war stars from their profile, and their record
-    over the wars this collector has seen. scope=all is every recorded war, regular and CWL, since `since`; scope=cwl is
-    the current league season only. A member with no recorded war in the scope has war null."""
+    """GET /explore/war?scope=all|cwl. Every current member's all-time war stars (profile) and their war record.
+
+    scope=all: the latest cycle's clashspot export (baseline.py) plus the recorded wars that started after each
+    clan's pull date, so no war counts twice. scope=cwl: the current league season's recorded CWL wars only.
+    A member with nothing in the scope has war null. Ranked by all-time war stars in both scopes. window_from opens the
+    whole window (the export's earliest war, else the first recorded one); since is the first recorded war counted."""
     if scope not in ("all", "cwl"):
         raise HTTPException(422, "scope is all or cwl")
+    base = baseline.current() if scope == "all" else None
+    empty = {"kind": "war", "scope": scope, "since": None, "window_from": None, "sources": [], "season": None,
+             "updated_at": None, "players": []}
     if conn is None:
-        return {"kind": "war", "scope": scope, "since": None, "season": None, "updated_at": None, "players": []}
-    since = conn.execute("SELECT MIN(COALESCE(start_time, preparation_start)) FROM wars").fetchone()[0]
+        return empty
     updated = conn.execute("SELECT MAX(finished_at) FROM polls").fetchone()[0]
     season = conn.execute("SELECT MAX(season) FROM wars WHERE kind='cwl'").fetchone()[0]
     if scope == "all":
-        stats = war_stats(conn)
+        cutoffs = base.pull_dates if base else None
+        rec = recorded_counts(conn, cutoffs=cutoffs)
+        counted = conn.execute("SELECT MIN(start_time) FROM wars WHERE start_time IS NOT NULL" + (
+            " AND (" + " OR ".join("(? IN (clan_tag, opponent_tag) AND substr(start_time, 1, 8) > ?)"
+                                    for _ in cutoffs) + ")" if cutoffs else ""),
+            tuple(x for t, d in (cutoffs or {}).items() for x in (t, d.replace("-", "")))).fetchone()[0]
     else:
-        stats = war_stats(conn, "w.kind='cwl' AND w.season=?", (season,)) if season else {}
-    rows = [{**row(m), "war_stars": m["war_stars"], "war": stats.get(m["tag"])} for m in current_members(conn)]
-    # Ranked by all-time war stars in both scopes, so a player keeps their place when the scope changes.
-    return {"kind": "war", "scope": scope, "since": api_day(since), "season": season, "updated_at": updated,
-            "players": ranked(rows, lambda r: r["war_stars"])}
+        rec = recorded_counts(conn, "w.kind='cwl' AND w.season=?", (season,)) if season else {}
+        counted = conn.execute("SELECT MIN(start_time) FROM wars WHERE kind='cwl' AND season=?",
+                               (season,)).fetchone()[0] if season else None
+    sources = []
+    if base:
+        sources.append(f"clashspot export {base.cycle}")
+    if counted:
+        sources.append(f"recorded since {api_day(counted)}")
+    window_from = min(base.earliest.values()) if base and base.earliest else api_day(counted)
+    players = base.players if base else {}
+    rows = [{**row(m), "war_stars": m["war_stars"], "war": war_view(players.get(m["tag"]), rec.get(m["tag"]))}
+            for m in current_members(conn)]
+    return {"kind": "war", "scope": scope, "since": api_day(counted), "window_from": window_from, "sources": sources,
+            "season": season, "updated_at": updated, "players": ranked(rows, lambda r: r["war_stars"])}
 
 
 def donations(conn, ms):
