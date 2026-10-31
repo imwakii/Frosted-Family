@@ -37,4 +37,9 @@ export interface LiveWar {
   opponentStars: number
   attacks: number
   teamSize: number
+  kind: 'cwl' | 'regular' | null
+  startTime: number | null
+  endTime: number | null
+  destruction: number | null
+  opponentDestruction: number | null
 }

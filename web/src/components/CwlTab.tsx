@@ -3,7 +3,7 @@ import { CLAN, CLANS, GROUPS, SLOT_TEXT, coreAvg, fmtScore } from '../theme'
 import { playerHref } from '../route'
 import type { ClanName, LiveWar, Player, Roster } from '../types'
 import { useClans, type ClanMeta } from '../clash'
-import { Arrow, ClanBadge, Eyebrow, LeaguePill, LiveLine, SearchIcon, StatusPill, Th } from './ui'
+import { Arrow, ClanBadge, Eyebrow, LeaguePill, SearchIcon, StatusPill, Th, WarPill } from './ui'
 
 type Props = { roster: Roster; war: Partial<Record<ClanName, LiveWar | null>>; wide: boolean; q: string; setQ: (v: string) => void }
 
@@ -33,7 +33,7 @@ function clanFacts(roster: Roster, clan: ClanName, meta?: ClanMeta) {
 }
 
 // Badge, name and league; core average for clans in CWL, member count otherwise.
-function ClanCard({ roster, clan, meta, compact }: { roster: Roster; clan: ClanName; meta?: ClanMeta; compact?: boolean }) {
+function ClanCard({ roster, clan, meta, war, compact }: { roster: Roster; clan: ClanName; meta?: ClanMeta; war: LiveWar | null | undefined; compact?: boolean }) {
   const f = clanFacts(roster, clan, meta)
   const c = CLAN[clan]
   return (
@@ -42,6 +42,7 @@ function ClanCard({ roster, clan, meta, compact }: { roster: Roster; clan: ClanN
       <div className="flex min-w-0 flex-auto flex-col gap-1">
         <h2 className={`font-display m-0 truncate leading-none ${compact ? 'text-[22px]' : 'text-2xl'}`} style={{ color: c.deep }}>{f.name}</h2>
         <LeaguePill league={f.league} text={f.format} />
+        <WarPill war={war} />
       </div>
       <div className="flex flex-none flex-col items-end">
         <span className="text-[11px] font-bold uppercase tracking-[0.06em] text-muted">{f.inCwl ? 'Core avg' : 'Members'}</span>
@@ -107,12 +108,13 @@ function Groups({ roster, clan, q, dense }: { roster: Roster; clan: ClanName; q?
     <>
       {groupsFor(roster, clan).map((g) => (
         <section key={g.label} className={`flex flex-col ${dense ? 'gap-0.5 px-2' : 'gap-1.5'}`}>
-          {g.label !== 'Members' ? (
+          {/* Side by side, every clan's list starts under a label row, so the columns line up. */}
+          {g.label !== 'Members' || dense ? (
             <div className={`flex justify-between ${dense ? 'px-2.5 pt-3' : 'px-1'}`}>
               <Eyebrow className={dense ? 'text-[11px]' : ''}>{g.label}</Eyebrow>
               <Eyebrow className={dense ? 'text-[11px]' : ''}>{g.rows.length}</Eyebrow>
             </div>
-          ) : dense ? <div className="h-2" /> : null}
+          ) : null}
           {g.rows.length ? (
             <ol className={`m-0 list-none ${dense ? '' : 'rounded-2xl border border-line bg-white py-1'} ${g.dim ? 'opacity-[.85]' : ''}`}>
               {g.rows.map((p, i) => <Row key={p.tag} p={p} first={i === 0} dense={dense} hit={!!q && matches(p, q)} />)}
@@ -138,7 +140,6 @@ function Phone({ roster, war, q, setQ }: Omit<Props, 'wide'>) {
   const results = nq ? roster.players.filter((p) => matches(p, nq)).slice(0, 12) : []
   const movers = roster.players.filter((p) => p.from)
   const clans = useClans()
-  const facts = clanFacts(roster, clan, clans[clan])
 
   return (
     <>
@@ -175,8 +176,7 @@ function Phone({ roster, war, q, setQ }: Omit<Props, 'wide'>) {
                 </button>
               ))}
             </nav>
-            <ClanCard roster={roster} clan={clan} meta={clans[clan]} />
-            {facts.inCwl && <LiveLine war={war[clan]} />}
+            <ClanCard roster={roster} clan={clan} meta={clans[clan]} war={war[clan]} />
             <Groups roster={roster} clan={clan} />
           </>
         )}
@@ -209,11 +209,9 @@ function Desktop({ roster, war, q, setQ }: Omit<Props, 'wide'>) {
       </div>
       <div ref={grid} className="grid items-start gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr))]">
         {CLANS.map((clan) => {
-          const f = clanFacts(roster, clan)
           return (
             <section key={clan} aria-label={clan} className="overflow-hidden rounded-[18px] border border-line bg-white pb-2.5">
-              <ClanCard roster={roster} clan={clan} meta={clans[clan]} compact />
-              {f.inCwl && <LiveLine war={war[clan]} className="mx-3.5 mt-3" />}
+              <ClanCard roster={roster} clan={clan} meta={clans[clan]} war={war[clan]} compact />
               <Groups roster={roster} clan={clan} q={nq} dense />
             </section>
           )

@@ -29,8 +29,15 @@ type ApiPlayer = {
   snapshot: { name?: string; town_hall?: number } | null
 }
 type ApiWar = {
-  state: string; day: number | null; team_size: number; opponent: { name: string } | null
+  state: string; kind?: string | null; day: number | null; team_size: number; opponent: { name: string } | null
   stars: number; opponent_stars: number; attacks_used: number; attacks_allowed: number
+  start_time?: string | null; end_time?: string | null; destruction?: number | null; opponent_destruction?: number | null
+}
+
+// The Clash API's time format, 20261103T080000.000Z, to epoch milliseconds.
+function apiTime(t: string | null | undefined): number | null {
+  const m = t?.match(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})/)
+  return m ? Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]) : t ? Date.parse(t) || null : null
 }
 
 const SLOT: Record<string, Slot> = { CORE: 'CORE', SUB: 'SUB', 'Sitting Out': 'OUT' }
@@ -114,6 +121,9 @@ export async function loadWar(): Promise<LiveMap> {
             state: w.state as LiveWar['state'], day: w.day ?? null, opponent: w.opponent?.name ?? '',
             stars: w.stars ?? 0, opponentStars: w.opponent_stars ?? 0,
             attacks: w.attacks_used ?? 0, teamSize: w.attacks_allowed || w.team_size || 15,
+            kind: w.kind === 'cwl' || w.kind === 'regular' ? w.kind : null,
+            startTime: apiTime(w.start_time), endTime: apiTime(w.end_time),
+            destruction: w.destruction ?? null, opponentDestruction: w.opponent_destruction ?? null,
           }
         : null
     }
