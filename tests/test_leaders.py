@@ -2,6 +2,7 @@
 mocked with httpx.MockTransport; the rule checks run against a copy of the real roster."""
 import csv
 import io
+import json
 import shutil
 import time
 from urllib.parse import parse_qs, urlparse
@@ -11,7 +12,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from server import api, auth, db, plan, profiles, pull_allocation
-from test_server import Recorder, poll  # tests/ is on sys.path (rootdir import mode)
+from test_server import FIX, Recorder, poll  # tests/ is on sys.path (rootdir import mode)
 
 SITE = "https://frosted-family.vercel.app"
 LEADER_ROLE, OTHER_ROLE = "111", "999"
@@ -312,9 +313,50 @@ def test_explore_donations_and_capital(explored):
     assert explored.get("/explore/rushed").status_code == 404
 
 
-def test_profiles_due_twice_a_day():
+def test_profiles_due_every_two_hours():
     conn = db.connect(":memory:")
     assert profiles.profiles_due(conn, "2026-11-02T00:00:00Z")
     conn.execute("INSERT INTO profile_runs VALUES ('2026-11-02T00:00:00Z', 5)")
-    assert not profiles.profiles_due(conn, "2026-11-02T11:59:00Z")
-    assert profiles.profiles_due(conn, "2026-11-02T12:00:00Z")
+    assert not profiles.profiles_due(conn, "2026-11-02T01:59:00Z")
+    assert profiles.profiles_due(conn, "2026-11-02T02:00:00Z")
+
+
+# ─── matrix ───────────────────────────────────────────────────────────────────
+
+def test_matrix_heroes_in_game_order_with_zero_for_locked(explored):
+    body = explored.get("/explore/matrix", params={"cat": "heroes"}).json()
+    assert body["cat"] == "heroes" and body["as_of"]
+    assert body["units"] == [{"name": "Barbarian King", "max": 105}, {"name": "Archer Queen", "max": 105}]
+    # Fire, then Cake, then Flakes; higher TH first, then name. No profile yet: levels null.
+    assert [(p["name"], p["clan"], p["levels"]) for p in body["players"]] == [
+        ("Waki renamed", "Fire", [100, 100]), ("newbie", "Fire", None),
+        ("cake two", "Cake", None), ("Maki", "Cake", [90, 95]),
+        ("flake", "Flakes", [70, 0])]
+
+
+def test_matrix_categories_split_the_troops_list(explored):
+    get = lambda cat: explored.get("/explore/matrix", params={"cat": cat}).json()
+    assert [u["name"] for u in get("troops")["units"]] == ["Barbarian"]  # no super troop, pet or siege
+    assert [u["name"] for u in get("pets")["units"]] == ["Unicorn"]
+    sieges = get("sieges")
+    assert sieges["units"] == [{"name": "Wall Wrecker", "max": 5}]
+    assert {p["name"]: p["levels"] for p in sieges["players"]}["Maki"] == [4]
+    assert {p["name"]: p["levels"] for p in get("pets")["players"]}["Maki"] == [0]
+    assert [u["name"] for u in get("equipment")["units"]] == ["Giant Gauntlet", "Barbarian Puppet"]
+    assert [u["name"] for u in get("spells")["units"]] == ["Rage Spell"]
+    assert explored.get("/explore/matrix", params={"cat": "builder"}).status_code == 404
+
+
+def test_unit_history_records_only_level_changes(env):
+    conn = db.connect(env / "frosted.db")
+    p = json.loads((FIX / "player_CGJ8YR8J.json").read_text(encoding="utf-8"))
+    with conn:
+        profiles.upsert_profile(conn, p, "2026-11-02T00:00:00Z")
+        profiles.upsert_profile(conn, p, "2026-11-02T02:00:00Z")
+    first = conn.execute("SELECT COUNT(*) FROM player_unit_history").fetchone()[0]
+    p["heroes"][0]["level"] = 91
+    with conn:
+        profiles.upsert_profile(conn, p, "2026-11-02T04:00:00Z")
+    rows = conn.execute("SELECT level, seen_at FROM player_unit_history WHERE name='Barbarian King' ORDER BY level")
+    assert [tuple(r) for r in rows] == [(90, "2026-11-02T00:00:00Z"), (91, "2026-11-02T04:00:00Z")]
+    assert conn.execute("SELECT COUNT(*) FROM player_unit_history").fetchone()[0] == first + 1

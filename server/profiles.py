@@ -1,4 +1,4 @@
-"""Player profiles for the Explore tab: stored by the collector about twice a day, served by kind.
+"""Player profiles for the Explore tab: stored by the collector every 2 hours, served by kind and as a level matrix.
 
 Every current member gets a row in every kind, with null where the data is not in yet. "max" is the API's maxLevel,
 the unit's maximum in the game. "cap", the maximum at the player's town hall, is always null: there is no source for
@@ -15,7 +15,7 @@ from fastapi import HTTPException
 
 from frosted.config import TAG_TO_CLAN
 
-PROFILE_HOURS = 12
+PROFILE_HOURS = 2  # about 115 calls a pass, well inside the API's limits
 KINDS = json.loads(resources.files("server").joinpath("data/unit_kinds.json").read_text(encoding="utf-8"))
 PETS, SIEGE, SUPER = set(KINDS["pets"]), set(KINDS["siege_machines"]), set(KINDS["super_troops"])
 
@@ -56,8 +56,12 @@ def upsert_profile(conn: sqlite3.Connection, p: dict, fetched_at: str) -> None:
     units += [(troop_kind(t["name"]), t, None) for t in home(p.get("troops"))]
     units += [("spell", s, None) for s in home(p.get("spells"))]
     conn.execute("DELETE FROM player_units WHERE player_tag=?", (tag,))
-    conn.executemany("INSERT OR REPLACE INTO player_units VALUES (?,?,?,?,?,?)",
-                     [(tag, k, u["name"], u["level"], u.get("maxLevel"), hero) for k, u, hero in units])
+    conn.executemany("INSERT OR REPLACE INTO player_units VALUES (?,?,?,?,?,?,?)",
+                     [(tag, k, u["name"], u["level"], u.get("maxLevel"), hero, i)
+                      for i, (k, u, hero) in enumerate(units)])
+    # A level already recorded adds nothing, so a pass with no upgrades writes no history.
+    conn.executemany("INSERT OR IGNORE INTO player_unit_history VALUES (?,?,?,?,?)",
+                     [(tag, k, u["name"], u["level"], fetched_at) for k, u, _ in units])
 
 
 def upsert_raid(conn: sqlite3.Connection, clan_tag: str, season: dict) -> None:
@@ -187,6 +191,43 @@ def capital(conn, ms):
 
 BOARDS = {"heroes": heroes, "equipment": equipment, "army": army, "war": war, "donations": donations,
           "capital": capital}
+
+
+# ─── Matrix: every member against every unit of one category ─────────────────
+
+MATRIX = {"heroes": "hero", "equipment": "equipment", "troops": "troop", "spells": "spell", "pets": "pet",
+          "sieges": "siege"}
+CLAN_ORDER = {"Fire": 0, "Cake": 1, "Flakes": 2}
+
+
+def matrix(conn, cat: str) -> dict:
+    """Columns in the game's order, a row per current member, 0 for a unit the player has not unlocked. A member
+    whose profile has not been fetched yet has levels null."""
+    if cat not in MATRIX:
+        raise HTTPException(404, f"no category {cat}; try {', '.join(MATRIX)}")
+    if conn is None:
+        return {"cat": cat, "as_of": None, "units": [], "players": []}
+    by: dict[str, dict[str, sqlite3.Row]] = {}
+    for u in conn.execute("SELECT * FROM player_units WHERE kind=? ORDER BY player_tag, position", (MATRIX[cat],)):
+        by.setdefault(u["player_tag"], {})[u["name"]] = u
+    # The API lists only unlocked units, in game order. Merging the lists, longest first, recovers the full order.
+    order: list[str] = []
+    top: dict[str, int | None] = {}
+    for units in sorted(by.values(), key=len, reverse=True):
+        for name, u in units.items():
+            if name not in top:
+                order.append(name)
+                top[name] = u["max_level"]
+            elif u["max_level"] and (top[name] or 0) < u["max_level"]:
+                top[name] = u["max_level"]
+    players = []
+    for m in current_members(conn):
+        mine = by.get(m["tag"])
+        levels = None if m["fetched_at"] is None else [mine[n]["level"] if mine and n in mine else 0 for n in order]
+        players.append({**row(m), "levels": levels})
+    players.sort(key=lambda p: (CLAN_ORDER.get(p["clan"], 9), -(p["th"] or 0), (p["name"] or "").lower()))
+    as_of = conn.execute("SELECT MAX(started_at) FROM profile_runs").fetchone()[0]
+    return {"cat": cat, "as_of": as_of, "units": [{"name": n, "max": top[n]} for n in order], "players": players}
 
 
 def board(conn, kind: str) -> dict:

@@ -119,7 +119,17 @@ CREATE TABLE IF NOT EXISTS player_units (
     level INTEGER NOT NULL,
     max_level INTEGER,                    -- the game's max for the unit, not the player's town hall cap
     hero TEXT,                            -- equipment only: the hero it is equipped on, if any
+    position INTEGER NOT NULL,            -- index in the API's list, which is the game's order
     PRIMARY KEY (player_tag, kind, name)
+);
+-- Every level change seen, so progress can be traced: one row when a unit first appears or its level moves.
+CREATE TABLE IF NOT EXISTS player_unit_history (
+    player_tag TEXT NOT NULL,
+    kind TEXT NOT NULL,
+    name TEXT NOT NULL,
+    level INTEGER NOT NULL,
+    seen_at TEXT NOT NULL,
+    PRIMARY KEY (player_tag, kind, name, level)
 );
 -- Each clan's latest raid weekend, polled with the profiles. One row per raider.
 CREATE TABLE IF NOT EXISTS raid_members (

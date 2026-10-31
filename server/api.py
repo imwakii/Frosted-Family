@@ -6,6 +6,7 @@ site through a Vercel rewrite.
     GET /player/{tag}    one player's allocation, latest snapshot, wars, attacks and missed attacks
     GET /allocation.csv  the latest published allocation, for server/pull_allocation.py
     GET /explore/{board} ranked boards from player profiles: heroes, equipment, army, war, donations, capital
+    GET /explore/matrix?cat=heroes|equipment|troops|spells|pets|sieges   every member's level in every unit
     /auth/*, /plan/*     Discord sign-in for leaders (server/auth.py) and the Plan tab (server/plan.py)
 
 The CSV is canonical for allocation. The one thing laid over it is the publisher's latest publish, and only while the
@@ -153,6 +154,11 @@ def player(tag: str):
 @app.get("/allocation.csv")
 def allocation():
     return plan.allocation_csv()
+
+
+@app.get("/explore/matrix")  # before /explore/{board}, which would otherwise take "matrix"
+def explore_matrix(cat: str = "heroes"):
+    return profiles.matrix(open_db(), cat)
 
 
 @app.get("/explore/{board}")
