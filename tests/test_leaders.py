@@ -42,7 +42,8 @@ def env(tmp_path, monkeypatch, repo):
                  "DISCORD_LEADER_ROLE_IDS": f"{LEADER_ROLE}, 222", "DISCORD_PUBLISHER_ID": PUBLISHER,
                  "SESSION_SECRET": "test-secret", "FROSTED_SITE_URL": SITE,
                  "FROSTED_DB": str(tmp_path / "frosted.db"), "FROSTED_APP_DB": str(tmp_path / "app.db"),
-                 "FROSTED_ROSTER": str(tmp_path / "roster.csv")}.items():
+                 "FROSTED_ROSTER": str(tmp_path / "roster.csv"),
+                 "FROSTED_RAW": str(tmp_path / "raw")}.items():  # no exports unless a test writes them
         monkeypatch.setenv(k, v)
     monkeypatch.setattr(auth, "discord_client",
                         lambda: httpx.Client(base_url=auth.DISCORD_API, transport=httpx.MockTransport(discord)))
@@ -313,34 +314,98 @@ def test_explore_army_groups_and_drops_super_troops(explored):
     assert all(u["cap"] is None for u in units)
 
 
-def test_explore_war_record_all(explored):
+HEADER = ("Tag,Name,Date last war,Average TH,Attack: count,Attack: Average TH of targets,Attack: Average Stars,"
+          "Attack: 3 Stars Count,Attack: % of 3 Stars,Attack: 2 Stars Count,Attack: % of 2 Stars,Attack: 1 Star Count,"
+          "Attack: % of 1 Star,Attack: 0 Star Count,Attack: % of 0 Star,Attack: Miss attacks,Attack: % of Miss attacks,"
+          "Defense: count,Defense: Average TH,Defense: Average Stars,Defense: 3 Stars Count,Defense: % of 3 Stars,"
+          "Defense: 2 Stars Count,Defense: % of 2 Stars,Defense: 1 Star Count,Defense: % of 1 Star,"
+          "Defense: 0 Star Count,Defense: % of 0 Star\n")
+
+
+def export_row(tag, name, att, three, two, one, missed, dfn=0, d3=0, d2=0, d1=0):
+    zero = att - three - two - one
+    return (f"{tag},{name},2026-10-29,18.00,{att},18.00,0,{three},0,{two},0,{one},0,{zero},0,{missed},0,"
+            f"{dfn},18.00,0,{d3},0,{d2},0,{d1},0,{dfn - d3 - d2 - d1},0\n")
+
+
+MANIFEST = """# Cycle {cycle} raw exports
+
+```
+  clan  pull_date earliest_war  attack_ceiling  players
+  Cake 2026-10-29   2026-07-14            63.6       45
+  Fire {fire_pull}   2026-07-24            94.0       35
+Flakes 2026-10-30   2026-07-18            46.0       19
+```
+"""
+
+
+@pytest.fixture
+def raw(env, monkeypatch):
+    """Two cycles plus a newer folder with no manifest yet: the baseline must be 2026-11."""
+    root = env / "raw"
+    for cycle, fire_pull, waki in (("2026-10", "2026-09-30", (999, 999, 0, 0, 0)),
+                                   ("2026-11", "2026-11-03", (10, 8, 2, 0, 1))):
+        d = root / cycle
+        d.mkdir(parents=True)
+        (d / "manifest.md").write_text(MANIFEST.format(cycle=cycle, fire_pull=fire_pull), encoding="utf-8")
+        (d / "CL0G80LV-war-statistics.csv").write_text(
+            HEADER + export_row("#R2PPV8CL", "Waki", *waki, 5, 1, 2, 2), encoding="utf-8")
+        # Waki also fought for Cake inside the window; Maki is Cake's.
+        (d / "20CU2R80R-war-statistics.csv").write_text(
+            HEADER + export_row("#R2PPV8CL", "Waki", 2, 2, 0, 0, 0) + export_row("#CGJ8YR8J", "Maki", 20, 15, 4, 1, 0),
+            encoding="utf-8")
+    (root / "2026-12").mkdir()
+    monkeypatch.setenv("FROSTED_RAW", str(root))
+    return root
+
+
+def test_war_record_merges_the_export_with_later_recorded_wars(raw, explored):
     body = explored.get("/explore/war").json()
-    # since is the earliest recorded war: Cake's regular war, which started on 21 Oct.
-    assert (body["kind"], body["scope"], body["since"], body["season"]) == ("war", "all", "2026-10-21", "2026-11")
-    assert body["updated_at"]
+    assert body["sources"] == ["clashspot export 2026-11", "recorded since 2026-11-04"]
+    assert body["window_from"] == body["since"] == "2026-07-14"
     rows = by_name(body)
-    assert rows["Waki renamed"]["war_stars"] == 2100
-    assert rows["Waki renamed"]["war"] == {"wars": 2, "attacks": 2, "stars": 6, "three_stars": 2, "missed": 0,
-                                           "avg_destruction": 100.0, "avg_stars": 3.0, "three_star_rate": 1.0}
-    # Skipped CWL day 1 (ended); day 2 is still in war, so its unused attack is not yet missed.
-    assert rows["newbie"]["war"] == {"wars": 2, "attacks": 0, "stars": 0, "three_stars": 0, "missed": 1,
-                                     "avg_destruction": None, "avg_stars": None, "three_star_rate": None}
-    assert rows["cake two"]["war"] == {"wars": 1, "attacks": 2, "stars": 2, "three_stars": 0, "missed": 0,
-                                       "avg_destruction": 61.5, "avg_stars": 1.0, "three_star_rate": 0.0}
+    # Export: 12 attacks (10 for Fire, 2 for Cake), 10 three-stars, 2 two-stars, 1 miss. Recorded: Fire's pull date is
+    # 3 Nov, so CWL day 1 (battle 3 Nov) is already in the export and only day 2 (4 Nov, one three-star) adds.
+    assert rows["Waki renamed"]["war"] == {
+        "attacks": 13, "stars": 37, "three_stars": 11, "missed": 1, "avg_stars": 2.85, "three_star_rate": 0.846,
+        "recorded_wars": 1, "recorded_avg_destruction": 100.0,
+        "defense": {"defenses": 5, "stars_conceded": 9, "three_stars_conceded": 1, "avg_stars_conceded": 1.8}}
+    # Cake's regular war (battle 21 Oct) is before Cake's pull date: export only.
+    assert rows["Maki"]["war"] == {
+        "attacks": 20, "stars": 54, "three_stars": 15, "missed": 0, "avg_stars": 2.7, "three_star_rate": 0.75,
+        "recorded_wars": 0, "recorded_avg_destruction": None,
+        "defense": {"defenses": 0, "stars_conceded": 0, "three_stars_conceded": 0, "avg_stars_conceded": None}}
+    # In no export; on day 2's lineup, which is still in war, so nothing is missed yet.
+    assert rows["newbie"]["war"]["recorded_wars"] == 1 and rows["newbie"]["war"]["attacks"] == 0
+    assert rows["cake two"]["war"] is None and rows["flake"]["war"] is None
+
+
+def test_war_record_follows_the_newest_cycle(raw, explored):
+    (raw / "2026-12" / "manifest.md").write_text(MANIFEST.format(cycle="2026-12", fire_pull="2026-11-05"),
+                                                 encoding="utf-8")
+    body = explored.get("/explore/war").json()
+    # The new cycle has no exports yet and its pull dates are later, so day 2 is now inside its window.
+    assert body["sources"] == ["clashspot export 2026-12"]
+    assert by_name(body)["Waki renamed"]["war"] is None
+
+
+def test_war_record_without_an_export_is_recorded_only(explored):
+    body = explored.get("/explore/war").json()
+    assert body["sources"] == ["recorded since 2026-10-21"] and body["window_from"] == "2026-10-21"
+    rows = by_name(body)
+    assert rows["Waki renamed"]["war"]["attacks"] == 2 and rows["Waki renamed"]["war"]["recorded_wars"] == 2
     assert rows["Maki"]["war"]["missed"] == 1  # 1 of 2 regular-war attacks used
-    assert rows["flake"]["war"] is None and rows["flake"]["war_stars"] == 300
-    # Ranked by all-time war stars; no profile yet means unranked.
     assert [(r["name"], r["rank"]) for r in body["players"]][:3] == [("Waki renamed", 1), ("Maki", 2), ("flake", 3)]
-    assert rows["newbie"]["rank"] is None
 
 
-def test_explore_war_record_cwl_season_only(explored):
+def test_war_record_cwl_scope_is_recorded_cwl_only(raw, explored):
     body = explored.get("/explore/war", params={"scope": "cwl"}).json()
-    assert (body["scope"], body["season"]) == ("cwl", "2026-11")
+    assert (body["scope"], body["season"], body["sources"]) == ("cwl", "2026-11", ["recorded since 2026-11-03"])
     rows = by_name(body)
-    assert rows["Waki renamed"]["war"]["wars"] == 2 and rows["newbie"]["war"]["missed"] == 1
-    # Cake's war was a regular war: not in the CWL season. War stars stay all-time.
-    assert rows["cake two"]["war"] is None and rows["Maki"]["war"] is None and rows["Maki"]["war_stars"] == 1900
+    # Both CWL days, no export rows, and day 1's enemy hit on Waki as a defense.
+    waki = rows["Waki renamed"]["war"]
+    assert (waki["attacks"], waki["recorded_wars"], waki["defense"]["defenses"]) == (2, 2, 1)
+    assert rows["Maki"]["war"] is None and rows["Maki"]["war_stars"] == 1900
     assert explored.get("/explore/war", params={"scope": "month"}).status_code == 422
 
 
