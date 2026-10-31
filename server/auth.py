@@ -26,7 +26,9 @@ from urllib.parse import urlencode
 
 import httpx
 from fastapi import APIRouter, Cookie, Depends, Header, HTTPException, Request
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.responses import RedirectResponse, Response
+
+from server import appdb, db
 
 DISCORD_API = "https://discord.com/api/v10"
 DISCORD_AUTHORIZE = "https://discord.com/oauth2/authorize"
@@ -124,6 +126,7 @@ def set_cookie(resp, name: str, value: str, max_age: int) -> None:
 class Leader:
     id: str
     name: str
+    avatar_url: str | None
     can_publish: bool
     csrf: str
 
@@ -134,7 +137,8 @@ def current_leader(ff_session: str | None = Cookie(default=None, alias=SESSION_C
     if not p:
         return None
     # Publish rights are re-read from config on every request, so changing DISCORD_PUBLISHER_ID takes effect at once.
-    return Leader(id=p["uid"], name=p["name"], can_publish=p["uid"] == cfg.publisher_id, csrf=p["csrf"])
+    return Leader(id=p["uid"], name=p["name"], avatar_url=p.get("avatar"), can_publish=p["uid"] == cfg.publisher_id,
+                  csrf=p["csrf"])
 
 
 def require_leader(leader: Leader | None = Depends(current_leader)) -> Leader:
@@ -158,63 +162,97 @@ def require_publisher(leader: Leader = Depends(require_leader_write)) -> Leader:
 
 # ─── routes ───────────────────────────────────────────────────────────────────
 
+DEFAULT_RETURN = "/#/plan"
+
+
+def safe_return(path: str | None) -> str:
+    """A path on the site, never another host: '/...' but not '//host', a backslash form, or control characters."""
+    if not path or not path.startswith("/") or path.startswith(("//", "/\\")) or any(ord(c) < 32 for c in path):
+        return DEFAULT_RETURN
+    return path
+
+
+def with_outcome(path: str, outcome: str) -> str:
+    """'/#/plan' -> '/?signin=denied#/plan'."""
+    base, hash_ = (path.split("#", 1) + [""])[:2]
+    base += ("&" if "?" in base else "?") + f"signin={outcome}"
+    return base + (f"#{hash_}" if hash_ else "")
+
+
 @router.get("/login")
-def login(cfg: Config = Depends(need_config)):
+def login(return_to: str | None = None, cfg: Config = Depends(need_config)):
     state = secrets.token_urlsafe(24)
     query = urlencode({"response_type": "code", "client_id": cfg.client_id, "scope": SCOPES, "state": state,
                        "redirect_uri": cfg.redirect_uri, "prompt": "none"})
     resp = RedirectResponse(f"{DISCORD_AUTHORIZE}?{query}", status_code=302)
-    set_cookie(resp, STATE_COOKIE, sign({"state": state, "exp": time.time() + STATE_MINUTES * 60}, cfg.secret),
-               STATE_MINUTES * 60)
+    saved = {"state": state, "return_to": safe_return(return_to), "exp": time.time() + STATE_MINUTES * 60}
+    set_cookie(resp, STATE_COOKIE, sign(saved, cfg.secret), STATE_MINUTES * 60)
     return resp
 
 
-def back_to_site(cfg: Config, outcome: str) -> RedirectResponse:
-    resp = RedirectResponse(f"{cfg.site}/?signin={outcome}#/plan", status_code=302)
+def back_to_site(cfg: Config, path: str, outcome: str | None = None) -> RedirectResponse:
+    resp = RedirectResponse(cfg.site + (with_outcome(path, outcome) if outcome else path), status_code=302)
     resp.delete_cookie(STATE_COOKIE, path="/", secure=True, httponly=True, samesite="lax")
     return resp
+
+
+def avatar_url(u: dict) -> str | None:
+    return f"https://cdn.discordapp.com/avatars/{u['id']}/{u['avatar']}.png?size=64" if u.get("avatar") else None
 
 
 @router.get("/callback")
 def callback(request: Request, code: str | None = None, state: str | None = None, error: str | None = None,
              cfg: Config = Depends(need_config)):
     saved = unsign(request.cookies.get(STATE_COOKIE), cfg.secret)
+    back = safe_return(saved.get("return_to")) if saved else DEFAULT_RETURN
     if error or not code or not state or not saved or not hmac.compare_digest(saved["state"], state):
-        return back_to_site(cfg, "failed")
+        return back_to_site(cfg, back, "failed")
     with discord_client() as dc:
         tok = dc.post("/oauth2/token", auth=(cfg.client_id, cfg.client_secret), data={
             "grant_type": "authorization_code", "code": code, "redirect_uri": cfg.redirect_uri})
         if tok.status_code != 200:
-            return back_to_site(cfg, "failed")
+            return back_to_site(cfg, back, "failed")
         bearer = {"Authorization": f"Bearer {tok.json()['access_token']}"}
         user = dc.get("/users/@me", headers=bearer)
         member = dc.get(f"/users/@me/guilds/{cfg.guild_id}/member", headers=bearer)
     if user.status_code != 200:
-        return back_to_site(cfg, "failed")
-    uid = user.json()["id"]
-    roles = set(member.json().get("roles", [])) if member.status_code == 200 else set()
-    if not (roles & cfg.leader_roles):
-        return back_to_site(cfg, "denied")  # not in the server, or no leader role
-    m, u = member.json(), user.json()
-    name = m.get("nick") or u.get("global_name") or u.get("username") or uid
-    resp = back_to_site(cfg, "ok")
-    session = {"uid": uid, "name": name, "csrf": secrets.token_urlsafe(24), "exp": time.time() + SESSION_HOURS * 3600}
+        return back_to_site(cfg, back, "failed")
+    u = user.json()
+    m = member.json() if member.status_code == 200 else {}
+    if not (set(m.get("roles", [])) & cfg.leader_roles):
+        return back_to_site(cfg, back, "denied")  # not in the server, or no leader role
+    name = m.get("nick") or u.get("global_name") or u.get("username") or u["id"]
+    with appdb.connect() as conn:
+        conn.execute("""INSERT INTO leaders VALUES (?,?,?,?) ON CONFLICT (user_id) DO UPDATE SET
+                          name=excluded.name, avatar_url=excluded.avatar_url, last_sign_in=excluded.last_sign_in""",
+                     (u["id"], name, avatar_url(u), db.utcnow()))
+    resp = back_to_site(cfg, back)
+    session = {"uid": u["id"], "name": name, "avatar": avatar_url(u), "csrf": secrets.token_urlsafe(24),
+               "exp": time.time() + SESSION_HOURS * 3600}
     set_cookie(resp, SESSION_COOKIE, sign(session, cfg.secret), SESSION_HOURS * 3600)
     return resp
 
 
 @router.get("/me")
 def me(leader: Leader | None = Depends(current_leader)):
-    body = {"signed_in": bool(leader), "configured": config() is not None}
-    if leader:
-        body |= {"id": leader.id, "name": leader.name, "can_publish": leader.can_publish, "csrf": leader.csrf}
-    resp = JSONResponse(body)
-    resp.headers["Cache-Control"] = "no-store"
-    return resp
+    cfg = config()
+    publishers = []
+    if cfg:
+        with appdb.connect() as conn:
+            row = conn.execute("SELECT name FROM leaders WHERE user_id=?", (cfg.publisher_id,)).fetchone()
+        publishers = [row["name"]] if row else []  # named once the publisher has signed in here
+    return {
+        "user": {"id": leader.id, "name": leader.name, "avatar_url": leader.avatar_url} if leader else None,
+        "role": ("publisher" if leader.can_publish else "leader") if leader else None,
+        "publishers": publishers,
+        "csrf": leader.csrf if leader else None,
+        "configured": cfg is not None,
+    }
 
 
-@router.post("/logout")
+@router.post("/logout", status_code=204)
 def logout():
-    resp = JSONResponse({"signed_in": False})
+    # No CSRF check: the worst a forged logout does is sign a leader out.
+    resp = Response(status_code=204)
     resp.delete_cookie(SESSION_COOKIE, path="/", secure=True, httponly=True, samesite="lax")
     return resp

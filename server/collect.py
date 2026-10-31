@@ -102,7 +102,8 @@ def collect_league_group(conn, api: Api, group: dict) -> None:
 
 
 def collect_profiles(conn, api: Api, tags: list[str], now: str) -> None:
-    """Every current member's /players profile. About twice a day: profiles change slowly and cost one call each."""
+    """Every current member's /players profile, and each clan's latest raid weekend. About twice a day: profiles change
+    slowly and cost one call each."""
     stored = 0
     for tag in tags:
         p = api.get(f"/players/{enc(tag)}", quiet=(404,))
@@ -110,6 +111,12 @@ def collect_profiles(conn, api: Api, tags: list[str], now: str) -> None:
             with conn:
                 profiles.upsert_profile(conn, p, now)
             stored += 1
+    # Each clan's latest raid weekend, for the capital board. 404 or 403 (no raids, private) is quiet.
+    for clan_tag in CLAN_TAGS.values():
+        raids = api.get(f"/clans/{enc(clan_tag)}/capitalraidseasons?limit=1")
+        if raids and raids.get("items"):
+            with conn:
+                profiles.upsert_raid(conn, clan_tag, raids["items"][0])
     with conn:
         conn.execute("INSERT OR REPLACE INTO profile_runs VALUES (?,?)", (now, stored))
 

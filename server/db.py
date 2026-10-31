@@ -118,7 +118,18 @@ CREATE TABLE IF NOT EXISTS player_units (
     name TEXT NOT NULL,
     level INTEGER NOT NULL,
     max_level INTEGER,                    -- the game's max for the unit, not the player's town hall cap
+    hero TEXT,                            -- equipment only: the hero it is equipped on, if any
     PRIMARY KEY (player_tag, kind, name)
+);
+-- Each clan's latest raid weekend, polled with the profiles. One row per raider.
+CREATE TABLE IF NOT EXISTS raid_members (
+    clan_tag TEXT NOT NULL,
+    start_time TEXT NOT NULL,
+    player_tag TEXT NOT NULL,
+    name TEXT,
+    attacks INTEGER,
+    looted INTEGER,
+    PRIMARY KEY (clan_tag, start_time, player_tag)
 );
 CREATE TABLE IF NOT EXISTS profile_runs (
     started_at TEXT PRIMARY KEY,

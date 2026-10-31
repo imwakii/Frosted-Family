@@ -29,10 +29,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
-from server import db
+from server import appdb, db
 from server.auth import Leader, require_leader, require_leader_write, require_publisher
 
-DEFAULT_APP_DB = "/opt/bots/frosted/data/app.db"
 CWL_CLANS = ("Fire", "Cake")
 CLANS = ("Fire", "Cake", "Flakes")
 STARTERS = 15
@@ -41,33 +40,7 @@ MAKI = "#CGJ8YR8J"
 SLOT_IN = {"CORE": "CORE", "SUB": "SUB", "OUT": "Sitting Out", "Sitting Out": "Sitting Out"}
 ALLOC_COLS = ("clan", "cwl_slot", "transferred_from")
 
-SCHEMA = """
-CREATE TABLE IF NOT EXISTS drafts (
-    user_id TEXT PRIMARY KEY,
-    user_name TEXT,
-    body TEXT NOT NULL,
-    updated_at TEXT NOT NULL
-);
-CREATE TABLE IF NOT EXISTS publishes (
-    published_at TEXT PRIMARY KEY,
-    user_id TEXT NOT NULL,
-    user_name TEXT,
-    base_sha256 TEXT NOT NULL,        -- the roster CSV this was published against
-    override_valve INTEGER NOT NULL,
-    moves TEXT NOT NULL,              -- as submitted
-    allocation TEXT NOT NULL          -- {tag: {clan, cwl_slot, transferred_from}} for every tagged player
-);
-"""
-
 router = APIRouter(prefix="/plan")
-
-
-def app_db() -> sqlite3.Connection:
-    conn = sqlite3.connect(os.environ.get("FROSTED_APP_DB", DEFAULT_APP_DB))
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA journal_mode=WAL")
-    conn.executescript(SCHEMA)
-    return conn
 
 
 def roster_path() -> Path:
@@ -93,7 +66,7 @@ def latest_publish(conn: sqlite3.Connection) -> dict | None:
 def effective_roster() -> tuple[list[dict], dict]:
     """CSV rows with the latest publish laid over them by tag, if it was made against this CSV."""
     rows, sha = read_csv()
-    with app_db() as conn:
+    with appdb.connect() as conn:
         pub = latest_publish(conn)
     meta = {"source": "csv", "published_at": None, "published_by": None, "superseded": False}
     if pub:
@@ -161,33 +134,31 @@ def check_rules(before: dict, after: dict, override_valve: bool) -> list[str]:
 
 class DraftBody(BaseModel):
     moves: list[Move] = Field(max_length=500)
-    note: str | None = Field(default=None, max_length=2000)
+
+
+def draft_view(conn) -> dict:
+    row = conn.execute("SELECT * FROM drafts WHERE draft_id='family'").fetchone()
+    if not row:
+        return {"moves": []}
+    return {"moves": json.loads(row["body"])["moves"], "updated_at": row["updated_at"], "updated_by": row["updated_by"]}
 
 
 @router.get("/draft")
 def get_draft(leader: Leader = Depends(require_leader)):
-    with app_db() as conn:
-        row = conn.execute("SELECT body, updated_at FROM drafts WHERE user_id=?", (leader.id,)).fetchone()
-    return {"draft": json.loads(row["body"]) if row else None, "updated_at": row["updated_at"] if row else None}
+    """The family's one shared draft; any leader may load it."""
+    with appdb.connect() as conn:
+        return draft_view(conn)
 
 
 @router.put("/draft")
 def put_draft(body: DraftBody, leader: Leader = Depends(require_leader_write)):
-    now = db.utcnow()
-    with app_db() as conn:
+    """Replaces the shared draft: last write wins."""
+    with appdb.connect() as conn:
         conn.execute(
-            """INSERT INTO drafts VALUES (?,?,?,?) ON CONFLICT (user_id) DO UPDATE SET
-                 user_name=excluded.user_name, body=excluded.body, updated_at=excluded.updated_at""",
-            (leader.id, leader.name, body.model_dump_json(), now))
-    return {"ok": True, "updated_at": now}
-
-
-@router.get("/drafts")
-def list_drafts(leader: Leader = Depends(require_leader)):
-    """Every leader's saved draft, so co-leaders can see each other's proposals."""
-    with app_db() as conn:
-        rows = conn.execute("SELECT user_name, body, updated_at FROM drafts ORDER BY updated_at DESC").fetchall()
-    return {"drafts": [{"by": r["user_name"], "updated_at": r["updated_at"], **json.loads(r["body"])} for r in rows]}
+            """INSERT INTO drafts VALUES ('family',?,?,?) ON CONFLICT (draft_id) DO UPDATE SET
+                 body=excluded.body, updated_at=excluded.updated_at, updated_by=excluded.updated_by""",
+            (body.model_dump_json(), db.utcnow(), leader.name))
+        return draft_view(conn)
 
 
 @router.post("/check")
@@ -210,7 +181,7 @@ def publish(body: PublishBody, leader: Leader = Depends(require_publisher)):
     if problems:
         raise HTTPException(422, {"problems": problems})
     now = db.utcnow()
-    with app_db() as conn:
+    with appdb.connect() as conn:
         conn.execute("INSERT INTO publishes VALUES (?,?,?,?,?,?,?)",
                      (now, leader.id, leader.name, sha, int(body.override_valve),
                       json.dumps([m.model_dump() for m in body.moves]), json.dumps(after)))
@@ -220,7 +191,7 @@ def publish(body: PublishBody, leader: Leader = Depends(require_publisher)):
 def allocation_csv() -> Response:
     """The latest publish as CSV, for server/pull_allocation.py. 404 until something is published."""
     rows, _ = read_csv()
-    with app_db() as conn:
+    with appdb.connect() as conn:
         pub = latest_publish(conn)
     if not pub:
         raise HTTPException(404, "nothing published yet")

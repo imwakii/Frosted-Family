@@ -27,7 +27,8 @@ def discord(request: httpx.Request) -> httpx.Response:
         return httpx.Response(200, json={"access_token": f"tok-{code}"}) if code in USERS else httpx.Response(400)
     uid = USERS.get(request.headers["Authorization"].removeprefix("Bearer tok-"))
     if path.endswith("/users/@me"):
-        return httpx.Response(200, json={"id": uid, "username": f"user{uid}", "global_name": f"User {uid}"})
+        return httpx.Response(200, json={"id": uid, "username": f"user{uid}", "global_name": f"User {uid}",
+                                         "avatar": "abc" if uid == PUBLISHER else None})
     if path.endswith("/guilds/555/member"):
         return httpx.Response(200, json={"nick": None, "roles": ROLES[uid]})
     return httpx.Response(404)
@@ -51,15 +52,15 @@ def client():
     return TestClient(api.app, base_url="https://testserver", follow_redirects=False)
 
 
-def sign_in(c, code="good-code"):
-    login = c.get("/auth/login")
+def sign_in(c, code="good-code", return_to=None):
+    login = c.get("/auth/login", params={"return_to": return_to} if return_to else None)
     state = parse_qs(urlparse(login.headers["location"]).query)["state"][0]
     return c.get("/auth/callback", params={"code": code, "state": state})
 
 
 def signed_in(code="good-code"):
     c = client()
-    assert "signin=ok" in sign_in(c, code).headers["location"]
+    assert sign_in(c, code).headers["location"] == f"{SITE}/#/plan"
     csrf = c.get("/auth/me").json()["csrf"]
     return c, {"X-CSRF-Token": csrf}
 
@@ -87,18 +88,33 @@ def test_login_redirects_to_discord_with_scopes_and_callback(env):
 
 def test_leader_signs_in_and_gets_a_session(env):
     c = client()
-    r = sign_in(c)
-    assert r.headers["location"] == f"{SITE}/?signin=ok#/plan"
-    assert auth.SESSION_COOKIE in r.headers["set-cookie"]
+    r = sign_in(c, return_to="/#/explore")
+    assert r.headers["location"] == f"{SITE}/#/explore"
+    cookie = r.headers["set-cookie"]
+    assert auth.SESSION_COOKIE in cookie and "Domain" not in cookie and "HttpOnly" in cookie
     me = c.get("/auth/me").json()
-    assert me["signed_in"] and me["id"] == PUBLISHER and me["can_publish"] and me["name"] == f"User {PUBLISHER}"
+    assert me["user"] == {"id": PUBLISHER, "name": f"User {PUBLISHER}",
+                          "avatar_url": f"https://cdn.discordapp.com/avatars/{PUBLISHER}/abc.png?size=64"}
+    assert me["role"] == "publisher" and me["publishers"] == [f"User {PUBLISHER}"] and me["csrf"]
     assert c.get("/auth/me").headers["cache-control"] == "no-store, private"
+
+
+def test_coleader_is_a_leader_and_publisher_is_unnamed_until_signed_in(env):
+    c, _ = signed_in("coleader-code")
+    me = c.get("/auth/me").json()
+    assert me["role"] == "leader" and me["publishers"] == []
+
+
+def test_return_to_cannot_leave_the_site(env):
+    for bad in ("https://evil.example/", "//evil.example/", "/\\evil.example", "/\r\nSet-Cookie:x"):
+        assert sign_in(client(), return_to=bad).headers["location"] == f"{SITE}/#/plan"
+    assert auth.with_outcome("/#/plan", "denied") == "/?signin=denied#/plan"
 
 
 def test_member_without_leader_role_is_denied(env):
     c = client()
-    assert "signin=denied" in sign_in(c, "outsider-code").headers["location"]
-    assert c.get("/auth/me").json()["signed_in"] is False
+    assert sign_in(c, "outsider-code").headers["location"] == f"{SITE}/?signin=denied#/plan"
+    assert c.get("/auth/me").json()["user"] is None
 
 
 def test_callback_rejects_a_forged_state(env):
@@ -120,13 +136,14 @@ def test_tampered_or_expired_session_is_ignored(env):
 def test_sign_in_answers_503_until_configured(env, monkeypatch):
     monkeypatch.delenv("DISCORD_CLIENT_SECRET")
     assert client().get("/auth/login").status_code == 503
-    assert client().get("/auth/me").json() == {"signed_in": False, "configured": False}
+    assert client().get("/auth/me").json() == {"user": None, "role": None, "publishers": [], "csrf": None,
+                                               "configured": False}
 
 
 def test_logout_clears_the_session(env):
     c, _ = signed_in()
-    c.post("/auth/logout")
-    assert c.get("/auth/me").json()["signed_in"] is False
+    assert c.post("/auth/logout").status_code == 204
+    assert c.get("/auth/me").json()["user"] is None
 
 
 # ─── drafts and CSRF ──────────────────────────────────────────────────────────
@@ -134,12 +151,15 @@ def test_logout_clears_the_session(env):
 def test_drafts_need_sign_in_and_csrf(env):
     assert client().get("/plan/draft").status_code == 401
     c, csrf = signed_in("coleader-code")
-    body = {"moves": [{"tag": "#R2PPV8CL", "clan": "Fire", "slot": "SUB"}], "note": "try this"}
+    assert c.get("/plan/draft").json() == {"moves": []}
+    body = {"moves": [{"tag": "#R2PPV8CL", "clan": "Fire", "slot": "SUB"}]}
     assert c.put("/plan/draft", json=body).status_code == 403
     assert c.put("/plan/draft", json=body, headers={"X-CSRF-Token": "wrong"}).status_code == 403
-    assert c.put("/plan/draft", json=body, headers=csrf).status_code == 200
-    assert c.get("/plan/draft").json()["draft"]["note"] == "try this"
-    assert [d["by"] for d in c.get("/plan/drafts").json()["drafts"]] == [f"User {COLEADER}"]
+    saved = c.put("/plan/draft", json=body, headers=csrf).json()
+    assert saved["moves"] == body["moves"] and saved["updated_by"] == f"User {COLEADER}" and saved["updated_at"]
+    # One shared draft: the publisher loads the co-leader's.
+    p, _ = signed_in()
+    assert p.get("/plan/draft").json()["moves"] == body["moves"]
 
 
 # ─── rules and publish ────────────────────────────────────────────────────────
@@ -242,24 +262,53 @@ def explored(env):
     return client()
 
 
-def test_explore_heroes_counts_home_village_only_and_skips_leavers(explored):
-    players = explored.get("/explore/heroes").json()["players"]
-    assert [(p["name"], p["levels"], p["rank"]) for p in players] == [("Waki renamed", 200, 1), ("Maki", 185, 2)]
-    assert "Battle Machine" not in {u["name"] for u in players[0]["units"]}
+def by_name(body):
+    return {p["name"]: p for p in body["players"]}
 
 
-def test_explore_army_sorts_pets_and_siege_and_drops_super_troops(explored):
-    waki = explored.get("/explore/army").json()["players"][0]
-    kinds = {u["name"]: u["kind"] for u in waki["units"]}
-    assert kinds == {"Barbarian": "troop", "Wall Wrecker": "siege", "Unicorn": "pet", "Rage Spell": "spell"}
-    assert waki["progress_pct"] == 100.0
+def test_explore_every_member_gets_a_row(explored):
+    body = explored.get("/explore/heroes").json()
+    assert body["kind"] == "heroes" and body["updated_at"]
+    rows = by_name(body)
+    # Five members in the poll. flake's profile names another clan, but the member poll is fresher and keeps them.
+    assert set(rows) == {"Waki renamed", "newbie", "Maki", "cake two", "flake"}
+    assert rows["flake"]["clan"] == "Flakes"
+    assert rows["newbie"]["heroes"] == [] and rows["newbie"]["rank"] is None  # no profile fixture
+    # Home village only: no Battle Machine.
+    assert rows["Waki renamed"]["heroes"] == [{"name": "Barbarian King", "level": 100, "cap": None, "max": 105},
+                                              {"name": "Archer Queen", "level": 100, "cap": None, "max": 105}]
+    assert (rows["Waki renamed"]["rank"], rows["Maki"]["rank"], rows["flake"]["rank"]) == (1, 2, 3)
+    assert (rows["Waki renamed"]["clan"], rows["Waki renamed"]["th"]) == ("Fire", 18)
 
 
-def test_explore_ties_share_a_rank(explored):
-    capital = explored.get("/explore/capital").json()["players"]
-    assert [p["rank"] for p in capital] == [1, 1]
-    assert explored.get("/explore/donations").json()["players"][0]["name"] == "Maki"
-    assert explored.get("/explore/war").json()["players"][0]["war_stars"] == 2100
+def test_explore_equipment_names_the_hero_only_when_worn(explored):
+    eq = by_name(explored.get("/explore/equipment").json())["Waki renamed"]["equipment"]
+    assert {e["name"]: e["hero"] for e in eq} == {"Giant Gauntlet": "Barbarian King", "Barbarian Puppet": None}
+
+
+def test_explore_army_groups_and_drops_super_troops(explored):
+    units = by_name(explored.get("/explore/army").json())["Waki renamed"]["units"]
+    assert {u["name"]: u["group"] for u in units} == {"Barbarian": "troop", "Wall Wrecker": "siege",
+                                                      "Unicorn": "pet", "Rage Spell": "spell"}
+    assert all(u["cap"] is None for u in units)
+
+
+def test_explore_war_comes_from_recorded_wars(explored):
+    rows = by_name(explored.get("/explore/war").json())
+    assert rows["Waki renamed"]["war"] == {"wars": 2, "attacks": 2, "stars": 6, "three_stars": 2, "missed": 0,
+                                           "avg_destruction": 100.0, "from": "2026-11-03", "to": "2026-11-04"}
+    assert (rows["newbie"]["war"]["attacks"], rows["newbie"]["war"]["missed"]) == (0, 1)
+    assert rows["Maki"]["war"]["stars"] == 3 and rows["flake"]["war"] is None
+
+
+def test_explore_donations_and_capital(explored):
+    don = by_name(explored.get("/explore/donations").json())
+    assert don["Maki"]["donations"] == {"donated": 300, "received": 90} and don["Maki"]["rank"] == 1
+    assert don["newbie"]["donations"] is None
+    cap = by_name(explored.get("/explore/capital").json())
+    assert cap["Waki renamed"]["capital"] == {"contributed": 450000, "raid_loot": 21000, "raid_attacks": 6}
+    assert cap["Maki"]["capital"] == {"contributed": 450000, "raid_loot": None, "raid_attacks": None}
+    assert cap["Waki renamed"]["rank"] == cap["Maki"]["rank"] == 1  # a tie shares the rank
     assert explored.get("/explore/rushed").status_code == 404
 
 

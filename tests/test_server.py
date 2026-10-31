@@ -25,6 +25,9 @@ ROUTES = {
     "/v1/clanwarleagues/wars/%238QPY2LGR0": "cwl_war_fire_day1.json",
     "/v1/clanwarleagues/wars/%239RJ2C80GQ": "cwl_war_others.json",
     "/v1/clanwarleagues/wars/%232Y0QRLJ8P": "cwl_war_fire_day2.json",
+    "/v1/clans/%23CL0G80LV/capitalraidseasons?limit=1": "raids_fire.json",
+    "/v1/clans/%2320CU2R80R/capitalraidseasons?limit=1": 404,
+    "/v1/clans/%232JJYV0JVV/capitalraidseasons?limit=1": 403,
 }
 
 
