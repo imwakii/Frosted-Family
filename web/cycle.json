@@ -1,8 +1,8 @@
 {
   "cwlStart": "2026-11-02T18:00:00Z",
   "clans": {
-    "Fire": { "league": "Champion 3", "inCwl": true },
-    "Cake": { "league": "Masters 2", "inCwl": true },
-    "Flakes": { "league": null, "inCwl": false }
+    "Fire": { "league": "Champion League III", "inCwl": true },
+    "Cake": { "league": "Master League II", "inCwl": true },
+    "Flakes": { "league": "Master League III", "inCwl": false }
   }
 }

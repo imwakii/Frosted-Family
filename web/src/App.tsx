@@ -56,7 +56,7 @@ export default function App() {
       {wide ? (
         <header className="border-b border-line bg-white">
           <div className="mx-auto flex max-w-[1360px] flex-wrap items-center gap-x-6 gap-y-3 px-[clamp(16px,3vw,32px)] py-3">
-            <span className="text-xl font-extrabold tracking-[-0.02em]">Frosted Family</span>
+            <span className="font-display text-2xl text-brand">Frosted Family</span>
             <nav aria-label="Sections" className="flex gap-1 rounded-xl bg-[#EEF1F6] p-1">
               {TABS.map((t) => (
                 <a key={t.id} href={t.href} aria-current={route.tab === t.id ? 'page' : undefined}
@@ -70,7 +70,7 @@ export default function App() {
         </header>
       ) : (
         <header className="flex items-center justify-between gap-3 px-4 pb-2.5 pt-[max(16px,env(safe-area-inset-top))]">
-          <span className="text-[21px] font-extrabold tracking-[-0.02em]">Frosted Family</span>
+          <span className="font-display text-2xl text-brand">Frosted Family</span>
           {corner}
         </header>
       )}

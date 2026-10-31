@@ -3,7 +3,8 @@ import { loginHref, takeSigninError, type Me } from '../auth'
 import { checkPlan, getDraft, HttpError, publishPlan, saveDraft } from '../data'
 import { CLAN, CLANS, GROUPS, STATUS, coreAvg, fmtScore } from '../theme'
 import type { ClanName, Player, Roster, Slot } from '../types'
-import { Arrow, Th } from './ui'
+import { useClans } from '../clash'
+import { Arrow, ClanBadge, Th } from './ui'
 
 // Allocation rules: docs/specs/02-allocation-rules.md.
 const MAKI = '#CGJ8YR8J'
@@ -94,6 +95,7 @@ function Plan({ roster, me }: { roster: Roster; me: Me }) {
   const [override, setOverride] = useState(false)
   const [server, setServer] = useState<{ problems: string[] } | 'checking' | null>(null)
   const [phoneClan, setPhoneClan] = useState<ClanName>('Fire')
+  const clans = useClans()
 
   useEffect(() => { try { localStorage.setItem(DRAFT_KEY, JSON.stringify(moves)) } catch { /* private mode */ } }, [moves])
 
@@ -272,7 +274,7 @@ function Plan({ roster, me }: { roster: Roster; me: Me }) {
               <section key={c.clan} aria-label={c.clan} className={`overflow-hidden rounded-[18px] border border-line bg-white ${c.clan === phoneClan ? '' : 'max-md:hidden'}`}>
                 <div className="flex items-end justify-between p-4" style={{ background: t.tint }}>
                   <div className="flex flex-col gap-0.5">
-                    <h2 className="m-0 text-[22px] font-extrabold tracking-[-0.02em]" style={{ color: t.deep }}>{c.clan}</h2>
+                    <h2 className="font-display m-0 flex items-center gap-2 text-[22px] leading-none" style={{ color: t.deep }}><ClanBadge src={clans[c.clan]?.badge} size={30} />{c.clan}</h2>
                     <span className={`text-[13px] font-semibold ${c.count > CAP ? 'text-[#B91C1C]' : 'text-muted'}`}>{c.count}/{CAP}</span>
                   </div>
                   {c.inCwl && (
@@ -282,7 +284,7 @@ function Plan({ roster, me }: { roster: Roster; me: Me }) {
                           {c.delta > 0 ? '+' : '−'}{Math.abs(c.delta).toFixed(1)}
                         </span>
                       )}
-                      <span className="text-[26px] font-extrabold leading-[1.05] tabular-nums" style={{ color: t.deep }}>{c.avg === null ? '—' : c.avg.toFixed(1)}</span>
+                      <span className="font-display text-[26px] leading-[1.05] tabular-nums" style={{ color: t.deep }}>{c.avg === null ? '—' : c.avg.toFixed(1)}</span>
                     </div>
                   )}
                 </div>
@@ -306,7 +308,7 @@ function Plan({ roster, me }: { roster: Roster; me: Me }) {
         <div className="ff-fade fixed inset-0 z-50 flex items-center justify-center bg-[rgba(15,23,42,.4)] p-4" onClick={(e) => { if (e.target === e.currentTarget) setConfirming(false) }}>
           <section role="dialog" aria-modal="true" aria-label="Publish to CWL"
             className="ff-sheet flex max-h-[80vh] w-full max-w-[440px] flex-col gap-3.5 overflow-auto rounded-[20px] bg-white p-[22px] shadow-[0_20px_50px_rgba(15,23,42,.25)]">
-            <h2 className="m-0 text-xl font-extrabold tracking-[-0.02em]">Publish {changeLabel}?</h2>
+            <h2 className="font-display m-0 text-[22px]">Publish {changeLabel}?</h2>
             <ul className="m-0 flex list-none flex-col gap-0.5 p-0">
               {changes.map((p) => (
                 <li key={p.tag} className="flex min-h-10 items-center gap-2 rounded-[10px] bg-page px-3 text-sm">
@@ -353,7 +355,7 @@ function Gate({ me, onSignOut }: { me: Me; onSignOut: () => void }) {
         <span className="flex size-12 items-center justify-center rounded-2xl bg-[#EEF1F6] text-ink-2">
           <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="11" width="14" height="9" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></svg>
         </span>
-        <h2 className="m-0 text-xl font-extrabold tracking-[-0.02em]">Leaders only</h2>
+        <h2 className="font-display m-0 text-[24px] text-brand">Leaders only</h2>
         {failed && !me.user && (
           <span role="status" className="rounded-full bg-[#FEF3C7] px-3 py-1 text-[13px] font-bold text-[#92400E]">
             {failed === 'denied' ? 'Not a leader account' : 'Sign-in failed. Try again.'}
