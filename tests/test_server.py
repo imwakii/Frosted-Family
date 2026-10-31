@@ -28,6 +28,9 @@ ROUTES = {
     "/v1/clans/%23CL0G80LV/capitalraidseasons?limit=1": "raids_fire.json",
     "/v1/clans/%2320CU2R80R/capitalraidseasons?limit=1": 404,
     "/v1/clans/%232JJYV0JVV/capitalraidseasons?limit=1": 403,
+    "/v1/clans/%23CL0G80LV": "clan_fire.json",
+    "/v1/clans/%2320CU2R80R": "clan_cake.json",
+    "/v1/clans/%232JJYV0JVV": 404,
 }
 
 
@@ -201,6 +204,16 @@ def test_player_reports_wars_attacks_and_misses(client):
     assert body["missed_attacks"] == 1
     assert client.get("/player/%23R2PPV8CL").json()["allocation"]["name"] == "Waki"
     assert client.get("/player/%2399999999").status_code == 404
+
+
+def test_clans_serves_badges_and_league(client):
+    clans = {c["clan"]: c for c in client.get("/clans").json()["clans"]}
+    assert clans["Fire"]["badge_urls"]["large"].endswith("/512/fire.png")
+    assert clans["Fire"]["war_league"] == "Champion League III" and clans["Fire"]["members"] == 37
+    assert clans["Cake"]["capital_league"] is None
+    # Flakes' details 404ed: listed with nulls, never dropped.
+    assert clans["Flakes"]["name"] is None and clans["Flakes"]["badge_urls"] == {"small": None, "medium": None,
+                                                                                "large": None}
 
 
 def test_leader_endpoints_refuse_until_auth_exists(client):

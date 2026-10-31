@@ -87,6 +87,20 @@ CREATE TABLE IF NOT EXISTS cwl_war_tags (
     state TEXT
 );
 
+-- Each of our clans as /clans/{tag} last showed it: name, badge and leagues for the site's headers.
+CREATE TABLE IF NOT EXISTS clans (
+    clan_tag TEXT PRIMARY KEY,
+    name TEXT,
+    badge_small TEXT,
+    badge_medium TEXT,
+    badge_large TEXT,
+    war_league TEXT,
+    capital_league TEXT,
+    clan_level INTEGER,
+    members INTEGER,
+    updated_at TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS polls (
     started_at TEXT PRIMARY KEY,
     finished_at TEXT,
@@ -190,6 +204,19 @@ def upsert_members(conn: sqlite3.Connection, clan_tag: str, items: list[dict], s
         rows,
     )
     return len(rows)
+
+
+def upsert_clan(conn: sqlite3.Connection, c: dict, seen_at: str) -> None:
+    badge = c.get("badgeUrls") or {}
+    conn.execute(
+        """INSERT INTO clans VALUES (?,?,?,?,?,?,?,?,?,?) ON CONFLICT (clan_tag) DO UPDATE SET
+             name=excluded.name, badge_small=excluded.badge_small, badge_medium=excluded.badge_medium,
+             badge_large=excluded.badge_large, war_league=excluded.war_league, capital_league=excluded.capital_league,
+             clan_level=excluded.clan_level, members=excluded.members, updated_at=excluded.updated_at""",
+        (c["tag"], c.get("name"), badge.get("small"), badge.get("medium"), badge.get("large"),
+         (c.get("warLeague") or {}).get("name"), (c.get("capitalLeague") or {}).get("name"), c.get("clanLevel"),
+         c.get("members"), seen_at),
+    )
 
 
 def war_key(war: dict, war_tag: str | None) -> str:

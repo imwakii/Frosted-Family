@@ -62,7 +62,10 @@ def enc(tag: str) -> str:
 
 
 def collect_clan(conn, api: Api, clan_tag: str, now: str) -> list[str]:
-    """One clan's members and wars. Returns the member tags."""
+    """One clan's details, members and wars. Returns the member tags."""
+    clan = api.get(f"/clans/{enc(clan_tag)}", quiet=(404,))
+    if clan:
+        db.upsert_clan(conn, clan, now)
     members = api.get(f"/clans/{enc(clan_tag)}/members", quiet=(404,))
     items = members.get("items", []) if members else []
     if members is not None:
