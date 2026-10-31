@@ -79,12 +79,24 @@ export type WarRow = {
   war_stars?: number | null
   war: { wars: number; attacks: number; stars: number; three_stars: number; missed: number; avg_destruction: number | null; from?: string | null } | null
 }
-export type WarBoard = { scope: WarScope | null; since: string | null; windowFrom: string | null; season: string | null; updated_at: string | null; players: WarRow[] }
+export type WarBoard = { scope: WarScope | null; since: string | null; windowFrom: string | null; recordedFrom: string | null; season: string | null; updated_at: string | null; players: WarRow[] }
 
 type WarBlock = { wars_played: number; attacks_used: number; attacks_missed: number; three_star_rate: number | null; avg_stars: number | null; avg_destruction: number | null }
 type RawWar = {
-  scope?: WarScope; since?: string; window_from?: string | null; season?: string | null; cwl_season?: string | null; updated_at?: string | null; as_of?: string | null
-  players: (Omit<WarRow, 'war'> & { war?: WarRow['war']; recorded?: WarBlock | null; cwl?: WarBlock | null })[]
+  scope?: WarScope; since?: string; window_from?: string | null; sources?: string[]; season?: string | null; cwl_season?: string | null; updated_at?: string | null; as_of?: string | null
+  players: (Omit<WarRow, 'war'> & { war?: ApiWar | null; recorded?: WarBlock | null; cwl?: WarBlock | null })[]
+}
+
+// The per-scope war object; recorded_* names arrived with the clashspot baseline,
+// since war counts and destruction cover recorded wars only.
+type ApiWar = Partial<NonNullable<WarRow['war']>> & { recorded_wars?: number; recorded_avg_destruction?: number | null }
+
+function fromApi(w: ApiWar | null | undefined): WarRow['war'] {
+  if (!w) return null
+  return {
+    wars: w.recorded_wars ?? w.wars ?? 0, attacks: w.attacks ?? 0, stars: w.stars ?? 0, three_stars: w.three_stars ?? 0, missed: w.missed ?? 0,
+    avg_destruction: w.recorded_avg_destruction ?? w.avg_destruction ?? null, from: w.from ?? null,
+  }
 }
 
 // Per-attack rates back to counts, so both shapes sort and display alike.
@@ -112,7 +124,7 @@ function fetchWar(scope: WarScope): Promise<WarBoard | null> {
         const split = d.players.some((p) => 'recorded' in p || 'cwl' in p)
         const players: WarRow[] = d.players.map((p) => ({
           tag: p.tag, name: p.name, clan: p.clan, th: p.th, war_stars: p.war_stars ?? null,
-          war: split ? fromBlock(scope === 'cwl' ? p.cwl : p.recorded) : p.war ?? null,
+          war: split ? fromBlock(scope === 'cwl' ? p.cwl : p.recorded) : fromApi(p.war),
         }))
         const froms = players.map((p) => p.war?.from).filter((f): f is string => !!f).sort()
         return {
@@ -120,6 +132,8 @@ function fetchWar(scope: WarScope): Promise<WarBoard | null> {
           since: d.since ?? froms[0] ?? null,
           // Start of the merged history (export plus recorded wars); since is recorded wars only.
           windowFrom: d.window_from ?? null,
+          // First recorded war, from a source line such as "recorded since 2026-11-04".
+          recordedFrom: (d.sources ?? []).map((x) => x.match(/recorded since (\d{4}-\d{2}-\d{2})/)?.[1]).find(Boolean) ?? null,
           season: d.season ?? d.cwl_season ?? null,
           updated_at: d.updated_at ?? d.as_of ?? null,
           players,

@@ -337,7 +337,8 @@ function WarBoardView({ q, setQ, wide }: BoardProps) {
       const w = r.war
       if (!w) continue
       attacks += w.attacks; missed += w.missed; three += w.three_stars; stars += w.stars
-      if (w.avg_destruction !== null) { destSum += w.avg_destruction * w.attacks; destN += w.attacks }
+      // Destruction covers recorded wars only, so it is weighted by recorded wars.
+      if (w.avg_destruction !== null && w.wars) { destSum += w.avg_destruction * w.wars; destN += w.wars }
     }
     return {
       warStars: ws.length ? ws.reduce((a, b) => a + b, 0) : null,
@@ -363,7 +364,8 @@ function WarBoardView({ q, setQ, wide }: BoardProps) {
       dest: summary.dest === null ? '' : pct(summary.dest),
     } },
   ]
-  const recordedTip = data?.windowFrom && data.since && data.windowFrom !== data.since ? `Recorded ${sinceLabel(data.since)}` : undefined
+  const recordedStart = data?.recordedFrom ?? (data?.windowFrom && data.since !== data.windowFrom ? data.since : null)
+  const recordedTip = recordedStart && recordedStart !== data?.windowFrom ? `Recorded ${sinceLabel(recordedStart)}` : undefined
 
   const scopeToggle = scoped && (
     <div role="group" aria-label="Wars" className="inline-grid flex-none auto-cols-max grid-flow-col gap-1 rounded-xl bg-well p-1">
