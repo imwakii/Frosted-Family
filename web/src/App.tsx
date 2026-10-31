@@ -82,7 +82,7 @@ export default function App() {
           {[48, 120, 46, 320].map((h, i) => <div key={i} className="animate-pulse rounded-2xl bg-well" style={{ height: h }} />)}
         </div>
       ) : route.tab === 'plan' ? (
-        <PlanTab roster={roster} me={auth.me} ready={auth.status === 'ready'} onSignOut={auth.signOut} />
+        <PlanTab roster={roster} me={auth.me} ready={auth.status === 'ready'} wide={wide} onSignOut={auth.signOut} onSignedIn={auth.reload} />
       ) : route.tab === 'explore' ? (
         <ExploreTab kind={route.kind} q={q} setQ={setQ} wide={wide} />
       ) : (

@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { useClans } from '../clash'
 import { groupUnits } from '../equipment'
+import UpgradesBoard from './UpgradesBoard'
 import { CATS, type Cat, competitionRanks, HIGH_MISS, isMaxed, type MatrixPlayer, missRate, progress, useMatrix, useWarBoard, type WarRow, type WarScope } from '../explore'
 import { go, playerHref } from '../route'
 import { CLAN, CLANS } from '../theme'
@@ -8,18 +9,18 @@ import type { ClanName } from '../types'
 import { norm, SearchBox } from './CwlTab'
 import { ClanBadge, Star, Th, UnitIcon } from './ui'
 
-type ClanPick = ClanName | 'All'
+export type ClanPick = ClanName | 'All'
 type BoardProps = { q: string; setQ: (v: string) => void; wide: boolean }
 
 // The unit categories, then the boards that are not a unit matrix.
-const NAV: { id: string; label: string; icon: string | null }[] = [...CATS, { id: 'war', label: 'War record', icon: 'War Record' }]
+const NAV: { id: string; label: string; icon: string | null }[] = [...CATS, { id: 'war', label: 'War record', icon: 'War Record' }, { id: 'upgrades', label: 'Upgrades', icon: null }]
 
-function useClanPick() {
+export function useClanPick() {
   const [clan, setClanState] = useState<ClanPick>(() => (read('ff-x-clan') as ClanPick) || 'All')
   return [clan, (c: ClanPick) => { setClanState(c); write('ff-x-clan', c) }] as const
 }
 
-function CategoryNav({ current, wide }: { current: string; wide: boolean }) {
+export function CategoryNav({ current, wide }: { current: string; wide: boolean }) {
   const navRef = useRef<HTMLElement>(null)
   useEffect(() => { navRef.current?.querySelector('[aria-pressed="true"]')?.scrollIntoView({ inline: 'center', block: 'nearest' }) }, [current])
   if (wide) {
@@ -49,7 +50,7 @@ function CategoryNav({ current, wide }: { current: string; wide: boolean }) {
 const read = (k: string) => { try { return sessionStorage.getItem(k) } catch { return null } }
 const write = (k: string, v: string) => { try { sessionStorage.setItem(k, v) } catch { /* private mode */ } }
 
-function ClanFilter({ clan, setClan, counts, wide }: { clan: ClanPick; setClan: (c: ClanPick) => void; counts: Record<string, number>; wide: boolean }) {
+export function ClanFilter({ clan, setClan, counts, wide }: { clan: ClanPick; setClan: (c: ClanPick) => void; counts: Record<string, number>; wide: boolean }) {
   const clans = useClans()
   return (
     <div role="group" aria-label="Clan" className={`gap-1 rounded-xl bg-well p-1 ${wide ? 'inline-grid flex-none auto-cols-max grid-flow-col' : 'grid grid-cols-4'}`}>
@@ -65,7 +66,7 @@ function ClanFilter({ clan, setClan, counts, wide }: { clan: ClanPick; setClan: 
   )
 }
 
-function Empty({ loading }: { loading: boolean }) {
+export function Empty({ loading }: { loading: boolean }) {
   if (loading) {
     return <div aria-busy="true" aria-label="Loading" className="flex flex-col gap-2">{[0, 1, 2, 3, 4].map((i) => <div key={i} className="h-[52px] animate-pulse rounded-xl bg-well" />)}</div>
   }
@@ -82,6 +83,7 @@ const cellTone = (l: number | null, max: number) =>
 
 export default function ExploreTab({ kind, ...rest }: BoardProps & { kind: string | null }) {
   const id = NAV.find((c) => c.id === kind)?.id ?? 'heroes'
+  if (id === 'upgrades') return <UpgradesBoard {...rest} />
   return id === 'war' ? <WarBoardView {...rest} /> : <MatrixBoard cat={id as Cat} {...rest} />
 }
 

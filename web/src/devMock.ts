@@ -48,3 +48,50 @@ export async function mockWar(scope: 'all' | 'cwl') {
     }),
   }
 }
+
+const HOURS = 3600_000
+
+export async function mockUpgrades() {
+  const roster: Roster = await fetch('/roster.json').then((r) => r.json())
+  const pool: [string, 'hero' | 'equipment' | 'troop' | 'spell' | 'pet' | 'siege' | 'town_hall', number][] = [
+    ['Archer Queen', 'hero', 110], ['Barbarian King', 'hero', 110], ['Grand Warden', 'hero', 85], ['Giant Gauntlet', 'equipment', 27],
+    ['Fireball', 'equipment', 27], ['Electro Titan', 'troop', 4], ['Root Rider', 'troop', 3], ['Rage Spell', 'spell', 6],
+    ['Overgrowth Spell', 'spell', 3], ['Unicorn', 'pet', 10], ['Log Launcher', 'siege', 5], ['Town Hall', 'town_hall', 18],
+  ]
+  const r = rnd('upgrades')
+  const upgrades = Array.from({ length: 60 }, () => {
+    const p = roster.players[Math.floor(r() * roster.players.length)]
+    const [unit, category, max] = pool[Math.floor(r() * pool.length)]
+    const to = category === 'town_hall' ? Math.min(18, (p.th ?? 15) + 1) : Math.max(1, Math.floor(r() * max) + 1)
+    return { tag: p.tag, name: p.name, clan: p.clan, th: p.th, unit, category, change: to === 1 ? 'unlock' : 'level_up', from: to - 1, to,
+      at: new Date(Date.now() - r() * 7 * 24 * HOURS).toISOString() }
+  }).sort((a, b) => b.at.localeCompare(a.at))
+  return { as_of: new Date().toISOString(), upgrades }
+}
+
+export async function mockInactivity() {
+  const roster: Roster = await fetch('/roster.json').then((r) => r.json())
+  const r = rnd('inactive')
+  return {
+    as_of: new Date().toISOString(),
+    players: roster.players.map((p) => {
+      const d = Math.floor(r() * r() * 30)
+      return { tag: p.tag, name: p.name, clan: p.clan, th: p.th, last_active: new Date(Date.now() - d * 24 * HOURS).toISOString(),
+        days_inactive: d, inactive_at_least: r() < 0.1, tracking_since: '2026-10-30', last_war_attack: r() < 0.3 ? null : new Date(Date.now() - r() * 20 * 24 * HOURS).toISOString(),
+        donations: Math.floor(r() * 1500), missed_attacks_recorded: Math.floor(r() * 3) }
+    }).sort((a, b) => b.days_inactive - a.days_inactive),
+  }
+}
+
+export async function mockMakeRoom(clan: 'Fire' | 'Cake' | 'Flakes') {
+  const roster: Roster = await fetch('/roster.json').then((r) => r.json())
+  const r = rnd('room' + clan)
+  const codes = ['inactive_days', 'high_miss', 'missed_recent', 'sitting_out', 'no_donations', 'low_th_for_clan', 'new_and_unproven']
+  const mine = roster.players.filter((p) => p.clan === clan)
+  return {
+    clan, members: mine.length, cap: 50, as_of: new Date().toISOString(),
+    players: mine.map((p) => ({ tag: p.tag, name: p.name, clan: p.clan, th: p.th, cwl_slot: p.slot,
+      reasons: codes.filter(() => r() < 0.25).map((code) => ({ code, value: code === 'inactive_days' ? 7 + Math.floor(r() * 30) : code === 'missed_recent' ? 1 + Math.floor(r() * 4) : null })),
+      score: 0 })).map((c) => ({ ...c, score: c.reasons.length })).filter((c) => c.score).sort((a, b) => b.score - a.score),
+  }
+}

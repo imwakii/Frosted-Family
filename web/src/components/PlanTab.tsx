@@ -4,6 +4,7 @@ import { checkPlan, getDraft, HttpError, publishPlan, saveDraft } from '../data'
 import { CLAN, CLANS, GROUPS, STATUS, coreAvg, fmtScore } from '../theme'
 import type { ClanName, Player, Roster, Slot } from '../types'
 import { useClans } from '../clash'
+import LeadersTools from './LeadersTools'
 import { Arrow, ClanBadge, Th } from './ui'
 
 // Allocation rules: docs/specs/02-allocation-rules.md.
@@ -123,7 +124,7 @@ function Plan({ roster, me }: { roster: Roster; me: Me }) {
   const dirty = saved ? !sameMoves(moves, saved.moves) : Object.keys(moves).length > 0
   const canPublish = me.role === 'publisher'
   // Until sign-in is set up the board is open to anyone, but nothing is saved or published.
-  const readOnly = !me.configured
+  const readOnly = !me.role
   const lockedTip = 'Sign-in coming soon'
 
   const at = (p: Player): Place => moves[p.tag] ?? { clan: p.clan, slot: p.slot }
@@ -390,9 +391,27 @@ function Gate({ me, onSignOut }: { me: Me; onSignOut: () => void }) {
   )
 }
 
-export default function PlanTab({ roster, me, ready, onSignOut }: { roster: Roster; me: Me; ready: boolean; onSignOut: () => void }) {
-  if (ready && !me.configured) return <Plan roster={roster} me={me} />
+type PlanProps = { roster: Roster; me: Me; ready: boolean; wide: boolean; onSignOut: () => void; onSignedIn: () => void }
+
+export default function PlanTab({ roster, me, ready, wide, onSignOut, onSignedIn }: PlanProps) {
+  const [view, setView] = useState<'lineup' | 'leaders'>('lineup')
   if (!ready) return <div aria-busy="true" aria-label="Loading" className="mx-auto mt-16 h-48 max-w-[380px] animate-pulse rounded-[20px] bg-well" />
-  if (me.role) return <Plan roster={roster} me={me} />
-  return <Gate me={me} onSignOut={onSignOut} />
+  // The board is open while sign-in is not set up; a leader session unlocks saving and the leaders' tools.
+  const lineup = me.role || !me.configured ? <Plan roster={roster} me={me} /> : <Gate me={me} onSignOut={onSignOut} />
+  if (!me.passcode_enabled && !me.role) return lineup
+  return (
+    <>
+      <div className="mx-auto max-w-[1360px] px-[clamp(16px,3vw,32px)] pt-3 md:pt-5">
+        <div role="group" aria-label="Plan" className="inline-grid auto-cols-max grid-flow-col gap-1 rounded-xl bg-well p-1">
+          {([['lineup', 'Lineup'], ['leaders', 'Leaders']] as const).map(([k, label]) => (
+            <button key={k} type="button" aria-pressed={k === view} onClick={() => setView(k)}
+              className={`min-h-10 cursor-pointer rounded-[9px] border-0 px-4 text-sm font-bold ${k === view ? 'bg-white text-ink shadow-[0_1px_3px_rgba(15,23,42,.12)]' : 'bg-transparent text-muted'}`}>
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+      {view === 'leaders' ? <LeadersTools me={me} wide={wide} onUnlocked={onSignedIn} /> : lineup}
+    </>
+  )
 }

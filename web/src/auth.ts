@@ -9,10 +9,13 @@ export type Me = {
   csrf: string | null
   /** False until the Discord app is set up on the server. */
   configured: boolean
+  /** How this session signed in; a passcode session is a leader that cannot publish. */
+  via: 'passcode' | 'discord' | null
+  passcode_enabled: boolean
 }
 export type AuthState = { status: 'loading' | 'ready'; me: Me }
 
-const SIGNED_OUT: Me = { user: null, role: null, publishers: [], csrf: null, configured: true }
+const SIGNED_OUT: Me = { user: null, role: null, publishers: [], csrf: null, configured: true, via: null, passcode_enabled: false }
 // No answer from /auth/me is treated as sign-in not set up yet.
 const NOT_SET_UP: Me = { ...SIGNED_OUT, configured: false }
 
@@ -27,6 +30,8 @@ function devMe(): Me | null {
     publishers: ['Waki'],
     csrf: 'dev',
     configured: true,
+    via: as === 'publisher' ? 'discord' : 'passcode',
+    passcode_enabled: true,
   }
 }
 
@@ -46,7 +51,7 @@ export function useAuth() {
     await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin', headers: csrf ? { 'X-CSRF-Token': csrf } : {} }).catch(() => null)
     setState({ status: 'ready', me: SIGNED_OUT })
   }, [csrf])
-  return { ...state, signOut }
+  return { ...state, signOut, reload: load }
 }
 
 /** ?signin=denied|failed, added by the callback on a failed sign-in; read once and dropped from the URL. */
@@ -58,6 +63,16 @@ export function takeSigninError(): 'denied' | 'failed' | null {
   const qs = params.toString()
   window.history.replaceState(null, '', window.location.pathname + (qs ? `?${qs}` : '') + window.location.hash)
   return v
+}
+
+/** POST /api/auth/passcode; resolves to 'ok', 'wrong' or 'busy' (too many tries). */
+export async function submitPasscode(passcode: string): Promise<'ok' | 'wrong' | 'busy'> {
+  if (import.meta.env.DEV && new URLSearchParams(window.location.search).has('mock')) return passcode ? 'ok' : 'wrong'
+  const r = await fetch('/api/auth/passcode', {
+    method: 'POST', credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ passcode }),
+  }).catch(() => null)
+  return r?.ok ? 'ok' : r?.status === 429 ? 'busy' : 'wrong'
 }
 
 export const loginHref = () => `/api/auth/login?return_to=${encodeURIComponent('/#/plan')}`
