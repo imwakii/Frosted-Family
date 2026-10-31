@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
-import { HttpError, publishPlan } from '../data'
+import { loginHref, takeSigninError, type Me } from '../auth'
+import { checkPlan, getDraft, HttpError, publishPlan, saveDraft } from '../data'
 import { CLAN, CLANS, GROUPS, STATUS, coreAvg, fmtScore } from '../theme'
 import type { ClanName, Player, Roster, Slot } from '../types'
-import { Arrow, Th } from './ui'
+import { useClans } from '../clash'
+import { Arrow, ClanBadge, Th } from './ui'
 
 // Allocation rules: docs/specs/02-allocation-rules.md.
 const MAKI = '#CGJ8YR8J'
@@ -80,14 +82,49 @@ function PlanRow({ p, at, onPlace }: { p: Player; at: Place; onPlace: (v: Place)
   )
 }
 
-function Plan({ roster }: { roster: Roster }) {
+const toList = (m: Moves) => Object.entries(m).map(([tag, v]) => ({ tag, ...v })).sort((a, b) => a.tag.localeCompare(b.tag))
+const sameMoves = (a: Moves, b: Moves) => JSON.stringify(toList(a)) === JSON.stringify(toList(b))
+
+function Plan({ roster, me }: { roster: Roster; me: Me }) {
   const [moves, setMoves] = useState<Moves>(() => readDraft(roster))
+  const [saved, setSaved] = useState<{ moves: Moves; by: string | null } | null>(null)
+  const [saving, setSaving] = useState(false)
   const [confirming, setConfirming] = useState(false)
   const [result, setResult] = useState<{ ok: boolean; n: number; why?: string } | null>(null)
   const [busy, setBusy] = useState(false)
+  const [override, setOverride] = useState(false)
+  const [server, setServer] = useState<{ problems: string[] } | 'checking' | null>(null)
   const [phoneClan, setPhoneClan] = useState<ClanName>('Fire')
+  const clans = useClans()
 
   useEffect(() => { try { localStorage.setItem(DRAFT_KEY, JSON.stringify(moves)) } catch { /* private mode */ } }, [moves])
+
+  // The shared draft on the server; it fills the board unless this browser has unsaved moves.
+  useEffect(() => {
+    const tags = new Set(roster.players.map((p) => p.tag))
+    getDraft().then((d) => {
+      const server: Moves = Object.fromEntries((d.moves ?? []).filter((m) => tags.has(m.tag)).map((m) => [m.tag, { clan: m.clan, slot: m.slot }]))
+      setSaved({ moves: server, by: d.updated_by ?? null })
+      setMoves((local) => (Object.keys(local).length ? local : server))
+    }).catch(() => setSaved(null))
+  }, [roster])
+
+  const save = async () => {
+    setSaving(true)
+    try {
+      const d = await saveDraft(toList(moves), me.csrf)
+      setSaved({ moves, by: d.updated_by ?? me.user?.name ?? null })
+    } catch {
+      setResult({ ok: false, n: 0, why: 'Draft not saved. Try again.' })
+    } finally {
+      setSaving(false)
+    }
+  }
+  const dirty = saved ? !sameMoves(moves, saved.moves) : Object.keys(moves).length > 0
+  const canPublish = me.role === 'publisher'
+  // Until sign-in is set up the board is open to anyone, but nothing is saved or published.
+  const readOnly = !me.configured
+  const lockedTip = 'Sign-in coming soon'
 
   const at = (p: Player): Place => moves[p.tag] ?? { clan: p.clan, slot: p.slot }
   const place = (p: Player, v: Place) => {
@@ -135,19 +172,40 @@ function Plan({ roster }: { roster: Roster }) {
   const step = (p: Player) => (p.clan === 'Cake' && moves[p.tag].clan !== 'Cake' ? 0 : p.clan !== 'Cake' && moves[p.tag].clan === 'Cake' ? 2 : 1)
   const changes = roster.players.filter((p) => moves[p.tag]).sort((a, b) => step(a) - step(b))
   const n = changes.length
-  const blocked = checks.some((k) => k.tone === 'bad' || k.tone === 'warn')
+  // The publisher may override the one-way valve, confirmed in the publish sheet.
+  const valveOnly = (k: Check) => k.key === 'valve' && canPublish
+  const blocked = checks.some((k) => (k.tone === 'bad' || k.tone === 'warn') && !valveOnly(k))
+  const valveHit = checks.some((k) => k.key === 'valve' && k.tone === 'bad')
   const cant = !n || blocked || busy
+  const list = () => changes.map((p) => ({ tag: p.tag, ...moves[p.tag] }))
+
+  const openConfirm = async () => {
+    setOverride(false)
+    setConfirming(true)
+    setServer('checking')
+    try {
+      const r = await checkPlan(list(), valveHit, me.csrf)
+      setServer({ problems: r.problems ?? [] })
+    } catch (e) {
+      setServer(e instanceof HttpError && e.problems.length ? { problems: e.problems } : null)
+    }
+  }
+  const serverProblems = server && server !== 'checking' ? server.problems : []
   const changeLabel = n ? `${n} ${n === 1 ? 'change' : 'changes'}` : 'No changes'
 
   const publish = async () => {
     setBusy(true)
     try {
-      await publishPlan(changes.map((p) => ({ tag: p.tag, ...moves[p.tag] })))
+      await publishPlan(list(), valveHit && override, me.csrf)
       setResult({ ok: true, n })
       setMoves({})
+      setSaved({ moves: {}, by: me.user?.name ?? null })
     } catch (e) {
-      const auth = e instanceof HttpError && (e.status === 401 || e.status === 403)
-      setResult({ ok: false, n, why: auth ? 'Not published. Leader sign-in is not set up yet.' : 'Not published. The server is offline.' })
+      const err = e instanceof HttpError ? e : null
+      const why = err?.problems.length ? `Not published. ${err.problems.join('. ')}.`
+        : err && (err.status === 401 || err.status === 403) ? 'Not published. Sign in again as the publisher.'
+        : 'Not published. The server is offline.'
+      setResult({ ok: false, n, why })
     } finally {
       setBusy(false)
       setConfirming(false)
@@ -160,14 +218,27 @@ function Plan({ roster }: { roster: Roster }) {
         <div className="mx-auto flex max-w-[1360px] flex-wrap items-center gap-2 px-[clamp(16px,3vw,32px)] py-2.5 md:pt-5">
           <span className="rounded-full bg-[#EEF1F6] px-3 py-1.5 text-[13px] font-bold text-ink-2">{changeLabel}</span>
           <span className="flex-auto" />
-          <button type="button" onClick={() => { setMoves({}); setResult(null) }} disabled={!n}
-            className="min-h-10 cursor-pointer rounded-[10px] border border-[#D5DBE5] bg-white px-3.5 text-sm font-semibold text-ink-2 hover:bg-page disabled:cursor-not-allowed disabled:opacity-50">
-            Reset
+          {n > 0 && (
+            <button type="button" onClick={() => { setMoves({}); setResult(null) }}
+              className="min-h-10 cursor-pointer rounded-[10px] border border-[#D5DBE5] bg-white px-3 text-sm font-semibold text-ink-2 hover:bg-page">
+              Reset
+            </button>
+          )}
+          <button type="button" onClick={save} disabled={readOnly || !dirty || saving} title={readOnly ? lockedTip : undefined}
+            className="min-h-10 cursor-pointer rounded-[10px] border border-[#D5DBE5] bg-white px-3 text-sm font-semibold text-ink-2 hover:bg-page disabled:cursor-default disabled:opacity-60">
+            {dirty || !saved ? 'Save' : 'Saved'}
           </button>
-          <button type="button" onClick={() => setConfirming(true)} disabled={cant}
-            className="min-h-10 cursor-pointer rounded-[10px] border-0 bg-action px-4 text-sm font-bold text-white hover:bg-action-deep disabled:cursor-not-allowed disabled:bg-[#E2E8F0] disabled:text-faint">
-            Publish to CWL
-          </button>
+          {readOnly ? (
+            <button type="button" disabled title={lockedTip}
+              className="min-h-10 cursor-not-allowed rounded-[10px] border-0 bg-[#E2E8F0] px-4 text-sm font-bold text-faint">
+              Publish
+            </button>
+          ) : canPublish ? (
+            <button type="button" onClick={openConfirm} disabled={cant}
+              className="min-h-10 cursor-pointer rounded-[10px] border-0 bg-action px-4 text-sm font-bold text-white hover:bg-action-deep disabled:cursor-not-allowed disabled:bg-[#E2E8F0] disabled:text-faint">
+              Publish
+            </button>
+          ) : null}
         </div>
       </div>
 
@@ -180,6 +251,9 @@ function Plan({ roster }: { roster: Roster }) {
         )}
 
         <section aria-label="Checks" className="flex flex-wrap gap-2">
+          {!canPublish && me.publishers.length > 0 && (
+            <span className="flex min-h-[34px] items-center rounded-full bg-[#EEF1F6] px-3 text-[13px] font-bold text-muted">{me.publishers.join(', ')} publishes</span>
+          )}
           {checks.map((k) => <CheckChip key={k.key} k={k} />)}
           {checks.every((k) => k.tone === 'ok') && <CheckChip k={{ key: 'all', label: 'All rules pass', tip: '', tone: 'ok' }} className="!flex md:!hidden" />}
         </section>
@@ -208,7 +282,7 @@ function Plan({ roster }: { roster: Roster }) {
               <section key={c.clan} aria-label={c.clan} className={`overflow-hidden rounded-[18px] border border-line bg-white ${c.clan === phoneClan ? '' : 'max-md:hidden'}`}>
                 <div className="flex items-end justify-between p-4" style={{ background: t.tint }}>
                   <div className="flex flex-col gap-0.5">
-                    <h2 className="m-0 text-[22px] font-extrabold tracking-[-0.02em]" style={{ color: t.deep }}>{c.clan}</h2>
+                    <h2 className="font-display m-0 flex items-center gap-2 text-[22px] leading-none" style={{ color: t.deep }}><ClanBadge src={clans[c.clan]?.badge} size={30} />{c.clan}</h2>
                     <span className={`text-[13px] font-semibold ${c.count > CAP ? 'text-[#B91C1C]' : 'text-muted'}`}>{c.count}/{CAP}</span>
                   </div>
                   {c.inCwl && (
@@ -218,7 +292,7 @@ function Plan({ roster }: { roster: Roster }) {
                           {c.delta > 0 ? '+' : '−'}{Math.abs(c.delta).toFixed(1)}
                         </span>
                       )}
-                      <span className="text-[26px] font-extrabold leading-[1.05] tabular-nums" style={{ color: t.deep }}>{c.avg === null ? '—' : c.avg.toFixed(1)}</span>
+                      <span className="font-display text-[26px] leading-[1.05] tabular-nums" style={{ color: t.deep }}>{c.avg === null ? '—' : c.avg.toFixed(1)}</span>
                     </div>
                   )}
                 </div>
@@ -242,7 +316,7 @@ function Plan({ roster }: { roster: Roster }) {
         <div className="ff-fade fixed inset-0 z-50 flex items-center justify-center bg-[rgba(15,23,42,.4)] p-4" onClick={(e) => { if (e.target === e.currentTarget) setConfirming(false) }}>
           <section role="dialog" aria-modal="true" aria-label="Publish to CWL"
             className="ff-sheet flex max-h-[80vh] w-full max-w-[440px] flex-col gap-3.5 overflow-auto rounded-[20px] bg-white p-[22px] shadow-[0_20px_50px_rgba(15,23,42,.25)]">
-            <h2 className="m-0 text-xl font-extrabold tracking-[-0.02em]">Publish {changeLabel}?</h2>
+            <h2 className="font-display m-0 text-[22px]">Publish {changeLabel}?</h2>
             <ul className="m-0 flex list-none flex-col gap-0.5 p-0">
               {changes.map((p) => (
                 <li key={p.tag} className="flex min-h-10 items-center gap-2 rounded-[10px] bg-page px-3 text-sm">
@@ -253,10 +327,21 @@ function Plan({ roster }: { roster: Roster }) {
                 </li>
               ))}
             </ul>
+            {valveHit && (
+              <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-[10px] bg-[#FEE2E2] px-3 text-sm font-bold text-[#B91C1C]">
+                <input type="checkbox" checked={override} onChange={(e) => setOverride(e.target.checked)} className="size-4 accent-[#B91C1C]" />
+                Override the one-way valve
+              </label>
+            )}
+            {serverProblems.length > 0 && (
+              <ul className="m-0 flex list-none flex-col gap-1 rounded-[10px] bg-[#FEF3C7] p-3 text-[13px] font-semibold text-[#92400E]">
+                {serverProblems.map((x) => <li key={x}>{x}</li>)}
+              </ul>
+            )}
             <div className="flex justify-end gap-2">
               <button type="button" autoFocus onClick={() => setConfirming(false)}
                 className="min-h-11 cursor-pointer rounded-[10px] border border-[#D5DBE5] bg-white px-4 text-sm font-semibold text-ink-2 hover:bg-page">Cancel</button>
-              <button type="button" onClick={publish} disabled={busy}
+              <button type="button" onClick={publish} disabled={busy || server === 'checking' || serverProblems.length > 0 || (valveHit && !override)}
                 className="min-h-11 cursor-pointer rounded-[10px] border-0 bg-action px-[18px] text-sm font-bold text-white hover:bg-action-deep disabled:opacity-60">Publish</button>
             </div>
           </section>
@@ -266,21 +351,48 @@ function Plan({ roster }: { roster: Roster }) {
   )
 }
 
-// Placeholder gate until leader sign-in exists. Open in dev, or when the
-// deployment sets VITE_PLAN_OPEN=1.
-const OPEN = import.meta.env.DEV || import.meta.env.VITE_PLAN_OPEN === '1'
+const Discord = () => (
+  <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M20.3 4.4A19.6 19.6 0 0 0 15.4 3l-.6 1.3a18.2 18.2 0 0 0-5.6 0L8.6 3a19.5 19.5 0 0 0-4.9 1.4C.6 9 -.3 13.5.1 18a19.8 19.8 0 0 0 6 3l1.3-2a12.7 12.7 0 0 1-2-1l.5-.4a14 14 0 0 0 12.2 0l.5.4c-.6.4-1.3.7-2 1l1.3 2a19.7 19.7 0 0 0 6-3c.5-5.2-.8-9.7-3.6-13.6ZM8.3 15.3c-1.2 0-2.2-1.1-2.2-2.4s1-2.4 2.2-2.4 2.2 1.1 2.2 2.4-1 2.4-2.2 2.4Zm7.4 0c-1.2 0-2.2-1.1-2.2-2.4s1-2.4 2.2-2.4 2.2 1.1 2.2 2.4-1 2.4-2.2 2.4Z" /></svg>
+)
 
-export default function PlanTab({ roster }: { roster: Roster }) {
-  if (OPEN) return <Plan roster={roster} />
+function Gate({ me, onSignOut }: { me: Me; onSignOut: () => void }) {
+  const [failed] = useState(takeSigninError)
   return (
     <main className="mx-auto flex max-w-[1360px] justify-center px-4 pt-16">
       <section className="flex w-full max-w-[380px] flex-col items-center gap-3 rounded-[20px] border border-line bg-white px-6 py-8 text-center">
         <span className="flex size-12 items-center justify-center rounded-2xl bg-[#EEF1F6] text-ink-2">
           <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="11" width="14" height="9" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></svg>
         </span>
-        <h2 className="m-0 text-xl font-extrabold tracking-[-0.02em]">Leaders only</h2>
-        <button type="button" disabled className="min-h-11 w-full rounded-[10px] border-0 bg-[#E2E8F0] text-sm font-bold text-faint">Sign in · soon</button>
+        <h2 className="font-display m-0 text-[24px] text-brand">Leaders only</h2>
+        {failed && !me.user && (
+          <span role="status" className="rounded-full bg-[#FEF3C7] px-3 py-1 text-[13px] font-bold text-[#92400E]">
+            {failed === 'denied' ? 'Not a leader account' : 'Sign-in failed. Try again.'}
+          </span>
+        )}
+        {me.user ? (
+          <>
+            <span className="text-sm text-faint">Signed in as {me.user.name}</span>
+            <button type="button" onClick={onSignOut}
+              className="min-h-11 w-full cursor-pointer rounded-[10px] border border-[#D5DBE5] bg-white text-sm font-semibold text-ink-2 hover:bg-page">Sign out</button>
+          </>
+        ) : !me.configured ? (
+          <button type="button" disabled className="mt-1 flex min-h-12 w-full items-center justify-center gap-2.5 rounded-[12px] border-0 bg-[#E2E8F0] text-[15px] font-bold text-faint">
+            <Discord />Sign-in coming soon
+          </button>
+        ) : (
+          <a href={loginHref()}
+            className="mt-1 flex min-h-12 w-full items-center justify-center gap-2.5 rounded-[12px] bg-[#5865F2] text-[15px] font-bold text-white no-underline hover:bg-[#4752C4]">
+            <Discord />Sign in with Discord
+          </a>
+        )}
       </section>
     </main>
   )
+}
+
+export default function PlanTab({ roster, me, ready, onSignOut }: { roster: Roster; me: Me; ready: boolean; onSignOut: () => void }) {
+  if (ready && !me.configured) return <Plan roster={roster} me={me} />
+  if (!ready) return <div aria-busy="true" aria-label="Loading" className="mx-auto mt-16 h-48 max-w-[380px] animate-pulse rounded-[20px] bg-well" />
+  if (me.role) return <Plan roster={roster} me={me} />
+  return <Gate me={me} onSignOut={onSignOut} />
 }

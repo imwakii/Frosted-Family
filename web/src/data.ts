@@ -2,14 +2,20 @@ import { useEffect, useState } from 'react'
 import type { ClanName, LiveWar, Player, Roster, Slot, Status } from './types'
 
 export class HttpError extends Error {
-  constructor(url: string, public status: number) { super(`${url}: ${status}`) }
+  constructor(url: string, public status: number, public problems: string[] = []) { super(`${url}: ${status}`) }
 }
 
 // The API answers JSON; anything else (a missing route serving index.html,
 // a network failure) falls back to the static roster built from the CSV.
 async function getJson<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, { ...init, headers: { Accept: 'application/json', ...init?.headers } })
-  if (!res.ok || !res.headers.get('content-type')?.includes('json')) throw new HttpError(url, res.ok ? 0 : res.status)
+  const json = res.headers.get('content-type')?.includes('json')
+  if (!res.ok) {
+    // Rule failures come back as 422 {detail: {problems: [...]}}.
+    const body = json ? await res.json().catch(() => null) : null
+    throw new HttpError(url, res.status, Array.isArray(body?.detail?.problems) ? body.detail.problems : [])
+  }
+  if (!json) throw new HttpError(url, 0)
   return res.json() as Promise<T>
 }
 
@@ -151,10 +157,21 @@ export function useWide(query = '(min-width: 768px)') {
   return wide
 }
 
-export async function publishPlan(moves: { tag: string; clan: ClanName; slot: string }[]) {
-  return getJson<{ ok: boolean }>('/api/plan/publish', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ moves }),
+// Writes under /plan and /auth/logout need the CSRF token from /auth/me.
+export type PlanMove = { tag: string; clan: ClanName; slot: Slot }
+export type Draft = { moves: PlanMove[]; updated_at?: string | null; updated_by?: string | null }
+
+const send = <T,>(url: string, method: string, csrf: string | null, body?: unknown) =>
+  getJson<T>(url, {
+    method,
+    credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json', ...(csrf ? { 'X-CSRF-Token': csrf } : {}) },
+    body: body === undefined ? undefined : JSON.stringify(body),
   })
-}
+
+export const getDraft = () => getJson<Draft>('/api/plan/draft', { credentials: 'same-origin' })
+export const saveDraft = (moves: PlanMove[], csrf: string | null) => send<Draft>('/api/plan/draft', 'PUT', csrf, { moves })
+export const checkPlan = (moves: PlanMove[], overrideValve: boolean, csrf: string | null) =>
+  send<{ ok: boolean; problems: string[] }>('/api/plan/check', 'POST', csrf, { moves, ...(overrideValve ? { override_valve: true } : {}) })
+export const publishPlan = (moves: PlanMove[], overrideValve: boolean, csrf: string | null) =>
+  send<{ ok: boolean }>('/api/plan/publish', 'POST', csrf, { moves, ...(overrideValve ? { override_valve: true } : {}) })

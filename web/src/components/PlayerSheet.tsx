@@ -84,7 +84,7 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
         <div className="flex items-center gap-3">
           {p && <Th th={p.th} size="lg" />}
           <div className="flex min-w-0 flex-auto flex-col">
-            <span className="truncate text-2xl font-extrabold tracking-[-0.02em]">{p?.name ?? 'Not on the roster'}</span>
+            <span className="font-display truncate text-[26px] leading-tight">{p?.name ?? 'Not on the roster'}</span>
             <span className="truncate text-[13px] text-faint">{tag}{p ? ` · ${where}` : ''}</span>
           </div>
           <button ref={close} type="button" aria-label="Close" onClick={onClose}
@@ -106,7 +106,7 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
             <div className="flex items-end justify-between rounded-2xl p-4" style={{ background: c.tint }}>
               <div className="flex flex-col">
                 <span className="text-xs font-bold uppercase tracking-[0.06em]" style={{ color: c.label }}>Score</span>
-                <span className="text-5xl font-extrabold leading-none tracking-[-0.03em] tabular-nums" style={{ color: c.deep }}>{fmtScore(p.score)}</span>
+                <span className="font-display text-5xl leading-none tabular-nums" style={{ color: c.deep }}>{fmtScore(p.score)}</span>
               </div>
               <div className="flex flex-col items-end gap-1.5">
                 <StatusPill status={p.status} className="!px-2.5 !py-[3px] !text-xs !font-bold" />
