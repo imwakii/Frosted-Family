@@ -58,7 +58,12 @@ export default function App() {
         <CwlTab roster={roster} war={war} wide={wide} />
       )}
 
-      {roster && route.player && <PlayerSheet tag={route.player} roster={roster} wide={wide} onClose={closeSheet} />}
+      <footer className="mx-auto max-w-[1320px] px-4 pb-6 pt-2 text-center text-[11px] leading-relaxed text-faint">
+        This material is unofficial and is not endorsed by Supercell. For more information see Supercell's Fan Content Policy:{' '}
+        <a href="https://supercell.com/en/fan-content-policy/" target="_blank" rel="noopener noreferrer" className="text-faint underline hover:text-muted">www.supercell.com/fan-content-policy</a>.
+      </footer>
+
+      {roster && route.player &&<PlayerSheet tag={route.player} roster={roster} wide={wide} onClose={closeSheet} />}
 
       {!wide && (
         <nav aria-label="Sections" className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-2 border-t border-line bg-white pb-[env(safe-area-inset-bottom)]">
