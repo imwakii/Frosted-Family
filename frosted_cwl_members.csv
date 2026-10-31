@@ -5,7 +5,7 @@ row,tag,name,clan,cwl_slot,transferred_from,current_th,avg_war_th,attack_count,t
 4,#YLYJP80RC,Yaki,Cake,CORE,Flakes,17,16.18,96.0,89.58,4.0,-0.37,84.41,19.8,104.21,False,False,False,False,,False,PROVEN
 5,#Y9CCQVPQV,Yuki,Flakes,Sitting Out,,15,14.18,41.0,75.61,6.82,-0.17,69.85,32.0,101.85,False,False,False,False,,False,PROVEN
 6,#J8LJUQUV,RR,Fire,CORE,,18,18.0,81.0,75.31,1.22,-0.05,74.21,27.6,101.81,False,False,False,False,,False,PROVEN
-7,#20G28UPQG,juna the zealot,Cake,CORE,,16,16.0,53.0,79.25,0.0,1.11,83.65,15.75,99.4,False,False,False,False,,True,PROVEN
+7,#20G28UPQG,juna the zealot,Cake,SUB,,16,16.0,53.0,79.25,0.0,1.11,83.65,15.75,99.4,False,False,False,False,,True,PROVEN
 8,#2YJC8C8L,Chaengiiee,Fire,CORE,,18,18.0,84.0,83.33,5.62,-0.02,78.57,18.78,97.35,False,False,False,False,,False,PROVEN
 9,#2C2RCG089,Death 3,Fire,CORE,,18,18.0,79.0,69.62,2.47,-0.2,67.22,29.52,96.74,False,False,False,False,,False,PROVEN
 10,#9L02LJ9P,Vadim,Fire,CORE,,18,17.87,94.0,78.72,0.0,-0.03,78.6,17.63,96.24,False,False,False,False,,False,PROVEN
@@ -22,7 +22,7 @@ row,tag,name,clan,cwl_slot,transferred_from,current_th,avg_war_th,attack_count,t
 21,#2VGQLPVP0,LOGAN,Fire,CORE,,18,17.47,60.0,75.0,0.0,-0.65,72.56,16.1,88.66,False,False,False,False,,False,PROVEN
 22,#YCPJ9UYG,Potetsalat,Fire,CORE,,18,18.0,88.0,79.55,8.33,-0.12,72.49,16.1,88.59,False,False,False,False,,False,PROVEN
 23,#PG9U0CV2J,Calpis,Fire,SUB,,18,18.0,35.0,80.0,23.91,-0.09,60.6,27.6,88.2,True,False,False,False,HIGH MISS,False,UNRELIABLE (HM)
-24,#V8VRQ2RV,Ale,Cake,CORE,,16,15.94,63.0,66.67,0.0,0.84,69.47,18.55,88.02,False,False,False,False,,False,PROVEN
+24,#V8VRQ2RV,Ale,Cake,SUB,,16,15.94,63.0,66.67,0.0,0.84,69.47,18.55,88.02,False,False,False,False,,False,PROVEN
 25,#GY0RQRPVG,Death Eaters RS,Cake,CORE,,18,18.0,75.0,78.67,2.6,-0.53,74.59,12.65,87.24,False,False,False,False,,False,PROVEN
 26,#GPPVGC9PP,manny,Fire,SUB,,17,17.0,49.0,83.67,20.97,-0.1,65.79,21.27,87.06,True,False,False,,HIGH MISS,,UNRELIABLE (HM)
 27,#2VLRPGGY,hagar,Fire,SUB,,18,18.0,52.0,73.08,7.14,-0.04,67.73,18.02,85.74,False,False,False,,,,DORMANT
@@ -42,11 +42,11 @@ row,tag,name,clan,cwl_slot,transferred_from,current_th,avg_war_th,attack_count,t
 41,#9VJQLVRGJ,Hallelou,Fire,SUB,,18,17.94,22.0,77.27,21.43,-0.05,53.29,11.39,64.68,True,False,False,False,HIGH MISS,False,UNRELIABLE (HM)
 42,#PY99GV0JC,Genjey,Flakes,Sitting Out,,17,17.0,32.0,75.0,23.81,-0.44,55.89,6.6,62.49,True,False,False,False,HIGH MISS,False,DORMANT
 43,#9LPRQRYJ9,Darknight999,Flakes,Sitting Out,,17,16.53,27.0,59.26,28.95,-0.7,40.63,21.63,62.26,True,False,False,,HIGH MISS,,UNRELIABLE (HM)
-44,#2L209CLP2,Edward Snowden,Cake,SUB,,18,18.0,26.0,46.15,27.78,-0.69,32.18,26.07,58.25,True,False,False,,HIGH MISS,,UNRELIABLE (HM)
+44,#2L209CLP2,Edward Snowden,Cake,CORE,,18,18.0,26.0,46.15,27.78,-0.69,32.18,26.07,58.25,True,False,False,,HIGH MISS,,UNRELIABLE (HM)
 45,#G0JPYGJL8,mayank,Fire,SUB,,17,16.16,48.0,47.92,22.58,-1.02,35.21,20.53,55.74,True,False,False,,HIGH MISS,,UNRELIABLE (HM)
 46,#LYRQQUPC,Rodrigo,Cake,SUB,,18,18.0,24.0,33.33,40.0,0.0,19.2,36.03,55.23,True,False,False,False,HIGH MISS,False,LAPSING
 47,#Q2JV09GJ2,Monkey D Luffy,Cake,SUB,,18,18.0,17.0,70.59,43.33,-0.53,26.48,28.37,54.85,True,False,False,,HIGH MISS,,UNRELIABLE (HM)
-48,#8QPR8V2V8,MANEESH,Cake,SUB,,18,18.0,42.0,33.33,25.0,-0.1,24.87,28.75,53.62,True,False,False,,HIGH MISS,,UNRELIABLE (HM)
+48,#8QPR8V2V8,MANEESH,Cake,CORE,,18,18.0,42.0,33.33,25.0,-0.1,24.87,28.75,53.62,True,False,False,,HIGH MISS,,UNRELIABLE (HM)
 49,#QJVLVCCGY,Dev shadow,Cake,SUB,,18,18.0,30.0,56.67,42.31,-0.27,32.25,20.7,52.95,True,False,False,,HIGH MISS,,UNRELIABLE (HM)
 50,#2R8P92JYP,Blaze,Fire,CORE,,18,18.0,18.0,72.22,30.77,0.0,36.0,14.57,50.57,True,False,False,False,HIGH MISS,False,UNRELIABLE (HM)
 51,#288RCPP92,LordDavid,Cake,SUB,,16,16.0,50.0,40.0,10.71,-0.1,35.54,13.65,49.19,False,False,False,False,,False,PROVEN
