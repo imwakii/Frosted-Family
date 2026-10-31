@@ -14,15 +14,17 @@ export const STATUS: Record<Status, { text: string; bg: string; fg: string; dot:
   highMiss: { text: 'High miss', bg: '#FEF3C7', fg: '#92400E', dot: '#D97706' },
   inactive: { text: 'Inactive', bg: '#E2E8F0', fg: '#334155', dot: '#94A3B8' },
   thin: { text: 'Few attacks', bg: '#E2E8F0', fg: '#334155', dot: '#94A3B8' },
+  new: { text: 'New', bg: '#DBEAFE', fg: '#1D4ED8', dot: '#3B82F6' },
 }
 
 export const GROUPS: { slot: Slot; label: string; dim: boolean }[] = [
   { slot: 'CORE', label: 'Starting 15', dim: false },
   { slot: 'SUB', label: 'Bench', dim: false },
   { slot: 'OUT', label: 'Not playing', dim: true },
+  { slot: 'NEW', label: 'New', dim: false },
 ]
 
-export const SLOT_TEXT: Record<Slot, string> = { CORE: 'Starting', SUB: 'Bench', OUT: 'Not playing' }
+export const SLOT_TEXT: Record<Slot, string> = { CORE: 'Starting', SUB: 'Bench', OUT: 'Not playing', NEW: 'New' }
 
 export const fmtScore = (s: number | null) => (s === null ? '—' : s.toFixed(1))
 

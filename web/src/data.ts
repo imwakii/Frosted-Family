@@ -27,6 +27,7 @@ type ApiPlayer = {
   tag: string; name: string; clan: ClanName; cwl_slot: string; transferred_from: string | null
   tier: string; final_score: number | string | null; current_th: number | string | null
   snapshot: { name?: string; town_hall?: number } | null
+  left?: boolean; joined_at?: string | null; suggested_slot?: string | null; suggested_reason?: string | null
 }
 type ApiWar = {
   state: string; kind?: string | null; day: number | null; team_size: number; opponent: { name: string } | null
@@ -40,9 +41,10 @@ function apiTime(t: string | null | undefined): number | null {
   return m ? Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]) : t ? Date.parse(t) || null : null
 }
 
-const SLOT: Record<string, Slot> = { CORE: 'CORE', SUB: 'SUB', 'Sitting Out': 'OUT' }
+const SLOT: Record<string, Slot> = { CORE: 'CORE', SUB: 'SUB', 'Sitting Out': 'OUT', New: 'NEW' }
 const STATUS: Record<string, Status> = {
   PROVEN: 'active', 'UNRELIABLE (HM)': 'highMiss', 'THIN RECORD': 'thin', LAPSING: 'inactive', DORMANT: 'inactive', 'NO DATA': 'inactive',
+  NEW: 'new',
 }
 const CLAN_NAMES = ['Fire', 'Cake', 'Flakes']
 // The API sends numeric columns as strings ("122.19").
@@ -57,7 +59,8 @@ const asClan = (c: string | null | undefined) => (c && CLAN_NAMES.includes(c) ? 
 // rates and rank. Joined on tag only.
 function mergeRoster(api: { players: ApiPlayer[] }, base: Roster | null): Roster {
   const known = new Map(base?.players.map((p) => [p.tag, p]))
-  const players: Player[] = api.players.filter((a) => a.tag && asClan(a.clan)).map((a) => {
+  // Departed players stay in the API's history but not on the roster.
+  const players: Player[] = api.players.filter((a) => a.tag && asClan(a.clan) && !a.left).map((a) => {
     const b = known.get(a.tag)
     return {
       tag: a.tag,
@@ -73,6 +76,9 @@ function mergeRoster(api: { players: ApiPlayer[] }, base: Roster | null): Roster
       attacks: b?.attacks ?? null,
       rank: b?.rank ?? null,
       history: b?.history ?? [],
+      joinedAt: a.joined_at ?? null,
+      suggestedSlot: a.suggested_slot ? SLOT[a.suggested_slot] ?? null : null,
+      suggestedReason: a.suggested_reason ?? null,
     }
   })
   return {
@@ -87,7 +93,9 @@ function mergeRoster(api: { players: ApiPlayer[] }, base: Roster | null): Roster
 
 export async function loadRoster(): Promise<{ roster: Roster; live: boolean }> {
   try {
-    const api = await getJson<{ players: ApiPlayer[] }>('/api/roster')
+    const api = import.meta.env.DEV && new URLSearchParams(window.location.search).get('mock') === 'new'
+      ? await import('./devMock').then((m) => m.mockRosterApi() as Promise<{ players: ApiPlayer[] }>)
+      : await getJson<{ players: ApiPlayer[] }>('/api/roster')
     if (!Array.isArray(api.players) || !api.players.length) throw new Error('empty roster')
     const base = await getStatic().catch(() => null)
     return { roster: mergeRoster(api, base), live: true }

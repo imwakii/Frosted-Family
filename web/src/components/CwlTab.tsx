@@ -13,8 +13,12 @@ const href = (p: Player) => playerHref(p.tag)
 
 function groupsFor(roster: Roster, clan: ClanName) {
   const mine = roster.players.filter((p) => p.clan === clan)
-  if (!roster.clans[clan]?.inCwl) return [{ label: 'Members', dim: false, rows: mine }]
-  return GROUPS.map((g) => ({ label: g.label, dim: g.dim, rows: mine.filter((p) => p.slot === g.slot) }))
+  const fresh = { label: 'New', dim: false, rows: mine.filter((p) => p.slot === 'NEW') }
+  const groups = roster.clans[clan]?.inCwl
+    ? GROUPS.filter((g) => g.slot !== 'NEW').map((g) => ({ label: g.label, dim: g.dim, rows: mine.filter((p) => p.slot === g.slot) }))
+    : [{ label: 'Members', dim: false, rows: mine.filter((p) => p.slot !== 'NEW') }]
+  // New members follow the clan's other groups, only when there are any.
+  return fresh.rows.length ? [...groups, fresh] : groups
 }
 
 function clanFacts(roster: Roster, clan: ClanName, meta?: ClanMeta) {
@@ -81,15 +85,36 @@ function FromPill({ from }: { from: ClanName | null }) {
   )
 }
 
+const SUGGEST: Record<string, string> = { CORE: 'start', SUB: 'bench', OUT: 'out', NEW: 'new' }
+
+// Joined date and the backend's suggested slot for a new member; the reason is the chip's tooltip.
+function NewLine({ p }: { p: Player }) {
+  const joined = p.joinedAt ? new Date(p.joinedAt + 'T00:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' }) : null
+  if (!joined && !p.suggestedSlot) return null
+  return (
+    <span className="flex min-w-0 items-center gap-1.5 text-[11px] text-faint">
+      {joined && <span className="flex-none">Joined {joined}</span>}
+      {p.suggestedSlot && (
+        <span title={p.suggestedReason ?? undefined} className="flex-none rounded-full border border-line px-1.5 font-semibold text-muted">
+          Suggest: {SUGGEST[p.suggestedSlot]}
+        </span>
+      )}
+    </span>
+  )
+}
+
 function Row({ p, first, hit, dense }: { p: Player; first: boolean; hit?: boolean; dense?: boolean }) {
   return (
     <li>
       <a href={href(p)} data-tag={p.tag}
         className={`flex items-center gap-3 text-ink no-underline ${dense ? 'min-h-[42px] px-2.5' : 'min-h-[46px] px-3.5'} ${first ? '' : 'border-t border-hair'} ${hit ? 'bg-hit' : 'hover:bg-hover'}`}>
         <Th th={p.th} />
-        <span className="flex min-w-0 flex-auto items-center gap-1.5">
-          <span className={`min-w-0 truncate font-semibold ${dense ? 'text-sm' : 'text-[15px]'}`}>{p.name}</span>
-          <FromPill from={p.from} />
+        <span className="flex min-w-0 flex-auto flex-col">
+          <span className="flex min-w-0 items-center gap-1.5">
+            <span className={`min-w-0 truncate font-semibold ${dense ? 'text-sm' : 'text-[15px]'}`}>{p.name}</span>
+            <FromPill from={p.from} />
+          </span>
+          {p.slot === 'NEW' && <NewLine p={p} />}
         </span>
         <StatusPill status={p.status} />
         <span className="w-10 flex-none text-right text-sm font-bold tabular-nums text-muted">{fmtScore(p.score)}</span>

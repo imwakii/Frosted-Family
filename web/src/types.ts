@@ -1,6 +1,6 @@
 export type ClanName = 'Fire' | 'Cake' | 'Flakes'
-export type Slot = 'CORE' | 'SUB' | 'OUT'
-export type Status = 'active' | 'highMiss' | 'inactive' | 'thin'
+export type Slot = 'CORE' | 'SUB' | 'OUT' | 'NEW'
+export type Status = 'active' | 'highMiss' | 'inactive' | 'thin' | 'new'
 
 export interface Player {
   tag: string
@@ -16,6 +16,10 @@ export interface Player {
   attacks: number | null
   rank: number | null
   history: { cycle: string; score: number | null }[]
+  /** New members only: first seen in the clan, and the slot the backend suggests. */
+  joinedAt?: string | null
+  suggestedSlot?: Slot | null
+  suggestedReason?: string | null
 }
 
 export interface ClanInfo { league: string | null; inCwl: boolean }
