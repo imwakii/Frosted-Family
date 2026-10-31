@@ -122,6 +122,9 @@ function Plan({ roster, me }: { roster: Roster; me: Me }) {
   }
   const dirty = saved ? !sameMoves(moves, saved.moves) : Object.keys(moves).length > 0
   const canPublish = me.role === 'publisher'
+  // Until sign-in is set up the board is open to anyone, but nothing is saved or published.
+  const readOnly = !me.configured
+  const lockedTip = 'Sign-in coming soon'
 
   const at = (p: Player): Place => moves[p.tag] ?? { clan: p.clan, slot: p.slot }
   const place = (p: Player, v: Place) => {
@@ -221,11 +224,16 @@ function Plan({ roster, me }: { roster: Roster; me: Me }) {
               Reset
             </button>
           )}
-          <button type="button" onClick={save} disabled={!dirty || saving}
+          <button type="button" onClick={save} disabled={readOnly || !dirty || saving} title={readOnly ? lockedTip : undefined}
             className="min-h-10 cursor-pointer rounded-[10px] border border-[#D5DBE5] bg-white px-3 text-sm font-semibold text-ink-2 hover:bg-page disabled:cursor-default disabled:opacity-60">
             {dirty || !saved ? 'Save' : 'Saved'}
           </button>
-          {canPublish ? (
+          {readOnly ? (
+            <button type="button" disabled title={lockedTip}
+              className="min-h-10 cursor-not-allowed rounded-[10px] border-0 bg-[#E2E8F0] px-4 text-sm font-bold text-faint">
+              Publish
+            </button>
+          ) : canPublish ? (
             <button type="button" onClick={openConfirm} disabled={cant}
               className="min-h-10 cursor-pointer rounded-[10px] border-0 bg-action px-4 text-sm font-bold text-white hover:bg-action-deep disabled:cursor-not-allowed disabled:bg-[#E2E8F0] disabled:text-faint">
               Publish
@@ -383,6 +391,7 @@ function Gate({ me, onSignOut }: { me: Me; onSignOut: () => void }) {
 }
 
 export default function PlanTab({ roster, me, ready, onSignOut }: { roster: Roster; me: Me; ready: boolean; onSignOut: () => void }) {
+  if (ready && !me.configured) return <Plan roster={roster} me={me} />
   if (!ready) return <div aria-busy="true" aria-label="Loading" className="mx-auto mt-16 h-48 max-w-[380px] animate-pulse rounded-[20px] bg-well" />
   if (me.role) return <Plan roster={roster} me={me} />
   return <Gate me={me} onSignOut={onSignOut} />

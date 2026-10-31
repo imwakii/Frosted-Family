@@ -13,6 +13,8 @@ export type Me = {
 export type AuthState = { status: 'loading' | 'ready'; me: Me }
 
 const SIGNED_OUT: Me = { user: null, role: null, publishers: [], csrf: null, configured: true }
+// No answer from /auth/me is treated as sign-in not set up yet.
+const NOT_SET_UP: Me = { ...SIGNED_OUT, configured: false }
 
 // Dev only: ?as=publisher|leader|member previews each signed-in state.
 function devMe(): Me | null {
@@ -34,9 +36,9 @@ export function useAuth() {
     const dev = devMe()
     if (dev) return setState({ status: 'ready', me: dev })
     fetch('/api/auth/me', { headers: { Accept: 'application/json' }, credentials: 'same-origin' })
-      .then((r) => (r.ok && r.headers.get('content-type')?.includes('json') ? r.json() : SIGNED_OUT))
+      .then((r) => (r.ok && r.headers.get('content-type')?.includes('json') ? r.json() : NOT_SET_UP))
       .then((me: Me) => setState({ status: 'ready', me: { ...SIGNED_OUT, ...me } }))
-      .catch(() => setState({ status: 'ready', me: SIGNED_OUT }))
+      .catch(() => setState({ status: 'ready', me: NOT_SET_UP }))
   }, [])
   useEffect(load, [load])
   const csrf = state.me.csrf

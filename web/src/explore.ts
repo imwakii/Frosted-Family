@@ -17,9 +17,10 @@ export type Unit = { name: string; max: number }
 export type MatrixPlayer = { tag: string; name: string; clan: ClanName; th: number | null; levels: (number | null)[] }
 export type Matrix = { cat: Cat; as_of: string | null; units: Unit[]; players: MatrixPlayer[] }
 
-type Raw = { cat: Cat; as_of?: string | null; units: Unit[]; players: (Omit<MatrixPlayer, 'levels'> & { levels: (number | null)[] | Record<string, number | null> })[] }
+type Raw = { cat: Cat; as_of?: string | null; units: Unit[]; players: (Omit<MatrixPlayer, 'levels'> & { levels: (number | null)[] | Record<string, number | null> | null })[] }
 
-// Levels may come as an array aligned with units or keyed by unit name.
+// Levels may come as an array aligned with units, keyed by unit name, or null
+// before a member's first profile fetch.
 function normalise(d: Raw): Matrix {
   return {
     cat: d.cat,
@@ -27,7 +28,9 @@ function normalise(d: Raw): Matrix {
     units: d.units,
     players: d.players.map((p) => ({
       ...p,
-      levels: Array.isArray(p.levels) ? d.units.map((_, i) => (p.levels as (number | null)[])[i] ?? null) : d.units.map((u) => (p.levels as Record<string, number | null>)[u.name] ?? null),
+      levels: !p.levels ? d.units.map(() => null)
+        : Array.isArray(p.levels) ? d.units.map((_, i) => (p.levels as (number | null)[])[i] ?? null)
+        : d.units.map((u) => (p.levels as Record<string, number | null>)[u.name] ?? null),
     })),
   }
 }
