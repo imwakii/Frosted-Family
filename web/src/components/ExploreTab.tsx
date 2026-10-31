@@ -105,7 +105,7 @@ function MatrixBoard({ cat, q, setQ, wide }: BoardProps & { cat: Cat }) {
   const pool = useMemo(() => (data?.players ?? []).filter((p) => clan === 'All' || p.clan === clan), [data, clan])
   const counts = Object.fromEntries(CLANS.map((k) => [k, (data?.players ?? []).filter((p) => p.clan === k).length]))
   const matchQ = (p: MatrixPlayer) => !nq || norm(p.name).includes(nq) || p.tag.toLowerCase().includes(nq)
-  const stamp = data?.as_of ? new Date(data.as_of).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : null
+  const stamp = data?.as_of ? `${new Date(data.as_of).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'UTC' })} UTC` : null
 
   const unitNav = useRef<HTMLDivElement>(null)
   useEffect(() => { unitNav.current?.querySelector('[aria-selected="true"]')?.scrollIntoView({ inline: 'nearest', block: 'nearest' }) }, [unit, cat])
