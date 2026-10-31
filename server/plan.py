@@ -30,7 +30,7 @@ from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
 from server import appdb, db
-from server.auth import Leader, require_leader, require_leader_write, require_publisher
+from server.auth import Leader, require_discord_write, require_leader, require_leader_write, require_publisher
 
 CWL_CLANS = ("Fire", "Cake")
 CLANS = ("Fire", "Cake", "Flakes")
@@ -151,7 +151,7 @@ def get_draft(leader: Leader = Depends(require_leader)):
 
 
 @router.put("/draft")
-def put_draft(body: DraftBody, leader: Leader = Depends(require_leader_write)):
+def put_draft(body: DraftBody, leader: Leader = Depends(require_discord_write)):
     """Replaces the shared draft: last write wins."""
     with appdb.connect() as conn:
         conn.execute(

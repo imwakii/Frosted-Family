@@ -1,4 +1,4 @@
-"""Upgrade feed (public), inactivity watch and the make-room list (leaders only).
+"""Upgrade feed, inactivity watch and the make-room list. All public for now; LEADERS_PUBLIC=false locks the last two.
 
 Everything here only reads. The make-room list gives reasons, never decisions: who leaves a clan is Ka Wai's call.
 
@@ -9,13 +9,14 @@ defenses move them while the player is idle, and a season reset of donations to 
 """
 from __future__ import annotations
 
+import os
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
 
 from frosted.config import CLAN_TAGS, TAG_TO_CLAN
 from server import baseline, plan, profiles
-from server.auth import Leader, require_leader
+from server.auth import Leader, current_leader
 
 INACTIVE_DAYS = 7          # make-room flags a member idle this long
 MISSED_RECENT_DAYS = 14    # missed attacks in wars that ended this recently
@@ -214,11 +215,22 @@ def _db():
     return open_db()
 
 
-@router.get("/inactivity")
-def get_inactivity(leader: Leader = Depends(require_leader)):
+def leaders_public() -> bool:
+    """LEADERS_PUBLIC (default true) opens the inactivity and make-room lists to everyone. Set it to false in api.env
+    and restart the API to put them back behind a leader session."""
+    return os.environ.get("LEADERS_PUBLIC", "true").strip().lower() not in ("false", "0", "no", "off")
+
+
+def leaders_access(leader: Leader | None = Depends(current_leader)) -> None:
+    if not leaders_public() and not leader:
+        raise HTTPException(401, "sign in as a leader")
+
+
+@router.get("/inactivity", dependencies=[Depends(leaders_access)])
+def get_inactivity():
     return inactivity(_db())
 
 
-@router.get("/make-room")
-def get_make_room(clan: str, leader: Leader = Depends(require_leader)):
+@router.get("/make-room", dependencies=[Depends(leaders_access)])
+def get_make_room(clan: str):
     return make_room(_db(), clan)
