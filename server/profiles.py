@@ -216,7 +216,8 @@ def war_record(conn, scope: str = "all") -> dict:
 
     scope=all: the latest cycle's clashspot export (baseline.py) plus the recorded wars that started after each
     clan's pull date, so no war counts twice. scope=cwl: the current league season's recorded CWL wars only.
-    A member with nothing in the scope has war null. Ranked by all-time war stars in both scopes."""
+    A member with nothing in the scope has war null. Ranked by all-time war stars in both scopes. window_from opens the
+    whole window (the export's earliest war, else the first recorded one); since is the first recorded war counted."""
     if scope not in ("all", "cwl"):
         raise HTTPException(422, "scope is all or cwl")
     base = baseline.current() if scope == "all" else None
@@ -246,7 +247,7 @@ def war_record(conn, scope: str = "all") -> dict:
     players = base.players if base else {}
     rows = [{**row(m), "war_stars": m["war_stars"], "war": war_view(players.get(m["tag"]), rec.get(m["tag"]))}
             for m in current_members(conn)]
-    return {"kind": "war", "scope": scope, "since": window_from, "window_from": window_from, "sources": sources,
+    return {"kind": "war", "scope": scope, "since": api_day(counted), "window_from": window_from, "sources": sources,
             "season": season, "updated_at": updated, "players": ranked(rows, lambda r: r["war_stars"])}
 
 

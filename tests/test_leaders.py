@@ -362,7 +362,8 @@ def raw(env, monkeypatch):
 def test_war_record_merges_the_export_with_later_recorded_wars(raw, explored):
     body = explored.get("/explore/war").json()
     assert body["sources"] == ["clashspot export 2026-11", "recorded since 2026-11-04"]
-    assert body["window_from"] == body["since"] == "2026-07-14"
+    # window_from opens the merged window (the earliest export war); since is the first recorded war counted.
+    assert (body["window_from"], body["since"]) == ("2026-07-14", "2026-11-04")
     rows = by_name(body)
     # Export: 12 attacks (10 for Fire, 2 for Cake), 10 three-stars, 2 two-stars, 1 miss. Recorded: Fire's pull date is
     # 3 Nov, so CWL day 1 (battle 3 Nov) is already in the export and only day 2 (4 Nov, one three-star) adds.
@@ -391,7 +392,8 @@ def test_war_record_follows_the_newest_cycle(raw, explored):
 
 def test_war_record_without_an_export_is_recorded_only(explored):
     body = explored.get("/explore/war").json()
-    assert body["sources"] == ["recorded since 2026-10-21"] and body["window_from"] == "2026-10-21"
+    assert body["sources"] == ["recorded since 2026-10-21"]
+    assert body["window_from"] == body["since"] == "2026-10-21"
     rows = by_name(body)
     assert rows["Waki renamed"]["war"]["attacks"] == 2 and rows["Waki renamed"]["war"]["recorded_wars"] == 2
     assert rows["Maki"]["war"]["missed"] == 1  # 1 of 2 regular-war attacks used
