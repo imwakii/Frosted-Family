@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useClans } from '../clash'
-import { CATS, type Cat, HIGH_MISS, isMaxed, type MatrixPlayer, missRate, progress, useMatrix, useWarBoard, type WarRow, type WarScope } from '../explore'
+import { CATS, type Cat, competitionRanks, HIGH_MISS, isMaxed, type MatrixPlayer, missRate, progress, useMatrix, useWarBoard, type WarRow, type WarScope } from '../explore'
 import { go, playerHref } from '../route'
 import { CLAN, CLANS } from '../theme'
 import type { ClanName } from '../types'
@@ -105,6 +105,8 @@ function MatrixBoard({ cat, q, setQ, wide }: BoardProps & { cat: Cat }) {
     const rows = pool.map((p) => ({ p, pct: progress(p.levels, units), maxed: units.every((u, i) => isMaxed(p.levels[i], u)) }))
     const key = (r: (typeof rows)[number]) => (sort.col < 0 ? r.pct : r.p.levels[sort.col] ?? -1)
     rows.sort((a, b) => (sort.asc ? key(a) - key(b) : key(b) - key(a)) || b.pct - a.pct || a.p.name.localeCompare(b.p.name))
+    // # is the overall position by category progress, whatever column is sorted.
+    const place = competitionRanks(rows, (r) => Math.round(r.pct * 10) / 10)
     const maxedN = rows.filter((r) => r.maxed).length
     const shown = rows.filter((r) => matchQ(r.p))
     const pick = (col: number) => setSort((s) => (s.col === col ? { col, asc: !s.asc } : { col, asc: false }))
@@ -135,7 +137,8 @@ function MatrixBoard({ cat, q, setQ, wide }: BoardProps & { cat: Cat }) {
               <table className="min-w-full border-separate border-spacing-0 text-sm">
                 <thead>
                   <tr>
-                    <th className="sticky left-0 z-[2] min-w-[210px] border-b border-line bg-white px-3 py-2.5 text-left text-xs font-bold text-faint">PLAYER</th>
+                    <th className="sticky left-0 z-[2] w-12 min-w-12 border-b border-line bg-white py-2.5 pl-4 pr-1 text-left text-xs font-bold text-faint">#</th>
+                    <th className="sticky left-12 z-[2] min-w-[210px] border-b border-line bg-white px-3 py-2.5 text-left text-xs font-bold text-faint">PLAYER</th>
                     <th className={`border-b border-line p-0 ${sort.col < 0 ? 'bg-[#EEF2FF]' : 'bg-white'}`} aria-sort={sort.col < 0 ? (sort.asc ? 'ascending' : 'descending') : undefined}>
                       <button type="button" onClick={() => pick(-1)} className="min-h-16 w-24 cursor-pointer border-0 bg-transparent text-xs font-bold text-ink-2 hover:bg-[#EEF2FF]">Progress</button>
                     </th>
@@ -150,9 +153,10 @@ function MatrixBoard({ cat, q, setQ, wide }: BoardProps & { cat: Cat }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {shown.map(({ p, pct }) => (
+                  {shown.map((r) => { const { p, pct } = r; return (
                     <tr key={p.tag} onClick={() => go.to(playerHref(p.tag))} className="group cursor-pointer">
-                      <td className="sticky left-0 z-[1] whitespace-nowrap border-b border-hair bg-white px-3 py-1.5 group-hover:bg-hover">
+                      <td className="sticky left-0 z-[1] w-12 min-w-12 border-b border-hair bg-white py-1.5 pl-4 pr-1 font-bold tabular-nums text-faint group-hover:bg-hover">{place.get(r) ?? '—'}</td>
+                      <td className="sticky left-12 z-[1] whitespace-nowrap border-b border-hair bg-white px-3 py-1.5 group-hover:bg-hover">
                         <span className="flex items-center gap-2.5">
                           <Th th={p.th} />
                           <a href={playerHref(p.tag)} onClick={(e) => e.stopPropagation()} className="font-semibold text-ink no-underline">{p.name}</a>
@@ -174,8 +178,8 @@ function MatrixBoard({ cat, q, setQ, wide }: BoardProps & { cat: Cat }) {
                         )
                       })}
                     </tr>
-                  ))}
-                  {!shown.length && <tr><td colSpan={2 + units.length} className="p-5 text-sm text-faint">No one by that name</td></tr>}
+                  ) })}
+                  {!shown.length && <tr><td colSpan={3 + units.length} className="p-5 text-sm text-faint">No one by that name</td></tr>}
                 </tbody>
               </table>
             </section>
@@ -187,10 +191,11 @@ function MatrixBoard({ cat, q, setQ, wide }: BoardProps & { cat: Cat }) {
 
   // Phone: one unit at a time, ranked.
   const u = units[Math.min(unit, Math.max(0, units.length - 1))]
-  const ranked = u ? pool
+  const sorted = u ? pool
     .map((p) => ({ p, l: p.levels[units.indexOf(u)] ?? 0 }))
-    .sort((a, b) => b.l - a.l || a.p.name.localeCompare(b.p.name))
-    .map((x, i) => ({ ...x, rank: i + 1 })) : []
+    .sort((a, b) => b.l - a.l || a.p.name.localeCompare(b.p.name)) : []
+  const unitPlace = competitionRanks(sorted, (x) => x.l)
+  const ranked = sorted.map((x) => ({ ...x, rank: unitPlace.get(x) ?? null }))
   const maxedN = u ? ranked.filter((r) => r.l >= u.max).length : 0
   const shown = ranked.filter((r) => matchQ(r.p))
 
@@ -221,7 +226,7 @@ function MatrixBoard({ cat, q, setQ, wide }: BoardProps & { cat: Cat }) {
               return (
                 <li key={p.tag}>
                   <a href={playerHref(p.tag)} className={`flex min-h-[54px] items-center gap-2.5 px-3.5 py-1.5 text-ink no-underline hover:bg-hover ${i ? 'border-t border-hair' : ''}`}>
-                    <span className="w-6 flex-none text-right text-xs tabular-nums text-faint">{rank}</span>
+                    <span className="w-6 flex-none text-right text-xs tabular-nums text-faint">{rank ?? '—'}</span>
                     <Th th={p.th} />
                     <span className="flex min-w-0 flex-auto flex-col gap-1">
                       <span className="flex min-w-0 items-baseline gap-1.5">
@@ -290,8 +295,9 @@ function WarBoardView({ q, setQ, wide }: BoardProps) {
       .filter((r) => clan === 'All' || r.clan === clan)
       .map((r) => ({ r, v: col.value(r) }))
       .sort((a, b) => (a.v === null ? (b.v === null ? 0 : 1) : b.v === null ? -1 : sort.asc ? a.v - b.v : b.v - a.v) || a.r.name.localeCompare(b.r.name))
-      .map((x, i) => ({ ...x, rank: x.v === null ? null : i + 1 }))
   }, [data, clan, col, sort.asc])
+  const placeCol = cols.find((c) => c.key === 'stars') ?? cols[0]
+  const place = useMemo(() => competitionRanks(ranked.map((x) => x.r), (r) => (wide ? placeCol : col)?.value(r) ?? null, !wide && !!col?.low), [ranked, placeCol, col, wide])
   const shown = ranked.filter(({ r }) => !nq || norm(r.name).includes(nq) || r.tag.toLowerCase().includes(nq))
   const since = sinceLabel(data?.since ?? null)
 
@@ -324,8 +330,8 @@ function WarBoardView({ q, setQ, wide }: BoardProps) {
             <table className="min-w-full border-separate border-spacing-0 text-sm">
               <thead>
                 <tr className="text-left text-xs font-bold text-faint">
-                  <th className="w-12 border-b border-line py-2.5 pl-4 pr-2 font-bold">#</th>
-                  <th className="min-w-[220px] border-b border-line px-2 font-bold">PLAYER</th>
+                  <th className="sticky left-0 z-[2] w-12 min-w-12 border-b border-line bg-white py-2.5 pl-4 pr-1 font-bold">#</th>
+                  <th className="sticky left-12 z-[2] min-w-[220px] border-b border-line bg-white px-2 font-bold">PLAYER</th>
                   {cols.map((c) => (
                     <th key={c.key} className={`border-b border-line p-0 text-right ${c.key === sort.key ? 'bg-[#EEF2FF]' : ''}`} aria-sort={c.key === sort.key ? (sort.asc ? 'ascending' : 'descending') : undefined}>
                       <button type="button" onClick={() => pick(c)}
@@ -337,10 +343,10 @@ function WarBoardView({ q, setQ, wide }: BoardProps) {
                 </tr>
               </thead>
               <tbody>
-                {shown.map(({ r, rank }) => (
+                {shown.map(({ r }) => (
                   <tr key={r.tag} onClick={() => go.to(playerHref(r.tag))} className="group cursor-pointer">
-                    <td className="border-b border-hair py-1.5 pl-4 pr-2 font-bold tabular-nums text-faint group-hover:bg-hover">{rank ?? '—'}</td>
-                    <td className="whitespace-nowrap border-b border-hair px-2 py-1.5 group-hover:bg-hover">
+                    <td className="sticky left-0 z-[1] w-12 min-w-12 border-b border-hair bg-white py-1.5 pl-4 pr-1 font-bold tabular-nums text-faint group-hover:bg-hover">{place.get(r) ?? '—'}</td>
+                    <td className="sticky left-12 z-[1] whitespace-nowrap border-b border-hair bg-white px-2 py-1.5 group-hover:bg-hover">
                       <span className="flex items-center gap-2.5">
                         <Th th={r.th} />
                         <a href={playerHref(r.tag)} onClick={(e) => e.stopPropagation()} className="font-semibold text-ink no-underline">{r.name}</a>
@@ -386,10 +392,10 @@ function WarBoardView({ q, setQ, wide }: BoardProps) {
             ))}
           </div>
           <ol className="m-0 mx-4 list-none rounded-2xl border border-line bg-white py-1">
-            {shown.map(({ r, v, rank }, i) => (
+            {shown.map(({ r, v }, i) => (
               <li key={r.tag}>
                 <a href={playerHref(r.tag)} className={`flex min-h-[56px] items-center gap-2.5 px-3.5 py-1.5 text-ink no-underline hover:bg-hover ${i ? 'border-t border-hair' : ''}`}>
-                  <span className="w-6 flex-none text-right text-xs tabular-nums text-faint">{rank ?? '—'}</span>
+                  <span className="w-6 flex-none text-right text-xs tabular-nums text-faint">{place.get(r) ?? '—'}</span>
                   <Th th={r.th} />
                   <span className="flex min-w-0 flex-auto flex-col gap-0.5">
                     <span className="flex min-w-0 items-center gap-1.5">

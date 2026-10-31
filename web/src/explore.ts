@@ -81,6 +81,23 @@ export type WarRow = {
 }
 export type WarBoard = { scope: WarScope | null; since: string | null; season: string | null; updated_at: string | null; players: WarRow[] }
 
+type WarBlock = { wars_played: number; attacks_used: number; attacks_missed: number; three_star_rate: number | null; avg_stars: number | null; avg_destruction: number | null }
+type RawWar = {
+  scope?: WarScope; since?: string; season?: string | null; cwl_season?: string | null; updated_at?: string | null; as_of?: string | null
+  players: (Omit<WarRow, 'war'> & { war?: WarRow['war']; recorded?: WarBlock | null; cwl?: WarBlock | null })[]
+}
+
+// Per-attack rates back to counts, so both shapes sort and display alike.
+function fromBlock(b: WarBlock | null | undefined): WarRow['war'] {
+  if (!b) return null
+  const n = b.attacks_used
+  return {
+    wars: b.wars_played, attacks: n, missed: b.attacks_missed,
+    three_stars: Math.round((b.three_star_rate ?? 0) * n), stars: (b.avg_stars ?? 0) * n,
+    avg_destruction: b.avg_destruction,
+  }
+}
+
 const warCache = new Map<WarScope, Promise<WarBoard | null>>()
 
 function fetchWar(scope: WarScope): Promise<WarBoard | null> {
@@ -89,10 +106,22 @@ function fetchWar(scope: WarScope): Promise<WarBoard | null> {
       ? import('./devMock').then((m) => m.mockWar(scope))
       : fetch(`/api/explore/war?scope=${scope}`, { headers: { Accept: 'application/json' } })
         .then((r) => (r.ok && r.headers.get('content-type')?.includes('json') ? r.json() : null)))
-      .then((d: (Partial<WarBoard> & { players?: WarRow[] }) | null) => {
+      .then((d: RawWar | null) => {
         if (!d || !Array.isArray(d.players) || !d.players.length) return null
-        const froms = d.players.map((p) => p.war?.from).filter((f): f is string => !!f).sort()
-        return { scope: d.scope ?? null, since: d.since ?? froms[0] ?? null, season: d.season ?? null, updated_at: d.updated_at ?? null, players: d.players }
+        // Two shapes: one row per scope ({war}), or both scopes per row ({recorded, cwl}).
+        const split = d.players.some((p) => 'recorded' in p || 'cwl' in p)
+        const players: WarRow[] = d.players.map((p) => ({
+          tag: p.tag, name: p.name, clan: p.clan, th: p.th, war_stars: p.war_stars ?? null,
+          war: split ? fromBlock(scope === 'cwl' ? p.cwl : p.recorded) : p.war ?? null,
+        }))
+        const froms = players.map((p) => p.war?.from).filter((f): f is string => !!f).sort()
+        return {
+          scope: split ? scope : d.scope ?? null,
+          since: d.since ?? froms[0] ?? null,
+          season: d.season ?? d.cwl_season ?? null,
+          updated_at: d.updated_at ?? d.as_of ?? null,
+          players,
+        }
       })
       .catch(() => null))
   }
@@ -113,3 +142,12 @@ export function useWarBoard(scope: WarScope) {
 /** Missed as a share of attacks owed; null before any recorded war. */
 export const missRate = (w: WarRow['war']) => (w && w.attacks + w.missed ? (100 * w.missed) / (w.attacks + w.missed) : null)
 export const HIGH_MISS = 20
+
+/** Standard competition ranks (1, 2, 2, 4); items without a value get null. */
+export function competitionRanks<T>(items: T[], value: (t: T) => number | null, asc = false) {
+  const scored = items.map((t) => ({ t, v: value(t) })).filter((x): x is { t: T; v: number } => x.v !== null)
+  scored.sort((a, b) => (asc ? a.v - b.v : b.v - a.v))
+  const ranks = new Map<T, number | null>(items.map((t) => [t, null]))
+  scored.forEach((x, i) => ranks.set(x.t, i && scored[i - 1].v === x.v ? ranks.get(scored[i - 1].t)! : i + 1))
+  return ranks
+}
