@@ -88,6 +88,28 @@ is in the data.
 
 ---
 
+## Removing members
+
+Set by Ka Wai on 1 November 2026: "activity is number one indicator, followed by strength of the player.
+players with weak heroes relative to their townhalls are first to go".
+
+The site's make-room list (`GET /leaders/make-room?clan=`, `server/leaders.py`) orders each clan's members by
+that rule. **It lists candidates and never removes anyone.** Who leaves is still Ka Wai's call.
+
+1. **Activity first.** Members fall into four buckets by days without activity: 14 or more, 7 to 13, 3 to 6,
+   then active. Activity comes from the 2-hourly profile snapshots. Trophies do not count, and a donations
+   reset at season end does not count. Where nothing has changed since tracking began, the days counted are
+   a minimum, and they still decide the bucket.
+2. **Then hero strength, weakest first.** A member's home hero levels, summed, as a percentage of the median
+   sum among all current members of the three clans at the same town hall. With fewer than 3 members at
+   that town hall, the comparison widens to TH-1 to TH+1, and its median is scaled by the ratio of summed
+   hero max levels. The list marks these comparisons `thin`.
+3. **Other reasons only break ties**, in this order: missed attacks in the last 14 days, a high miss rate,
+   no donations this season, sitting out, new or unproven, below the clan's TH floor (TH18 in Fire, TH16 in
+   Cake). They show as reasons beside each name.
+
+---
+
 ## Open, and not to be recorded as settled
 
 **Variant B.** Proposed 28 August 2026, never adopted or rejected. Applying the one-way valve

@@ -20,7 +20,9 @@ War collector and read API for the Frosted Family site, on the bots droplet unde
 - `leaders.py` serves `/explore/upgrades?days=7&clan=` (public: level-ups, unlocks and TH upgrades between profile
   snapshots, newest first), `/leaders/inactivity` and `/leaders/make-room?clan=`. The last two are public while
   `LEADERS_PUBLIC` is true (the default); set it to false in api.env and restart the API to lock them. Make-room
-  lists reason codes and a sort key, never a decision. Until Discord sign-in, `POST /auth/passcode` checks
+  orders each clan by Ka Wai's rule in `docs/specs/02-allocation-rules.md` ("Removing members"): activity bucket,
+  then hero strength for the town hall, weakest first, then the other reasons as tie-breaks. It lists, never
+  decides. Until Discord sign-in, `POST /auth/passcode` checks
   `LEADER_PASSCODE` (5 failed tries per client and 30 overall per 15 minutes) and issues a leader session that
   cannot publish or save the plan (plan writes wait for Discord). Locked, with no passcode set, `/leaders/*` is 401.
 - `pull_allocation.py` runs on the laptop: `python -m server.pull_allocation` writes the published allocation into
