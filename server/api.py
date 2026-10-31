@@ -1,7 +1,8 @@
 """Read API for the Frosted Family site, served at FROSTED_API_HOST (deploy/setup.sh) behind Caddy and reached by the
 site through a Vercel rewrite.
 
-    GET /roster          every allocated player from frosted_cwl_members.csv, joined on tag to the latest snapshot
+    GET /roster          every player in frosted_cwl_members.csv joined on tag to the latest snapshot (left flags who
+                         has gone), plus live members not in it yet (cwl_slot "New", with a suggested slot)
     GET /clans           each clan's name, badge URLs and war league
     GET /war/live        each clan's current war: CWL day, opponent, stars, attacks used
     GET /player/{tag}    one player's allocation, latest snapshot, wars, attacks and missed attacks
@@ -27,7 +28,7 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException, Request
 
 from frosted.config import CLAN_TAGS, TAG_TO_CLAN
-from server import auth, db, leaders, plan, profiles
+from server import auth, db, leaders, members, plan, profiles
 
 DEFAULT_DB = "/opt/bots/frosted/data/frosted.db"
 ROSTER_FIELDS = ("tag", "name", "clan", "cwl_slot", "transferred_from", "tier", "final_score", "current_th", "flags")
@@ -75,10 +76,19 @@ def roster():
     latest = db.latest_members(conn) if conn else {}
     rows = []
     players, meta = read_roster()
+    seen = members.presence(conn) if conn else {}
     for r in players:
         # Rows with no tag (joined between export and roster build) cannot be joined and show without a snapshot.
         r["snapshot"] = snapshot_view(latest.get(r["tag"])) if r["tag"] else None
+        p = seen.get(r["tag"]) if r["tag"] else None
+        # left: not in their clan's polls for 30+ minutes, or never seen by the collector at all. Unknown (null) for
+        # rows with no tag, and before the first poll.
+        r["left"] = None if not r["tag"] or not seen else (p["left"] if p else True)
+        r["new"] = False
         rows.append(r)
+    if conn:
+        csv_tags = {r["tag"] for r in players if r["tag"]}
+        rows += members.new_member_rows(conn, csv_tags, leaders.hero_strength(conn), snapshot_view)
     return {"players": rows, "allocation": meta, "last_poll": last_poll(conn)}
 
 

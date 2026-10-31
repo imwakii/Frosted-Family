@@ -1,4 +1,4 @@
-"""Player profiles for the Explore tab: stored by the collector every 2 hours, served by kind and as a level matrix.
+"""Player profiles for the Explore tab: stored by the collector every hour, served by kind and as a level matrix.
 
 Every current member gets a row in every kind, with null where the data is not in yet. "max" is the API's maxLevel,
 the unit's maximum in the game. "cap", the maximum at the player's town hall, is always null: there is no source for
@@ -16,7 +16,9 @@ from fastapi import HTTPException
 from frosted.config import TAG_TO_CLAN
 from server import baseline
 
-PROFILE_HOURS = 2  # about 115 calls a pass, well inside the API's limits
+# Hourly: about 115 calls a pass, well inside the API's limits. Due after 55 minutes so it lands on the 10-minute
+# pass nearest the hour instead of slipping to the next one.
+PROFILE_MINUTES = 55
 KINDS = json.loads(resources.files("server").joinpath("data/unit_kinds.json").read_text(encoding="utf-8"))
 PETS, SIEGE, SUPER = set(KINDS["pets"]), set(KINDS["siege_machines"]), set(KINDS["super_troops"])
 
@@ -26,7 +28,7 @@ def profiles_due(conn: sqlite3.Connection, now: str) -> bool:
     if not last:
         return True
     t = lambda s: datetime.strptime(s, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
-    return t(now) - t(last) >= timedelta(hours=PROFILE_HOURS)
+    return t(now) - t(last) >= timedelta(minutes=PROFILE_MINUTES)
 
 
 def troop_kind(name: str) -> str:
@@ -254,7 +256,10 @@ def war_record(conn, scope: str = "all") -> dict:
         sources.append(f"recorded since {api_day(counted)}")
     window_from = min(base.earliest.values()) if base and base.earliest else api_day(counted)
     players = base.players if base else {}
-    rows = [{**row(m), "war_stars": m["war_stars"], "war": war_view(players.get(m["tag"]), rec.get(m["tag"]))}
+    # history says where a player's record comes from. "recorded only" (no export row: joined after the cycle's
+    # pull, or the CWL scope) means the API has nothing from before the collector first saw them.
+    rows = [{**row(m), "war_stars": m["war_stars"], "war": war_view(players.get(m["tag"]), rec.get(m["tag"])),
+             "history": "export + recorded" if m["tag"] in players else "recorded only"}
             for m in current_members(conn)]
     return {"kind": "war", "scope": scope, "since": api_day(counted), "window_from": window_from, "sources": sources,
             "season": season, "updated_at": updated, "players": ranked(rows, lambda r: r["war_stars"])}

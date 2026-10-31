@@ -27,6 +27,14 @@ CREATE TABLE IF NOT EXISTS member_snapshots (
 );
 CREATE INDEX IF NOT EXISTS ix_snap_player ON member_snapshots (player_tag, seen_at);
 
+-- The first poll that saw each player, at poll precision (member_snapshots keeps one row a day, so its seen_at
+-- moves). Backfilled from those rows for players seen before this table existed, which is right to the day.
+CREATE TABLE IF NOT EXISTS member_first_seen (
+    player_tag TEXT PRIMARY KEY,
+    first_seen TEXT NOT NULL
+);
+INSERT OR IGNORE INTO member_first_seen SELECT player_tag, MIN(seen_at) FROM member_snapshots GROUP BY player_tag;
+
 CREATE TABLE IF NOT EXISTS wars (
     war_key TEXT PRIMARY KEY,             -- CWL: the war tag. Regular: clan|opponent|preparationStartTime
     war_tag TEXT,
@@ -108,7 +116,7 @@ CREATE TABLE IF NOT EXISTS polls (
     errors INTEGER
 );
 
--- Player profiles from /players/{tag}, fetched about twice a day. Latest only; the units are replaced each fetch.
+-- Player profiles from /players/{tag}, fetched every hour. Latest only; the units are replaced each fetch.
 CREATE TABLE IF NOT EXISTS player_profiles (
     player_tag TEXT PRIMARY KEY,
     fetched_at TEXT NOT NULL,
@@ -221,6 +229,7 @@ def upsert_members(conn: sqlite3.Connection, clan_tag: str, items: list[dict], s
              donations_received=excluded.donations_received""",
         rows,
     )
+    conn.executemany("INSERT OR IGNORE INTO member_first_seen VALUES (?, ?)", [(r[1], seen_at) for r in rows])
     return len(rows)
 
 

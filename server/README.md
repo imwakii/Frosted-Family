@@ -17,6 +17,11 @@ War collector and read API for the Frosted Family site, on the bots droplet unde
   (only `DISCORD_PUBLISHER_ID`, after the server re-runs the 15 CORE, 50 cap, valve and Maki checks; a failure is
   422 with the problems). The latest publish overrides `/roster` by tag while the CSV is unchanged.
   `/allocation.csv` serves it.
+- `members.py` keeps `/roster` current between cycles. Live members not in `frosted_cwl_members.csv` appear with
+  `cwl_slot` "New", tier "NEW", `joined_at` and `history: "recorded only"`, plus a `suggested_slot` (SUB if the
+  TH meets the clan's floor and heroes are at least 85% of same-TH peers, else Sitting Out) with its reason. The
+  suggestion is never written anywhere. CSV players missing from their clan's polls for 30+ minutes get
+  `left: true`.
 - `leaders.py` serves `/explore/upgrades?days=7&clan=` (public: level-ups, unlocks and TH upgrades between profile
   snapshots, newest first), `/leaders/inactivity` and `/leaders/make-room?clan=`. The last two are public while
   `LEADERS_PUBLIC` is true (the default); set it to false in api.env and restart the API to lock them. Make-room
@@ -28,7 +33,7 @@ War collector and read API for the Frosted Family site, on the bots droplet unde
 - `pull_allocation.py` runs on the laptop: `python -m server.pull_allocation` writes the published allocation into
   `frosted_cwl_members.csv` (allocation columns only) for Ka Wai to commit. The server never writes to GitHub.
 - `profiles.py` stores every member's `/players` profile (each level change kept in `player_unit_history`) and each
-  clan's latest raid weekend every 2 hours, and serves `/explore/matrix?cat=heroes|equipment|troops|spells|pets|sieges` and
+  clan's latest raid weekend every hour, and serves `/explore/matrix?cat=heroes|equipment|troops|spells|pets|sieges` and
   `/explore/{heroes|equipment|army|donations|capital}`, one row per current member. `/explore/war?scope=all|cwl` is all-time war
   stars from the profile plus the war record: the latest cycle's clashspot war-statistics export (`baseline.py`) and,
   on top, the recorded wars whose battle started after each clan's `pull_date` in that cycle's manifest, so nothing

@@ -422,12 +422,13 @@ def test_explore_donations_and_capital(explored):
     assert explored.get("/explore/rushed").status_code == 404
 
 
-def test_profiles_due_every_two_hours():
+def test_profiles_due_every_hour():
     conn = db.connect(":memory:")
     assert profiles.profiles_due(conn, "2026-11-02T00:00:00Z")
-    conn.execute("INSERT INTO profile_runs VALUES ('2026-11-02T00:00:00Z', 5)")
-    assert not profiles.profiles_due(conn, "2026-11-02T01:59:00Z")
-    assert profiles.profiles_due(conn, "2026-11-02T02:00:00Z")
+    conn.execute("INSERT INTO profile_runs VALUES ('2026-11-02T00:00:05Z', 5)")
+    assert not profiles.profiles_due(conn, "2026-11-02T00:50:00Z")
+    # Due after 55 minutes, so the 10-minute pass just before the hour picks it up.
+    assert profiles.profiles_due(conn, "2026-11-02T01:00:00Z")
 
 
 # ─── matrix ───────────────────────────────────────────────────────────────────
