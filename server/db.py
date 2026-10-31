@@ -109,6 +109,23 @@ CREATE TABLE IF NOT EXISTS clans (
     updated_at TEXT NOT NULL
 );
 
+-- One row per clan per UTC day, rewritten by each collector pass that day, so /stats/clans reads a small table.
+-- Sums, not averages, so the family line can be added up from the three clans.
+CREATE TABLE IF NOT EXISTS clan_daily (
+    date TEXT NOT NULL,                   -- YYYY-MM-DD
+    clan_tag TEXT NOT NULL,
+    members INTEGER NOT NULL,
+    th_sum INTEGER NOT NULL,
+    hero_levels INTEGER NOT NULL,         -- members with a profile only
+    hero_max INTEGER NOT NULL,
+    donations INTEGER NOT NULL,           -- season to date; resets at season end
+    donations_received INTEGER NOT NULL,
+    capital_contributions INTEGER,        -- lifetime, members with a profile
+    war_league TEXT,
+    updated_at TEXT NOT NULL,
+    PRIMARY KEY (date, clan_tag)
+);
+
 CREATE TABLE IF NOT EXISTS polls (
     started_at TEXT PRIMARY KEY,
     finished_at TEXT,

@@ -4,6 +4,7 @@ site through a Vercel rewrite.
     GET /roster          every player in frosted_cwl_members.csv joined on tag to the latest snapshot (left flags who
                          has gone), plus live members not in it yet (cwl_slot "New", with a suggested slot)
     GET /clans           each clan's name, badge URLs and war league
+    GET /stats/clans     each clan's and the family's daily series, wars, raids, leagues and cycle scores
     GET /war/live        each clan's current war: CWL day, opponent, stars, attacks used
     GET /player/{tag}    one player's allocation, latest snapshot, wars, attacks and missed attacks
     GET /allocation.csv  the latest published allocation, for server/pull_allocation.py
@@ -28,7 +29,7 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException, Request
 
 from frosted.config import CLAN_TAGS, TAG_TO_CLAN
-from server import auth, db, leaders, members, plan, profiles
+from server import auth, db, leaders, members, plan, profiles, stats
 
 DEFAULT_DB = "/opt/bots/frosted/data/frosted.db"
 ROSTER_FIELDS = ("tag", "name", "clan", "cwl_slot", "transferred_from", "tier", "final_score", "current_th", "flags")
@@ -183,6 +184,11 @@ def player(tag: str):
 @app.get("/allocation.csv")
 def allocation():
     return plan.allocation_csv()
+
+
+@app.get("/stats/clans")
+def stats_clans():
+    return stats.clans(open_db())
 
 
 @app.get("/explore/upgrades")  # before /explore/{board}, like war and matrix

@@ -17,6 +17,10 @@ War collector and read API for the Frosted Family site, on the bots droplet unde
   (only `DISCORD_PUBLISHER_ID`, after the server re-runs the 15 CORE, 50 cap, valve and Maki checks; a failure is
   422 with the problems). The latest publish overrides `/roster` by tag while the CSV is unchanged.
   `/allocation.csv` serves it.
+- `stats.py` serves `/stats/clans`: per clan and for the family, daily members, average TH, hero progress and
+  season-to-date donations (from `clan_daily`, one row per clan per day written by each collector pass), each
+  ended war's result, capital loot per raid weekend, the CWL league per month, and the average score per cycle
+  from `data/score_history.csv`. That file has no slot column, so the CORE average is for the current cycle only.
 - `members.py` keeps `/roster` current between cycles. Live members not in `frosted_cwl_members.csv` appear with
   `cwl_slot` "New", tier "NEW", `joined_at` and `history: "recorded only"`, plus a `suggested_slot` (SUB if the
   TH meets the clan's floor and heroes are at least 85% of same-TH peers, else Sitting Out) with its reason. The
