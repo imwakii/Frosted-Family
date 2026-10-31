@@ -15,7 +15,7 @@ pytest.importorskip("PIL")
 
 EXPECTED = {
     "make_poster.py": (1700, 1683),
-    "make_directory_poster.py": (2400, 1993),
+    "make_directory_poster.py": (2400, 2083),
 }
 
 

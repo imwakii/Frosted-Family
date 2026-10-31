@@ -25,6 +25,13 @@ exactly the case it was tested on.
 EATERS jr, Death Eaters 3 and Death Eaters 2 from Fire to Cake CORE. Ka Wai confirmed it on
 29 September 2026 as a one-off override. It does not retire the valve.
 
+**The four Death Eaters accounts are permanently Cake members.** Death Eaters RS, DEATH EATERS jr,
+Death Eaters 3 and Death Eaters 2 stay in Cake and are no longer shown as transfers from Fire. Ka Wai's
+call, 31 October 2026. Their CORE or SUB slot is still decided on merit each cycle.
+
+*Exception, November 2026 cycle:* Ka Wai moved juna the great and wamr from Fire to Cake CORE on
+31 October 2026, a one-off override. It does not retire the valve.
+
 **Fire and Cake are TH18-first.** TH17s are retained only where their scores are too strong to
 demote. Flakes is the catch-all for everyone below TH18, plus a small number of TH18 exceptions.
 Active since the June 2026 cycle.
@@ -38,7 +45,7 @@ constraint, so moves that are each individually valid fail collectively if order
 the ceiling mid-transfer and the later moves silently do not happen. Discovered live in the
 September cycle. **Restate this in every move checklist.**
 
-Alt accounts compete on merit. That rule is already in `CLAUDE.md` and is not repeated here.
+Alt accounts compete on merit. That rule is already in `AGENTS.md` and is not repeated here.
 
 ---
 

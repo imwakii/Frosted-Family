@@ -33,7 +33,7 @@ from frosted.fonts import build_charset, clean, sized
 CLAN_ORDER  = ["Fire", "Cake", "Flakes"]
 CLAN_STATUS = {
     "Fire":   "15v15 · CHAMPION 3 · PRIORITY CLAN",
-    "Cake":   "15v15 · MASTERS 1 · BACKFILL",
+    "Cake":   "15v15 · MASTERS 2 · BACKFILL",
     "Flakes": "NOT IN CWL",
 }
 SECTIONS_AFTER = [("CORE", "STARTING FIFTEEN"),
