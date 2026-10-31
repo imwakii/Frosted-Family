@@ -181,3 +181,58 @@ def test_what_counts_as_activity():
     assert leaders.was_active(base, {**base, "donations_received": 21})
     for k in ("town_hall", "exp_level", "attack_wins", "war_stars", "capital_contributions", "unit_levels"):
         assert leaders.was_active(base, {**base, k: base[k] + 1})
+
+
+# ─── leaders' private link ────────────────────────────────────────────────────
+
+KEY = "Abc-123_link-key-that-is-long-and-random-xyz"
+
+
+@pytest.fixture
+def link_only(timeline, monkeypatch):
+    for k in (*SESSION_VARS, "LEADER_PASSCODE"):
+        monkeypatch.delenv(k, raising=False)
+    monkeypatch.setenv("LEADER_LINK_KEY", KEY)
+    return timeline
+
+
+def test_leader_link_signs_in_and_drops_the_key_from_the_address(link_only):
+    c = client()
+    r = c.get("/auth/leader-link", params={"k": KEY})
+    assert r.status_code == 302 and r.headers["location"] == "https://frosted-family.vercel.app/#/plan"
+    assert r.headers["referrer-policy"] == "no-referrer" and auth.SESSION_COOKIE in r.headers["set-cookie"]
+    me = c.get("/auth/me").json()
+    assert (me["role"], me["via"]) == ("leader", "passcode")
+    assert c.get("/leaders/inactivity").status_code == 200
+    assert c.post("/plan/publish", json={"moves": []}, headers={"X-CSRF-Token": me["csrf"]}).status_code == 403
+
+
+def test_wrong_link_goes_back_to_the_site_without_a_session(link_only):
+    r = client().get("/auth/leader-link", params={"k": "wrong"})
+    assert r.headers["location"] == "https://frosted-family.vercel.app/?signin=failed#/plan"
+    assert auth.SESSION_COOKIE not in r.headers.get("set-cookie", "")
+
+
+def test_link_tries_share_the_rate_limit(link_only):
+    c = client()
+    for _ in range(auth.PASSCODE_PER_CLIENT):
+        c.get("/auth/leader-link", params={"k": "guess"})
+    r = c.get("/auth/leader-link", params={"k": KEY})
+    assert "signin=limited" in r.headers["location"] and auth.SESSION_COOKIE not in r.headers.get("set-cookie", "")
+    assert c.post("/auth/passcode", json={"passcode": KEY}).status_code == 429
+
+
+def test_link_key_wins_over_the_old_passcode_name(link_only, monkeypatch):
+    monkeypatch.setenv("LEADER_PASSCODE", "old-passcode")
+    assert "signin=failed" in client().get("/auth/leader-link", params={"k": "old-passcode"}).headers["location"]
+    assert client().post("/auth/passcode", json={"passcode": KEY}).status_code == 204
+
+
+def test_rotating_the_key_signs_leaders_out_even_with_a_session_secret(link_only, monkeypatch):
+    # Once Discord is set up SESSION_SECRET signs sessions; the key's fingerprint in the session still ends it.
+    monkeypatch.setenv("SESSION_SECRET", "a-fixed-session-secret")
+    c = client()
+    c.get("/auth/leader-link", params={"k": KEY})
+    assert c.get("/leaders/inactivity").status_code == 200
+    monkeypatch.setenv("LEADER_LINK_KEY", "a-brand-new-key")
+    assert c.get("/leaders/inactivity").status_code == 401

@@ -7,6 +7,9 @@
 #                           30-minute roster pull (main only), and the collector timer once api.env has COC_API_TOKEN
 #   bash setup.sh caddy     the API's site block for FROSTED_API_HOST, imported into /etc/caddy/Caddyfile
 #   bash setup.sh status    units, last collector run, row counts
+#   bash setup.sh leader-link          print the leaders' private sign-in link (makes a key the first time)
+#   bash setup.sh rotate-leader-link   new key, prints the new link; every leader signed in with the old one is
+#                                      signed out (when a leader leaves)
 #
 # Variables: FROSTED_BRANCH (main), FROSTED_API_HOST (the API's public hostname, set once below).
 #
@@ -92,10 +95,47 @@ PY
   fi
 }
 
+# ─── the leaders' private link ───────────────────────────────────────────────
+# The key lives only in api.env as LEADER_LINK_KEY (an older LEADER_PASSCODE line is read the same way). These
+# commands print the link on the server for Ka Wai to copy; the key never goes anywhere else.
+SITE_URL=https://frosted-family.vercel.app
+
+current_key() {
+  local k
+  k="$(sed -n 's/^LEADER_LINK_KEY=//p' "$BOT_HOME/api.env" | tail -n1)"
+  [ -n "$k" ] || k="$(sed -n 's/^LEADER_PASSCODE=//p' "$BOT_HOME/api.env" | tail -n1)"
+  printf '%s' "$k"
+}
+
+print_link() { echo "$SITE_URL/api/auth/leader-link?k=$(current_key)"; }
+
+rotate_leader_link() {
+  local key tmp
+  # 32 random bytes, base64url without padding: 43 characters, safe in a URL as is.
+  key="$(openssl rand -base64 32 | tr '+/' '-_' | tr -d '=\n')"
+  tmp="$(mktemp "$BOT_HOME/api.env.XXXXXX")"
+  grep -v -e '^LEADER_LINK_KEY=' -e '^LEADER_PASSCODE=' "$BOT_HOME/api.env" > "$tmp" || true
+  echo "LEADER_LINK_KEY=$key" >> "$tmp"
+  chown root:root "$tmp"; chmod 600 "$tmp"; mv "$tmp" "$BOT_HOME/api.env"
+  systemctl restart frosted-api  # reads the new key; sessions made with the old one stop working
+  echo "New leaders' link (the old one and every session made with it no longer work):"
+  print_link
+}
+
+leader_link() {
+  if [ -z "$(current_key)" ]; then rotate_leader_link; return; fi
+  print_link
+}
+
+# Sourced with SETUP_SOURCE_ONLY=1 to try the functions without root.
+[ "${SETUP_SOURCE_ONLY:-}" = 1 ] && return 0
+
 need_root
 case "${1:-}" in
   install) install_app ;;
   caddy) caddy_site ;;
   status) status ;;
-  *) sed -n 2,15p "$0"; exit 1 ;;
+  leader-link) leader_link ;;
+  rotate-leader-link) rotate_leader_link ;;
+  *) sed -n 2,18p "$0"; exit 1 ;;
 esac

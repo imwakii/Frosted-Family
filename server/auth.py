@@ -25,7 +25,7 @@ from dataclasses import dataclass
 from urllib.parse import urlencode
 
 import httpx
-from fastapi import APIRouter, Cookie, Depends, Header, HTTPException, Request
+from fastapi import APIRouter, Cookie, Depends, Header, HTTPException, Query, Request
 from fastapi.responses import RedirectResponse, Response
 from pydantic import BaseModel, Field
 
@@ -133,13 +133,23 @@ class Leader:
     via: str = "discord"
 
 
+def leader_key() -> str | None:
+    """The leaders' link key. LEADER_LINK_KEY, or the older LEADER_PASSCODE so an existing api.env keeps working."""
+    return os.environ.get("LEADER_LINK_KEY") or os.environ.get("LEADER_PASSCODE") or None
+
+
+def key_print(key: str) -> str:
+    """A fingerprint of the key, kept in leader-link sessions: a new key ends every session made with the old one."""
+    return hashlib.sha256(b"frosted-family leader key " + key.encode()).hexdigest()[:16]
+
+
 def session_secret() -> bytes | None:
-    """SESSION_SECRET signs sessions. Until Discord is set up it may be absent; then a key derived from
-    LEADER_PASSCODE signs them, so one api.env line enables the passcode and changing it signs everyone out."""
+    """SESSION_SECRET signs sessions. Until Discord is set up it may be absent; then a key derived from the leader
+    key signs them, so one api.env line is enough."""
     if os.environ.get("SESSION_SECRET"):
         return os.environ["SESSION_SECRET"].encode()
-    code = os.environ.get("LEADER_PASSCODE")
-    return hmac.new(code.encode(), b"frosted-family session key", hashlib.sha256).digest() if code else None
+    key = leader_key()
+    return hmac.new(key.encode(), b"frosted-family session key", hashlib.sha256).digest() if key else None
 
 
 def current_leader(ff_session: str | None = Cookie(default=None, alias=SESSION_COOKIE)) -> Leader | None:
@@ -148,8 +158,10 @@ def current_leader(ff_session: str | None = Cookie(default=None, alias=SESSION_C
     if not p:
         return None
     via = p.get("via", "discord")
-    if via == "passcode" and not os.environ.get("LEADER_PASSCODE"):
-        return None  # the passcode was removed: its sessions end with it
+    if via == "passcode":
+        key = leader_key()
+        if not key or not hmac.compare_digest(p.get("kf", ""), key_print(key)):
+            return None  # the key was removed or rotated: its sessions end with it
     cfg = config()
     # Publish rights are re-read from config on every request, so changing DISCORD_PUBLISHER_ID takes effect at once.
     # A passcode session never publishes.
@@ -265,15 +277,17 @@ def me(leader: Leader | None = Depends(current_leader)):
         "publishers": publishers,
         "csrf": leader.csrf if leader else None,
         "configured": cfg is not None,
-        "passcode_enabled": bool(os.environ.get("LEADER_PASSCODE")),
+        "passcode_enabled": leader_key() is not None,
     }
 
 
-# ─── leaders' passcode, until Discord sign-in ─────────────────────────────────
-# POST /auth/passcode checks LEADER_PASSCODE and issues the same session cookie with role leader and no publish
-# rights. Failed tries are limited per client (5 in 15 minutes) and overall (30 in 15 minutes): behind Vercel and
-# Caddy the client address is shared, and the header Vercel adds can be forged by anyone calling the API host
-# directly, so the overall limit is what bounds a guessing attack. The passcode itself is long and random.
+# ─── leaders' link and passcode, until Discord sign-in ────────────────────────
+# GET /auth/leader-link?k=<key> (the link Ka Wai posts in the leaders' chat) and POST /auth/passcode both check the
+# leader key and issue the same session cookie: role leader, no publish rights. Failed tries are limited per client
+# (5 in 15 minutes) and overall (30 in 15 minutes): behind Vercel and Caddy the client address is shared, and the
+# header Vercel adds can be forged by anyone calling the API host directly, so the overall limit is what bounds a
+# guessing attack. The key itself is long and random (setup.sh rotate-leader-link). The API runs without an access
+# log so the key in the link's query string is not written to the journal.
 
 PASSCODE_WINDOW = 15 * 60
 PASSCODE_PER_CLIENT = 5
@@ -291,24 +305,48 @@ class PasscodeBody(BaseModel):
     passcode: str = Field(max_length=200)
 
 
-@router.post("/passcode")
-def passcode(body: PasscodeBody, request: Request):
-    code = os.environ.get("LEADER_PASSCODE")
-    if not code:
-        raise HTTPException(401, "the leaders' passcode is not set up")
+def check_key(given: str, request: Request) -> int:
+    """200 if the key matches; 401 (no key set, or wrong) or 429 (too many failed tries) otherwise."""
+    key = leader_key()
+    if not key:
+        return 401
     now = time.time()
     client = f"{request.client.host if request.client else '?'}|{request.headers.get('x-vercel-forwarded-for', '')}"
     if len(_recent(client, now)) >= PASSCODE_PER_CLIENT or len(_recent("*", now)) >= PASSCODE_OVERALL:
-        raise HTTPException(429, "too many tries; wait 15 minutes")
-    if not hmac.compare_digest(body.passcode.encode(), code.encode()):
+        return 429
+    if not hmac.compare_digest(given.encode(), key.encode()):
         _failures.setdefault(client, []).append(now)
         _failures.setdefault("*", []).append(now)
-        raise HTTPException(401, "wrong passcode")
-    session = {"uid": "passcode", "name": "Leader", "via": "passcode", "csrf": secrets.token_urlsafe(24),
-               "exp": now + SESSION_HOURS * 3600}
-    resp = Response(status_code=204)
+        return 401
+    return 200
+
+
+def sign_in_leader(resp: Response) -> Response:
+    session = {"uid": "passcode", "name": "Leader", "via": "passcode", "kf": key_print(leader_key()),
+               "csrf": secrets.token_urlsafe(24), "exp": time.time() + SESSION_HOURS * 3600}
     set_cookie(resp, SESSION_COOKIE, sign(session, session_secret()), SESSION_HOURS * 3600)
     return resp
+
+
+@router.post("/passcode")
+def passcode(body: PasscodeBody, request: Request):
+    status = check_key(body.passcode, request)
+    if status == 429:
+        raise HTTPException(429, "too many tries; wait 15 minutes")
+    if status != 200:
+        raise HTTPException(401, "wrong passcode" if leader_key() else "the leaders' passcode is not set up")
+    return sign_in_leader(Response(status_code=204))
+
+
+@router.get("/leader-link")
+def leader_link(request: Request, k: str = Query(default="", max_length=200)):
+    """The leaders' private link. Always redirects to the site's Plan tab, so the key leaves the address bar."""
+    site = os.environ.get("FROSTED_SITE_URL", DEFAULT_SITE).rstrip("/")
+    status = check_key(k, request)
+    outcome = {200: None, 429: "limited"}.get(status, "failed")
+    resp = RedirectResponse(site + (with_outcome(DEFAULT_RETURN, outcome) if outcome else DEFAULT_RETURN), 302)
+    resp.headers["Referrer-Policy"] = "no-referrer"
+    return sign_in_leader(resp) if status == 200 else resp
 
 
 @router.post("/logout", status_code=204)

@@ -15,7 +15,7 @@ Environment=FROSTED_APP_DB=/opt/bots/frosted/data/app.db
 Environment=FROSTED_SITE_URL=https://frosted-family.vercel.app
 Environment=FROSTED_ROSTER=/opt/bots/frosted/repo/frosted_cwl_members.csv
 WorkingDirectory=/opt/bots/frosted/repo
-ExecStart=/opt/bots/frosted/venv/bin/python -B -m uvicorn server.api:app --host 127.0.0.1 --port 8090 --proxy-headers
+ExecStart=/opt/bots/frosted/venv/bin/python -B -m uvicorn server.api:app --host 127.0.0.1 --port 8090 --proxy-headers --no-access-log
 Restart=on-failure
 RestartSec=5
 MemoryMax=300M

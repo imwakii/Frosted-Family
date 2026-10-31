@@ -19,8 +19,11 @@ War collector and read API for the Frosted Family site, on the bots droplet unde
   `/allocation.csv` serves it.
 - `leaders.py` serves `/explore/upgrades?days=7&clan=` (public: level-ups, unlocks and TH upgrades between profile
   snapshots, newest first) and, for leaders only, `/leaders/inactivity` and `/leaders/make-room?clan=`. Make-room
-  lists reason codes and a sort key, never a decision. Until Discord sign-in, `POST /auth/passcode` checks
-  `LEADER_PASSCODE` (5 failed tries per client and 30 overall per 15 minutes) and issues a leader session that
+  lists reason codes and a sort key, never a decision. Until Discord sign-in, leaders open a private link,
+  `/auth/leader-link?k=` (`setup.sh leader-link` prints it, `setup.sh rotate-leader-link` replaces it and signs
+  everyone out), or `POST /auth/passcode`. Both check
+  `LEADER_LINK_KEY` (or the older `LEADER_PASSCODE`; 5 failed tries per client and 30 overall per 15 minutes) and
+  issue a leader session that
   cannot publish. With no passcode set, `/leaders/*` answers 401.
 - `pull_allocation.py` runs on the laptop: `python -m server.pull_allocation` writes the published allocation into
   `frosted_cwl_members.csv` (allocation columns only) for Ka Wai to commit. The server never writes to GitHub.
