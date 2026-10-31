@@ -75,35 +75,60 @@ export const Eyebrow = ({ children, className = '' }: { children: ReactNode; cla
   <span className={`text-xs font-bold uppercase tracking-[0.06em] text-faint ${className}`}>{children}</span>
 )
 
-const Swords = ({ color }: { color: string }) => (
-  <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="flex-none">
-    <path d="M14.5 17.5L3 6V3h3l11.5 11.5M13 19l6-6M16 16l4 4M19 21l2-2M9.5 17.5L21 6V3h-3L6.5 14.5M11 19l-6-6M8 16l-4 4M5 21l-2-2" />
-  </svg>
-)
-
 export const Star = () => <span aria-hidden="true" className="text-gold">★</span>
 
-export function LiveLine({ war, className = '' }: { war: LiveWar | null | undefined; className?: string }) {
-  if (!war) {
+const ENDED_SHOWN = 24 * 3600_000
+
+function until(ms: number) {
+  const m = Math.max(0, Math.round(ms / 60000))
+  return m < 60 ? `${m}m` : `${Math.round(m / 60)}h`
+}
+
+/**
+ * War status for a clan header: one fixed-height pill whatever the state, so
+ * every clan's header and list start at the same height.
+ */
+export function WarPill({ war, now = Date.now() }: { war: LiveWar | null | undefined; now?: number }) {
+  const [open, setOpen] = useState(false)
+  const box = 'inline-flex h-7 max-w-full items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 text-xs font-bold'
+  const ended = war?.state === 'warEnded' && (war.endTime === null || now - war.endTime < ENDED_SHOWN)
+  if (!war || (war.state === 'warEnded' && !ended)) {
+    return <span className={`${box} bg-white/60 font-semibold text-[#94A3B8]`}>No war</span>
+  }
+  if (war.state === 'preparation') {
     return (
-      <div className={`flex min-h-[42px] items-center gap-2 rounded-[14px] border border-line bg-white px-3.5 text-[13px] ${className}`}>
-        <Swords color="#CBD5E1" />
-        <span className="font-semibold text-faint">No war yet</span>
-      </div>
+      <span title={`vs ${war.opponent}`} className={`${box} bg-[#FEF3C7] text-[#92400E]`}>
+        Prep{war.startTime ? ` · starts ${until(war.startTime - now)}` : ''}
+      </span>
     )
   }
-  const live = war.state === 'inWar'
-  const label = war.state === 'preparation' ? 'Prep' : war.state === 'warEnded' ? 'Ended' : war.day ? 'Day' : 'Live'
+  if (war.state === 'warEnded') {
+    const won = war.stars > war.opponentStars || (war.stars === war.opponentStars && (war.destruction ?? 0) > (war.opponentDestruction ?? 0))
+    const draw = war.stars === war.opponentStars && war.destruction === war.opponentDestruction
+    return (
+      <span title={`vs ${war.opponent}`} className={`${box} bg-white/60 font-semibold text-muted`}>
+        {draw ? 'Draw' : won ? `Won ${war.stars}–${war.opponentStars}` : `Lost ${war.stars}–${war.opponentStars}`}
+      </span>
+    )
+  }
+  const pct = (v: number | null) => (v === null ? '—' : `${Math.round(v)}%`)
   return (
-    <div className={`flex min-h-[42px] items-center gap-2 rounded-[14px] border border-line bg-white px-3.5 text-[13px] ${className}`}>
-      <Swords color={live ? '#B91C1C' : '#94A3B8'} />
-      <span className={`whitespace-nowrap font-bold ${live ? 'text-[#B91C1C]' : 'text-ink-2'}`}>
-        {label}{war.day ? ` ${war.day}` : ''}
-      </span>
-      <span className="min-w-0 flex-auto truncate text-muted">vs <bdi>{war.opponent}</bdi></span>
-      <span className="font-display whitespace-nowrap text-base tabular-nums" aria-label={`${war.stars} stars to ${war.opponentStars}`}>
-        <Star /> {war.stars} – {war.opponentStars} <Star />
-      </span>
-    </div>
+    <span className="relative inline-flex max-w-full">
+      <button type="button" aria-expanded={open} title={`vs ${war.opponent}`} onClick={() => setOpen((o) => !o)}
+        className={`${box} cursor-pointer border-0 bg-white text-[#B91C1C] shadow-[0_1px_2px_rgba(15,23,42,.08)]`}>
+        <span className="ff-live size-2 flex-none rounded bg-[#DC2626]" />
+        {war.day ? `Day ${war.day}` : 'Live'}
+        <span className="font-display text-[13px] font-normal text-ink tabular-nums"><Star /> {war.stars}–{war.opponentStars}</span>
+      </button>
+      {open && <span aria-hidden="true" className="fixed inset-0 z-30" onClick={() => setOpen(false)} />}
+      {open && (
+        <span role="dialog" aria-label="War" className="ff-fade absolute left-0 top-[calc(100%+6px)] z-40 flex w-60 flex-col gap-1.5 rounded-xl border border-line bg-white p-3 text-left text-[13px] font-semibold text-ink-2 shadow-[0_10px_30px_rgba(15,23,42,.14)]">
+          <span className="truncate font-bold text-ink">vs <bdi>{war.opponent}</bdi></span>
+          <span className="flex justify-between"><span className="text-faint">Stars</span><span className="tabular-nums">{war.stars} – {war.opponentStars}</span></span>
+          <span className="flex justify-between"><span className="text-faint">Destruction</span><span className="tabular-nums">{pct(war.destruction)} – {pct(war.opponentDestruction)}</span></span>
+          <span className="flex justify-between"><span className="text-faint">Attacks used</span><span className="tabular-nums">{war.attacks}/{war.teamSize}</span></span>
+        </span>
+      )}
+    </span>
   )
 }

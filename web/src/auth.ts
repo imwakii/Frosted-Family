@@ -9,10 +9,13 @@ export type Me = {
   csrf: string | null
   /** False until the Discord app is set up on the server. */
   configured: boolean
+  /** How this session signed in; a passcode session is a leader that cannot publish. */
+  via: 'passcode' | 'discord' | null
+  passcode_enabled: boolean
 }
 export type AuthState = { status: 'loading' | 'ready'; me: Me }
 
-const SIGNED_OUT: Me = { user: null, role: null, publishers: [], csrf: null, configured: true }
+const SIGNED_OUT: Me = { user: null, role: null, publishers: [], csrf: null, configured: true, via: null, passcode_enabled: false }
 // No answer from /auth/me is treated as sign-in not set up yet.
 const NOT_SET_UP: Me = { ...SIGNED_OUT, configured: false }
 
@@ -27,6 +30,8 @@ function devMe(): Me | null {
     publishers: ['Waki'],
     csrf: 'dev',
     configured: true,
+    via: 'discord',
+    passcode_enabled: true,
   }
 }
 

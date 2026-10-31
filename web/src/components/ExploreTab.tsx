@@ -1,5 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { useClans } from '../clash'
+import { groupUnits } from '../equipment'
+import UpgradesBoard from './UpgradesBoard'
 import { CATS, type Cat, competitionRanks, HIGH_MISS, isMaxed, type MatrixPlayer, missRate, progress, useMatrix, useWarBoard, type WarRow, type WarScope } from '../explore'
 import { go, playerHref } from '../route'
 import { CLAN, CLANS } from '../theme'
@@ -7,18 +9,18 @@ import type { ClanName } from '../types'
 import { norm, SearchBox } from './CwlTab'
 import { ClanBadge, Star, Th, UnitIcon } from './ui'
 
-type ClanPick = ClanName | 'All'
+export type ClanPick = ClanName | 'All'
 type BoardProps = { q: string; setQ: (v: string) => void; wide: boolean }
 
 // The unit categories, then the boards that are not a unit matrix.
-const NAV: { id: string; label: string; icon: string | null }[] = [...CATS, { id: 'war', label: 'War record', icon: null }]
+const NAV: { id: string; label: string; icon: string | null }[] = [...CATS, { id: 'war', label: 'War record', icon: 'War Record' }, { id: 'upgrades', label: 'Upgrades', icon: null }]
 
-function useClanPick() {
+export function useClanPick() {
   const [clan, setClanState] = useState<ClanPick>(() => (read('ff-x-clan') as ClanPick) || 'All')
   return [clan, (c: ClanPick) => { setClanState(c); write('ff-x-clan', c) }] as const
 }
 
-function CategoryNav({ current, wide }: { current: string; wide: boolean }) {
+export function CategoryNav({ current, wide }: { current: string; wide: boolean }) {
   const navRef = useRef<HTMLElement>(null)
   useEffect(() => { navRef.current?.querySelector('[aria-pressed="true"]')?.scrollIntoView({ inline: 'center', block: 'nearest' }) }, [current])
   if (wide) {
@@ -48,7 +50,7 @@ function CategoryNav({ current, wide }: { current: string; wide: boolean }) {
 const read = (k: string) => { try { return sessionStorage.getItem(k) } catch { return null } }
 const write = (k: string, v: string) => { try { sessionStorage.setItem(k, v) } catch { /* private mode */ } }
 
-function ClanFilter({ clan, setClan, counts, wide }: { clan: ClanPick; setClan: (c: ClanPick) => void; counts: Record<string, number>; wide: boolean }) {
+export function ClanFilter({ clan, setClan, counts, wide }: { clan: ClanPick; setClan: (c: ClanPick) => void; counts: Record<string, number>; wide: boolean }) {
   const clans = useClans()
   return (
     <div role="group" aria-label="Clan" className={`gap-1 rounded-xl bg-well p-1 ${wide ? 'inline-grid flex-none auto-cols-max grid-flow-col' : 'grid grid-cols-4'}`}>
@@ -64,7 +66,7 @@ function ClanFilter({ clan, setClan, counts, wide }: { clan: ClanPick; setClan: 
   )
 }
 
-function Empty({ loading }: { loading: boolean }) {
+export function Empty({ loading }: { loading: boolean }) {
   if (loading) {
     return <div aria-busy="true" aria-label="Loading" className="flex flex-col gap-2">{[0, 1, 2, 3, 4].map((i) => <div key={i} className="h-[52px] animate-pulse rounded-xl bg-well" />)}</div>
   }
@@ -81,6 +83,7 @@ const cellTone = (l: number | null, max: number) =>
 
 export default function ExploreTab({ kind, ...rest }: BoardProps & { kind: string | null }) {
   const id = NAV.find((c) => c.id === kind)?.id ?? 'heroes'
+  if (id === 'upgrades') return <UpgradesBoard {...rest} />
   return id === 'war' ? <WarBoardView {...rest} /> : <MatrixBoard cat={id as Cat} {...rest} />
 }
 
@@ -88,10 +91,16 @@ function MatrixBoard({ cat, q, setQ, wide }: BoardProps & { cat: Cat }) {
   const { data, loading } = useMatrix(cat)
   const [clan, setClan] = useClanPick()
   const [sort, setSort] = useState<{ col: number; asc: boolean }>({ col: -1, asc: false })
-  const [unit, setUnit] = useState(0)
-  useEffect(() => { setSort({ col: -1, asc: false }); setUnit(0) }, [cat])
+  const [unit, setUnit] = useState<number | null>(null)
+  useEffect(() => { setSort({ col: -1, asc: false }); setUnit(null) }, [cat])
 
   const units = useMemo(() => data?.units ?? [], [data])
+  // Equipment groups by hero; other categories are one group in the API's order.
+  const groups = useMemo(() => groupUnits(cat, units), [cat, units])
+  const order = groups.flatMap((g) => g.idx)
+  const opensGroup = new Set(groups.slice(1).map((g) => g.idx[0]))
+  const byHero = groups.some((g) => g.hero)
+  const divider = (i: number) => (opensGroup.has(i) ? 'border-l border-l-line' : '')
   const nq = norm(q.trim())
   const pool = useMemo(() => (data?.players ?? []).filter((p) => clan === 'All' || p.clan === clan), [data, clan])
   const counts = Object.fromEntries(CLANS.map((k) => [k, (data?.players ?? []).filter((p) => p.clan === k).length]))
@@ -136,20 +145,31 @@ function MatrixBoard({ cat, q, setQ, wide }: BoardProps & { cat: Cat }) {
             <section className="overflow-auto rounded-[18px] border border-line bg-white">
               <table className="min-w-full border-separate border-spacing-0 text-sm">
                 <thead>
+                  {byHero && (
+                    <tr>
+                      <th colSpan={3} className="sticky left-0 z-[2] bg-white" />
+                      {groups.map((g) => (
+                        <th key={g.hero ?? 'other'} colSpan={g.idx.length} title={g.hero ?? undefined}
+                          className={`bg-[#F8FAFC] pb-0.5 pt-1.5 ${divider(g.idx[0])}`}>
+                          {g.hero && <span className="flex justify-center"><UnitIcon name={g.hero} size={28} /></span>}
+                        </th>
+                      ))}
+                    </tr>
+                  )}
                   <tr>
                     <th className="sticky left-0 z-[2] w-12 min-w-12 border-b border-line bg-white py-2.5 pl-4 pr-1 text-left text-xs font-bold text-faint">#</th>
                     <th className="sticky left-12 z-[2] min-w-[210px] border-b border-line bg-white px-3 py-2.5 text-left text-xs font-bold text-faint">PLAYER</th>
                     <th className={`border-b border-line p-0 ${sort.col < 0 ? 'bg-[#EEF2FF]' : 'bg-white'}`} aria-sort={sort.col < 0 ? (sort.asc ? 'ascending' : 'descending') : undefined}>
                       <button type="button" onClick={() => pick(-1)} className="min-h-16 w-24 cursor-pointer border-0 bg-transparent text-xs font-bold text-ink-2 hover:bg-[#EEF2FF]">Progress</button>
                     </th>
-                    {units.map((u, i) => (
-                      <th key={u.name} className={`border-b border-line p-0 ${sort.col === i ? 'bg-[#EEF2FF]' : 'bg-white'}`} aria-sort={sort.col === i ? (sort.asc ? 'ascending' : 'descending') : undefined}>
+                    {order.map((i) => { const u = units[i]; return (
+                      <th key={u.name} className={`border-b border-line p-0 ${divider(i)} ${sort.col === i ? 'bg-[#EEF2FF]' : 'bg-white'}`} aria-sort={sort.col === i ? (sort.asc ? 'ascending' : 'descending') : undefined}>
                         <button type="button" onClick={() => pick(i)} title={`${u.name} · max ${u.max}`} aria-label={`Sort by ${u.name}`}
                           className="flex min-h-16 w-14 cursor-pointer flex-col items-center justify-center gap-0.5 border-0 bg-transparent px-0.5 py-1 hover:bg-[#EEF2FF]">
                           <UnitIcon name={u.name} size={36} />
                         </button>
                       </th>
-                    ))}
+                    ) })}
                   </tr>
                 </thead>
                 <tbody>
@@ -169,10 +189,11 @@ function MatrixBoard({ cat, q, setQ, wide }: BoardProps & { cat: Cat }) {
                           <span className="block h-[5px] overflow-hidden rounded-[3px] bg-[#E2E8F0]"><span className="block h-[5px] bg-ink" style={{ width: `${pct}%` }} /></span>
                         </span>
                       </td>
-                      {units.map((u, i) => {
+                      {order.map((i) => {
+                        const u = units[i]
                         const l = p.levels[i]
                         return (
-                          <td key={u.name} className={`h-11 border-b border-hair px-1 text-center tabular-nums group-hover:bg-hover ${sort.col === i ? 'bg-[#F5F7FF]' : ''} ${cellTone(l, u.max)}`}>
+                          <td key={u.name} className={`h-11 border-b border-hair px-1 text-center tabular-nums group-hover:bg-hover ${divider(i)} ${sort.col === i ? 'bg-[#F5F7FF]' : ''} ${cellTone(l, u.max)}`}>
                             {l ? l : '—'}{isMaxed(l, u) && <span className="ml-px align-[4px] text-[11px] text-gold">★</span>}
                           </td>
                         )
@@ -190,9 +211,10 @@ function MatrixBoard({ cat, q, setQ, wide }: BoardProps & { cat: Cat }) {
   }
 
   // Phone: one unit at a time, ranked.
-  const u = units[Math.min(unit, Math.max(0, units.length - 1))]
+  const ui = unit !== null && unit < units.length ? unit : order[0]
+  const u = ui === undefined ? undefined : units[ui]
   const sorted = u ? pool
-    .map((p) => ({ p, l: p.levels[units.indexOf(u)] ?? 0 }))
+    .map((p) => ({ p, l: p.levels[ui] ?? 0 }))
     .sort((a, b) => b.l - a.l || a.p.name.localeCompare(b.p.name)) : []
   const unitPlace = competitionRanks(sorted, (x) => x.l)
   const ranked = sorted.map((x) => ({ ...x, rank: unitPlace.get(x) ?? null }))
@@ -209,11 +231,18 @@ function MatrixBoard({ cat, q, setQ, wide }: BoardProps & { cat: Cat }) {
       {!data || !u ? <div className="px-4"><Empty loading={loading} /></div> : (
         <>
           <div ref={unitNav} role="listbox" aria-label="Unit" className="flex flex-none gap-2 overflow-x-auto px-4 pb-2 pt-1 [scrollbar-width:none]">
-            {units.map((x, i) => (
-              <button key={x.name} type="button" role="option" aria-selected={x === u} aria-label={x.name} onClick={() => setUnit(i)}
-                className={`flex size-[60px] flex-none cursor-pointer items-center justify-center rounded-2xl p-0 ${x === u ? 'border-2 border-action bg-[#EFF5FF] shadow-[0_2px_8px_rgba(37,99,235,.2)]' : 'border border-line bg-white'}`}>
-                <UnitIcon name={x.name} size={44} />
-              </button>
+            {groups.map((g, gi) => (
+              <Fragment key={g.hero ?? 'other'}>
+                {byHero && (g.hero
+                  ? <span title={g.hero} className={`flex flex-none items-center ${gi ? 'border-l border-line pl-2' : ''}`}><UnitIcon name={g.hero} size={26} /></span>
+                  : <span aria-hidden="true" className="w-px flex-none self-stretch bg-line" />)}
+                {g.idx.map((i) => { const x = units[i]; return (
+                  <button key={x.name} type="button" role="option" aria-selected={i === ui} aria-label={x.name} onClick={() => setUnit(i)}
+                    className={`flex size-[60px] flex-none cursor-pointer items-center justify-center rounded-2xl p-0 ${i === ui ? 'border-2 border-action bg-[#EFF5FF] shadow-[0_2px_8px_rgba(37,99,235,.2)]' : 'border border-line bg-white'}`}>
+                    <UnitIcon name={x.name} size={44} />
+                  </button>
+                ) })}
+              </Fragment>
             ))}
           </div>
           <div className="flex items-baseline justify-between gap-3 px-4">
@@ -252,7 +281,7 @@ function MatrixBoard({ cat, q, setQ, wide }: BoardProps & { cat: Cat }) {
   )
 }
 
-type WarCol = { key: string; label: string; value: (r: WarRow) => number | null; fmt: (v: number) => string; low?: boolean }
+type WarCol = { key: string; label: string; value: (r: WarRow) => number | null; fmt: (v: number) => string; low?: boolean; recordedOnly?: boolean }
 
 const pct = (v: number) => `${Math.round(v)}%`
 const WAR_COLS: WarCol[] = [
@@ -261,7 +290,7 @@ const WAR_COLS: WarCol[] = [
   { key: 'missed', label: 'Missed', value: (r) => (r.war ? r.war.missed : null), fmt: String, low: true },
   { key: 'triple', label: '3★ rate', value: (r) => (r.war?.attacks ? (100 * r.war.three_stars) / r.war.attacks : null), fmt: pct },
   { key: 'avg', label: 'Avg ★', value: (r) => (r.war?.attacks ? r.war.stars / r.war.attacks : null), fmt: (v) => v.toFixed(1) },
-  { key: 'dest', label: 'Avg dest.', value: (r) => r.war?.avg_destruction ?? null, fmt: pct },
+  { key: 'dest', label: 'Avg dest.', value: (r) => r.war?.avg_destruction ?? null, fmt: pct, recordedOnly: true },
 ]
 
 // Green once a member has attacked with misses at or under the line, amber above it.
@@ -299,7 +328,46 @@ function WarBoardView({ q, setQ, wide }: BoardProps) {
   const placeCol = cols.find((c) => c.key === 'stars') ?? cols[0]
   const place = useMemo(() => competitionRanks(ranked.map((x) => x.r), (r) => (wide ? placeCol : col)?.value(r) ?? null, !wide && !!col?.low), [ranked, placeCol, col, wide])
   const shown = ranked.filter(({ r }) => !nq || norm(r.name).includes(nq) || r.tag.toLowerCase().includes(nq))
-  const since = sinceLabel(data?.since ?? null)
+  const since = sinceLabel(data?.windowFrom ?? data?.since ?? null)
+  // Destruction comes from recorded wars only, which can start later than the window.
+  // Totals and weighted averages over the players the clan and scope filters keep.
+  const summary = useMemo(() => {
+    const rows = ranked.map((x) => x.r)
+    const ws = rows.map((r) => r.war_stars).filter((v): v is number => v !== null && v !== undefined)
+    let attacks = 0, missed = 0, three = 0, stars = 0, destSum = 0, destN = 0
+    for (const r of rows) {
+      const w = r.war
+      if (!w) continue
+      attacks += w.attacks; missed += w.missed; three += w.three_stars; stars += w.stars
+      // Destruction covers recorded wars only, so it is weighted by recorded wars.
+      if (w.avg_destruction !== null && w.wars) { destSum += w.avg_destruction * w.wars; destN += w.wars }
+    }
+    return {
+      warStars: ws.length ? ws.reduce((a, b) => a + b, 0) : null,
+      warStarsMean: ws.length ? ws.reduce((a, b) => a + b, 0) / ws.length : null,
+      attacks, missed, three, stars,
+      triple: attacks ? (100 * three) / attacks : null,
+      avgStars: attacks ? stars / attacks : null,
+      dest: destN ? destSum / destN : null,
+      missRate: attacks + missed ? (100 * missed) / (attacks + missed) : null,
+    }
+  }, [ranked])
+  const who = clan === 'All' ? 'Family' : clan
+  const footer: { label: string; cell: Record<string, string> }[] = [
+    { label: `Total · ${who}`, cell: {
+      stars: summary.warStars === null ? '' : `${summary.warStars.toLocaleString('en-GB')}★`,
+      attacks: String(summary.attacks), missed: String(summary.missed),
+      triple: `${summary.three} × 3★`, avg: `${Math.round(summary.stars).toLocaleString('en-GB')}★`, dest: '',
+    } },
+    { label: `Average · ${who}`, cell: {
+      stars: summary.warStarsMean === null ? '' : `${Math.round(summary.warStarsMean).toLocaleString('en-GB')}★`,
+      attacks: '', missed: summary.missRate === null ? '' : `${Math.round(summary.missRate)}%`,
+      triple: summary.triple === null ? '' : pct(summary.triple), avg: summary.avgStars === null ? '' : summary.avgStars.toFixed(2),
+      dest: summary.dest === null ? '' : pct(summary.dest),
+    } },
+  ]
+  const recordedStart = data?.recordedFrom ?? (data?.windowFrom && data.since !== data.windowFrom ? data.since : null)
+  const recordedTip = recordedStart && recordedStart !== data?.windowFrom ? `Recorded ${sinceLabel(recordedStart)}` : undefined
 
   const scopeToggle = scoped && (
     <div role="group" aria-label="Wars" className="inline-grid flex-none auto-cols-max grid-flow-col gap-1 rounded-xl bg-well p-1">
@@ -326,15 +394,15 @@ function WarBoardView({ q, setQ, wide }: BoardProps) {
           <div className="ml-auto min-w-[200px] max-w-[320px] flex-auto"><SearchBox q={q} setQ={setQ} onEnter={enter} /></div>
         </div>
         {!data || !col ? <Empty loading={loading} /> : (
-          <section className="overflow-auto rounded-[18px] border border-line bg-white">
+          <section className="max-h-[calc(100dvh-210px)] overflow-auto rounded-[18px] border border-line bg-white">
             <table className="min-w-full border-separate border-spacing-0 text-sm">
               <thead>
                 <tr className="text-left text-xs font-bold text-faint">
-                  <th className="sticky left-0 z-[2] w-12 min-w-12 border-b border-line bg-white py-2.5 pl-4 pr-1 font-bold">#</th>
-                  <th className="sticky left-12 z-[2] min-w-[220px] border-b border-line bg-white px-2 font-bold">PLAYER</th>
+                  <th className="sticky left-0 top-0 z-[4] w-12 min-w-12 border-b border-line bg-white py-2.5 pl-4 pr-1 font-bold">#</th>
+                  <th className="sticky left-12 top-0 z-[4] min-w-[220px] border-b border-line bg-white px-2 font-bold">PLAYER</th>
                   {cols.map((c) => (
-                    <th key={c.key} className={`border-b border-line p-0 text-right ${c.key === sort.key ? 'bg-[#EEF2FF]' : ''}`} aria-sort={c.key === sort.key ? (sort.asc ? 'ascending' : 'descending') : undefined}>
-                      <button type="button" onClick={() => pick(c)}
+                    <th key={c.key} className={`sticky top-0 z-[2] border-b border-line p-0 text-right ${c.key === sort.key ? 'bg-[#EEF2FF]' : 'bg-white'}`} aria-sort={c.key === sort.key ? (sort.asc ? 'ascending' : 'descending') : undefined}>
+                      <button type="button" onClick={() => pick(c)} title={c.recordedOnly ? recordedTip : undefined}
                         className={`min-h-12 w-full cursor-pointer whitespace-nowrap border-0 bg-transparent px-4 text-right text-xs font-bold hover:bg-[#EEF2FF] ${c.key === sort.key ? 'text-ink' : 'text-faint'}`}>
                         {c.label}{c.key === sort.key ? (sort.asc ? ' ↑' : ' ↓') : ''}
                       </button>
@@ -367,6 +435,23 @@ function WarBoardView({ q, setQ, wide }: BoardProps) {
                 ))}
                 {!shown.length && <tr><td colSpan={2 + cols.length} className="p-5 text-sm text-faint">No one by that name</td></tr>}
               </tbody>
+              <tfoot>
+                {footer.map((f, fi) => {
+                  const pin = fi === 0 ? 'bottom-11 border-t-2 border-t-line' : 'bottom-0'
+                  return (
+                    <tr key={f.label} className="h-11">
+                      <td className={`sticky left-0 z-[3] bg-[#F8FAFC] ${pin}`} />
+                      <td className={`sticky left-12 z-[3] whitespace-nowrap bg-[#F8FAFC] px-2 text-[13px] font-extrabold text-ink ${pin}`}>{f.label}</td>
+                      {cols.map((c) => (
+                        <td key={c.key} title={c.recordedOnly ? recordedTip : undefined}
+                          className={`sticky z-[2] whitespace-nowrap bg-[#F8FAFC] px-4 text-right font-extrabold tabular-nums text-ink ${pin}`}>
+                          {f.cell[c.key] ?? ''}
+                        </td>
+                      ))}
+                    </tr>
+                  )
+                })}
+              </tfoot>
             </table>
           </section>
         )}
@@ -385,10 +470,18 @@ function WarBoardView({ q, setQ, wide }: BoardProps) {
         <>
           <div role="group" aria-label="Sort by" className="-mb-1 flex gap-1 overflow-x-auto px-4 [scrollbar-width:none]">
             {cols.map((c) => (
-              <button key={c.key} type="button" aria-pressed={c.key === sort.key} onClick={() => pick(c)}
+              <button key={c.key} type="button" aria-pressed={c.key === sort.key} onClick={() => pick(c)} title={c.recordedOnly ? recordedTip : undefined}
                 className={`flex min-h-8 flex-none cursor-pointer items-center whitespace-nowrap rounded-lg border px-2.5 text-[13px] font-bold ${c.key === sort.key ? 'border-ink-2 bg-white text-ink' : 'border-transparent bg-transparent text-faint'}`}>
                 {c.label}{c.key === sort.key ? (sort.asc ? ' ↑' : ' ↓') : ''}
               </button>
+            ))}
+          </div>
+          <div aria-label={`${who} summary`} className="mx-4 grid grid-cols-3 gap-2">
+            {[['3★ rate', summary.triple === null ? '—' : pct(summary.triple)], ['Avg ★', summary.avgStars === null ? '—' : summary.avgStars.toFixed(2)], ['Attacks', String(summary.attacks)]].map(([k, v]) => (
+              <div key={k} className="flex flex-col gap-0.5 rounded-xl border border-line bg-white px-3 py-2">
+                <span className="text-[11px] font-bold uppercase tracking-[0.06em] text-faint">{k}</span>
+                <span className="font-display text-xl leading-none tabular-nums">{v}</span>
+              </div>
             ))}
           </div>
           <ol className="m-0 mx-4 list-none rounded-2xl border border-line bg-white py-1">

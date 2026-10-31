@@ -2,11 +2,11 @@
 
 The CWL site that replaces the Streamlit dashboard. Vite, React, TypeScript and Tailwind CSS, deployed to Vercel as `frosted-family`.
 
-Three tabs. **CWL** shows every member's clan and slot for the coming league, the moves due before sign-up, the live war line and a player sheet with score by cycle. **Explore** compares every member's heroes, equipment, troops, spells, pets and sieges: a sortable matrix on desktop, a ranked list per unit on phones, with a gold ★ on maxed levels. **Plan** is the leaders' allocation sandbox with live rule checks, behind Discord sign-in: leaders save a shared draft and the publisher publishes it.
+Three tabs. **CWL** shows every member's clan and slot for the coming league, the moves due before sign-up, the live war line and a player sheet with score by cycle. **Explore** compares every member's heroes, equipment, troops, spells, pets and sieges: a sortable matrix on desktop, a ranked list per unit on phones, with a gold ★ on maxed levels. **Plan** is the leaders' allocation sandbox with live rule checks, open to view; leaders unlock saving and the leaders' tools (inactivity, make room) with Discord or the leaders' code, and the publisher publishes.
 
 ## Data
 
-The site reads `/api/roster`, `/api/war/live`, `/api/player/{tag}`, `/api/explore/matrix?cat=…`, `/api/clans`, `/api/auth/*` and `/api/plan/*`. `vercel.json` rewrites `/api/*` to `https://frostedcwl.duckdns.org/*` (the `server/` package). Change that one line if the host moves.
+The site reads `/api/roster`, `/api/war/live`, `/api/player/{tag}`, `/api/explore/matrix?cat=…`, `/api/explore/war`, `/api/explore/upgrades`, `/api/clans`, `/api/leaders/*` (leaders only), `/api/auth/*` and `/api/plan/*`. `vercel.json` rewrites `/api/*` to `https://frostedcwl.duckdns.org/*` (the `server/` package). Change that one line if the host moves.
 
 Unit, town hall and CWL league art lives in `public/icons/` (unit names snake_cased, e.g. `barbarian_king.png`) and `public/leagues/`. A unit with no icon shows its name, and a town hall with no image shows its number. Clan badges are not bundled; they load at runtime from the badge URLs `/api/clans` returns.
 

@@ -4,6 +4,7 @@ import { checkPlan, getDraft, HttpError, publishPlan, saveDraft } from '../data'
 import { CLAN, CLANS, GROUPS, STATUS, coreAvg, fmtScore } from '../theme'
 import type { ClanName, Player, Roster, Slot } from '../types'
 import { useClans } from '../clash'
+import LeadersTools from './LeadersTools'
 import { Arrow, ClanBadge, Th } from './ui'
 
 // Allocation rules: docs/specs/02-allocation-rules.md.
@@ -123,7 +124,8 @@ function Plan({ roster, me }: { roster: Roster; me: Me }) {
   const dirty = saved ? !sameMoves(moves, saved.moves) : Object.keys(moves).length > 0
   const canPublish = me.role === 'publisher'
   // Until sign-in is set up the board is open to anyone, but nothing is saved or published.
-  const readOnly = !me.configured
+  // Saving and publishing wait for a Discord leader session.
+  const readOnly = !me.role || me.via === 'passcode'
   const lockedTip = 'Sign-in coming soon'
 
   const at = (p: Player): Place => moves[p.tag] ?? { clan: p.clan, slot: p.slot }
@@ -212,8 +214,9 @@ function Plan({ roster, me }: { roster: Roster; me: Me }) {
     }
   }
 
+  // The wrapper ends the toolbar's stickiness at the bottom of the board.
   return (
-    <>
+    <div>
       <div className="sticky top-0 z-20 border-b border-line bg-white/95 backdrop-blur md:static md:border-0 md:bg-transparent md:backdrop-blur-none">
         <div className="mx-auto flex max-w-[1360px] flex-wrap items-center gap-2 px-[clamp(16px,3vw,32px)] py-2.5 md:pt-5">
           <span className="rounded-full bg-[#EEF1F6] px-3 py-1.5 text-[13px] font-bold text-ink-2">{changeLabel}</span>
@@ -347,7 +350,7 @@ function Plan({ roster, me }: { roster: Roster; me: Me }) {
           </section>
         </div>
       )}
-    </>
+    </div>
   )
 }
 
@@ -390,9 +393,15 @@ function Gate({ me, onSignOut }: { me: Me; onSignOut: () => void }) {
   )
 }
 
-export default function PlanTab({ roster, me, ready, onSignOut }: { roster: Roster; me: Me; ready: boolean; onSignOut: () => void }) {
-  if (ready && !me.configured) return <Plan roster={roster} me={me} />
+type PlanProps = { roster: Roster; me: Me; ready: boolean; wide: boolean; onSignOut: () => void }
+
+export default function PlanTab({ roster, me, ready, wide, onSignOut }: PlanProps) {
   if (!ready) return <div aria-busy="true" aria-label="Loading" className="mx-auto mt-16 h-48 max-w-[380px] animate-pulse rounded-[20px] bg-well" />
-  if (me.role) return <Plan roster={roster} me={me} />
-  return <Gate me={me} onSignOut={onSignOut} />
+  // The board is open while Discord sign-in is not set up; Inactivity and Make room sit below it for everyone.
+  return (
+    <>
+      {me.role || !me.configured ? <Plan roster={roster} me={me} /> : <Gate me={me} onSignOut={onSignOut} />}
+      <LeadersTools wide={wide} />
+    </>
+  )
 }
