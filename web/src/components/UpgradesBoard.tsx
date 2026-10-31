@@ -15,12 +15,13 @@ const KINDS: { id: UpgradeCategory | 'all'; label: string }[] = [
 const DAYS = 7
 
 function dayLabel(iso: string, now = new Date()) {
+  // Days are UTC days, matching every other time on the site.
   const d = new Date(iso)
-  const key = (x: Date) => x.toDateString()
-  const yesterday = new Date(now); yesterday.setDate(now.getDate() - 1)
-  if (key(d) === key(now)) return 'Today'
-  if (key(d) === key(yesterday)) return 'Yesterday'
-  return d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
+  const key = (x: Date) => x.toISOString().slice(0, 10)
+  const yesterday = new Date(now.getTime() - 86_400_000)
+  if (key(d) === key(now)) return 'Today (UTC)'
+  if (key(d) === key(yesterday)) return 'Yesterday (UTC)'
+  return d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' })
 }
 
 function UpgradeIcon({ u }: { u: Upgrade }) {
