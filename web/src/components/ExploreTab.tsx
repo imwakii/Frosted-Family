@@ -328,6 +328,41 @@ function WarBoardView({ q, setQ, wide }: BoardProps) {
   const shown = ranked.filter(({ r }) => !nq || norm(r.name).includes(nq) || r.tag.toLowerCase().includes(nq))
   const since = sinceLabel(data?.windowFrom ?? data?.since ?? null)
   // Destruction comes from recorded wars only, which can start later than the window.
+  // Totals and weighted averages over the players the clan and scope filters keep.
+  const summary = useMemo(() => {
+    const rows = ranked.map((x) => x.r)
+    const ws = rows.map((r) => r.war_stars).filter((v): v is number => v !== null && v !== undefined)
+    let attacks = 0, missed = 0, three = 0, stars = 0, destSum = 0, destN = 0
+    for (const r of rows) {
+      const w = r.war
+      if (!w) continue
+      attacks += w.attacks; missed += w.missed; three += w.three_stars; stars += w.stars
+      if (w.avg_destruction !== null) { destSum += w.avg_destruction * w.attacks; destN += w.attacks }
+    }
+    return {
+      warStars: ws.length ? ws.reduce((a, b) => a + b, 0) : null,
+      warStarsMean: ws.length ? ws.reduce((a, b) => a + b, 0) / ws.length : null,
+      attacks, missed, three, stars,
+      triple: attacks ? (100 * three) / attacks : null,
+      avgStars: attacks ? stars / attacks : null,
+      dest: destN ? destSum / destN : null,
+      missRate: attacks + missed ? (100 * missed) / (attacks + missed) : null,
+    }
+  }, [ranked])
+  const who = clan === 'All' ? 'Family' : clan
+  const footer: { label: string; cell: Record<string, string> }[] = [
+    { label: `Total · ${who}`, cell: {
+      stars: summary.warStars === null ? '' : `${summary.warStars.toLocaleString('en-GB')}★`,
+      attacks: String(summary.attacks), missed: String(summary.missed),
+      triple: `${summary.three} × 3★`, avg: `${Math.round(summary.stars).toLocaleString('en-GB')}★`, dest: '',
+    } },
+    { label: `Average · ${who}`, cell: {
+      stars: summary.warStarsMean === null ? '' : `${Math.round(summary.warStarsMean).toLocaleString('en-GB')}★`,
+      attacks: '', missed: summary.missRate === null ? '' : `${Math.round(summary.missRate)}%`,
+      triple: summary.triple === null ? '' : pct(summary.triple), avg: summary.avgStars === null ? '' : summary.avgStars.toFixed(2),
+      dest: summary.dest === null ? '' : pct(summary.dest),
+    } },
+  ]
   const recordedTip = data?.windowFrom && data.since && data.windowFrom !== data.since ? `Recorded ${sinceLabel(data.since)}` : undefined
 
   const scopeToggle = scoped && (
@@ -355,14 +390,14 @@ function WarBoardView({ q, setQ, wide }: BoardProps) {
           <div className="ml-auto min-w-[200px] max-w-[320px] flex-auto"><SearchBox q={q} setQ={setQ} onEnter={enter} /></div>
         </div>
         {!data || !col ? <Empty loading={loading} /> : (
-          <section className="overflow-auto rounded-[18px] border border-line bg-white">
+          <section className="max-h-[calc(100dvh-210px)] overflow-auto rounded-[18px] border border-line bg-white">
             <table className="min-w-full border-separate border-spacing-0 text-sm">
               <thead>
                 <tr className="text-left text-xs font-bold text-faint">
-                  <th className="sticky left-0 z-[2] w-12 min-w-12 border-b border-line bg-white py-2.5 pl-4 pr-1 font-bold">#</th>
-                  <th className="sticky left-12 z-[2] min-w-[220px] border-b border-line bg-white px-2 font-bold">PLAYER</th>
+                  <th className="sticky left-0 top-0 z-[4] w-12 min-w-12 border-b border-line bg-white py-2.5 pl-4 pr-1 font-bold">#</th>
+                  <th className="sticky left-12 top-0 z-[4] min-w-[220px] border-b border-line bg-white px-2 font-bold">PLAYER</th>
                   {cols.map((c) => (
-                    <th key={c.key} className={`border-b border-line p-0 text-right ${c.key === sort.key ? 'bg-[#EEF2FF]' : ''}`} aria-sort={c.key === sort.key ? (sort.asc ? 'ascending' : 'descending') : undefined}>
+                    <th key={c.key} className={`sticky top-0 z-[2] border-b border-line p-0 text-right ${c.key === sort.key ? 'bg-[#EEF2FF]' : 'bg-white'}`} aria-sort={c.key === sort.key ? (sort.asc ? 'ascending' : 'descending') : undefined}>
                       <button type="button" onClick={() => pick(c)} title={c.recordedOnly ? recordedTip : undefined}
                         className={`min-h-12 w-full cursor-pointer whitespace-nowrap border-0 bg-transparent px-4 text-right text-xs font-bold hover:bg-[#EEF2FF] ${c.key === sort.key ? 'text-ink' : 'text-faint'}`}>
                         {c.label}{c.key === sort.key ? (sort.asc ? ' ↑' : ' ↓') : ''}
@@ -396,6 +431,23 @@ function WarBoardView({ q, setQ, wide }: BoardProps) {
                 ))}
                 {!shown.length && <tr><td colSpan={2 + cols.length} className="p-5 text-sm text-faint">No one by that name</td></tr>}
               </tbody>
+              <tfoot>
+                {footer.map((f, fi) => {
+                  const pin = fi === 0 ? 'bottom-11 border-t-2 border-t-line' : 'bottom-0'
+                  return (
+                    <tr key={f.label} className="h-11">
+                      <td className={`sticky left-0 z-[3] bg-[#F8FAFC] ${pin}`} />
+                      <td className={`sticky left-12 z-[3] whitespace-nowrap bg-[#F8FAFC] px-2 text-[13px] font-extrabold text-ink ${pin}`}>{f.label}</td>
+                      {cols.map((c) => (
+                        <td key={c.key} title={c.recordedOnly ? recordedTip : undefined}
+                          className={`sticky z-[2] whitespace-nowrap bg-[#F8FAFC] px-4 text-right font-extrabold tabular-nums text-ink ${pin}`}>
+                          {f.cell[c.key] ?? ''}
+                        </td>
+                      ))}
+                    </tr>
+                  )
+                })}
+              </tfoot>
             </table>
           </section>
         )}
@@ -418,6 +470,14 @@ function WarBoardView({ q, setQ, wide }: BoardProps) {
                 className={`flex min-h-8 flex-none cursor-pointer items-center whitespace-nowrap rounded-lg border px-2.5 text-[13px] font-bold ${c.key === sort.key ? 'border-ink-2 bg-white text-ink' : 'border-transparent bg-transparent text-faint'}`}>
                 {c.label}{c.key === sort.key ? (sort.asc ? ' ↑' : ' ↓') : ''}
               </button>
+            ))}
+          </div>
+          <div aria-label={`${who} summary`} className="mx-4 grid grid-cols-3 gap-2">
+            {[['3★ rate', summary.triple === null ? '—' : pct(summary.triple)], ['Avg ★', summary.avgStars === null ? '—' : summary.avgStars.toFixed(2)], ['Attacks', String(summary.attacks)]].map(([k, v]) => (
+              <div key={k} className="flex flex-col gap-0.5 rounded-xl border border-line bg-white px-3 py-2">
+                <span className="text-[11px] font-bold uppercase tracking-[0.06em] text-faint">{k}</span>
+                <span className="font-display text-xl leading-none tabular-nums">{v}</span>
+              </div>
             ))}
           </div>
           <ol className="m-0 mx-4 list-none rounded-2xl border border-line bg-white py-1">
