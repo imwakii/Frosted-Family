@@ -155,6 +155,24 @@ CREATE TABLE IF NOT EXISTS raid_members (
     looted INTEGER,
     PRIMARY KEY (clan_tag, start_time, player_tag)
 );
+-- A player's activity counters, one row per profile fetch where any of them moved (the first fetch always adds one).
+-- The rows after the first are evidence of activity; town_hall across rows gives TH upgrades.
+CREATE TABLE IF NOT EXISTS profile_snapshots (
+    player_tag TEXT NOT NULL,
+    fetched_at TEXT NOT NULL,
+    town_hall INTEGER,
+    exp_level INTEGER,
+    trophies INTEGER,
+    builder_trophies INTEGER,
+    attack_wins INTEGER,
+    war_stars INTEGER,
+    donations INTEGER,
+    donations_received INTEGER,
+    capital_contributions INTEGER,
+    unit_levels INTEGER,                  -- sum of every home unit level; it only rises, so any upgrade moves it
+    PRIMARY KEY (player_tag, fetched_at)
+);
+
 CREATE TABLE IF NOT EXISTS profile_runs (
     started_at TEXT PRIMARY KEY,
     players INTEGER

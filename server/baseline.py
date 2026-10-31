@@ -76,6 +76,9 @@ def load(cycle_dir: Path) -> Baseline:
                     p[k] += as_int(r.get(col))
                 for k, col in DEFENSE_COLS.items():
                     p["defenses" if k == "defenses" else f"d_{k}"] += as_int(r.get(col))
+                last = (r.get("Date last war") or "").strip()
+                if last and last > p.get("last_war", ""):
+                    p["last_war"] = last
     return Baseline(cycle=cycle_dir.name, pull_dates=pulls, earliest=earliest, players=players)
 
 

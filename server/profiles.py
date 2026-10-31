@@ -63,6 +63,15 @@ def upsert_profile(conn: sqlite3.Connection, p: dict, fetched_at: str) -> None:
     # A level already recorded adds nothing, so a pass with no upgrades writes no history.
     conn.executemany("INSERT OR IGNORE INTO player_unit_history VALUES (?,?,?,?,?)",
                      [(tag, k, u["name"], u["level"], fetched_at) for k, u, _ in units])
+    counters = (p.get("townHallLevel"), p.get("expLevel"), p.get("trophies"), p.get("builderBaseTrophies"),
+                p.get("attackWins"), p.get("warStars"), p.get("donations"), p.get("donationsReceived"),
+                p.get("clanCapitalContributions"), sum(u["level"] for _, u, _ in units))
+    last = conn.execute("""SELECT town_hall, exp_level, trophies, builder_trophies, attack_wins, war_stars, donations,
+                                  donations_received, capital_contributions, unit_levels FROM profile_snapshots
+                           WHERE player_tag=? ORDER BY fetched_at DESC LIMIT 1""", (tag,)).fetchone()
+    if last is None or tuple(last) != counters:
+        conn.execute("INSERT OR REPLACE INTO profile_snapshots VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+                     (tag, fetched_at, *counters))
 
 
 def upsert_raid(conn: sqlite3.Connection, clan_tag: str, season: dict) -> None:

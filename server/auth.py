@@ -27,6 +27,7 @@ from urllib.parse import urlencode
 import httpx
 from fastapi import APIRouter, Cookie, Depends, Header, HTTPException, Request
 from fastapi.responses import RedirectResponse, Response
+from pydantic import BaseModel, Field
 
 from server import appdb, db
 
@@ -129,16 +130,32 @@ class Leader:
     avatar_url: str | None
     can_publish: bool
     csrf: str
+    via: str = "discord"
+
+
+def session_secret() -> bytes | None:
+    """SESSION_SECRET signs sessions. Until Discord is set up it may be absent; then a key derived from
+    LEADER_PASSCODE signs them, so one api.env line enables the passcode and changing it signs everyone out."""
+    if os.environ.get("SESSION_SECRET"):
+        return os.environ["SESSION_SECRET"].encode()
+    code = os.environ.get("LEADER_PASSCODE")
+    return hmac.new(code.encode(), b"frosted-family session key", hashlib.sha256).digest() if code else None
 
 
 def current_leader(ff_session: str | None = Cookie(default=None, alias=SESSION_COOKIE)) -> Leader | None:
-    cfg = config()
-    p = unsign(ff_session, cfg.secret) if cfg else None
+    secret = session_secret()
+    p = unsign(ff_session, secret) if secret else None
     if not p:
         return None
+    via = p.get("via", "discord")
+    if via == "passcode" and not os.environ.get("LEADER_PASSCODE"):
+        return None  # the passcode was removed: its sessions end with it
+    cfg = config()
     # Publish rights are re-read from config on every request, so changing DISCORD_PUBLISHER_ID takes effect at once.
-    return Leader(id=p["uid"], name=p["name"], avatar_url=p.get("avatar"), can_publish=p["uid"] == cfg.publisher_id,
-                  csrf=p["csrf"])
+    # A passcode session never publishes.
+    can_publish = via == "discord" and cfg is not None and p["uid"] == cfg.publisher_id
+    return Leader(id=p["uid"], name=p["name"], avatar_url=p.get("avatar"), can_publish=can_publish, csrf=p["csrf"],
+                  via=via)
 
 
 def require_leader(leader: Leader | None = Depends(current_leader)) -> Leader:
@@ -244,10 +261,54 @@ def me(leader: Leader | None = Depends(current_leader)):
     return {
         "user": {"id": leader.id, "name": leader.name, "avatar_url": leader.avatar_url} if leader else None,
         "role": ("publisher" if leader.can_publish else "leader") if leader else None,
+        "via": leader.via if leader else None,
         "publishers": publishers,
         "csrf": leader.csrf if leader else None,
         "configured": cfg is not None,
+        "passcode_enabled": bool(os.environ.get("LEADER_PASSCODE")),
     }
+
+
+# ─── leaders' passcode, until Discord sign-in ─────────────────────────────────
+# POST /auth/passcode checks LEADER_PASSCODE and issues the same session cookie with role leader and no publish
+# rights. Failed tries are limited per client (5 in 15 minutes) and overall (30 in 15 minutes): behind Vercel and
+# Caddy the client address is shared, and the header Vercel adds can be forged by anyone calling the API host
+# directly, so the overall limit is what bounds a guessing attack. The passcode itself is long and random.
+
+PASSCODE_WINDOW = 15 * 60
+PASSCODE_PER_CLIENT = 5
+PASSCODE_OVERALL = 30
+_failures: dict[str, list[float]] = {}
+
+
+def _recent(key: str, now: float) -> list[float]:
+    kept = [t for t in _failures.get(key, []) if now - t < PASSCODE_WINDOW]
+    _failures[key] = kept
+    return kept
+
+
+class PasscodeBody(BaseModel):
+    passcode: str = Field(max_length=200)
+
+
+@router.post("/passcode")
+def passcode(body: PasscodeBody, request: Request):
+    code = os.environ.get("LEADER_PASSCODE")
+    if not code:
+        raise HTTPException(401, "the leaders' passcode is not set up")
+    now = time.time()
+    client = f"{request.client.host if request.client else '?'}|{request.headers.get('x-vercel-forwarded-for', '')}"
+    if len(_recent(client, now)) >= PASSCODE_PER_CLIENT or len(_recent("*", now)) >= PASSCODE_OVERALL:
+        raise HTTPException(429, "too many tries; wait 15 minutes")
+    if not hmac.compare_digest(body.passcode.encode(), code.encode()):
+        _failures.setdefault(client, []).append(now)
+        _failures.setdefault("*", []).append(now)
+        raise HTTPException(401, "wrong passcode")
+    session = {"uid": "passcode", "name": "Leader", "via": "passcode", "csrf": secrets.token_urlsafe(24),
+               "exp": now + SESSION_HOURS * 3600}
+    resp = Response(status_code=204)
+    set_cookie(resp, SESSION_COOKIE, sign(session, session_secret()), SESSION_HOURS * 3600)
+    return resp
 
 
 @router.post("/logout", status_code=204)

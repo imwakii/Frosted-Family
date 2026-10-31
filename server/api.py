@@ -6,6 +6,8 @@ site through a Vercel rewrite.
     GET /war/live        each clan's current war: CWL day, opponent, stars, attacks used
     GET /player/{tag}    one player's allocation, latest snapshot, wars, attacks and missed attacks
     GET /allocation.csv  the latest published allocation, for server/pull_allocation.py
+    GET /explore/upgrades?days=7&clan=   level-ups, unlocks and TH upgrades between profile snapshots
+    GET /leaders/inactivity, /leaders/make-room?clan=   leaders only (passcode or Discord session), read-only
     GET /explore/war     every member's all-time war stars and their record over the recorded wars, plus this CWL season
     GET /explore/{board} ranked boards from player profiles: heroes, equipment, army, donations, capital
     GET /explore/matrix?cat=heroes|equipment|troops|spells|pets|sieges   every member's level in every unit
@@ -25,7 +27,7 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException, Request
 
 from frosted.config import CLAN_TAGS, TAG_TO_CLAN
-from server import auth, db, plan, profiles
+from server import auth, db, leaders, plan, profiles
 
 DEFAULT_DB = "/opt/bots/frosted/data/frosted.db"
 ROSTER_FIELDS = ("tag", "name", "clan", "cwl_slot", "transferred_from", "tier", "final_score", "current_th", "flags")
@@ -173,6 +175,11 @@ def allocation():
     return plan.allocation_csv()
 
 
+@app.get("/explore/upgrades")  # before /explore/{board}, like war and matrix
+def explore_upgrades(days: int = 7, clan: str | None = None):
+    return leaders.upgrades(open_db(), max(1, min(days, 90)), clan)
+
+
 @app.get("/explore/war")  # before /explore/{board}, like matrix
 def explore_war(scope: str = "all"):
     return profiles.war_record(open_db(), scope)
@@ -190,6 +197,7 @@ def explore(board: str):
 
 app.include_router(auth.router)
 app.include_router(plan.router)
+app.include_router(leaders.router)
 
 
 @app.middleware("http")
@@ -197,7 +205,7 @@ async def private_responses(request: Request, call_next):
     """Sign-in and plan answers are per leader. Caddy marks the public reads cacheable, so these say no-store, and
     Vary: Cookie keeps any cache from handing one leader's answer to another."""
     resp = await call_next(request)
-    if request.url.path.startswith(("/auth", "/plan", "/allocation")):
+    if request.url.path.startswith(("/auth", "/plan", "/allocation", "/leaders")):
         resp.headers["Cache-Control"] = "no-store, private"
     resp.headers["Vary"] = "Cookie"
     return resp

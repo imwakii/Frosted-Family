@@ -138,8 +138,8 @@ def test_tampered_or_expired_session_is_ignored(env):
 def test_sign_in_answers_503_until_configured(env, monkeypatch):
     monkeypatch.delenv("DISCORD_CLIENT_SECRET")
     assert client().get("/auth/login").status_code == 503
-    assert client().get("/auth/me").json() == {"user": None, "role": None, "publishers": [], "csrf": None,
-                                               "configured": False}
+    assert client().get("/auth/me").json() == {"user": None, "role": None, "via": None, "publishers": [], "csrf": None,
+                                               "configured": False, "passcode_enabled": False}
 
 
 def test_nothing_writes_without_a_configured_sign_in(env, monkeypatch):
