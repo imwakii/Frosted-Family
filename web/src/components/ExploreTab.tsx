@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useClans } from '../clash'
-import { CATS, type Cat, isMaxed, type MatrixPlayer, progress, useMatrix } from '../explore'
+import { CATS, type Cat, competitionRanks, HIGH_MISS, isMaxed, type MatrixPlayer, missRate, progress, useMatrix, useWarBoard, type WarRow, type WarScope } from '../explore'
 import { go, playerHref } from '../route'
 import { CLAN, CLANS } from '../theme'
 import type { ClanName } from '../types'
@@ -8,6 +8,42 @@ import { norm, SearchBox } from './CwlTab'
 import { ClanBadge, Star, Th, UnitIcon } from './ui'
 
 type ClanPick = ClanName | 'All'
+type BoardProps = { q: string; setQ: (v: string) => void; wide: boolean }
+
+// The unit categories, then the boards that are not a unit matrix.
+const NAV: { id: string; label: string; icon: string | null }[] = [...CATS, { id: 'war', label: 'War record', icon: null }]
+
+function useClanPick() {
+  const [clan, setClanState] = useState<ClanPick>(() => (read('ff-x-clan') as ClanPick) || 'All')
+  return [clan, (c: ClanPick) => { setClanState(c); write('ff-x-clan', c) }] as const
+}
+
+function CategoryNav({ current, wide }: { current: string; wide: boolean }) {
+  const navRef = useRef<HTMLElement>(null)
+  useEffect(() => { navRef.current?.querySelector('[aria-pressed="true"]')?.scrollIntoView({ inline: 'center', block: 'nearest' }) }, [current])
+  if (wide) {
+    return (
+      <nav aria-label="Category" className="flex flex-wrap gap-1 rounded-[14px] bg-well p-1">
+        {NAV.map((c) => (
+          <button key={c.id} type="button" aria-pressed={c.id === current} onClick={() => go.to(`#/explore/${c.id}`)}
+            className={`flex min-h-[42px] cursor-pointer items-center gap-1.5 rounded-[10px] border-0 text-sm font-bold ${c.icon ? 'pl-2.5 pr-3.5' : 'px-3.5'} ${c.id === current ? 'bg-white text-ink shadow-[0_1px_3px_rgba(15,23,42,.12)]' : 'bg-transparent text-muted hover:text-ink'}`}>
+            {c.icon && <UnitIcon name={c.icon} size={24} />}{c.label}
+          </button>
+        ))}
+      </nav>
+    )
+  }
+  return (
+    <nav ref={navRef} aria-label="Category" className="flex flex-none gap-1.5 overflow-x-auto px-4 [scrollbar-width:none]">
+      {NAV.map((c) => (
+        <button key={c.id} type="button" aria-pressed={c.id === current} onClick={() => go.to(`#/explore/${c.id}`)}
+          className={`min-h-10 flex-none cursor-pointer rounded-full border px-3.5 text-sm font-bold ${c.id === current ? 'border-ink bg-ink text-white' : 'border-line bg-white text-muted'}`}>
+          {c.label}
+        </button>
+      ))}
+    </nav>
+  )
+}
 
 const read = (k: string) => { try { return sessionStorage.getItem(k) } catch { return null } }
 const write = (k: string, v: string) => { try { sessionStorage.setItem(k, v) } catch { /* private mode */ } }
@@ -43,11 +79,14 @@ function Empty({ loading }: { loading: boolean }) {
 const cellTone = (l: number | null, max: number) =>
   l === null || l === 0 ? 'text-[#CBD5E1]' : l >= max ? 'font-extrabold text-ink' : l < max * 0.6 ? 'font-semibold text-[#94A3B8]' : 'font-semibold text-ink-2'
 
-export default function ExploreTab({ kind, q, setQ, wide }: { kind: string | null; q: string; setQ: (v: string) => void; wide: boolean }) {
-  const cat: Cat = (CATS.find((c) => c.id === kind)?.id ?? 'heroes') as Cat
+export default function ExploreTab({ kind, ...rest }: BoardProps & { kind: string | null }) {
+  const id = NAV.find((c) => c.id === kind)?.id ?? 'heroes'
+  return id === 'war' ? <WarBoardView {...rest} /> : <MatrixBoard cat={id as Cat} {...rest} />
+}
+
+function MatrixBoard({ cat, q, setQ, wide }: BoardProps & { cat: Cat }) {
   const { data, loading } = useMatrix(cat)
-  const [clan, setClanState] = useState<ClanPick>(() => (read('ff-x-clan') as ClanPick) || 'All')
-  const setClan = (c: ClanPick) => { setClanState(c); write('ff-x-clan', c) }
+  const [clan, setClan] = useClanPick()
   const [sort, setSort] = useState<{ col: number; asc: boolean }>({ col: -1, asc: false })
   const [unit, setUnit] = useState(0)
   useEffect(() => { setSort({ col: -1, asc: false }); setUnit(0) }, [cat])
@@ -59,8 +98,6 @@ export default function ExploreTab({ kind, q, setQ, wide }: { kind: string | nul
   const matchQ = (p: MatrixPlayer) => !nq || norm(p.name).includes(nq) || p.tag.toLowerCase().includes(nq)
   const stamp = data?.as_of ? new Date(data.as_of).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : null
 
-  const catNav = useRef<HTMLElement>(null)
-  useEffect(() => { catNav.current?.querySelector('[aria-pressed="true"]')?.scrollIntoView({ inline: 'center', block: 'nearest' }) }, [cat])
   const unitNav = useRef<HTMLDivElement>(null)
   useEffect(() => { unitNav.current?.querySelector('[aria-selected="true"]')?.scrollIntoView({ inline: 'nearest', block: 'nearest' }) }, [unit, cat])
 
@@ -68,6 +105,8 @@ export default function ExploreTab({ kind, q, setQ, wide }: { kind: string | nul
     const rows = pool.map((p) => ({ p, pct: progress(p.levels, units), maxed: units.every((u, i) => isMaxed(p.levels[i], u)) }))
     const key = (r: (typeof rows)[number]) => (sort.col < 0 ? r.pct : r.p.levels[sort.col] ?? -1)
     rows.sort((a, b) => (sort.asc ? key(a) - key(b) : key(b) - key(a)) || b.pct - a.pct || a.p.name.localeCompare(b.p.name))
+    // # is the overall position by category progress, whatever column is sorted.
+    const place = competitionRanks(rows, (r) => Math.round(r.pct * 10) / 10)
     const maxedN = rows.filter((r) => r.maxed).length
     const shown = rows.filter((r) => matchQ(r.p))
     const pick = (col: number) => setSort((s) => (s.col === col ? { col, asc: !s.asc } : { col, asc: false }))
@@ -76,15 +115,17 @@ export default function ExploreTab({ kind, q, setQ, wide }: { kind: string | nul
     return (
       <main className="mx-auto flex max-w-[1360px] flex-col gap-3.5 px-[clamp(16px,3vw,32px)] pb-12 pt-5">
         <div className="flex flex-wrap items-center gap-2.5">
-          <nav aria-label="Category" className="flex flex-wrap gap-1 rounded-[14px] bg-well p-1">
-            {CATS.map((c) => (
-              <button key={c.id} type="button" aria-pressed={c.id === cat} onClick={() => go.to(`#/explore/${c.id}`)}
-                className={`flex min-h-[42px] cursor-pointer items-center gap-1.5 rounded-[10px] border-0 pl-2.5 pr-3.5 text-sm font-bold ${c.id === cat ? 'bg-white text-ink shadow-[0_1px_3px_rgba(15,23,42,.12)]' : 'bg-transparent text-muted hover:text-ink'}`}>
-                {c.icon && <UnitIcon name={c.icon} size={24} />}{c.label}
-              </button>
-            ))}
-          </nav>
+          <CategoryNav current={cat} wide />
           <ClanFilter clan={clan} setClan={setClan} counts={counts} wide />
+        </div>
+        <div className="flex flex-wrap items-center gap-2 text-sm text-muted">
+          {data && (
+            <>
+              <span className="rounded-full border border-line bg-white px-3 py-1.5 font-bold text-ink"><Star /> {maxedN} of {rows.length} fully maxed</span>
+              <span className="rounded-full border border-line bg-white px-3 py-1.5 font-semibold">Ranked by {sort.col < 0 ? `${catLabel} progress` : units[sort.col]?.name}</span>
+              {stamp && <span className="text-xs font-semibold text-faint">Updated {stamp}</span>}
+            </>
+          )}
           <div className="ml-auto min-w-[200px] max-w-[320px] flex-auto">
             <SearchBox q={q} setQ={setQ} onEnter={() => { if (shown[0]) go.to(playerHref(shown[0].p.tag)) }} />
           </div>
@@ -92,16 +133,12 @@ export default function ExploreTab({ kind, q, setQ, wide }: { kind: string | nul
 
         {!data ? <Empty loading={loading} /> : (
           <>
-            <div className="flex flex-wrap items-center gap-2 text-sm text-muted">
-              <span className="rounded-full border border-line bg-white px-3 py-1.5 font-bold text-ink"><Star /> {maxedN} of {rows.length} fully maxed</span>
-              <span className="rounded-full border border-line bg-white px-3 py-1.5 font-semibold">Ranked by {sort.col < 0 ? `${catLabel} progress` : units[sort.col]?.name}</span>
-              {stamp && <span className="ml-auto text-xs font-semibold text-faint">Updated {stamp}</span>}
-            </div>
             <section className="overflow-auto rounded-[18px] border border-line bg-white">
               <table className="min-w-full border-separate border-spacing-0 text-sm">
                 <thead>
                   <tr>
-                    <th className="sticky left-0 z-[2] min-w-[210px] border-b border-line bg-white px-3 py-2.5 text-left text-xs font-bold text-faint">PLAYER</th>
+                    <th className="sticky left-0 z-[2] w-12 min-w-12 border-b border-line bg-white py-2.5 pl-4 pr-1 text-left text-xs font-bold text-faint">#</th>
+                    <th className="sticky left-12 z-[2] min-w-[210px] border-b border-line bg-white px-3 py-2.5 text-left text-xs font-bold text-faint">PLAYER</th>
                     <th className={`border-b border-line p-0 ${sort.col < 0 ? 'bg-[#EEF2FF]' : 'bg-white'}`} aria-sort={sort.col < 0 ? (sort.asc ? 'ascending' : 'descending') : undefined}>
                       <button type="button" onClick={() => pick(-1)} className="min-h-16 w-24 cursor-pointer border-0 bg-transparent text-xs font-bold text-ink-2 hover:bg-[#EEF2FF]">Progress</button>
                     </th>
@@ -116,9 +153,10 @@ export default function ExploreTab({ kind, q, setQ, wide }: { kind: string | nul
                   </tr>
                 </thead>
                 <tbody>
-                  {shown.map(({ p, pct }) => (
+                  {shown.map((r) => { const { p, pct } = r; return (
                     <tr key={p.tag} onClick={() => go.to(playerHref(p.tag))} className="group cursor-pointer">
-                      <td className="sticky left-0 z-[1] whitespace-nowrap border-b border-hair bg-white px-3 py-1.5 group-hover:bg-hover">
+                      <td className="sticky left-0 z-[1] w-12 min-w-12 border-b border-hair bg-white py-1.5 pl-4 pr-1 font-bold tabular-nums text-faint group-hover:bg-hover">{place.get(r) ?? '—'}</td>
+                      <td className="sticky left-12 z-[1] whitespace-nowrap border-b border-hair bg-white px-3 py-1.5 group-hover:bg-hover">
                         <span className="flex items-center gap-2.5">
                           <Th th={p.th} />
                           <a href={playerHref(p.tag)} onClick={(e) => e.stopPropagation()} className="font-semibold text-ink no-underline">{p.name}</a>
@@ -140,8 +178,8 @@ export default function ExploreTab({ kind, q, setQ, wide }: { kind: string | nul
                         )
                       })}
                     </tr>
-                  ))}
-                  {!shown.length && <tr><td colSpan={2 + units.length} className="p-5 text-sm text-faint">No one by that name</td></tr>}
+                  ) })}
+                  {!shown.length && <tr><td colSpan={3 + units.length} className="p-5 text-sm text-faint">No one by that name</td></tr>}
                 </tbody>
               </table>
             </section>
@@ -153,10 +191,11 @@ export default function ExploreTab({ kind, q, setQ, wide }: { kind: string | nul
 
   // Phone: one unit at a time, ranked.
   const u = units[Math.min(unit, Math.max(0, units.length - 1))]
-  const ranked = u ? pool
+  const sorted = u ? pool
     .map((p) => ({ p, l: p.levels[units.indexOf(u)] ?? 0 }))
-    .sort((a, b) => b.l - a.l || a.p.name.localeCompare(b.p.name))
-    .map((x, i) => ({ ...x, rank: i + 1 })) : []
+    .sort((a, b) => b.l - a.l || a.p.name.localeCompare(b.p.name)) : []
+  const unitPlace = competitionRanks(sorted, (x) => x.l)
+  const ranked = sorted.map((x) => ({ ...x, rank: unitPlace.get(x) ?? null }))
   const maxedN = u ? ranked.filter((r) => r.l >= u.max).length : 0
   const shown = ranked.filter((r) => matchQ(r.p))
 
@@ -166,14 +205,7 @@ export default function ExploreTab({ kind, q, setQ, wide }: { kind: string | nul
         <SearchBox q={q} setQ={setQ} onEnter={() => { if (shown[0]) go.to(playerHref(shown[0].p.tag)) }} />
       </div>
       <div className="px-4"><ClanFilter clan={clan} setClan={setClan} counts={counts} wide={false} /></div>
-      <nav ref={catNav} aria-label="Category" className="flex flex-none gap-1.5 overflow-x-auto px-4 [scrollbar-width:none]">
-        {CATS.map((c) => (
-          <button key={c.id} type="button" aria-pressed={c.id === cat} onClick={() => go.to(`#/explore/${c.id}`)}
-            className={`min-h-10 flex-none cursor-pointer rounded-full border px-3.5 text-sm font-bold ${c.id === cat ? 'border-ink bg-ink text-white' : 'border-line bg-white text-muted'}`}>
-            {c.label}
-          </button>
-        ))}
-      </nav>
+      <CategoryNav current={cat} wide={false} />
       {!data || !u ? <div className="px-4"><Empty loading={loading} /></div> : (
         <>
           <div ref={unitNav} role="listbox" aria-label="Unit" className="flex flex-none gap-2 overflow-x-auto px-4 pb-2 pt-1 [scrollbar-width:none]">
@@ -194,7 +226,7 @@ export default function ExploreTab({ kind, q, setQ, wide }: { kind: string | nul
               return (
                 <li key={p.tag}>
                   <a href={playerHref(p.tag)} className={`flex min-h-[54px] items-center gap-2.5 px-3.5 py-1.5 text-ink no-underline hover:bg-hover ${i ? 'border-t border-hair' : ''}`}>
-                    <span className="w-6 flex-none text-right text-xs tabular-nums text-faint">{rank}</span>
+                    <span className="w-6 flex-none text-right text-xs tabular-nums text-faint">{rank ?? '—'}</span>
                     <Th th={p.th} />
                     <span className="flex min-w-0 flex-auto flex-col gap-1">
                       <span className="flex min-w-0 items-baseline gap-1.5">
@@ -212,6 +244,175 @@ export default function ExploreTab({ kind, q, setQ, wide }: { kind: string | nul
                 </li>
               )
             })}
+            {!shown.length && <li className="p-4 text-sm text-faint">No one by that name</li>}
+          </ol>
+        </>
+      )}
+    </div>
+  )
+}
+
+type WarCol = { key: string; label: string; value: (r: WarRow) => number | null; fmt: (v: number) => string; low?: boolean }
+
+const pct = (v: number) => `${Math.round(v)}%`
+const WAR_COLS: WarCol[] = [
+  { key: 'stars', label: 'War stars', value: (r) => r.war_stars ?? null, fmt: (v) => v.toLocaleString('en-GB') },
+  { key: 'attacks', label: 'Attacks', value: (r) => r.war?.attacks ?? null, fmt: String },
+  { key: 'missed', label: 'Missed', value: (r) => (r.war ? r.war.missed : null), fmt: String, low: true },
+  { key: 'triple', label: '3★ rate', value: (r) => (r.war?.attacks ? (100 * r.war.three_stars) / r.war.attacks : null), fmt: pct },
+  { key: 'avg', label: 'Avg ★', value: (r) => (r.war?.attacks ? r.war.stars / r.war.attacks : null), fmt: (v) => v.toFixed(1) },
+  { key: 'dest', label: 'Avg dest.', value: (r) => r.war?.avg_destruction ?? null, fmt: pct },
+]
+
+// Green once a member has attacked with misses at or under the line, amber above it.
+function MissDot({ r }: { r: WarRow }) {
+  const m = missRate(r.war)
+  if (m === null) return null
+  const high = m > HIGH_MISS
+  return <span title={high ? 'High miss' : 'Active'} aria-label={high ? 'High miss' : 'Active'} className="size-2 flex-none rounded" style={{ background: high ? '#D97706' : '#16A34A' }} />
+}
+
+const sinceLabel = (d: string | null) => (d ? `since ${new Date(d + 'T00:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' })}` : null)
+
+function WarBoardView({ q, setQ, wide }: BoardProps) {
+  const [scope, setScope] = useState<WarScope>(() => (read('ff-war-scope') as WarScope) || 'all')
+  const pickScope = (s: WarScope) => { setScope(s); write('ff-war-scope', s) }
+  // The CWL toggle shows once the API filters by scope.
+  const scoped = useWarBoard('all').data?.scope != null
+  const { data, loading } = useWarBoard(scoped ? scope : 'all')
+  const [clan, setClan] = useClanPick()
+  const cols = useMemo(() => WAR_COLS.filter((c) => !data || data.players.some((r) => c.value(r) !== null)), [data])
+  const [sortKey, setSortKey] = useState<{ key: string; asc: boolean } | null>(null)
+  const sort = sortKey && cols.some((c) => c.key === sortKey.key) ? sortKey : { key: cols[0]?.key ?? 'attacks', asc: !!cols[0]?.low }
+  const col = cols.find((c) => c.key === sort.key) ?? cols[0]
+  const pick = (c: WarCol) => setSortKey(sort.key === c.key ? { key: c.key, asc: !sort.asc } : { key: c.key, asc: !!c.low })
+
+  const nq = norm(q.trim())
+  const counts = Object.fromEntries(CLANS.map((k) => [k, (data?.players ?? []).filter((p) => p.clan === k).length]))
+  const ranked = useMemo(() => {
+    if (!data || !col) return []
+    return data.players
+      .filter((r) => clan === 'All' || r.clan === clan)
+      .map((r) => ({ r, v: col.value(r) }))
+      .sort((a, b) => (a.v === null ? (b.v === null ? 0 : 1) : b.v === null ? -1 : sort.asc ? a.v - b.v : b.v - a.v) || a.r.name.localeCompare(b.r.name))
+  }, [data, clan, col, sort.asc])
+  const placeCol = cols.find((c) => c.key === 'stars') ?? cols[0]
+  const place = useMemo(() => competitionRanks(ranked.map((x) => x.r), (r) => (wide ? placeCol : col)?.value(r) ?? null, !wide && !!col?.low), [ranked, placeCol, col, wide])
+  const shown = ranked.filter(({ r }) => !nq || norm(r.name).includes(nq) || r.tag.toLowerCase().includes(nq))
+  const since = sinceLabel(data?.since ?? null)
+
+  const scopeToggle = scoped && (
+    <div role="group" aria-label="Wars" className="inline-grid flex-none auto-cols-max grid-flow-col gap-1 rounded-xl bg-well p-1">
+      {([['all', 'All wars'], ['cwl', 'CWL season']] as const).map(([k, label]) => (
+        <button key={k} type="button" aria-pressed={k === scope} onClick={() => pickScope(k)}
+          className={`min-h-10 cursor-pointer rounded-[9px] border-0 px-3 text-sm font-bold ${k === scope ? 'bg-white text-ink shadow-[0_1px_3px_rgba(15,23,42,.12)]' : 'bg-transparent text-muted'}`}>
+          {label}
+        </button>
+      ))}
+    </div>
+  )
+  const sinceChip = since && <span className="flex-none text-xs font-semibold text-faint">{since}</span>
+  const enter = () => { if (shown[0]) go.to(playerHref(shown[0].r.tag)) }
+
+  if (wide) {
+    return (
+      <main className="mx-auto flex max-w-[1360px] flex-col gap-3.5 px-[clamp(16px,3vw,32px)] pb-12 pt-5">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <CategoryNav current="war" wide />
+          <ClanFilter clan={clan} setClan={setClan} counts={counts} wide />
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          {scopeToggle}{sinceChip}
+          <div className="ml-auto min-w-[200px] max-w-[320px] flex-auto"><SearchBox q={q} setQ={setQ} onEnter={enter} /></div>
+        </div>
+        {!data || !col ? <Empty loading={loading} /> : (
+          <section className="overflow-auto rounded-[18px] border border-line bg-white">
+            <table className="min-w-full border-separate border-spacing-0 text-sm">
+              <thead>
+                <tr className="text-left text-xs font-bold text-faint">
+                  <th className="sticky left-0 z-[2] w-12 min-w-12 border-b border-line bg-white py-2.5 pl-4 pr-1 font-bold">#</th>
+                  <th className="sticky left-12 z-[2] min-w-[220px] border-b border-line bg-white px-2 font-bold">PLAYER</th>
+                  {cols.map((c) => (
+                    <th key={c.key} className={`border-b border-line p-0 text-right ${c.key === sort.key ? 'bg-[#EEF2FF]' : ''}`} aria-sort={c.key === sort.key ? (sort.asc ? 'ascending' : 'descending') : undefined}>
+                      <button type="button" onClick={() => pick(c)}
+                        className={`min-h-12 w-full cursor-pointer whitespace-nowrap border-0 bg-transparent px-4 text-right text-xs font-bold hover:bg-[#EEF2FF] ${c.key === sort.key ? 'text-ink' : 'text-faint'}`}>
+                        {c.label}{c.key === sort.key ? (sort.asc ? ' ↑' : ' ↓') : ''}
+                      </button>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {shown.map(({ r }) => (
+                  <tr key={r.tag} onClick={() => go.to(playerHref(r.tag))} className="group cursor-pointer">
+                    <td className="sticky left-0 z-[1] w-12 min-w-12 border-b border-hair bg-white py-1.5 pl-4 pr-1 font-bold tabular-nums text-faint group-hover:bg-hover">{place.get(r) ?? '—'}</td>
+                    <td className="sticky left-12 z-[1] whitespace-nowrap border-b border-hair bg-white px-2 py-1.5 group-hover:bg-hover">
+                      <span className="flex items-center gap-2.5">
+                        <Th th={r.th} />
+                        <a href={playerHref(r.tag)} onClick={(e) => e.stopPropagation()} className="font-semibold text-ink no-underline">{r.name}</a>
+                        <MissDot r={r} />
+                        {clan === 'All' && <span className="text-xs font-bold" style={{ color: CLAN[r.clan].deep }}>{r.clan}</span>}
+                      </span>
+                    </td>
+                    {cols.map((c) => {
+                      const v = c.value(r)
+                      const high = c.key === 'missed' && (missRate(r.war) ?? 0) > HIGH_MISS
+                      return (
+                        <td key={c.key} className={`border-b border-hair px-4 text-right tabular-nums group-hover:bg-hover ${c.key === sort.key ? 'bg-[#F5F7FF] font-extrabold text-ink' : 'font-semibold text-ink-2'} ${v === null ? '!font-normal !text-[#CBD5E1]' : ''}`}>
+                          {v === null ? '—' : high ? <span className="rounded-full bg-[#FEF3C7] px-2 py-0.5 text-[#92400E]">{c.fmt(v)}</span> : <>{c.fmt(v)}{c.key === 'stars' && <span className="ml-0.5 text-gold">★</span>}</>}
+                        </td>
+                      )
+                    })}
+                  </tr>
+                ))}
+                {!shown.length && <tr><td colSpan={2 + cols.length} className="p-5 text-sm text-faint">No one by that name</td></tr>}
+              </tbody>
+            </table>
+          </section>
+        )}
+      </main>
+    )
+  }
+
+  const rest = col ? cols.filter((c) => c.key !== col.key).slice(0, 3) : []
+  return (
+    <div className="flex flex-col gap-2.5 pb-6">
+      <div className="sticky top-0 z-10 bg-page px-4 pb-2 pt-1"><SearchBox q={q} setQ={setQ} onEnter={enter} /></div>
+      <div className="px-4"><ClanFilter clan={clan} setClan={setClan} counts={counts} wide={false} /></div>
+      <CategoryNav current="war" wide={false} />
+      {(scopeToggle || sinceChip) && <div className="flex items-center justify-between gap-3 px-4">{scopeToggle}{sinceChip}</div>}
+      {!data || !col ? <div className="px-4"><Empty loading={loading} /></div> : (
+        <>
+          <div role="group" aria-label="Sort by" className="-mb-1 flex gap-1 overflow-x-auto px-4 [scrollbar-width:none]">
+            {cols.map((c) => (
+              <button key={c.key} type="button" aria-pressed={c.key === sort.key} onClick={() => pick(c)}
+                className={`flex min-h-8 flex-none cursor-pointer items-center whitespace-nowrap rounded-lg border px-2.5 text-[13px] font-bold ${c.key === sort.key ? 'border-ink-2 bg-white text-ink' : 'border-transparent bg-transparent text-faint'}`}>
+                {c.label}{c.key === sort.key ? (sort.asc ? ' ↑' : ' ↓') : ''}
+              </button>
+            ))}
+          </div>
+          <ol className="m-0 mx-4 list-none rounded-2xl border border-line bg-white py-1">
+            {shown.map(({ r, v }, i) => (
+              <li key={r.tag}>
+                <a href={playerHref(r.tag)} className={`flex min-h-[56px] items-center gap-2.5 px-3.5 py-1.5 text-ink no-underline hover:bg-hover ${i ? 'border-t border-hair' : ''}`}>
+                  <span className="w-6 flex-none text-right text-xs tabular-nums text-faint">{place.get(r) ?? '—'}</span>
+                  <Th th={r.th} />
+                  <span className="flex min-w-0 flex-auto flex-col gap-0.5">
+                    <span className="flex min-w-0 items-center gap-1.5">
+                      <span className="truncate text-[15px] font-semibold">{r.name}</span>
+                      <MissDot r={r} />
+                    </span>
+                    <span className="truncate text-xs text-faint">
+                      {clan === 'All' && <span className="font-bold" style={{ color: CLAN[r.clan].deep }}>{r.clan} · </span>}
+                      {rest.map((c, j) => { const x = c.value(r); return <span key={c.key}>{j ? ' · ' : ''}{c.label} {x === null ? '—' : c.fmt(x)}</span> })}
+                    </span>
+                  </span>
+                  <span className={`flex-none whitespace-nowrap text-right text-base tabular-nums ${v === null ? 'text-[#CBD5E1]' : 'font-extrabold'}`}>
+                    {v === null ? '—' : col.fmt(v)}{v !== null && col.key === 'stars' && <span className="ml-0.5 text-gold">★</span>}
+                  </span>
+                </a>
+              </li>
+            ))}
             {!shown.length && <li className="p-4 text-sm text-faint">No one by that name</li>}
           </ol>
         </>
