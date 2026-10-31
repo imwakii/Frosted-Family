@@ -124,7 +124,8 @@ function Plan({ roster, me }: { roster: Roster; me: Me }) {
   const dirty = saved ? !sameMoves(moves, saved.moves) : Object.keys(moves).length > 0
   const canPublish = me.role === 'publisher'
   // Until sign-in is set up the board is open to anyone, but nothing is saved or published.
-  const readOnly = !me.role
+  // Saving and publishing wait for a Discord leader session.
+  const readOnly = !me.role || me.via === 'passcode'
   const lockedTip = 'Sign-in coming soon'
 
   const at = (p: Player): Place => moves[p.tag] ?? { clan: p.clan, slot: p.slot }
@@ -213,8 +214,9 @@ function Plan({ roster, me }: { roster: Roster; me: Me }) {
     }
   }
 
+  // The wrapper ends the toolbar's stickiness at the bottom of the board.
   return (
-    <>
+    <div>
       <div className="sticky top-0 z-20 border-b border-line bg-white/95 backdrop-blur md:static md:border-0 md:bg-transparent md:backdrop-blur-none">
         <div className="mx-auto flex max-w-[1360px] flex-wrap items-center gap-2 px-[clamp(16px,3vw,32px)] py-2.5 md:pt-5">
           <span className="rounded-full bg-[#EEF1F6] px-3 py-1.5 text-[13px] font-bold text-ink-2">{changeLabel}</span>
@@ -348,7 +350,7 @@ function Plan({ roster, me }: { roster: Roster; me: Me }) {
           </section>
         </div>
       )}
-    </>
+    </div>
   )
 }
 
@@ -391,27 +393,15 @@ function Gate({ me, onSignOut }: { me: Me; onSignOut: () => void }) {
   )
 }
 
-type PlanProps = { roster: Roster; me: Me; ready: boolean; wide: boolean; onSignOut: () => void; onSignedIn: () => void }
+type PlanProps = { roster: Roster; me: Me; ready: boolean; wide: boolean; onSignOut: () => void }
 
-export default function PlanTab({ roster, me, ready, wide, onSignOut, onSignedIn }: PlanProps) {
-  const [view, setView] = useState<'lineup' | 'leaders'>('lineup')
+export default function PlanTab({ roster, me, ready, wide, onSignOut }: PlanProps) {
   if (!ready) return <div aria-busy="true" aria-label="Loading" className="mx-auto mt-16 h-48 max-w-[380px] animate-pulse rounded-[20px] bg-well" />
-  // The board is open while sign-in is not set up; a leader session unlocks saving and the leaders' tools.
-  const lineup = me.role || !me.configured ? <Plan roster={roster} me={me} /> : <Gate me={me} onSignOut={onSignOut} />
-  if (!me.passcode_enabled && !me.role) return lineup
+  // The board is open while Discord sign-in is not set up; Inactivity and Make room sit below it for everyone.
   return (
     <>
-      <div className="mx-auto max-w-[1360px] px-[clamp(16px,3vw,32px)] pt-3 md:pt-5">
-        <div role="group" aria-label="Plan" className="inline-grid auto-cols-max grid-flow-col gap-1 rounded-xl bg-well p-1">
-          {([['lineup', 'Lineup'], ['leaders', 'Leaders']] as const).map(([k, label]) => (
-            <button key={k} type="button" aria-pressed={k === view} onClick={() => setView(k)}
-              className={`min-h-10 cursor-pointer rounded-[9px] border-0 px-4 text-sm font-bold ${k === view ? 'bg-white text-ink shadow-[0_1px_3px_rgba(15,23,42,.12)]' : 'bg-transparent text-muted'}`}>
-              {label}
-            </button>
-          ))}
-        </div>
-      </div>
-      {view === 'leaders' ? <LeadersTools me={me} wide={wide} onUnlocked={onSignedIn} /> : lineup}
+      {me.role || !me.configured ? <Plan roster={roster} me={me} /> : <Gate me={me} onSignOut={onSignOut} />}
+      <LeadersTools wide={wide} />
     </>
   )
 }

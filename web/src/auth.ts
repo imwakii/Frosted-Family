@@ -30,7 +30,7 @@ function devMe(): Me | null {
     publishers: ['Waki'],
     csrf: 'dev',
     configured: true,
-    via: as === 'publisher' ? 'discord' : 'passcode',
+    via: 'discord',
     passcode_enabled: true,
   }
 }
@@ -51,7 +51,7 @@ export function useAuth() {
     await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin', headers: csrf ? { 'X-CSRF-Token': csrf } : {} }).catch(() => null)
     setState({ status: 'ready', me: SIGNED_OUT })
   }, [csrf])
-  return { ...state, signOut, reload: load }
+  return { ...state, signOut }
 }
 
 /** ?signin=denied|failed, added by the callback on a failed sign-in; read once and dropped from the URL. */
@@ -63,16 +63,6 @@ export function takeSigninError(): 'denied' | 'failed' | null {
   const qs = params.toString()
   window.history.replaceState(null, '', window.location.pathname + (qs ? `?${qs}` : '') + window.location.hash)
   return v
-}
-
-/** POST /api/auth/passcode; resolves to 'ok', 'wrong' or 'busy' (too many tries). */
-export async function submitPasscode(passcode: string): Promise<'ok' | 'wrong' | 'busy'> {
-  if (import.meta.env.DEV && new URLSearchParams(window.location.search).has('mock')) return passcode ? 'ok' : 'wrong'
-  const r = await fetch('/api/auth/passcode', {
-    method: 'POST', credentials: 'same-origin',
-    headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ passcode }),
-  }).catch(() => null)
-  return r?.ok ? 'ok' : r?.status === 429 ? 'busy' : 'wrong'
 }
 
 export const loginHref = () => `/api/auth/login?return_to=${encodeURIComponent('/#/plan')}`
