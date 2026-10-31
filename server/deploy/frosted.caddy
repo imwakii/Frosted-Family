@@ -1,0 +1,11 @@
+# Template: `setup.sh caddy` fills in __FROSTED_API_HOST__ from FROSTED_API_HOST, installs the result to
+# /etc/caddy/sites/frosted.caddy and adds the import line to the Caddyfile. Caddy gets the certificate by HTTP challenge.
+# The site reaches this through a Vercel rewrite, so players only ever see the Vercel URL.
+__FROSTED_API_HOST__ {
+	encode gzip
+	header {
+		-Server
+		Cache-Control "public, max-age=30"
+	}
+	reverse_proxy 127.0.0.1:8090
+}

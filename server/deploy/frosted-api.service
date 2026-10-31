@@ -1,0 +1,24 @@
+# The read API (server/api.py) on 127.0.0.1:8090. Caddy serves it at FROSTED_API_HOST (setup.sh, frosted.caddy).
+# It reads the collector's database and the repo's frosted_cwl_members.csv, and needs no token.
+[Unit]
+Description=Frosted Family CWL API
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=frosted
+Group=bots
+Environment=FROSTED_DB=/opt/bots/frosted/data/frosted.db
+Environment=FROSTED_ROSTER=/opt/bots/frosted/repo/frosted_cwl_members.csv
+WorkingDirectory=/opt/bots/frosted/repo
+ExecStart=/opt/bots/frosted/venv/bin/python -B -m uvicorn server.api:app --host 127.0.0.1 --port 8090 --proxy-headers
+Restart=on-failure
+RestartSec=5
+MemoryMax=300M
+NoNewPrivileges=true
+ProtectSystem=strict
+# SQLite's WAL index (-shm) must be writable even for a read-only connection.
+ReadWritePaths=/opt/bots/frosted/data
+
+[Install]
+WantedBy=multi-user.target

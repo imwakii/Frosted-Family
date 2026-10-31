@@ -1,0 +1,7 @@
+{"state": "inWar", "season": "2026-11",
+ "clans": [{"tag": "#CL0G80LV", "name": "Fire"}, {"tag": "#2PQ9LYQ0", "name": "Enemy"}, {"tag": "#9VYRQ2L8", "name": "Other A"}, {"tag": "#8UJ0GQ2P", "name": "Other B"}],
+ "rounds": [
+   {"warTags": ["#8QPY2LGR0", "#9RJ2C80GQ"]},
+   {"warTags": ["#2Y0QRLJ8P", "#0"]},
+   {"warTags": ["#0", "#0"]}
+ ]}

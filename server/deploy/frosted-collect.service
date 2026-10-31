@@ -1,0 +1,21 @@
+# One collector pass over Fire, Cake and Flakes (server/collect.py). Started every 10 minutes by frosted-collect.timer.
+# /opt/bots/frosted/api.env (root 600, never in git) holds COC_API_TOKEN; systemd reads it as root.
+[Unit]
+Description=Frosted Family war collector
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=frosted
+Group=bots
+EnvironmentFile=/opt/bots/frosted/api.env
+Environment=FROSTED_DB=/opt/bots/frosted/data/frosted.db
+WorkingDirectory=/opt/bots/frosted/repo
+ExecStart=/opt/bots/frosted/venv/bin/python -B -m server.collect
+TimeoutStartSec=300
+Nice=10
+MemoryMax=300M
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/opt/bots/frosted/data

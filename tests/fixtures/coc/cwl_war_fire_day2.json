@@ -1,0 +1,14 @@
+{"state": "inWar", "teamSize": 2, "attacksPerMember": 1,
+ "preparationStartTime": "20261103T080000.000Z", "startTime": "20261104T080000.000Z", "endTime": "20261105T080000.000Z",
+ "clan": {"tag": "#CL0G80LV", "name": "Fire", "stars": 3, "destructionPercentage": 50.0, "attacks": 1,
+   "members": [
+     {"tag": "#R2PPV8CL", "name": "Waki renamed", "townhallLevel": 18, "mapPosition": 1, "opponentAttacks": 0,
+      "attacks": [{"attackerTag": "#R2PPV8CL", "defenderTag": "#2VQ8LJ0P", "stars": 3, "destructionPercentage": 100, "order": 1, "duration": 140}]},
+     {"tag": "#Q8VJ2L0C", "name": "newbie", "townhallLevel": 17, "mapPosition": 2, "opponentAttacks": 0}
+   ]},
+ "opponent": {"tag": "#9VYRQ2L8", "name": "Other A", "stars": 0, "destructionPercentage": 0.0, "attacks": 0,
+   "members": [
+     {"tag": "#2VQ8LJ0P", "name": "other one", "townhallLevel": 18, "mapPosition": 1, "opponentAttacks": 1},
+     {"tag": "#8L0QYJ2V", "name": "other two", "townhallLevel": 17, "mapPosition": 2, "opponentAttacks": 0}
+   ]}
+}

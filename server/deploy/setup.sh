@@ -1,0 +1,96 @@
+#!/usr/bin/env bash
+# Frosted Family collector and API on the bots droplet (bots-sgp1), beside the finance app. Run as root.
+# Every step is idempotent, so a rerun repairs drift and doubles as the update. Nothing here holds a secret: the
+# Clash of Clans token goes in /opt/bots/frosted/api.env by hand and is never printed.
+#
+#   bash setup.sh install   user, repo checkout (public, over HTTPS), venv, systemd units; starts the API, and the
+#                           collector timer once api.env has COC_API_TOKEN
+#   bash setup.sh caddy     the API's site block for FROSTED_API_HOST, imported into /etc/caddy/Caddyfile
+#   bash setup.sh status    units, last collector run, row counts
+#
+# Variables: FROSTED_BRANCH (main), FROSTED_API_HOST (the API's public hostname, set once below).
+#
+# The finance setup.sh `web` phase rewrites /etc/caddy/Caddyfile and drops the import line. Rerun `setup.sh caddy`
+# after it, until the finance renderer emits the import itself.
+set -euo pipefail
+
+cd /  # the bot user cannot stat the admin's home, so sudo -u from there fails (finance setup.sh, 23 Oct 2026)
+BOTS=/opt/bots
+BOT=frosted
+BOT_HOME="$BOTS/$BOT"
+BRANCH="${FROSTED_BRANCH:-main}"
+# The one place the hostname is set. A free DuckDNS name pointed at this droplet; nothing on ngkawai.dev.
+FROSTED_API_HOST="${FROSTED_API_HOST:-frostedcwl.duckdns.org}"
+REPO_URL=https://github.com/imwakii/Frosted-Family.git
+DEPLOY="$BOT_HOME/repo/server/deploy"  # units come from the checkout, so a first run from a downloaded copy works
+SITES=/etc/caddy/sites
+IMPORT_LINE="import $SITES/*.caddy"
+
+need_root() { [ "$(id -u)" -eq 0 ] || { echo "run as root (sudo bash setup.sh ...)"; exit 1; }; }
+as_bot() { sudo -u "$BOT" -H "$@"; }
+
+install_app() {
+  getent group bots >/dev/null || groupadd bots
+  id "$BOT" >/dev/null 2>&1 || useradd --system --home-dir "$BOT_HOME" --no-create-home --shell /usr/sbin/nologin \
+    --gid bots "$BOT"
+  install -d -m 755 -o "$BOT" -g bots "$BOT_HOME" "$BOT_HOME/data"
+  # The token file: root only, read by systemd. Created empty; the token is pasted in by hand.
+  [ -f "$BOT_HOME/api.env" ] || install -m 600 -o root -g root /dev/null "$BOT_HOME/api.env"
+  # A file made by hand may be world-readable; the token is for root (systemd) only.
+  chown root:root "$BOT_HOME/api.env"; chmod 600 "$BOT_HOME/api.env"
+
+  if [ -d "$BOT_HOME/repo/.git" ]; then
+    as_bot git -C "$BOT_HOME/repo" fetch -q origin "$BRANCH"
+    as_bot git -C "$BOT_HOME/repo" checkout -q -B "$BRANCH" "origin/$BRANCH"
+  else
+    as_bot git clone -q --branch "$BRANCH" "$REPO_URL" "$BOT_HOME/repo"
+  fi
+  [ -x "$BOT_HOME/venv/bin/python" ] || as_bot python3 -m venv "$BOT_HOME/venv"
+  as_bot "$BOT_HOME/venv/bin/pip" install -q --upgrade pip
+  as_bot "$BOT_HOME/venv/bin/pip" install -q -r "$BOT_HOME/repo/server/requirements.txt"
+
+  cp "$DEPLOY"/frosted-api.service "$DEPLOY"/frosted-collect.service "$DEPLOY"/frosted-collect.timer /etc/systemd/system/
+  systemctl daemon-reload
+  systemctl enable -q frosted-api
+  systemctl restart frosted-api
+  if grep -q '^COC_API_TOKEN=.\+' "$BOT_HOME/api.env"; then
+    systemctl enable -q --now frosted-collect.timer
+    systemctl start frosted-collect.service || true  # one pass now; its outcome shows in `status`
+    echo "Collector timer on (every 10 minutes)."
+  else
+    echo "api.env has no COC_API_TOKEN yet: add it, then rerun install to start the collector."
+  fi
+  echo "API on 127.0.0.1:8090, branch $BRANCH at $(as_bot git -C "$BOT_HOME/repo" rev-parse --short HEAD)."
+}
+
+caddy_site() {
+  install -d -m 755 "$SITES"
+  sed "s/__FROSTED_API_HOST__/$FROSTED_API_HOST/g" "$DEPLOY/frosted.caddy" > "$SITES/frosted.caddy"
+  chmod 644 "$SITES/frosted.caddy"
+  grep -qxF "$IMPORT_LINE" /etc/caddy/Caddyfile || printf '\n%s\n' "$IMPORT_LINE" >> /etc/caddy/Caddyfile
+  caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile >/dev/null
+  systemctl reload caddy
+  echo "$FROSTED_API_HOST served (the DuckDNS name must point at this droplet before Caddy can get a certificate)."
+}
+
+status() {
+  systemctl --no-pager --lines=0 status frosted-api frosted-collect.timer || true
+  journalctl -u frosted-collect --no-pager -n 5 -o cat || true
+  if [ -f "$BOT_HOME/data/frosted.db" ]; then
+    as_bot "$BOT_HOME/venv/bin/python" - "$BOT_HOME/data/frosted.db" <<'PY'
+import sqlite3, sys
+c = sqlite3.connect(f"file:{sys.argv[1]}?mode=ro", uri=True)
+for t in ("polls", "member_snapshots", "wars", "war_members", "attacks"):
+    print(f"{t:18} {c.execute(f'SELECT COUNT(*) FROM {t}').fetchone()[0]}")
+print("last poll        ", c.execute("SELECT MAX(finished_at) FROM polls").fetchone()[0])
+PY
+  fi
+}
+
+need_root
+case "${1:-}" in
+  install) install_app ;;
+  caddy) caddy_site ;;
+  status) status ;;
+  *) sed -n 2,15p "$0"; exit 1 ;;
+esac

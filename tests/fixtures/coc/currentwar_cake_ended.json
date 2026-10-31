@@ -1,0 +1,18 @@
+{"state": "warEnded", "teamSize": 2, "attacksPerMember": 2,
+ "preparationStartTime": "20261020T120000.000Z", "startTime": "20261021T120000.000Z", "endTime": "20261022T120000.000Z",
+ "clan": {"tag": "#20CU2R80R", "name": "Cake", "stars": 5, "destructionPercentage": 91.5, "attacks": 3,
+   "members": [
+     {"tag": "#CGJ8YR8J", "name": "Maki", "townhallLevel": 18, "mapPosition": 1, "opponentAttacks": 1,
+      "attacks": [{"attackerTag": "#CGJ8YR8J", "defenderTag": "#LQ2V9P8G", "stars": 3, "destructionPercentage": 100, "order": 1, "duration": 140}]},
+     {"tag": "#P0LYJ9QU", "name": "cake two", "townhallLevel": 18, "mapPosition": 2, "opponentAttacks": 1,
+      "attacks": [{"attackerTag": "#P0LYJ9QU", "defenderTag": "#GQ8U2J0Y", "stars": 2, "destructionPercentage": 83, "order": 2, "duration": 170},
+                  {"attackerTag": "#P0LYJ9QU", "defenderTag": "#GQ8U2J0Y", "stars": 0, "destructionPercentage": 40, "order": 4, "duration": 180}]}
+   ]},
+ "opponent": {"tag": "#2LQ8PYV0", "name": "Rivals", "stars": 4, "destructionPercentage": 80.0, "attacks": 2,
+   "members": [
+     {"tag": "#LQ2V9P8G", "name": "rival one", "townhallLevel": 18, "mapPosition": 1, "opponentAttacks": 1,
+      "attacks": [{"attackerTag": "#LQ2V9P8G", "defenderTag": "#CGJ8YR8J", "stars": 2, "destructionPercentage": 88, "order": 3, "duration": 175}]},
+     {"tag": "#GQ8U2J0Y", "name": "rival two", "townhallLevel": 17, "mapPosition": 2, "opponentAttacks": 2,
+      "attacks": [{"attackerTag": "#GQ8U2J0Y", "defenderTag": "#P0LYJ9QU", "stars": 2, "destructionPercentage": 72, "order": 5, "duration": 180}]}
+   ]}
+}
