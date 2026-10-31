@@ -164,28 +164,37 @@ def war_stats(conn, where: str = "1", args: tuple = ()) -> dict[str, dict]:
         h = hits.get(tag)
         used = h["n"] if h else 0
         out[tag] = {
-            "wars_played": n, "attacks_used": used, "attacks_missed": missed.get(tag, 0),
-            "three_star_rate": round(h["threes"] / used, 3) if used else None,
-            "avg_stars": round(h["stars"] / used, 2) if used else None,
+            "wars": n, "attacks": used, "stars": h["stars"] if h else 0, "three_stars": h["threes"] if h else 0,
+            "missed": missed.get(tag, 0),
             "avg_destruction": round(h["destruction"], 1) if used else None,
+            "avg_stars": round(h["stars"] / used, 2) if used else None,
+            "three_star_rate": round(h["threes"] / used, 3) if used else None,
         }
     return out
 
 
-def war_record(conn) -> dict:
-    """GET /explore/war: every current member's all-time war stars from their profile, and their record over the
-    wars this collector has seen (since `since`), with the current CWL season on its own. A member with no recorded
-    war has recorded and cwl null."""
+def api_day(t: str | None) -> str | None:
+    return f"{t[:4]}-{t[4:6]}-{t[6:8]}" if t else None  # 20261031T080000.000Z -> 2026-10-31
+
+
+def war_record(conn, scope: str = "all") -> dict:
+    """GET /explore/war?scope=all|cwl: every current member's all-time war stars from their profile, and their record
+    over the wars this collector has seen. scope=all is every recorded war, regular and CWL, since `since`; scope=cwl is
+    the current league season only. A member with no recorded war in the scope has war null."""
+    if scope not in ("all", "cwl"):
+        raise HTTPException(422, "scope is all or cwl")
     if conn is None:
-        return {"kind": "war", "as_of": None, "since": None, "cwl_season": None, "players": []}
-    since = conn.execute("SELECT MIN(started_at) FROM polls").fetchone()[0]
-    as_of = conn.execute("SELECT MAX(finished_at) FROM polls").fetchone()[0]
+        return {"kind": "war", "scope": scope, "since": None, "season": None, "updated_at": None, "players": []}
+    since = conn.execute("SELECT MIN(COALESCE(start_time, preparation_start)) FROM wars").fetchone()[0]
+    updated = conn.execute("SELECT MAX(finished_at) FROM polls").fetchone()[0]
     season = conn.execute("SELECT MAX(season) FROM wars WHERE kind='cwl'").fetchone()[0]
-    recorded = war_stats(conn)
-    cwl = war_stats(conn, "w.kind='cwl' AND w.season=?", (season,)) if season else {}
-    rows = [{**row(m), "war_stars": m["war_stars"], "recorded": recorded.get(m["tag"]), "cwl": cwl.get(m["tag"])}
-            for m in current_members(conn)]
-    return {"kind": "war", "as_of": as_of, "since": since[:10] if since else None, "cwl_season": season,
+    if scope == "all":
+        stats = war_stats(conn)
+    else:
+        stats = war_stats(conn, "w.kind='cwl' AND w.season=?", (season,)) if season else {}
+    rows = [{**row(m), "war_stars": m["war_stars"], "war": stats.get(m["tag"])} for m in current_members(conn)]
+    # Ranked by all-time war stars in both scopes, so a player keeps their place when the scope changes.
+    return {"kind": "war", "scope": scope, "since": api_day(since), "season": season, "updated_at": updated,
             "players": ranked(rows, lambda r: r["war_stars"])}
 
 

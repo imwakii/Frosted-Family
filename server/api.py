@@ -174,8 +174,8 @@ def allocation():
 
 
 @app.get("/explore/war")  # before /explore/{board}, like matrix
-def explore_war():
-    return profiles.war_record(open_db())
+def explore_war(scope: str = "all"):
+    return profiles.war_record(open_db(), scope)
 
 
 @app.get("/explore/matrix")  # before /explore/{board}, which would otherwise take "matrix"
