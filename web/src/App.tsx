@@ -89,9 +89,9 @@ export default function App() {
         <CwlTab roster={roster} war={war} wide={wide} q={q} setQ={setQ} />
       )}
 
-      <footer className="mx-auto max-w-[1320px] px-4 pb-6 pt-2 text-center text-[11px] leading-relaxed text-faint">
-        This material is unofficial and is not endorsed by Supercell. For more information see Supercell's Fan Content Policy:{' '}
-        <a href="https://supercell.com/en/fan-content-policy/" target="_blank" rel="noopener noreferrer" className="text-faint underline hover:text-muted">www.supercell.com/fan-content-policy</a>.
+      <footer className="mx-auto max-w-[1320px] px-4 pb-4 pt-1 text-center text-[10px] text-faint opacity-70">
+        Unofficial, not endorsed by Supercell.{' '}
+        <a href="https://supercell.com/en/fan-content-policy/" target="_blank" rel="noopener noreferrer" className="text-faint underline hover:text-muted">Fan Content Policy</a>
       </footer>
 
       {roster && route.player &&<PlayerSheet tag={route.player} roster={roster} wide={wide} onClose={closeSheet} />}
