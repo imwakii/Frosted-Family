@@ -158,3 +158,16 @@ export async function publishPlan(moves: { tag: string; clan: ClanName; slot: st
     body: JSON.stringify({ moves }),
   })
 }
+
+export type DraftMove = { tag: string; clan: ClanName; slot: Slot }
+export type Draft = { moves: DraftMove[]; updated_at?: string | null; updated_by?: string | null }
+
+export const getDraft = () => getJson<Draft>('/api/plan/draft', { credentials: 'same-origin' })
+
+export const saveDraft = (moves: DraftMove[]) =>
+  getJson<Draft>('/api/plan/draft', {
+    method: 'PUT',
+    credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ moves }),
+  })

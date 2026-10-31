@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { HttpError, publishPlan } from '../data'
+import { loginHref, type Me } from '../auth'
+import { getDraft, HttpError, publishPlan, saveDraft } from '../data'
 import { CLAN, CLANS, GROUPS, STATUS, coreAvg, fmtScore } from '../theme'
 import type { ClanName, Player, Roster, Slot } from '../types'
 import { Arrow, Th } from './ui'
@@ -80,14 +81,43 @@ function PlanRow({ p, at, onPlace }: { p: Player; at: Place; onPlace: (v: Place)
   )
 }
 
-function Plan({ roster }: { roster: Roster }) {
+const toList = (m: Moves) => Object.entries(m).map(([tag, v]) => ({ tag, ...v })).sort((a, b) => a.tag.localeCompare(b.tag))
+const sameMoves = (a: Moves, b: Moves) => JSON.stringify(toList(a)) === JSON.stringify(toList(b))
+
+function Plan({ roster, me }: { roster: Roster; me: Me }) {
   const [moves, setMoves] = useState<Moves>(() => readDraft(roster))
+  const [saved, setSaved] = useState<{ moves: Moves; by: string | null } | null>(null)
+  const [saving, setSaving] = useState(false)
   const [confirming, setConfirming] = useState(false)
   const [result, setResult] = useState<{ ok: boolean; n: number; why?: string } | null>(null)
   const [busy, setBusy] = useState(false)
   const [phoneClan, setPhoneClan] = useState<ClanName>('Fire')
 
   useEffect(() => { try { localStorage.setItem(DRAFT_KEY, JSON.stringify(moves)) } catch { /* private mode */ } }, [moves])
+
+  // The shared draft on the server; it fills the board unless this browser has unsaved moves.
+  useEffect(() => {
+    const tags = new Set(roster.players.map((p) => p.tag))
+    getDraft().then((d) => {
+      const server: Moves = Object.fromEntries((d.moves ?? []).filter((m) => tags.has(m.tag)).map((m) => [m.tag, { clan: m.clan, slot: m.slot }]))
+      setSaved({ moves: server, by: d.updated_by ?? null })
+      setMoves((local) => (Object.keys(local).length ? local : server))
+    }).catch(() => setSaved(null))
+  }, [roster])
+
+  const save = async () => {
+    setSaving(true)
+    try {
+      const d = await saveDraft(toList(moves))
+      setSaved({ moves, by: d.updated_by ?? me.user?.name ?? null })
+    } catch {
+      setResult({ ok: false, n: 0, why: 'Draft not saved. Try again.' })
+    } finally {
+      setSaving(false)
+    }
+  }
+  const dirty = saved ? !sameMoves(moves, saved.moves) : Object.keys(moves).length > 0
+  const canPublish = me.role === 'publisher'
 
   const at = (p: Player): Place => moves[p.tag] ?? { clan: p.clan, slot: p.slot }
   const place = (p: Player, v: Place) => {
@@ -145,9 +175,10 @@ function Plan({ roster }: { roster: Roster }) {
       await publishPlan(changes.map((p) => ({ tag: p.tag, ...moves[p.tag] })))
       setResult({ ok: true, n })
       setMoves({})
+      setSaved({ moves: {}, by: me.user?.name ?? null })
     } catch (e) {
       const auth = e instanceof HttpError && (e.status === 401 || e.status === 403)
-      setResult({ ok: false, n, why: auth ? 'Not published. Leader sign-in is not set up yet.' : 'Not published. The server is offline.' })
+      setResult({ ok: false, n, why: auth ? 'Not published. Only the publisher can publish.' : 'Not published. The server is offline.' })
     } finally {
       setBusy(false)
       setConfirming(false)
@@ -160,14 +191,22 @@ function Plan({ roster }: { roster: Roster }) {
         <div className="mx-auto flex max-w-[1360px] flex-wrap items-center gap-2 px-[clamp(16px,3vw,32px)] py-2.5 md:pt-5">
           <span className="rounded-full bg-[#EEF1F6] px-3 py-1.5 text-[13px] font-bold text-ink-2">{changeLabel}</span>
           <span className="flex-auto" />
-          <button type="button" onClick={() => { setMoves({}); setResult(null) }} disabled={!n}
-            className="min-h-10 cursor-pointer rounded-[10px] border border-[#D5DBE5] bg-white px-3.5 text-sm font-semibold text-ink-2 hover:bg-page disabled:cursor-not-allowed disabled:opacity-50">
-            Reset
+          {n > 0 && (
+            <button type="button" onClick={() => { setMoves({}); setResult(null) }}
+              className="min-h-10 cursor-pointer rounded-[10px] border border-[#D5DBE5] bg-white px-3 text-sm font-semibold text-ink-2 hover:bg-page">
+              Reset
+            </button>
+          )}
+          <button type="button" onClick={save} disabled={!dirty || saving}
+            className="min-h-10 cursor-pointer rounded-[10px] border border-[#D5DBE5] bg-white px-3 text-sm font-semibold text-ink-2 hover:bg-page disabled:cursor-default disabled:opacity-60">
+            {dirty ? 'Save' : 'Saved'}
           </button>
-          <button type="button" onClick={() => setConfirming(true)} disabled={cant}
-            className="min-h-10 cursor-pointer rounded-[10px] border-0 bg-action px-4 text-sm font-bold text-white hover:bg-action-deep disabled:cursor-not-allowed disabled:bg-[#E2E8F0] disabled:text-faint">
-            Publish to CWL
-          </button>
+          {canPublish ? (
+            <button type="button" onClick={() => setConfirming(true)} disabled={cant}
+              className="min-h-10 cursor-pointer rounded-[10px] border-0 bg-action px-4 text-sm font-bold text-white hover:bg-action-deep disabled:cursor-not-allowed disabled:bg-[#E2E8F0] disabled:text-faint">
+              Publish
+            </button>
+          ) : null}
         </div>
       </div>
 
@@ -180,6 +219,9 @@ function Plan({ roster }: { roster: Roster }) {
         )}
 
         <section aria-label="Checks" className="flex flex-wrap gap-2">
+          {!canPublish && me.publishers.length > 0 && (
+            <span className="flex min-h-[34px] items-center rounded-full bg-[#EEF1F6] px-3 text-[13px] font-bold text-muted">{me.publishers.join(', ')} publishes</span>
+          )}
           {checks.map((k) => <CheckChip key={k.key} k={k} />)}
           {checks.every((k) => k.tone === 'ok') && <CheckChip k={{ key: 'all', label: 'All rules pass', tip: '', tone: 'ok' }} className="!flex md:!hidden" />}
         </section>
@@ -266,12 +308,11 @@ function Plan({ roster }: { roster: Roster }) {
   )
 }
 
-// Placeholder gate until leader sign-in exists. Open in dev, or when the
-// deployment sets VITE_PLAN_OPEN=1.
-const OPEN = import.meta.env.DEV || import.meta.env.VITE_PLAN_OPEN === '1'
+const Discord = () => (
+  <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M20.3 4.4A19.6 19.6 0 0 0 15.4 3l-.6 1.3a18.2 18.2 0 0 0-5.6 0L8.6 3a19.5 19.5 0 0 0-4.9 1.4C.6 9 -.3 13.5.1 18a19.8 19.8 0 0 0 6 3l1.3-2a12.7 12.7 0 0 1-2-1l.5-.4a14 14 0 0 0 12.2 0l.5.4c-.6.4-1.3.7-2 1l1.3 2a19.7 19.7 0 0 0 6-3c.5-5.2-.8-9.7-3.6-13.6ZM8.3 15.3c-1.2 0-2.2-1.1-2.2-2.4s1-2.4 2.2-2.4 2.2 1.1 2.2 2.4-1 2.4-2.2 2.4Zm7.4 0c-1.2 0-2.2-1.1-2.2-2.4s1-2.4 2.2-2.4 2.2 1.1 2.2 2.4-1 2.4-2.2 2.4Z" /></svg>
+)
 
-export default function PlanTab({ roster }: { roster: Roster }) {
-  if (OPEN) return <Plan roster={roster} />
+function Gate({ me, onSignOut }: { me: Me; onSignOut: () => void }) {
   return (
     <main className="mx-auto flex max-w-[1360px] justify-center px-4 pt-16">
       <section className="flex w-full max-w-[380px] flex-col items-center gap-3 rounded-[20px] border border-line bg-white px-6 py-8 text-center">
@@ -279,8 +320,25 @@ export default function PlanTab({ roster }: { roster: Roster }) {
           <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="11" width="14" height="9" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></svg>
         </span>
         <h2 className="m-0 text-xl font-extrabold tracking-[-0.02em]">Leaders only</h2>
-        <button type="button" disabled className="min-h-11 w-full rounded-[10px] border-0 bg-[#E2E8F0] text-sm font-bold text-faint">Sign in · soon</button>
+        {me.user ? (
+          <>
+            <span className="text-sm text-faint">Signed in as {me.user.name}</span>
+            <button type="button" onClick={onSignOut}
+              className="min-h-11 w-full cursor-pointer rounded-[10px] border border-[#D5DBE5] bg-white text-sm font-semibold text-ink-2 hover:bg-page">Sign out</button>
+          </>
+        ) : (
+          <a href={loginHref()}
+            className="mt-1 flex min-h-12 w-full items-center justify-center gap-2.5 rounded-[12px] bg-[#5865F2] text-[15px] font-bold text-white no-underline hover:bg-[#4752C4]">
+            <Discord />Sign in with Discord
+          </a>
+        )}
       </section>
     </main>
   )
+}
+
+export default function PlanTab({ roster, me, ready, onSignOut }: { roster: Roster; me: Me; ready: boolean; onSignOut: () => void }) {
+  if (!ready) return <div aria-busy="true" aria-label="Loading" className="mx-auto mt-16 h-48 max-w-[380px] animate-pulse rounded-[20px] bg-well" />
+  if (me.role) return <Plan roster={roster} me={me} />
+  return <Gate me={me} onSignOut={onSignOut} />
 }

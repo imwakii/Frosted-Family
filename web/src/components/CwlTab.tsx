@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { CLAN, CLANS, GROUPS, SLOT_TEXT, coreAvg, fmtScore } from '../theme'
+import { playerHref } from '../route'
 import type { ClanName, LiveWar, Player, Roster } from '../types'
 import { Arrow, Eyebrow, LiveLine, SearchIcon, StatusPill, Th } from './ui'
 
-type Props = { roster: Roster; war: Partial<Record<ClanName, LiveWar | null>>; wide: boolean }
+type Props = { roster: Roster; war: Partial<Record<ClanName, LiveWar | null>>; wide: boolean; q: string; setQ: (v: string) => void }
 
-const norm = (s: string) => s.normalize('NFKD').replace(/[̀-ͯ]/g, '').toLowerCase()
+export const norm = (s: string) => s.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
 const matches = (p: Player, q: string) => norm(p.name).includes(q) || p.tag.toLowerCase().includes(q)
-const href = (p: Player) => `#/p/${encodeURIComponent(p.tag.slice(1))}`
+const href = (p: Player) => playerHref(p.tag)
 
 function groupsFor(roster: Roster, clan: ClanName) {
   const mine = roster.players.filter((p) => p.clan === clan)
@@ -26,7 +27,7 @@ function clanFacts(roster: Roster, clan: ClanName) {
   }
 }
 
-function SearchBox({ q, setQ, tall, onEnter }: { q: string; setQ: (v: string) => void; tall?: boolean; onEnter?: () => void }) {
+export function SearchBox({ q, setQ, tall, onEnter }: { q: string; setQ: (v: string) => void; tall?: boolean; onEnter?: () => void }) {
   return (
     <div className="relative min-w-0">
       <label htmlFor="find" className="sr-only">Find your name</label>
@@ -104,8 +105,7 @@ function readClan(): ClanName {
   } catch { return 'Fire' }
 }
 
-function Phone({ roster, war }: Omit<Props, 'wide'>) {
-  const [q, setQ] = useState('')
+function Phone({ roster, war, q, setQ }: Omit<Props, 'wide'>) {
   const [clan, setClan] = useState<ClanName>(readClan)
   useEffect(() => { try { sessionStorage.setItem('ff-clan', clan) } catch { /* private mode */ } }, [clan])
   const nq = norm(q.trim())
@@ -162,8 +162,7 @@ function Phone({ roster, war }: Omit<Props, 'wide'>) {
   )
 }
 
-function Desktop({ roster, war }: Omit<Props, 'wide'>) {
-  const [q, setQ] = useState('')
+function Desktop({ roster, war, q, setQ }: Omit<Props, 'wide'>) {
   const nq = norm(q.trim())
   const movers = roster.players.filter((p) => p.from)
   const grid = useRef<HTMLDivElement>(null)
