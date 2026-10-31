@@ -9,7 +9,7 @@ export const CATS = [
   { id: 'troops', label: 'Troops', icon: 'P.E.K.K.A' },
   { id: 'spells', label: 'Spells', icon: 'Lightning Spell' },
   { id: 'pets', label: 'Pets', icon: 'L.A.S.S.I' },
-  { id: 'sieges', label: 'Sieges', icon: null },
+  { id: 'sieges', label: 'Sieges', icon: 'Log Launcher' },
 ] as const
 export type Cat = (typeof CATS)[number]['id']
 
