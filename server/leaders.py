@@ -2,10 +2,10 @@
 
 Everything here only reads. The make-room list gives reasons, never decisions: who leaves a clan is Ka Wai's call.
 
-Activity comes from profile snapshots, taken every 2 hours. A snapshot is stored only when a counter moved
-(attack wins, war stars, donations given or received, capital contributions, trophies, builder trophies, experience
-level, any unit level), so every snapshot after a player's first is a sign of activity. Two counters can move without
-the player: trophies fall or rise on defense, and donations reset to 0 at season end.
+Activity comes from profile snapshots, taken every 2 hours and stored when any counter moved. A snapshot shows
+activity when, against the one before it, attack wins, war stars, capital contributions, experience level, town hall
+or any unit level changed, or donations given or received rose. Trophies and builder trophies do not count, as
+defenses move them while the player is idle, and a season reset of donations to 0 is not activity.
 """
 from __future__ import annotations
 
@@ -92,18 +92,29 @@ def upgrades(conn, days: int = 7, clan: str | None = None) -> dict:
 
 # ─── inactivity ───────────────────────────────────────────────────────────────
 
+ACTIVE_IF_CHANGED = ("town_hall", "exp_level", "attack_wins", "war_stars", "capital_contributions", "unit_levels")
+ACTIVE_IF_RISEN = ("donations", "donations_received")  # both reset to 0 at season end, which is not activity
+# Trophies and builder trophies are left out: defenses move them while the player is idle.
+
+
+def was_active(before, after) -> bool:
+    return (any(after[k] != before[k] for k in ACTIVE_IF_CHANGED)
+            or any((after[k] or 0) > (before[k] or 0) for k in ACTIVE_IF_RISEN))
+
+
 def activity(conn) -> dict[str, dict]:
-    """Per member: last_active, days_inactive and the date tracking began for them."""
-    snaps: dict[str, list[str]] = {}
-    for s in conn.execute("SELECT player_tag, fetched_at FROM profile_snapshots ORDER BY player_tag, fetched_at"):
-        snaps.setdefault(s["player_tag"], []).append(s["fetched_at"])
+    """Per member: last_active (the latest snapshot that shows activity against the one before), days_inactive and
+    the date tracking began for them."""
+    snaps: dict[str, list] = {}
+    for s in conn.execute("SELECT * FROM profile_snapshots ORDER BY player_tag, fetched_at"):
+        snaps.setdefault(s["player_tag"], []).append(s)
     t = now()
     out = {}
-    for tag, times in snaps.items():
-        last = times[-1] if len(times) > 1 else None
-        ref = parse(last or times[0])
-        out[tag] = {"last_active": last, "tracking_since": times[0], "days_inactive": (t - ref).days,
-                    # No change seen since tracking began: days_inactive is a floor, not the full idle time.
+    for tag, rows in snaps.items():
+        last = next((b["fetched_at"] for a, b in reversed(list(zip(rows, rows[1:]))) if was_active(a, b)), None)
+        ref = parse(last or rows[0]["fetched_at"])
+        out[tag] = {"last_active": last, "tracking_since": rows[0]["fetched_at"], "days_inactive": (t - ref).days,
+                    # No activity seen since tracking began: days_inactive is a floor, not the full idle time.
                     "inactive_at_least": last is None}
     return out
 

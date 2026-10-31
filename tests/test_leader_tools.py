@@ -36,10 +36,12 @@ def timeline(env, monkeypatch):
         for p in (waki, maki, flake):
             profiles.upsert_profile(conn, p, T0)
         conn.execute("INSERT INTO profile_runs VALUES (?, 3)", (T0,))
-        # T1: Waki levels the King and unlocks a troop; flake reaches TH15; Maki changes nothing.
+        # T1: Waki levels the King and unlocks a troop; flake reaches TH15. Maki only loses trophies on defense and
+        # has donations reset by the new season: neither is activity.
         waki["heroes"][0]["level"] = 101
         waki["troops"].append({"name": "Electro Titan", "level": 1, "maxLevel": 4, "village": "home"})
         flake["townHallLevel"] = 15
+        maki.update(trophies=5100, donations=0, donationsReceived=0)
         for p in (waki, maki, flake):
             profiles.upsert_profile(conn, p, T1)
         conn.execute("INSERT INTO profile_runs VALUES (?, 3)", (T1,))
@@ -130,13 +132,13 @@ def test_inactivity_per_member(passcode_only, raw):
     c, _ = leader_client()
     rows = {r["name"]: r for r in c.get("/leaders/inactivity").json()["players"]}
     assert (rows["Waki renamed"]["last_active"], rows["Waki renamed"]["days_inactive"]) == (T1, 4)
-    # Maki changed nothing since tracking began: 9 days is a floor.
+    # Maki showed no activity since tracking began (a trophy drop and a season reset only): 9 days is a floor.
     assert rows["Maki"]["last_active"] is None and rows["Maki"]["days_inactive"] == 9
     assert rows["Maki"]["inactive_at_least"] is True and rows["Maki"]["tracking_since"] == T0
     # Last war attack: recorded wars, or the export's "Date last war" when later (29 Oct in the raw fixture).
     assert rows["Waki renamed"]["last_war_attack"] == "2026-11-04"
     assert rows["Maki"]["last_war_attack"] == "2026-10-29"
-    assert rows["Maki"]["donations"] == 300 and rows["Maki"]["missed_attacks_recorded"] == 1
+    assert rows["Maki"]["donations"] == 0 and rows["Maki"]["missed_attacks_recorded"] == 1
     assert rows["newbie"]["days_inactive"] is None and rows["newbie"]["missed_attacks_recorded"] == 1
     assert c.get("/leaders/inactivity").headers["cache-control"] == "no-store, private"
 
@@ -153,9 +155,9 @@ def test_make_room_lists_reasons_and_never_decides(passcode_only):
     assert rows["Waki renamed"]["reasons"] == [] and rows["Waki renamed"]["score"] == 0
     assert fire["players"][0]["name"] == "newbie"
     cake = c.get("/leaders/make-room", params={"clan": "Cake"}).json()["players"]
-    # Inactivity weighs heaviest: Maki's 9 idle days (27) outrank cake two's one other reason (10).
-    assert [(r["name"], r["score"]) for r in cake] == [("Maki", 27), ("cake two", 10)]
-    assert cake[0]["reasons"] == [{"code": "inactive_days", "value": 9}]
+    # Inactivity weighs heaviest: Maki's 9 idle days (27) plus no donations (10) outrank cake two's one reason (10).
+    assert [(r["name"], r["score"]) for r in cake] == [("Maki", 37), ("cake two", 10)]
+    assert cake[0]["reasons"] == [{"code": "inactive_days", "value": 9}, {"code": "no_donations", "value": 0}]
     assert c.get("/leaders/make-room", params={"clan": "Ice"}).status_code == 422
 
 
@@ -168,3 +170,14 @@ def test_reason_codes_from_the_roster():
     # Flakes sits out CWL by choice and has no TH floor.
     assert leaders.reasons_for(m, "Flakes", {}, {**alloc, "flag_high_miss": "False", "tier": "PROVEN"}, 0) == \
         [{"code": "no_donations", "value": 0}]
+
+
+def test_what_counts_as_activity():
+    base = {"town_hall": 17, "exp_level": 200, "attack_wins": 5, "war_stars": 900, "capital_contributions": 1000,
+            "unit_levels": 400, "donations": 50, "donations_received": 20, "trophies": 5000, "builder_trophies": 3000}
+    assert not leaders.was_active(base, {**base, "trophies": 4950, "builder_trophies": 3100})
+    assert not leaders.was_active(base, {**base, "donations": 0, "donations_received": 0})  # season reset
+    assert leaders.was_active(base, {**base, "donations": 51})
+    assert leaders.was_active(base, {**base, "donations_received": 21})
+    for k in ("town_hall", "exp_level", "attack_wins", "war_stars", "capital_contributions", "unit_levels"):
+        assert leaders.was_active(base, {**base, k: base[k] + 1})
