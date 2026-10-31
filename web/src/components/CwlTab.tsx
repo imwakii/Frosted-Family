@@ -3,7 +3,7 @@ import { CLAN, CLANS, GROUPS, SLOT_TEXT, coreAvg, fmtScore } from '../theme'
 import { playerHref } from '../route'
 import type { ClanName, LiveWar, Player, Roster } from '../types'
 import { useClans, type ClanMeta } from '../clash'
-import { Arrow, ClanBadge, Eyebrow, LeaguePill, SearchIcon, StatusPill, Th, WarPill } from './ui'
+import { ClanBadge, Eyebrow, LeaguePill, SearchIcon, StatusPill, Th, WarPill } from './ui'
 
 type Props = { roster: Roster; war: Partial<Record<ClanName, LiveWar | null>>; wide: boolean; q: string; setQ: (v: string) => void }
 
@@ -69,23 +69,15 @@ export function SearchBox({ q, setQ, tall, onEnter }: { q: string; setQ: (v: str
   )
 }
 
-function Movers({ movers, row }: { movers: Player[]; row?: boolean }) {
-  if (!movers.length) return null
+// A move into this clan before sign-up, shown after the name as on the poster,
+// tinted with the clan the player comes from.
+function FromPill({ from }: { from: ClanName | null }) {
+  if (!from) return null
   return (
-    <section aria-label="Move before sign-up" className={row
-      ? 'flex flex-[2_1_480px] flex-wrap items-center gap-x-4 gap-y-1 rounded-[14px] border border-line bg-white px-4 py-2'
-      : 'flex flex-col gap-0.5 rounded-2xl border border-line bg-white px-3.5 py-3'}>
-      <Eyebrow className={row ? 'mr-1' : 'mb-1'}>Move before sign-up</Eyebrow>
-      {movers.map((m) => (
-        <a key={m.tag} href={href(m)}
-          className={`flex min-h-9 items-center gap-2 rounded-lg text-ink no-underline hover:bg-hover ${row ? '-mx-1 px-1.5 text-sm' : '-mx-1.5 px-1.5 text-[15px]'}`}>
-          <span className={`font-semibold ${row ? '' : 'min-w-0 flex-auto truncate'}`}>{m.name}</span>
-          <span className="text-[13px] font-bold" style={{ color: CLAN[m.from!].deep }}>{m.from}</span>
-          <Arrow size={row ? 14 : 16} />
-          <span className="text-[13px] font-bold" style={{ color: CLAN[m.clan].deep }}>{m.clan}</span>
-        </a>
-      ))}
-    </section>
+    <span className="flex-none whitespace-nowrap rounded-full px-1.5 py-px text-[10px] font-extrabold uppercase tracking-[0.04em]"
+      style={{ background: CLAN[from].tint, color: CLAN[from].deep }}>
+      From {from}
+    </span>
   )
 }
 
@@ -95,7 +87,10 @@ function Row({ p, first, hit, dense }: { p: Player; first: boolean; hit?: boolea
       <a href={href(p)} data-tag={p.tag}
         className={`flex items-center gap-3 text-ink no-underline ${dense ? 'min-h-[42px] px-2.5' : 'min-h-[46px] px-3.5'} ${first ? '' : 'border-t border-hair'} ${hit ? 'bg-hit' : 'hover:bg-hover'}`}>
         <Th th={p.th} />
-        <span className={`min-w-0 flex-auto truncate font-semibold ${dense ? 'text-sm' : 'text-[15px]'}`}>{p.name}</span>
+        <span className="flex min-w-0 flex-auto items-center gap-1.5">
+          <span className={`min-w-0 truncate font-semibold ${dense ? 'text-sm' : 'text-[15px]'}`}>{p.name}</span>
+          <FromPill from={p.from} />
+        </span>
         <StatusPill status={p.status} />
         <span className="w-10 flex-none text-right text-sm font-bold tabular-nums text-muted">{fmtScore(p.score)}</span>
       </a>
@@ -138,7 +133,6 @@ function Phone({ roster, war, q, setQ }: Omit<Props, 'wide'>) {
   useEffect(() => { try { sessionStorage.setItem('ff-clan', clan) } catch { /* private mode */ } }, [clan])
   const nq = norm(q.trim())
   const results = nq ? roster.players.filter((p) => matches(p, nq)).slice(0, 12) : []
-  const movers = roster.players.filter((p) => p.from)
   const clans = useClans()
 
   return (
@@ -154,7 +148,10 @@ function Phone({ roster, war, q, setQ }: Omit<Props, 'wide'>) {
                 <a href={href(p)}
                   className={`flex min-h-[52px] items-center gap-3 px-3.5 py-1.5 text-ink no-underline hover:bg-hover ${i ? 'border-t border-hair' : ''}`}>
                   <Th th={p.th} />
-                  <span className="min-w-0 flex-auto truncate text-[15px] font-semibold">{p.name}</span>
+                  <span className="flex min-w-0 flex-auto items-center gap-1.5">
+                    <span className="min-w-0 truncate text-[15px] font-semibold">{p.name}</span>
+                    <FromPill from={p.from} />
+                  </span>
                   <span className="flex-none whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-bold" style={{ background: CLAN[p.clan].tint, color: CLAN[p.clan].deep }}>
                     {p.clan} · {roster.clans[p.clan]?.inCwl ? SLOT_TEXT[p.slot] : 'Not playing'}
                   </span>
@@ -165,7 +162,6 @@ function Phone({ roster, war, q, setQ }: Omit<Props, 'wide'>) {
           </ul>
         ) : (
           <>
-            <Movers movers={movers} />
             <nav aria-label="Clan" className="grid grid-cols-3 gap-1 rounded-xl bg-well p-1">
               {CLANS.map((k) => (
                 <button key={k} type="button" aria-pressed={k === clan} onClick={() => setClan(k)}
@@ -187,7 +183,6 @@ function Phone({ roster, war, q, setQ }: Omit<Props, 'wide'>) {
 
 function Desktop({ roster, war, q, setQ }: Omit<Props, 'wide'>) {
   const nq = norm(q.trim())
-  const movers = roster.players.filter((p) => p.from)
   const grid = useRef<HTMLDivElement>(null)
   const clans = useClans()
   const hits = useMemo(() => (nq ? roster.players.filter((p) => matches(p, nq)) : []), [nq, roster])
@@ -200,12 +195,9 @@ function Desktop({ roster, war, q, setQ }: Omit<Props, 'wide'>) {
 
   return (
     <main className="mx-auto flex max-w-[1320px] flex-col gap-4 px-[clamp(16px,3vw,32px)] pb-12 pt-6">
-      <div className="flex flex-wrap items-stretch gap-3">
-        <div className="flex flex-[1_1_320px] flex-col gap-1">
-          <SearchBox q={q} setQ={setQ} tall onEnter={() => { if (hits[0]) window.location.hash = href(hits[0]) }} />
-          {nq && !hits.length && <span className="px-1 text-sm text-faint">No one by that name</span>}
-        </div>
-        <Movers movers={movers} row />
+      <div className="flex max-w-[480px] flex-col gap-1">
+        <SearchBox q={q} setQ={setQ} tall onEnter={() => { if (hits[0]) window.location.hash = href(hits[0]) }} />
+        {nq && !hits.length && <span className="px-1 text-sm text-faint">No one by that name</span>}
       </div>
       <div ref={grid} className="grid items-start gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr))]">
         {CLANS.map((clan) => {
