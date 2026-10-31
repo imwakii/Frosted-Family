@@ -1,16 +1,16 @@
 import type { Unit } from './explore'
 
 // Hero equipment by hero, in hero order; within each hero, commons (max 18)
-// then epics (max 27). An unconfirmed piece goes under null, shown last
-// without a label, as does any equipment the API adds before this list knows it.
+// then epics (max 27). Equipment the API adds before this list knows it goes
+// under null, shown last without a label.
 const BY_HERO: [string | null, string[]][] = [
   ['Barbarian King', ['Barbarian Puppet', 'Rage Vial', 'Earthquake Boots', 'Vampstache', 'Giant Gauntlet', 'Spiky Ball', 'Snake Bracelet', 'Stick Horse']],
   ['Archer Queen', ['Archer Puppet', 'Invisibility Vial', 'Giant Arrow', 'Healer Puppet', 'Frozen Arrow', 'Magic Mirror', 'Action Figure', 'Monolith Arrow']],
   ['Grand Warden', ['Eternal Tome', 'Life Gem', 'Rage Gem', 'Healing Tome', 'Fireball', 'Lavaloon Puppet', 'Heroic Torch']],
   ['Royal Champion', ['Royal Gem', 'Seeking Shield', 'Hog Rider Puppet', 'Haste Vial', 'Rocket Spear', 'Electro Boots', 'Frost Flake']],
   ['Minion Prince', ['Henchmen Puppet', 'Dark Orb', 'Metal Pants', 'Noble Iron', 'Dark Crown', 'Meteor Staff']],
-  ['Dragon Duke', ['Fire Heart', 'Stun Blaster', 'Flame Blower', 'Electro Fangs', 'Rocket Backpack', 'Revenge Deck']],
-  [null, ['Portal Pendant']],
+  ['Dragon Duke', ['Fire Heart', 'Stun Blaster', 'Flame Blower', 'Electro Fangs', 'Rocket Backpack', 'Revenge Deck', 'Portal Pendant']],
+  [null, []],
 ]
 
 export type UnitGroup = { hero: string | null; idx: number[] }
