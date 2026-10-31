@@ -36,6 +36,8 @@ install_app() {
   install -d -m 755 -o "$BOT" -g bots "$BOT_HOME" "$BOT_HOME/data"
   # The token file: root only, read by systemd. Created empty; the token is pasted in by hand.
   [ -f "$BOT_HOME/api.env" ] || install -m 600 -o root -g root /dev/null "$BOT_HOME/api.env"
+  # A file made by hand may be world-readable; the token is for root (systemd) only.
+  chown root:root "$BOT_HOME/api.env"; chmod 600 "$BOT_HOME/api.env"
 
   if [ -d "$BOT_HOME/repo/.git" ]; then
     as_bot git -C "$BOT_HOME/repo" fetch -q origin "$BRANCH"
