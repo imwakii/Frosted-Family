@@ -164,13 +164,77 @@ def test_make_room_lists_reasons_and_never_decides(passcode_only):
     rows = {r["name"]: r for r in fire["players"]}
     assert {r["code"]: r["value"] for r in rows["newbie"]["reasons"]} == {
         "missed_recent": 1, "low_th_for_clan": 17, "new_and_unproven": "not on the roster"}
-    assert rows["Waki renamed"]["reasons"] == [] and rows["Waki renamed"]["score"] == 0
-    assert fire["players"][0]["name"] == "newbie"
+    assert rows["Waki renamed"]["reasons"] == [] and "score" not in rows["Waki renamed"]
+    # Activity first: Waki was last active 4 days ago (3 to 6); newbie has no profile yet, so counts as active.
+    assert [(r["name"], r["activity"], r["position"]) for r in fire["players"]] == [
+        ("Waki renamed", "inactive_3_to_6", 1), ("newbie", "active", 2)]
+    # Only Waki and Maki are TH18, so the comparison widens to TH17-19 and is marked thin.
+    waki = rows["Waki renamed"]
+    assert (waki["hero_levels"], waki["hero_pct"], waki["cohort_th"], waki["cohort_n"], waki["cohort"]) == \
+        (201, 104.1, 18, 2, "thin")
+    assert rows["newbie"]["hero_pct"] is None
     cake = c.get("/leaders/make-room", params={"clan": "Cake"}).json()["players"]
-    # Inactivity weighs heaviest: Maki's 9 idle days (27) plus no donations (10) outrank cake two's one reason (10).
-    assert [(r["name"], r["score"]) for r in cake] == [("Maki", 37), ("cake two", 10)]
+    assert [(r["name"], r["activity"]) for r in cake] == [("Maki", "inactive_7_to_13"), ("cake two", "active")]
     assert cake[0]["reasons"] == [{"code": "inactive_days", "value": 9}, {"code": "no_donations", "value": 0}]
     assert c.get("/leaders/make-room", params={"clan": "Ice"}).status_code == 422
+
+
+def hero_player(tag, name, th, levels, donations=10, wins=5):
+    return {"tag": tag, "name": name, "townHallLevel": th, "clan": {"tag": FIRE}, "donations": donations,
+            "donationsReceived": 0, "attackWins": wins, "warStars": 100, "expLevel": 200,
+            "heroes": [{"name": f"Hero {i}", "level": lv, "maxLevel": 100, "village": "home"}
+                       for i, lv in enumerate(levels)]}
+
+
+@pytest.fixture
+def fire_four(env, monkeypatch):
+    """Four TH18s in Fire. D is idle 20 days with the strongest heroes; A and C tie on heroes, C gives nothing."""
+    monkeypatch.setattr(leaders, "now", lambda: NOW)
+    monkeypatch.setenv("LEADERS_PUBLIC", "true")
+    players = {"#2A": ("A", [75, 75], 10), "#2B": ("B", [100, 100], 10), "#2C": ("C", [75, 75], 0),
+               "#2D": ("D", [110, 110], 10)}
+    conn = db.connect(env / "frosted.db")
+    with conn:
+        db.upsert_members(conn, FIRE, [{"tag": t, "name": n, "townHallLevel": 18} for t, (n, _, _) in players.items()],
+                          "2026-11-09T00:00:00Z")
+        for t, (n, lv, don) in players.items():
+            profiles.upsert_profile(conn, hero_player(t, n, 18, lv, don), "2026-10-21T00:00:00Z")
+            if t != "#2D":  # D never changes again
+                profiles.upsert_profile(conn, hero_player(t, n, 18, lv, don, wins=6), "2026-11-09T00:00:00Z")
+        conn.execute("INSERT INTO profile_runs VALUES ('2026-11-09T00:00:00Z', 4)")
+    conn.close()
+    return env
+
+
+def test_make_room_activity_then_weakest_heroes_then_tie_breaks(fire_four):
+    players = client().get("/leaders/make-room", params={"clan": "Fire"}).json()["players"]
+    # Median of 150, 150, 200, 220 is 175. D is idle 20 days, so first despite the strongest heroes. Among the active,
+    # A and C tie at 85.7%; C gives no donations, the first tie-break that differs, so C goes before A.
+    assert [(p["name"], p["activity"], p["hero_pct"]) for p in players] == [
+        ("D", "inactive_14_plus", 125.7), ("C", "active", 85.7), ("A", "active", 85.7), ("B", "active", 114.3)]
+    assert {p["cohort"] for p in players} == {"same_th"} and {p["cohort_n"] for p in players} == {4}
+    assert players[0]["inactive_at_least"] is True and players[0]["days_inactive"] == 20
+
+
+def test_activity_buckets():
+    assert [leaders.bucket(d)[1] for d in (None, 0, 2, 3, 6, 7, 13, 14, 90)] == [
+        "active", "active", "active", "inactive_3_to_6", "inactive_3_to_6", "inactive_7_to_13",
+        "inactive_7_to_13", "inactive_14_plus", "inactive_14_plus"]
+
+
+def test_thin_cohort_scales_by_unlocked_heroes(env):
+    # One TH16 with two heroes beside three TH17s with three: the TH15-17 cohort's median sum (300) is scaled by
+    # 200/300 of hero max levels, so 180 levels reads as 90% rather than 60%.
+    conn = db.connect(env / "frosted.db")
+    with conn:
+        people = {"#3A": ("A", 17, [100, 100, 100]), "#3B": ("B", 17, [100, 100, 100]),
+                  "#3C": ("C", 17, [100, 100, 100]), "#3D": ("D", 16, [90, 90])}
+        db.upsert_members(conn, FIRE, [{"tag": t, "name": n} for t, (n, _, _) in people.items()], T0)
+        for t, (n, th, lv) in people.items():
+            profiles.upsert_profile(conn, hero_player(t, n, th, lv), T0)
+    s = leaders.hero_strength(conn)
+    assert (s["#3D"]["hero_pct"], s["#3D"]["cohort"], s["#3D"]["cohort_n"]) == (90.0, "thin", 4)
+    assert (s["#3A"]["hero_pct"], s["#3A"]["cohort"], s["#3A"]["cohort_n"]) == (100.0, "same_th", 3)
 
 
 def test_reason_codes_from_the_roster():

@@ -181,10 +181,54 @@ def reasons_for(m: dict, clan: str, act: dict, alloc: dict | None, missed_recent
     return rs
 
 
-def score(rs: list[dict]) -> int:
-    """Inactivity weighs heaviest: 3 points a day (capped at 60 days), 10 for each other reason."""
-    days = next((r["value"] for r in rs if r["code"] == "inactive_days"), 0)
-    return 3 * min(days, 60) + 10 * sum(r["code"] != "inactive_days" for r in rs)
+# Ka Wai's rule, 1 Nov 2026 (docs/specs/02-allocation-rules.md, "Removing members"): activity first, then hero
+# strength for the town hall, weakest first. The other reasons only break ties, in TIE_BREAKS order.
+BUCKETS = ((14, "inactive_14_plus"), (7, "inactive_7_to_13"), (3, "inactive_3_to_6"), (0, "active"))
+TIE_BREAKS = ("missed_recent", "high_miss", "no_donations", "sitting_out", "new_and_unproven", "low_th_for_clan")
+MIN_COHORT = 3
+
+
+def bucket(days: int | None) -> tuple[int, str]:
+    """Index and name of the activity bucket. No snapshot yet counts as active: there is no evidence either way."""
+    for i, (floor, name) in enumerate(BUCKETS):
+        if (days or 0) >= floor:
+            return i, name
+    return len(BUCKETS) - 1, BUCKETS[-1][1]
+
+
+def median(xs: list[float]) -> float:
+    xs = sorted(xs)
+    n = len(xs)
+    return xs[n // 2] if n % 2 else (xs[n // 2 - 1] + xs[n // 2]) / 2
+
+
+def hero_strength(conn) -> dict[str, dict]:
+    """Per current member with a profile: home hero levels summed, as a % of the median sum among every current
+    family member at the same town hall. With fewer than 3 there, the cohort is TH-1 to TH+1 and its median is
+    scaled by the player's summed hero max levels over the cohort's median of the same, flagged thin. The API's max
+    is the game's, not the town hall's, so that scaling only reflects which heroes each player has unlocked."""
+    sums: dict[str, tuple[int, int]] = {}
+    for r in conn.execute("""SELECT player_tag, SUM(level) AS lv, SUM(COALESCE(max_level, 0)) AS mx
+                             FROM player_units WHERE kind='hero' GROUP BY player_tag"""):
+        sums[r["player_tag"]] = (r["lv"], r["mx"])
+    people = []
+    for m in profiles.current_members(conn):
+        if m["fetched_at"] is None or not m["town_hall"]:
+            continue
+        lv, mx = sums.get(m["tag"], (0, 0))  # a profile with no heroes yet (low town hall) sums to 0
+        people.append((m["tag"], m["town_hall"], lv, mx))
+    out = {}
+    for tag, th, lv, mx in people:
+        same = [p for p in people if p[1] == th]
+        if len(same) >= MIN_COHORT:
+            ref, cohort, kind = median([p[2] for p in same]), same, "same_th"
+        else:
+            cohort, kind = [p for p in people if abs(p[1] - th) <= 1], "thin"
+            top = median([p[3] for p in cohort])
+            ref = median([p[2] for p in cohort]) * (mx / top if top else 1)
+        out[tag] = {"hero_levels": lv, "hero_pct": round(100 * lv / ref, 1) if ref else None,
+                    "cohort_th": th, "cohort_n": len(cohort), "cohort": kind}
+    return out
 
 
 def make_room(conn, clan: str) -> dict:
@@ -194,16 +238,26 @@ def make_room(conn, clan: str) -> dict:
         return {"clan": clan, "members": 0, "cap": plan.CAP, "as_of": None, "players": []}
     rows, _ = plan.effective_roster()
     alloc = {r["tag"]: r for r in rows if r.get("tag")}
-    act = activity(conn)
+    act, heroes = activity(conn), hero_strength(conn)
     recent = missed_since(conn, (now() - timedelta(days=MISSED_RECENT_DAYS)).strftime("%Y%m%dT%H%M%S"))
     here = [m for m in profiles.current_members(conn) if TAG_TO_CLAN.get(m["clan_tag"]) == clan]
     out = []
     for m in here:
-        a = alloc.get(m["tag"])
-        rs = reasons_for(m, clan, act.get(m["tag"], {}), a, recent.get(m["tag"], 0))
-        out.append({**profiles.row(m), "cwl_slot": a.get("cwl_slot") if a else None, "reasons": rs,
-                    "score": score(rs)})
-    out.sort(key=lambda r: (-r["score"], r["th"] or 0, r["name"] or ""))
+        a, act_m = alloc.get(m["tag"]), act.get(m["tag"], {})
+        rs = reasons_for(m, clan, act_m, a, recent.get(m["tag"], 0))
+        b_idx, b_name = bucket(act_m.get("days_inactive"))
+        h = heroes.get(m["tag"], {"hero_levels": None, "hero_pct": None, "cohort_th": None, "cohort_n": 0,
+                                  "cohort": None})
+        codes = {r["code"] for r in rs}
+        out.append({**profiles.row(m), "cwl_slot": a.get("cwl_slot") if a else None,
+                    "days_inactive": act_m.get("days_inactive"), "inactive_at_least": act_m.get("inactive_at_least"),
+                    "activity": b_name, **h, "reasons": rs,
+                    "_key": (b_idx, h["hero_pct"] is None, h["hero_pct"] or 0,
+                             *(code not in codes for code in TIE_BREAKS), (m["name"] or m["snap_name"] or "").lower())})
+    out.sort(key=lambda r: r["_key"])
+    for i, r in enumerate(out, start=1):
+        del r["_key"]
+        r["position"] = i
     as_of = conn.execute("SELECT MAX(started_at) FROM profile_runs").fetchone()[0]
     return {"clan": clan, "members": len(here), "cap": plan.CAP, "as_of": as_of, "players": out}
 
