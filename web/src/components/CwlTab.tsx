@@ -20,7 +20,9 @@ function groupsFor(roster: Roster, clan: ClanName) {
 function clanFacts(roster: Roster, clan: ClanName, meta?: ClanMeta) {
   const info = roster.clans[clan]
   const core = roster.players.filter((p) => p.clan === clan && p.slot === 'CORE')
-  const avg = coreAvg(core.map((p) => p.score))
+  // Clans out of CWL have no core, so they show the average of their best 15.
+  const best = roster.players.filter((p) => p.clan === clan && p.score !== null).map((p) => p.score as number).sort((a, b) => b - a).slice(0, 15)
+  const avg = coreAvg(info?.inCwl ? core.map((p) => p.score) : best)
   const league = meta?.league ?? info?.league ?? null
   return {
     inCwl: !!info?.inCwl,
@@ -32,7 +34,7 @@ function clanFacts(roster: Roster, clan: ClanName, meta?: ClanMeta) {
   }
 }
 
-// Badge, name and league; core average for clans in CWL, member count otherwise.
+// Badge, name and league; core average (best 15 for clans out of CWL) and member count.
 function ClanCard({ roster, clan, meta, war, compact }: { roster: Roster; clan: ClanName; meta?: ClanMeta; war: LiveWar | null | undefined; compact?: boolean }) {
   const f = clanFacts(roster, clan, meta)
   const c = CLAN[clan]
@@ -45,10 +47,9 @@ function ClanCard({ roster, clan, meta, war, compact }: { roster: Roster; clan: 
         <WarPill war={war} />
       </div>
       <div className="flex flex-none flex-col items-end">
-        <span className="text-[11px] font-bold uppercase tracking-[0.06em] text-muted">{f.inCwl ? 'Core avg' : 'Members'}</span>
-        <span className={`font-display leading-none ${compact ? 'text-[26px]' : 'text-[30px]'}`} style={{ color: c.deep }}>
-          {f.inCwl ? f.avg : roster.players.filter((p) => p.clan === clan).length}
-        </span>
+        <span className="text-[11px] font-bold uppercase tracking-[0.06em] text-muted">{f.inCwl ? 'Core avg' : 'Top 15 avg'}</span>
+        <span className={`font-display leading-none ${compact ? 'text-[26px]' : 'text-[30px]'}`} style={{ color: c.deep }}>{f.avg}</span>
+        {!f.inCwl && <span className="mt-1 text-xs font-semibold text-muted">{roster.players.filter((p) => p.clan === clan).length} members</span>}
       </div>
     </div>
   )
@@ -81,11 +82,13 @@ function FromPill({ from }: { from: ClanName | null }) {
   )
 }
 
-function Row({ p, first, hit, dense }: { p: Player; first: boolean; hit?: boolean; dense?: boolean }) {
+function Row({ p, n, hit, dense }: { p: Player; n: number; hit?: boolean; dense?: boolean }) {
+  const first = n === 1
   return (
     <li>
       <a href={href(p)} data-tag={p.tag}
         className={`flex items-center gap-3 text-ink no-underline ${dense ? 'min-h-[42px] px-2.5' : 'min-h-[46px] px-3.5'} ${first ? '' : 'border-t border-hair'} ${hit ? 'bg-hit' : 'hover:bg-hover'}`}>
+        <span className="w-5 flex-none text-right text-xs font-bold tabular-nums text-faint">{n}</span>
         <Th th={p.th} />
         <span className="flex min-w-0 flex-auto items-center gap-1.5">
           <span className={`min-w-0 truncate font-semibold ${dense ? 'text-sm' : 'text-[15px]'}`}>{p.name}</span>
@@ -112,7 +115,7 @@ function Groups({ roster, clan, q, dense }: { roster: Roster; clan: ClanName; q?
           ) : null}
           {g.rows.length ? (
             <ol className={`m-0 list-none ${dense ? '' : 'rounded-2xl border border-line bg-white py-1'} ${g.dim ? 'opacity-[.85]' : ''}`}>
-              {g.rows.map((p, i) => <Row key={p.tag} p={p} first={i === 0} dense={dense} hit={!!q && matches(p, q)} />)}
+              {g.rows.map((p, i) => <Row key={p.tag} p={p} n={i + 1} dense={dense} hit={!!q && matches(p, q)} />)}
             </ol>
           ) : null}
         </section>

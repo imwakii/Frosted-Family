@@ -14,7 +14,7 @@ from PIL import Image
 pytest.importorskip("PIL")
 
 EXPECTED = {
-    "make_poster.py": (1700, 1607),
+    "make_poster.py": (1700, 1645),
     "make_directory_poster.py": (2400, 2083),
 }
 
