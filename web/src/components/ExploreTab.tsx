@@ -306,8 +306,9 @@ const sinceLabel = (d: string | null) => (d ? `since ${new Date(d + 'T00:00:00Z'
 function WarBoardView({ q, setQ, wide }: BoardProps) {
   const [scope, setScope] = useState<WarScope>(() => (read('ff-war-scope') as WarScope) || 'all')
   const pickScope = (s: WarScope) => { setScope(s); write('ff-war-scope', s) }
-  // The CWL toggle shows once the API filters by scope.
-  const scoped = useWarBoard('all').data?.scope != null
+  // The CWL toggle shows once the API filters by scope and has recorded a CWL war this season.
+  const allBoard = useWarBoard('all').data
+  const scoped = allBoard?.scope != null && !!allBoard.season
   const { data, loading } = useWarBoard(scoped ? scope : 'all')
   const [clan, setClan] = useClanPick()
   const cols = useMemo(() => WAR_COLS.filter((c) => !data || data.players.some((r) => c.value(r) !== null)), [data])
@@ -405,6 +406,7 @@ function WarBoardView({ q, setQ, wide }: BoardProps) {
                       <button type="button" onClick={() => pick(c)} title={c.recordedOnly ? recordedTip : undefined}
                         className={`min-h-12 w-full cursor-pointer whitespace-nowrap border-0 bg-transparent px-4 text-right text-xs font-bold hover:bg-[#EEF2FF] ${c.key === sort.key ? 'text-ink' : 'text-faint'}`}>
                         {c.label}{c.key === sort.key ? (sort.asc ? ' ↑' : ' ↓') : ''}
+                        {c.recordedOnly && recordedStart && <span className="block text-[10px] font-semibold text-faint">{sinceLabel(recordedStart)}</span>}
                       </button>
                     </th>
                   ))}

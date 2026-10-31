@@ -29,35 +29,12 @@ const SHORT: Record<Slot, string> = { CORE: 'start', SUB: 'bench', OUT: 'out' }
 const placeLabel = (p: Place) => (p.clan === 'Flakes' ? 'Flakes' : `${p.clan} ${SHORT[p.slot]}`)
 
 type Check = { key: string; label: string; tip: string; tone: 'ok' | 'warn' | 'bad' | 'info' }
-const TONE = {
-  ok: { bg: '#DCFCE7', fg: '#166534' },
-  warn: { bg: '#FFEDD5', fg: '#9A3412' },
-  bad: { bg: '#FEE2E2', fg: '#B91C1C' },
-  info: { bg: '#DBEAFE', fg: '#1D4ED8' },
-}
-
 function readDraft(roster: Roster): Moves {
   try {
     const raw = JSON.parse(localStorage.getItem(DRAFT_KEY) || '{}') as Moves
     const tags = new Set(roster.players.map((p) => p.tag))
     return Object.fromEntries(Object.entries(raw).filter(([t]) => tags.has(t)))
   } catch { return {} }
-}
-
-// On phones a passing chip repeats its column header, so only problems show there.
-function CheckChip({ k, className = '' }: { k: Check; className?: string }) {
-  const t = TONE[k.tone]
-  return (
-    <span title={k.tip} className={`min-h-[34px] items-center gap-1.5 rounded-full px-3 text-[13px] font-bold ${k.tone === 'ok' ? 'hidden md:flex' : 'flex'} ${className}`} style={{ background: t.bg, color: t.fg }}>
-      {k.tone === 'ok' ? (
-        <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12l5 5 9-10" /></svg>
-      ) : (
-        <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M12 7v6M12 17v.5" /></svg>
-      )}
-      <span>{k.label}</span>
-      <span className="sr-only">{k.tip}</span>
-    </span>
-  )
 }
 
 function PlanRow({ p, at, onPlace }: { p: Player; at: Place; onPlace: (v: Place) => void }) {
@@ -238,6 +215,7 @@ function Plan({ roster, me }: { roster: Roster; me: Me }) {
             </button>
           ) : canPublish ? (
             <button type="button" onClick={openConfirm} disabled={cant}
+              title={blocked ? checks.filter((k) => (k.tone === 'bad' || k.tone === 'warn') && !valveOnly(k)).map((k) => k.label).join(' · ') : undefined}
               className="min-h-10 cursor-pointer rounded-[10px] border-0 bg-action px-4 text-sm font-bold text-white hover:bg-action-deep disabled:cursor-not-allowed disabled:bg-[#E2E8F0] disabled:text-faint">
               Publish
             </button>
@@ -248,18 +226,10 @@ function Plan({ roster, me }: { roster: Roster; me: Me }) {
       <main className="mx-auto flex max-w-[1360px] flex-col gap-4 px-[clamp(16px,3vw,32px)] pb-12 pt-3 md:pt-1">
         {result && (
           <div role="status" className={`flex min-h-12 items-center gap-2.5 rounded-[14px] px-4 text-sm font-bold ${result.ok ? 'bg-[#DCFCE7] text-[#166534]' : 'bg-[#FEF3C7] text-[#92400E]'}`}>
-            <span className="flex-auto">{result.ok ? `Published · ${result.n} ${result.n === 1 ? 'change' : 'changes'} on the CWL tab` : result.why}</span>
-            {result.ok && <a href="#/" className="flex min-h-9 items-center rounded-[9px] bg-white px-3.5 text-[#166534] no-underline">Open CWL tab</a>}
+            <span className="flex-auto">{result.ok ? `Published · ${result.n} ${result.n === 1 ? 'change' : 'changes'} on Lineups` : result.why}</span>
+            {result.ok && <a href="#/" className="flex min-h-9 items-center rounded-[9px] bg-white px-3.5 text-[#166534] no-underline">Open Lineups</a>}
           </div>
         )}
-
-        <section aria-label="Checks" className="flex flex-wrap gap-2">
-          {!canPublish && me.publishers.length > 0 && (
-            <span className="flex min-h-[34px] items-center rounded-full bg-[#EEF1F6] px-3 text-[13px] font-bold text-muted">{me.publishers.join(', ')} publishes</span>
-          )}
-          {checks.map((k) => <CheckChip key={k.key} k={k} />)}
-          {checks.every((k) => k.tone === 'ok') && <CheckChip k={{ key: 'all', label: 'All rules pass', tip: '', tone: 'ok' }} className="!flex md:!hidden" />}
-        </section>
 
         <div aria-label="Key" className="flex flex-wrap gap-x-[18px] gap-y-1.5 text-[13px] font-semibold text-muted">
           {(['active', 'highMiss', 'inactive'] as const).map((s) => (

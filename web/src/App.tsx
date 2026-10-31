@@ -9,9 +9,9 @@ import { go, useRoute } from './route'
 import { fmtStart } from './theme'
 
 const TABS = [
-  { id: 'cwl', label: 'CWL', href: '#/', icon: <path d="M4 6h16M4 12h16M4 18h10" /> },
-  { id: 'explore', label: 'Explore', href: '#/explore', icon: <path d="M5 20V10M12 20V4M19 20v-7" /> },
-  { id: 'plan', label: 'Plan', href: '#/plan', icon: <path d="M7 4v16M17 4v16M3 8h8M13 16h8" /> },
+  { id: 'cwl', label: 'Lineups', href: '#/', icon: <path d="M4 6h16M4 12h16M4 18h10" /> },
+  { id: 'explore', label: 'Stats', href: '#/explore', icon: <path d="M5 20V10M12 20V4M19 20v-7" /> },
+  { id: 'plan', label: 'Leaders', href: '#/plan', icon: <path d="M7 4v16M17 4v16M3 8h8M13 16h8" /> },
 ] as const
 
 function Account({ me, onSignOut }: { me: Me; onSignOut: () => void }) {
