@@ -75,10 +75,9 @@ export const Eyebrow = ({ children, className = '' }: { children: ReactNode; cla
   <span className={`text-xs font-bold uppercase tracking-[0.06em] text-faint ${className}`}>{children}</span>
 )
 
-const Swords = ({ color }: { color: string }) => (
-  <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="flex-none">
-    <path d="M14.5 17.5L3 6V3h3l11.5 11.5M13 19l6-6M16 16l4 4M19 21l2-2M9.5 17.5L21 6V3h-3L6.5 14.5M11 19l-6-6M8 16l-4 4M5 21l-2-2" />
-  </svg>
+// Crossed swords from the fan kit; greyed out unless a war is live.
+const Swords = ({ live }: { live: boolean }) => (
+  <img src="/icons/war_record.png" alt="" width={20} height={20} className={`size-5 flex-none ${live ? '' : 'opacity-50 grayscale'}`} />
 )
 
 export const Star = () => <span aria-hidden="true" className="text-gold">★</span>
@@ -87,7 +86,7 @@ export function LiveLine({ war, className = '' }: { war: LiveWar | null | undefi
   if (!war) {
     return (
       <div className={`flex min-h-[42px] items-center gap-2 rounded-[14px] border border-line bg-white px-3.5 text-[13px] ${className}`}>
-        <Swords color="#CBD5E1" />
+        <Swords live={false} />
         <span className="font-semibold text-faint">No war yet</span>
       </div>
     )
@@ -96,7 +95,7 @@ export function LiveLine({ war, className = '' }: { war: LiveWar | null | undefi
   const label = war.state === 'preparation' ? 'Prep' : war.state === 'warEnded' ? 'Ended' : war.day ? 'Day' : 'Live'
   return (
     <div className={`flex min-h-[42px] items-center gap-2 rounded-[14px] border border-line bg-white px-3.5 text-[13px] ${className}`}>
-      <Swords color={live ? '#B91C1C' : '#94A3B8'} />
+      <Swords live={live} />
       <span className={`whitespace-nowrap font-bold ${live ? 'text-[#B91C1C]' : 'text-ink-2'}`}>
         {label}{war.day ? ` ${war.day}` : ''}
       </span>

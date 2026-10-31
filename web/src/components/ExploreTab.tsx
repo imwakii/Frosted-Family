@@ -12,7 +12,7 @@ type ClanPick = ClanName | 'All'
 type BoardProps = { q: string; setQ: (v: string) => void; wide: boolean }
 
 // The unit categories, then the boards that are not a unit matrix.
-const NAV: { id: string; label: string; icon: string | null }[] = [...CATS, { id: 'war', label: 'War record', icon: null }]
+const NAV: { id: string; label: string; icon: string | null }[] = [...CATS, { id: 'war', label: 'War record', icon: 'War Record' }]
 
 function useClanPick() {
   const [clan, setClanState] = useState<ClanPick>(() => (read('ff-x-clan') as ClanPick) || 'All')
