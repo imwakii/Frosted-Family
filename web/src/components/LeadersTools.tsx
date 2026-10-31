@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useClans } from '../clash'
-import { ago, type Inactive, reasonLabel, useInactivity, useMakeRoom } from '../leaders'
+import { ACTIVITY_LABEL, type Activity, ago, type Candidate, heroChip, type Inactive, reasonLabel, useInactivity, useMakeRoom } from '../leaders'
 import { go, playerHref } from '../route'
 import { CLAN, CLANS } from '../theme'
 import type { ClanName } from '../types'
@@ -88,6 +88,22 @@ function Inactivity({ wide }: { wide: boolean }) {
   )
 }
 
+const TONE = {
+  amber: { background: '#FEF3C7', color: '#92400E' },
+  grey: { background: '#E2E8F0', color: '#334155' },
+  plain: { background: '#F1F5F9', color: '#0F172A' },
+}
+
+function groupByActivity(players: Candidate[]) {
+  const out: { activity: Activity | null; rows: { p: Candidate; n: number }[] }[] = []
+  players.forEach((p, i) => {
+    const a = p.activity ?? null
+    if (!out.length || out[out.length - 1].activity !== a) out.push({ activity: a, rows: [] })
+    out[out.length - 1].rows.push({ p, n: p.position ?? i + 1 })
+  })
+  return out
+}
+
 const SLOT: Record<string, string> = { CORE: 'Starting', SUB: 'Bench', 'Sitting Out': 'Not playing', OUT: 'Not playing' }
 
 function MakeRoom() {
@@ -113,35 +129,56 @@ function MakeRoom() {
           </span>
         )}
       </div>
-      {!data ? <Empty loading={loading} /> : (
-        <ol className="m-0 list-none rounded-2xl border border-line bg-white py-1">
-          {data.players.map((p, i) => (
-            <li key={p.tag}>
-              <a href={playerHref(p.tag)} className={`flex min-h-[58px] items-center gap-2.5 px-3.5 py-2 text-ink no-underline hover:bg-hover ${i ? 'border-t border-hair' : ''}`}>
-                <span className="w-6 flex-none text-right text-xs font-bold tabular-nums text-faint">{i + 1}</span>
-                <Th th={p.th} />
-                <span className="flex min-w-0 flex-auto flex-col gap-1">
-                  <span className="flex min-w-0 items-baseline gap-1.5">
-                    <span className="truncate text-[15px] font-semibold">{p.name}</span>
-                    {p.cwl_slot && <span className="flex-none text-[11px] font-bold text-faint">{SLOT[p.cwl_slot] ?? p.cwl_slot}</span>}
-                  </span>
-                  <span className="flex flex-wrap gap-1">
-                    {p.reasons.map((r) => {
-                      const l = reasonLabel(r)
-                      return (
-                        <span key={r.code} className="rounded-full px-2 py-0.5 text-[11px] font-semibold"
-                          style={l.tone === 'amber' ? { background: '#FEF3C7', color: '#92400E' } : { background: '#E2E8F0', color: '#334155' }}>
-                          {l.text}
+      {!data ? <Empty loading={loading} /> : !data.players.length ? (
+        <div className="rounded-2xl border border-line bg-white p-4 text-sm text-faint">No candidates</div>
+      ) : (
+        // The server's order is the removal order; consecutive rows share an activity heading.
+        <div className="flex flex-col gap-3">
+          {groupByActivity(data.players).map((g) => (
+            <section key={g.activity ?? 'all'} aria-label={g.activity ? ACTIVITY_LABEL[g.activity] : undefined} className="flex flex-col gap-1.5">
+              {g.activity && (
+                <div className="flex justify-between px-1 text-xs font-bold uppercase tracking-[0.06em] text-faint">
+                  <span>{ACTIVITY_LABEL[g.activity]}</span><span>{g.rows.length}</span>
+                </div>
+              )}
+              <ol className="m-0 list-none rounded-2xl border border-line bg-white py-1">
+                {g.rows.map(({ p, n }, i) => {
+                  const lead = heroChip(p)
+                  return (
+                    <li key={p.tag}>
+                      <a href={playerHref(p.tag)} className={`flex min-h-[58px] items-center gap-2.5 px-3.5 py-2 text-ink no-underline hover:bg-hover ${i ? 'border-t border-hair' : ''}`}>
+                        <span className="w-6 flex-none text-right text-xs font-bold tabular-nums text-faint">{n}</span>
+                        <Th th={p.th} />
+                        <span className="flex min-w-0 flex-auto flex-col gap-1">
+                          <span className="flex min-w-0 items-baseline gap-1.5">
+                            <span className="truncate text-[15px] font-semibold">{p.name}</span>
+                            {p.cwl_slot && <span className="flex-none text-[11px] font-bold text-faint">{SLOT[p.cwl_slot] ?? p.cwl_slot}</span>}
+                          </span>
+                          <span className="flex flex-wrap items-center gap-1">
+                            {lead && (
+                              <span className="rounded-full px-2.5 py-0.5 text-xs font-bold" title={p.cohort_n ? `${p.cohort_n} in the comparison` : undefined}
+                                style={TONE[lead.tone]}>
+                                {lead.text}
+                              </span>
+                            )}
+                            {p.reasons.map((r) => {
+                              const l = reasonLabel(r)
+                              return (
+                                <span key={r.code} className="rounded-full px-1.5 py-px text-[10px] font-semibold" style={TONE[l.tone]}>
+                                  {l.text}
+                                </span>
+                              )
+                            })}
+                          </span>
                         </span>
-                      )
-                    })}
-                  </span>
-                </span>
-              </a>
-            </li>
+                      </a>
+                    </li>
+                  )
+                })}
+              </ol>
+            </section>
           ))}
-          {!data.players.length && <li className="p-4 text-sm text-faint">No candidates</li>}
-        </ol>
+        </div>
       )}
     </div>
   )

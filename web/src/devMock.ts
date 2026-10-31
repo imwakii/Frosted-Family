@@ -86,12 +86,22 @@ export async function mockInactivity() {
 export async function mockMakeRoom(clan: 'Fire' | 'Cake' | 'Flakes') {
   const roster: Roster = await fetch('/roster.json').then((r) => r.json())
   const r = rnd('room' + clan)
-  const codes = ['inactive_days', 'high_miss', 'missed_recent', 'sitting_out', 'no_donations', 'low_th_for_clan', 'new_and_unproven']
+  const codes = ['high_miss', 'missed_recent', 'sitting_out', 'no_donations', 'new_and_unproven']
+  const order = ['inactive_14_plus', 'inactive_7_to_13', 'inactive_3_to_6', 'active'] as const
   const mine = roster.players.filter((p) => p.clan === clan)
-  return {
-    clan, members: mine.length, cap: 50, as_of: new Date().toISOString(),
-    players: mine.map((p) => ({ tag: p.tag, name: p.name, clan: p.clan, th: p.th, cwl_slot: p.slot,
-      reasons: codes.filter(() => r() < 0.25).map((code) => ({ code, value: code === 'inactive_days' ? 7 + Math.floor(r() * 30) : code === 'missed_recent' ? 1 + Math.floor(r() * 4) : null })),
-      score: 0 })).map((c) => ({ ...c, score: c.reasons.length })).filter((c) => c.score).sort((a, b) => b.score - a.score),
-  }
+  const players = mine.map((p) => {
+    const days = Math.floor(r() * r() * 30)
+    const activity = days >= 14 ? order[0] : days >= 7 ? order[1] : days >= 3 ? order[2] : order[3]
+    const thin = r() < 0.15
+    return {
+      tag: p.tag, name: p.name, clan: p.clan, th: p.th, cwl_slot: p.slot === 'OUT' ? 'Sitting Out' : p.slot,
+      activity, days_inactive: days, inactive_at_least: r() < 0.1,
+      hero_levels: null, hero_pct: r() < 0.05 ? null : 55 + r() * 60, cohort_th: p.th, cohort_n: thin ? 2 : 3 + Math.floor(r() * 20), cohort: thin ? 'thin' : 'same_th',
+      reasons: [
+        ...(days >= 3 ? [{ code: 'inactive_days', value: days }] : []),
+        ...codes.filter(() => r() < 0.2).map((code) => ({ code, value: code === 'missed_recent' ? 1 + Math.floor(r() * 4) : null })),
+      ],
+    }
+  }).sort((a, b) => order.indexOf(a.activity) - order.indexOf(b.activity) || (a.hero_pct ?? 999) - (b.hero_pct ?? 999))
+  return { clan, members: mine.length, cap: 50, as_of: new Date().toISOString(), players: players.map((p, i) => ({ ...p, position: i + 1 })) }
 }

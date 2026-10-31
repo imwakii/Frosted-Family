@@ -13,7 +13,27 @@ export type Inactive = {
   last_war_attack: string | null; donations: number | null; missed_attacks_recorded: number | null
 }
 export type Reason = { code: string; value: number | string | null }
-export type Candidate = { tag: string; name: string; clan: ClanName; th: number | null; cwl_slot: string | null; reasons: Reason[]; score: number }
+export type Activity = 'inactive_14_plus' | 'inactive_7_to_13' | 'inactive_3_to_6' | 'active'
+/** Make room, already in Ka Wai's removal order: activity bucket, then weakest heroes for the TH. */
+export type Candidate = {
+  tag: string; name: string; clan: ClanName; th: number | null; cwl_slot: string | null; reasons: Reason[]
+  position?: number; activity?: Activity; days_inactive?: number | null; inactive_at_least?: boolean
+  hero_levels?: number | null; hero_pct?: number | null; cohort_th?: number | null; cohort_n?: number | null; cohort?: 'same_th' | 'thin' | null
+}
+
+export const ACTIVITY_LABEL: Record<Activity, string> = {
+  inactive_14_plus: 'Inactive 14+ days', inactive_7_to_13: 'Inactive 7–13 days', inactive_3_to_6: 'Inactive 3–6 days', active: 'Active',
+}
+
+const HERO_LOW = 85
+
+/** Heroes as a share of the same-TH median; a thin cohort compares TH-1 to TH+1. */
+export function heroChip(c: Candidate): { text: string; tone: 'amber' | 'grey' | 'plain' } | null {
+  if (c.hero_pct === null || c.hero_pct === undefined || !c.cohort_th) return null
+  const thin = c.cohort === 'thin'
+  const of = thin ? `TH${c.cohort_th - 1}–${c.cohort_th + 1}` : `TH${c.cohort_th}`
+  return { text: `Heroes ${Math.round(c.hero_pct)}% of ${of}`, tone: thin ? 'grey' : c.hero_pct < HERO_LOW ? 'amber' : 'plain' }
+}
 export type MakeRoom = { clan: ClanName; members: number; cap: number; as_of: string | null; players: Candidate[] }
 
 const mock = () => import.meta.env.DEV && new URLSearchParams(window.location.search).has('mock')
