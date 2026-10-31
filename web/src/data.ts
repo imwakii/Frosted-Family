@@ -19,7 +19,7 @@ const getStatic = () => (staticRoster ??= getJson<Roster>('/roster.json'))
 // API shapes from the cwl-server branch (server/ in this repo).
 type ApiPlayer = {
   tag: string; name: string; clan: ClanName; cwl_slot: string; transferred_from: string | null
-  tier: string; final_score: number | null; current_th: number | null
+  tier: string; final_score: number | string | null; current_th: number | string | null
   snapshot: { name?: string; town_hall?: number } | null
 }
 type ApiWar = {
@@ -32,6 +32,12 @@ const STATUS: Record<string, Status> = {
   PROVEN: 'active', 'UNRELIABLE (HM)': 'highMiss', 'THIN RECORD': 'thin', LAPSING: 'inactive', DORMANT: 'inactive', 'NO DATA': 'inactive',
 }
 const CLAN_NAMES = ['Fire', 'Cake', 'Flakes']
+// The API sends numeric columns as strings ("122.19").
+const toNum = (v: number | string | null | undefined) => {
+  if (v === null || v === undefined || v === '') return null
+  const n = Number(v)
+  return Number.isFinite(n) ? n : null
+}
 const asClan = (c: string | null | undefined) => (c && CLAN_NAMES.includes(c) ? (c as ClanName) : null)
 
 // The API owns placement and the live snapshot; the static file adds history,
@@ -46,8 +52,8 @@ function mergeRoster(api: { players: ApiPlayer[] }, base: Roster | null): Roster
       clan: a.clan,
       slot: SLOT[a.cwl_slot] ?? 'OUT',
       from: asClan(a.transferred_from),
-      th: a.snapshot?.town_hall ?? a.current_th ?? b?.th ?? null,
-      score: a.final_score === null || a.final_score === undefined ? null : Math.round(a.final_score * 10) / 10,
+      th: toNum(a.snapshot?.town_hall) ?? toNum(a.current_th) ?? b?.th ?? null,
+      score: ((s) => (s === null ? null : Math.round(s * 10) / 10))(toNum(a.final_score)),
       status: STATUS[a.tier] ?? b?.status ?? 'inactive',
       threeStar: b?.threeStar ?? null,
       missPct: b?.missPct ?? null,

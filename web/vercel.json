@@ -1,7 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "rewrites": [
-    { "source": "/api/:path*", "destination": "https://frostedcwl.duckdns.org/:path*" },
-    { "source": "/((?!api/|assets/|roster\.json).*)", "destination": "/index.html" }
+    { "source": "/api/:path*", "destination": "https://frostedcwl.duckdns.org/:path*" }
   ]
 }

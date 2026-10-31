@@ -47,14 +47,14 @@ export function LiveLine({ war, className = '' }: { war: LiveWar | null | undefi
     )
   }
   const live = war.state === 'inWar'
-  const label = war.state === 'preparation' ? 'Prep' : war.state === 'warEnded' ? 'Ended' : 'Day'
+  const label = war.state === 'preparation' ? 'Prep' : war.state === 'warEnded' ? 'Ended' : war.day ? 'Day' : 'Live'
   return (
     <div className={`flex min-h-[40px] items-center gap-2 rounded-[14px] border border-line bg-white px-3.5 text-[13px] ${className}`}>
       <span className={`size-2 flex-none rounded ${live ? 'ff-live bg-[#DC2626]' : 'bg-[#94A3B8]'}`} />
       <span className={`whitespace-nowrap font-bold ${live ? 'text-[#B91C1C]' : 'text-ink-2'}`}>
         {label}{war.day ? ` ${war.day}` : ''}
       </span>
-      <span className="min-w-0 flex-auto truncate text-muted">vs {war.opponent}</span>
+      <span className="min-w-0 flex-auto truncate text-muted">vs <bdi>{war.opponent}</bdi></span>
       <span className="whitespace-nowrap text-[15px] font-extrabold tabular-nums">{war.stars}–{war.opponentStars}</span>
       <span className="whitespace-nowrap tabular-nums text-faint">{war.attacks}/{war.teamSize}</span>
     </div>
