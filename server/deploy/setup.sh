@@ -3,8 +3,8 @@
 # Every step is idempotent, so a rerun repairs drift and doubles as the update. Nothing here holds a secret: the
 # Clash of Clans token goes in /opt/bots/frosted/api.env by hand and is never printed.
 #
-#   bash setup.sh install   user, repo checkout (public, over HTTPS), venv, systemd units; starts the API, and the
-#                           collector timer once api.env has COC_API_TOKEN
+#   bash setup.sh install   user, repo checkout (public, over HTTPS), venv, systemd units; starts the API, the
+#                           30-minute roster pull (main only), and the collector timer once api.env has COC_API_TOKEN
 #   bash setup.sh caddy     the API's site block for FROSTED_API_HOST, imported into /etc/caddy/Caddyfile
 #   bash setup.sh status    units, last collector run, row counts
 #
@@ -49,10 +49,14 @@ install_app() {
   as_bot "$BOT_HOME/venv/bin/pip" install -q --upgrade pip
   as_bot "$BOT_HOME/venv/bin/pip" install -q -r "$BOT_HOME/repo/server/requirements.txt"
 
-  cp "$DEPLOY"/frosted-api.service "$DEPLOY"/frosted-collect.service "$DEPLOY"/frosted-collect.timer /etc/systemd/system/
+  cp "$DEPLOY"/frosted-api.service "$DEPLOY"/frosted-collect.service "$DEPLOY"/frosted-collect.timer \
+    "$DEPLOY"/frosted-pull.service "$DEPLOY"/frosted-pull.timer /etc/systemd/system/
   systemctl daemon-reload
   systemctl enable -q frosted-api
   systemctl restart frosted-api
+  # Keeps the checkout on main so a pushed roster reaches /roster within 30 minutes. Main only: a branch install
+  # (FROSTED_BRANCH=...) leaves the timer off so it cannot move the checkout back.
+  if [ "$BRANCH" = main ]; then systemctl enable -q --now frosted-pull.timer; else systemctl disable -q --now frosted-pull.timer 2>/dev/null || true; fi
   if grep -q '^COC_API_TOKEN=.\+' "$BOT_HOME/api.env"; then
     systemctl enable -q --now frosted-collect.timer
     systemctl start frosted-collect.service || true  # one pass now; its outcome shows in `status`
@@ -74,7 +78,8 @@ caddy_site() {
 }
 
 status() {
-  systemctl --no-pager --lines=0 status frosted-api frosted-collect.timer || true
+  systemctl --no-pager --lines=0 status frosted-api frosted-collect.timer frosted-pull.timer || true
+  echo "checkout: $(as_bot git -C "$BOT_HOME/repo" rev-parse --abbrev-ref HEAD) at $(as_bot git -C "$BOT_HOME/repo" rev-parse --short HEAD)"
   journalctl -u frosted-collect --no-pager -n 5 -o cat || true
   if [ -f "$BOT_HOME/data/frosted.db" ]; then
     as_bot "$BOT_HOME/venv/bin/python" - "$BOT_HOME/data/frosted.db" <<'PY'

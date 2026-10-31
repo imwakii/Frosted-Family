@@ -1,0 +1,15 @@
+[Unit]
+Description=Frosted Family roster pull (fast-forwards the repo checkout to origin)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+# Runs as the bot user and only moves the checkout, so a push to GitHub never runs anything as root here. The API
+# reads frosted_cwl_members.csv on every request, so a new roster is live without a restart. Server code changes
+# still need `sudo bash setup.sh install`.
+User=frosted
+Group=bots
+WorkingDirectory=/opt/bots/frosted/repo
+ExecStart=/usr/bin/git fetch -q origin main
+ExecStart=/usr/bin/git merge -q --ff-only origin/main
