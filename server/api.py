@@ -2,6 +2,7 @@
 site through a Vercel rewrite.
 
     GET /roster          every allocated player from frosted_cwl_members.csv, joined on tag to the latest snapshot
+    GET /clans           each clan's name, badge URLs and war league
     GET /war/live        each clan's current war: CWL day, opponent, stars, attacks used
     GET /player/{tag}    one player's allocation, latest snapshot, wars, attacks and missed attacks
     GET /allocation.csv  the latest published allocation, for server/pull_allocation.py
@@ -109,6 +110,21 @@ def oriented(w: dict, clan_tag: str) -> dict:
         "attacks_used": w[f"{us}_attacks"], "attacks_allowed": (w["team_size"] or 0) * (w["attacks_per_member"] or 0),
         "opponent_attacks_used": w[f"{them}_attacks"],
     }
+
+
+@app.get("/clans")
+def clans():
+    """Each clan's name, badge and war league, for the site's headers. null fields until the first poll."""
+    conn = open_db()
+    rows = {r["clan_tag"]: r for r in conn.execute("SELECT * FROM clans")} if conn else {}
+    out = []
+    for name, tag in CLAN_TAGS.items():
+        r = rows.get(tag)
+        out.append({"clan": name, "tag": tag, "name": r["name"] if r else None,
+                    "badge_urls": {k: r[f"badge_{k}"] if r else None for k in ("small", "medium", "large")},
+                    "war_league": r["war_league"] if r else None, "capital_league": r["capital_league"] if r else None,
+                    "members": r["members"] if r else None, "updated_at": r["updated_at"] if r else None})
+    return {"clans": out}
 
 
 @app.get("/war/live")
