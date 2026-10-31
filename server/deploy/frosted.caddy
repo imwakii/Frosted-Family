@@ -5,7 +5,8 @@ __FROSTED_API_HOST__ {
 	encode gzip
 	header {
 		-Server
-		Cache-Control "public, max-age=30"
+		# Only where the API set none: sign-in and plan answers say no-store and must keep it.
+		?Cache-Control "public, max-age=30"
 	}
 	reverse_proxy 127.0.0.1:8090
 }

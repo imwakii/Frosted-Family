@@ -1,5 +1,6 @@
 # The read API (server/api.py) on 127.0.0.1:8090. Caddy serves it at FROSTED_API_HOST (setup.sh, frosted.caddy).
-# It reads the collector's database and the repo's frosted_cwl_members.csv, and needs no token.
+# It reads the collector's database and the repo's frosted_cwl_members.csv, and writes leaders' drafts and publishes
+# to app.db. api.env (root 600, read by systemd) has the Discord sign-in settings and SESSION_SECRET.
 [Unit]
 Description=Frosted Family CWL API
 After=network-online.target
@@ -8,7 +9,10 @@ Wants=network-online.target
 [Service]
 User=frosted
 Group=bots
+EnvironmentFile=/opt/bots/frosted/api.env
 Environment=FROSTED_DB=/opt/bots/frosted/data/frosted.db
+Environment=FROSTED_APP_DB=/opt/bots/frosted/data/app.db
+Environment=FROSTED_SITE_URL=https://frosted-family.vercel.app
 Environment=FROSTED_ROSTER=/opt/bots/frosted/repo/frosted_cwl_members.csv
 WorkingDirectory=/opt/bots/frosted/repo
 ExecStart=/opt/bots/frosted/venv/bin/python -B -m uvicorn server.api:app --host 127.0.0.1 --port 8090 --proxy-headers

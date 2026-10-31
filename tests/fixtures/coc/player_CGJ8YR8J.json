@@ -1,0 +1,15 @@
+{"tag": "#CGJ8YR8J", "name": "Maki", "townHallLevel": 18, "expLevel": 260,
+ "trophies": 5200, "bestTrophies": 5900, "warStars": 1900, "attackWins": 60, "defenseWins": 20,
+ "donations": 300, "donationsReceived": 90, "clanCapitalContributions": 450000,
+ "clan": {"tag": "#20CU2R80R", "name": "Cake"}, "leagueTier": {"id": 105000034, "name": "Legend League"},
+ "heroes": [
+   {"name": "Barbarian King", "level": 90, "maxLevel": 105, "village": "home"},
+   {"name": "Archer Queen", "level": 95, "maxLevel": 105, "village": "home"}
+ ],
+ "heroEquipment": [{"name": "Giant Gauntlet", "level": 20, "maxLevel": 27, "village": "home"}],
+ "troops": [
+   {"name": "Barbarian", "level": 10, "maxLevel": 12, "village": "home"},
+   {"name": "Wall Wrecker", "level": 4, "maxLevel": 5, "village": "home"}
+ ],
+ "spells": [{"name": "Rage Spell", "level": 6, "maxLevel": 6, "village": "home"}]
+}

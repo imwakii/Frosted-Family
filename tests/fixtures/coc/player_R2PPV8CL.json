@@ -1,0 +1,23 @@
+{"tag": "#R2PPV8CL", "name": "Waki renamed", "townHallLevel": 18, "townHallWeaponLevel": 5, "expLevel": 270,
+ "trophies": 5400, "bestTrophies": 6100, "warStars": 2100, "attackWins": 80, "defenseWins": 12,
+ "role": "leader", "donations": 120, "donationsReceived": 80, "clanCapitalContributions": 450000,
+ "clan": {"tag": "#CL0G80LV", "name": "Fire"}, "league": {"id": 29000022, "name": "Legend League"},
+ "heroes": [
+   {"name": "Barbarian King", "level": 100, "maxLevel": 105, "village": "home",
+    "equipment": [{"name": "Giant Gauntlet", "level": 27, "maxLevel": 27, "village": "home"}]},
+   {"name": "Archer Queen", "level": 100, "maxLevel": 105, "village": "home"},
+   {"name": "Battle Machine", "level": 35, "maxLevel": 35, "village": "builderBase"}
+ ],
+ "heroEquipment": [
+   {"name": "Giant Gauntlet", "level": 27, "maxLevel": 27, "village": "home"},
+   {"name": "Barbarian Puppet", "level": 18, "maxLevel": 18, "village": "home"}
+ ],
+ "troops": [
+   {"name": "Barbarian", "level": 12, "maxLevel": 12, "village": "home"},
+   {"name": "Super Barbarian", "level": 12, "maxLevel": 12, "village": "home"},
+   {"name": "Wall Wrecker", "level": 5, "maxLevel": 5, "village": "home"},
+   {"name": "Unicorn", "level": 10, "maxLevel": 10, "village": "home"},
+   {"name": "Raged Barbarian", "level": 20, "maxLevel": 20, "village": "builderBase"}
+ ],
+ "spells": [{"name": "Rage Spell", "level": 6, "maxLevel": 6, "village": "home"}]
+}

@@ -94,6 +94,58 @@ CREATE TABLE IF NOT EXISTS polls (
     errors INTEGER
 );
 
+-- Player profiles from /players/{tag}, fetched about twice a day. Latest only; the units are replaced each fetch.
+CREATE TABLE IF NOT EXISTS player_profiles (
+    player_tag TEXT PRIMARY KEY,
+    fetched_at TEXT NOT NULL,
+    name TEXT,
+    clan_tag TEXT,
+    town_hall INTEGER,
+    exp_level INTEGER,
+    trophies INTEGER,
+    best_trophies INTEGER,
+    league TEXT,
+    war_stars INTEGER,
+    attack_wins INTEGER,
+    defense_wins INTEGER,
+    donations INTEGER,
+    donations_received INTEGER,
+    capital_contributions INTEGER
+);
+CREATE TABLE IF NOT EXISTS player_units (
+    player_tag TEXT NOT NULL REFERENCES player_profiles (player_tag),
+    kind TEXT NOT NULL,                   -- hero, equipment, troop, super_troop, spell, pet, siege
+    name TEXT NOT NULL,
+    level INTEGER NOT NULL,
+    max_level INTEGER,                    -- the game's max for the unit, not the player's town hall cap
+    hero TEXT,                            -- equipment only: the hero it is equipped on, if any
+    position INTEGER NOT NULL,            -- index in the API's list, which is the game's order
+    PRIMARY KEY (player_tag, kind, name)
+);
+-- Every level change seen, so progress can be traced: one row when a unit first appears or its level moves.
+CREATE TABLE IF NOT EXISTS player_unit_history (
+    player_tag TEXT NOT NULL,
+    kind TEXT NOT NULL,
+    name TEXT NOT NULL,
+    level INTEGER NOT NULL,
+    seen_at TEXT NOT NULL,
+    PRIMARY KEY (player_tag, kind, name, level)
+);
+-- Each clan's latest raid weekend, polled with the profiles. One row per raider.
+CREATE TABLE IF NOT EXISTS raid_members (
+    clan_tag TEXT NOT NULL,
+    start_time TEXT NOT NULL,
+    player_tag TEXT NOT NULL,
+    name TEXT,
+    attacks INTEGER,
+    looted INTEGER,
+    PRIMARY KEY (clan_tag, start_time, player_tag)
+);
+CREATE TABLE IF NOT EXISTS profile_runs (
+    started_at TEXT PRIMARY KEY,
+    players INTEGER
+);
+
 -- A missed attack is an attack slot left unused once the war has ended. Wars still running are not counted.
 CREATE VIEW IF NOT EXISTS missed_attacks AS
 SELECT m.war_key, m.player_tag, m.clan_tag, m.name, w.kind, w.season, w.round, w.end_time,

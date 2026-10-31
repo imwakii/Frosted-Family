@@ -6,6 +6,7 @@ clans. A 403 (war log private), 404 (not in war, not in CWL) or a network failur
 pass moves on. The token comes from COC_API_TOKEN and is never printed.
 
     python -m server.collect                 # uses FROSTED_DB, default /opt/bots/frosted/data/frosted.db
+    python -m server.collect --profiles      # also fetch every member's profile now (otherwise every 12 hours)
 """
 from __future__ import annotations
 
@@ -16,7 +17,7 @@ from urllib.parse import quote
 import httpx
 
 from frosted.config import CLAN_TAGS
-from server import db
+from server import db, profiles
 
 API = "https://api.clashofclans.com/v1"
 DEFAULT_DB = "/opt/bots/frosted/data/frosted.db"
@@ -60,10 +61,12 @@ def enc(tag: str) -> str:
     return quote(tag, safe="")
 
 
-def collect_clan(conn, api: Api, clan_tag: str, now: str) -> None:
+def collect_clan(conn, api: Api, clan_tag: str, now: str) -> list[str]:
+    """One clan's members and wars. Returns the member tags."""
     members = api.get(f"/clans/{enc(clan_tag)}/members", quiet=(404,))
+    items = members.get("items", []) if members else []
     if members is not None:
-        db.upsert_members(conn, clan_tag, members.get("items", []), now)
+        db.upsert_members(conn, clan_tag, items, now)
 
     war = api.get(f"/clans/{enc(clan_tag)}/currentwar")
     # During CWL this endpoint reports notInWar; the league wars come through the group below.
@@ -73,6 +76,7 @@ def collect_clan(conn, api: Api, clan_tag: str, now: str) -> None:
     group = api.get(f"/clans/{enc(clan_tag)}/currentwar/leaguegroup")
     if group:
         collect_league_group(conn, api, group)
+    return [m["tag"] for m in items]
 
 
 def collect_league_group(conn, api: Api, group: dict) -> None:
@@ -97,13 +101,36 @@ def collect_league_group(conn, api: Api, group: dict) -> None:
                 db.upsert_war(conn, war, kind="cwl", war_tag=tag, season=season, round_no=i)
 
 
-def run(conn, client: httpx.Client) -> Api:
+def collect_profiles(conn, api: Api, tags: list[str], now: str) -> None:
+    """Every current member's /players profile, and each clan's latest raid weekend. About twice a day: profiles change
+    slowly and cost one call each."""
+    stored = 0
+    for tag in tags:
+        p = api.get(f"/players/{enc(tag)}", quiet=(404,))
+        if p:
+            with conn:
+                profiles.upsert_profile(conn, p, now)
+            stored += 1
+    # Each clan's latest raid weekend, for the capital board. 404 or 403 (no raids, private) is quiet.
+    for clan_tag in CLAN_TAGS.values():
+        raids = api.get(f"/clans/{enc(clan_tag)}/capitalraidseasons?limit=1")
+        if raids and raids.get("items"):
+            with conn:
+                profiles.upsert_raid(conn, clan_tag, raids["items"][0])
+    with conn:
+        conn.execute("INSERT OR REPLACE INTO profile_runs VALUES (?,?)", (now, stored))
+
+
+def run(conn, client: httpx.Client, force_profiles: bool = False) -> Api:
     api = Api(client)
     started = db.utcnow()
+    tags: list[str] = []
     for clan_tag in CLAN_TAGS.values():
         # One transaction per clan: a crash mid-pass keeps what earlier clans stored.
         with conn:
-            collect_clan(conn, api, clan_tag, started)
+            tags += collect_clan(conn, api, clan_tag, started)
+    if tags and (force_profiles or profiles.profiles_due(conn, started)):
+        collect_profiles(conn, api, tags, started)
     with conn:
         conn.execute("INSERT OR REPLACE INTO polls VALUES (?,?,?,?)", (started, db.utcnow(), api.calls, api.errors))
     return api
@@ -117,7 +144,7 @@ def main() -> int:
     conn = db.connect(os.environ.get("FROSTED_DB", DEFAULT_DB))
     headers = {"Authorization": f"Bearer {token}", "Accept": "application/json"}
     with httpx.Client(base_url=API, headers=headers, timeout=20) as client:
-        api = run(conn, client)
+        api = run(conn, client, force_profiles="--profiles" in sys.argv)
     log(f"poll done: {api.calls} calls, {api.errors} errors")
     # A pass where every call failed (bad token, IP not on the key) should show as a failed unit.
     return 1 if api.calls and api.errors == api.calls else 0
