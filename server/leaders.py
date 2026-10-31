@@ -2,7 +2,7 @@
 
 Everything here only reads. The make-room list gives reasons, never decisions: who leaves a clan is Ka Wai's call.
 
-Activity comes from profile snapshots, taken every 2 hours and stored when any counter moved. A snapshot shows
+Activity comes from profile snapshots, taken every hour and stored when any counter moved. A snapshot shows
 activity when, against the one before it, attack wins, war stars, capital contributions, experience level, town hall
 or any unit level changed, or donations given or received rose. Trophies and builder trophies do not count, as
 defenses move them while the player is idle, and a season reset of donations to 0 is not activity.

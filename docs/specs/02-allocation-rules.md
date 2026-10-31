@@ -97,7 +97,7 @@ The site's make-room list (`GET /leaders/make-room?clan=`, `server/leaders.py`) 
 that rule. **It lists candidates and never removes anyone.** Who leaves is still Ka Wai's call.
 
 1. **Activity first.** Members fall into four buckets by days without activity: 14 or more, 7 to 13, 3 to 6,
-   then active. Activity comes from the 2-hourly profile snapshots. Trophies do not count, and a donations
+   then active. Activity comes from the hourly profile snapshots. Trophies do not count, and a donations
    reset at season end does not count. Where nothing has changed since tracking began, the days counted are
    a minimum, and they still decide the bucket.
 2. **Then hero strength, weakest first.** A member's home hero levels, summed, as a percentage of the median

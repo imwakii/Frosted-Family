@@ -6,7 +6,7 @@ clans. A 403 (war log private), 404 (not in war, not in CWL) or a network failur
 pass moves on. The token comes from COC_API_TOKEN and is never printed.
 
     python -m server.collect                 # uses FROSTED_DB, default /opt/bots/frosted/data/frosted.db
-    python -m server.collect --profiles      # also fetch every member's profile now (otherwise every 12 hours)
+    python -m server.collect --profiles      # also fetch every member's profile now (otherwise every hour)
 """
 from __future__ import annotations
 
@@ -105,7 +105,7 @@ def collect_league_group(conn, api: Api, group: dict) -> None:
 
 
 def collect_profiles(conn, api: Api, tags: list[str], now: str) -> None:
-    """Every current member's /players profile, and each clan's latest raid weekend. About twice a day: profiles change
+    """Every current member's /players profile, and each clan's latest raid weekend. Every hour: profiles change
     slowly and cost one call each."""
     stored = 0
     for tag in tags:

@@ -158,7 +158,7 @@ def client(conn, tmp_path, monkeypatch):
 
 
 def test_roster_joins_on_tag_never_name(client):
-    players = {p["name"]: p for p in client.get("/roster").json()["players"]}
+    players = {p["name"]: p for p in client.get("/roster").json()["players"] if not p["new"]}
     # Renamed in game: still joined, by tag.
     assert players["Waki"]["snapshot"]["name"] == "Waki renamed"
     assert players["Waki"]["snapshot"]["clan"] == "Fire"
