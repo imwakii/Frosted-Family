@@ -1,0 +1,8 @@
+{"state": "warEnded", "teamSize": 1, "attacksPerMember": 1,
+ "preparationStartTime": "20261102T080000.000Z", "startTime": "20261103T080000.000Z", "endTime": "20261104T080000.000Z",
+ "clan": {"tag": "#9VYRQ2L8", "name": "Other A", "stars": 3, "destructionPercentage": 100.0, "attacks": 1,
+   "members": [{"tag": "#2VQ8LJ0P", "name": "other one", "townhallLevel": 18, "mapPosition": 1, "opponentAttacks": 0,
+     "attacks": [{"attackerTag": "#2VQ8LJ0P", "defenderTag": "#QY8J0L2U", "stars": 3, "destructionPercentage": 100, "order": 1, "duration": 120}]}]},
+ "opponent": {"tag": "#8UJ0GQ2P", "name": "Other B", "stars": 0, "destructionPercentage": 0.0, "attacks": 0,
+   "members": [{"tag": "#QY8J0L2U", "name": "b one", "townhallLevel": 18, "mapPosition": 1, "opponentAttacks": 1}]}
+}

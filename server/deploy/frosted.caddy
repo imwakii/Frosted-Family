@@ -1,0 +1,10 @@
+# Installed to /etc/caddy/sites/frosted.caddy by `setup.sh caddy`, which also adds the import line to the Caddyfile.
+# The site reaches this through a Vercel rewrite, so players only ever see the Vercel URL.
+cwl-api.ngkawai.dev {
+	encode gzip
+	header {
+		-Server
+		Cache-Control "public, max-age=30"
+	}
+	reverse_proxy 127.0.0.1:8090
+}

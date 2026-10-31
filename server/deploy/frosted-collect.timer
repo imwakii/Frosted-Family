@@ -1,0 +1,11 @@
+[Unit]
+Description=Frosted Family war collector (every 10 minutes)
+
+[Timer]
+OnCalendar=*-*-* *:00/10:00
+Persistent=false
+AccuracySec=30s
+Unit=frosted-collect.service
+
+[Install]
+WantedBy=timers.target
