@@ -141,6 +141,25 @@ def test_sign_in_answers_503_until_configured(env, monkeypatch):
                                                "configured": False}
 
 
+def test_nothing_writes_without_a_configured_sign_in(env, monkeypatch):
+    # Sign-in is deferred: api.env has no DISCORD_* or SESSION_SECRET. Even a cookie signed with a guessed secret
+    # must not open a write.
+    for k in ("DISCORD_CLIENT_ID", "DISCORD_CLIENT_SECRET", "DISCORD_GUILD_ID", "DISCORD_LEADER_ROLE_IDS",
+              "DISCORD_PUBLISHER_ID", "SESSION_SECRET"):
+        monkeypatch.delenv(k)
+    c = client()
+    forged = auth.sign({"uid": PUBLISHER, "name": "x", "csrf": "c", "exp": time.time() + 60}, b"test-secret")
+    c.cookies.set(auth.SESSION_COOKIE, forged)
+    h = {"X-CSRF-Token": "c"}
+    assert c.get("/auth/me").json()["configured"] is False and c.get("/auth/me").json()["user"] is None
+    body = {"moves": [{"tag": "#R2PPV8CL", "clan": "Fire", "slot": "SUB"}]}
+    assert c.put("/plan/draft", json=body, headers=h).status_code == 401
+    assert c.post("/plan/check", json=body, headers=h).status_code == 401
+    assert c.post("/plan/publish", json=body, headers=h).status_code == 401
+    assert c.get("/auth/login").status_code == 503
+    assert client().get("/allocation.csv").status_code == 404  # nothing was published
+
+
 def test_logout_clears_the_session(env):
     c, _ = signed_in()
     assert c.post("/auth/logout").status_code == 204
