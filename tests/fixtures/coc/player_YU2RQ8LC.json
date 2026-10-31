@@ -1,0 +1,7 @@
+{"tag": "#YU2RQ8LC", "name": "flake", "townHallLevel": 14, "expLevel": 150,
+ "trophies": 3000, "bestTrophies": 3300, "warStars": 300, "attackWins": 10, "defenseWins": 1,
+ "donations": 5, "donationsReceived": 5, "clanCapitalContributions": 1000,
+ "clan": {"tag": "#9VYRQ2L8", "name": "Left for another clan"},
+ "heroes": [{"name": "Barbarian King", "level": 70, "maxLevel": 105, "village": "home"}],
+ "troops": [], "spells": []
+}

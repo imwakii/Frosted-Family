@@ -94,6 +94,37 @@ CREATE TABLE IF NOT EXISTS polls (
     errors INTEGER
 );
 
+-- Player profiles from /players/{tag}, fetched about twice a day. Latest only; the units are replaced each fetch.
+CREATE TABLE IF NOT EXISTS player_profiles (
+    player_tag TEXT PRIMARY KEY,
+    fetched_at TEXT NOT NULL,
+    name TEXT,
+    clan_tag TEXT,
+    town_hall INTEGER,
+    exp_level INTEGER,
+    trophies INTEGER,
+    best_trophies INTEGER,
+    league TEXT,
+    war_stars INTEGER,
+    attack_wins INTEGER,
+    defense_wins INTEGER,
+    donations INTEGER,
+    donations_received INTEGER,
+    capital_contributions INTEGER
+);
+CREATE TABLE IF NOT EXISTS player_units (
+    player_tag TEXT NOT NULL REFERENCES player_profiles (player_tag),
+    kind TEXT NOT NULL,                   -- hero, equipment, troop, super_troop, spell, pet, siege
+    name TEXT NOT NULL,
+    level INTEGER NOT NULL,
+    max_level INTEGER,                    -- the game's max for the unit, not the player's town hall cap
+    PRIMARY KEY (player_tag, kind, name)
+);
+CREATE TABLE IF NOT EXISTS profile_runs (
+    started_at TEXT PRIMARY KEY,
+    players INTEGER
+);
+
 -- A missed attack is an attack slot left unused once the war has ended. Wars still running are not counted.
 CREATE VIEW IF NOT EXISTS missed_attacks AS
 SELECT m.war_key, m.player_tag, m.clan_tag, m.name, w.kind, w.season, w.round, w.end_time,

@@ -40,6 +40,9 @@ class Recorder:
     def __call__(self, request):
         path = request.url.raw_path.decode()
         self.paths.append(path)
+        if path.startswith("/v1/players/%23") and path not in self.routes:
+            profile = FIX / f"player_{path.rsplit('%23', 1)[1]}.json"
+            return httpx.Response(200, json=fixture(profile.name)) if profile.exists() else httpx.Response(404)
         target = self.routes[path]  # KeyError: an unexpected call fails the test
         if isinstance(target, int):
             return httpx.Response(target, json={"reason": "accessDenied" if target == 403 else "notFound"})
@@ -56,6 +59,11 @@ def counts(conn):
             for t in ("member_snapshots", "wars", "war_members", "attacks", "cwl_war_tags")}
 
 
+@pytest.fixture(autouse=True)
+def app_db(tmp_path, monkeypatch):
+    monkeypatch.setenv("FROSTED_APP_DB", str(tmp_path / "app.db"))
+
+
 @pytest.fixture
 def conn(tmp_path):
     c = db.connect(tmp_path / "frosted.db")
@@ -66,10 +74,14 @@ def conn(tmp_path):
 # ─── idempotent upserts ──────────────────────────────────────────────────────
 
 def test_repolling_adds_nothing(conn):
-    first = poll(conn, Recorder())
+    first_rec, second_rec = Recorder(), Recorder()
+    first = poll(conn, first_rec)
     after_first = counts(conn)
-    poll(conn, Recorder())
+    poll(conn, second_rec)
     assert counts(conn) == after_first
+    # Profiles are fetched on the first pass only: the next is due 12 hours later.
+    assert sum("/players/" in p for p in first_rec.paths) == 5
+    assert not any("/players/" in p for p in second_rec.paths)
     assert first.errors == 0  # the 403 and 404s are quiet
     # 5 members; Cake's regular war and Fire's two CWL wars; the other clans' war is not stored
     assert after_first == {"member_snapshots": 5, "wars": 3, "war_members": 12, "attacks": 9, "cwl_war_tags": 3}
@@ -93,7 +105,7 @@ def test_ended_and_foreign_cwl_wars_are_not_refetched(conn):
     poll(conn, Recorder())
     second = Recorder()
     poll(conn, second)
-    wars = [p for p in second.paths if "/clanwarleagues/wars/" in p]
+    wars = [p for p in second.paths if "/clanwarleagues/wars/" in p]  # profiles are not due on the second pass
     assert wars == ["/v1/clanwarleagues/wars/%232Y0QRLJ8P"]  # only the war still running
 
 

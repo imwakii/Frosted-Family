@@ -4,23 +4,25 @@ site through a Vercel rewrite.
     GET /roster          every allocated player from frosted_cwl_members.csv, joined on tag to the latest snapshot
     GET /war/live        each clan's current war: CWL day, opponent, stars, attacks used
     GET /player/{tag}    one player's allocation, latest snapshot, wars, attacks and missed attacks
+    GET /allocation.csv  the latest published allocation, for server/pull_allocation.py
+    GET /explore/{board} ranked boards from player profiles: heroes, equipment, army, war, donations, capital
+    /auth/*, /plan/*     Discord sign-in for leaders (server/auth.py) and the Plan tab (server/plan.py)
 
-The CSV is canonical for allocation and is read as it stands; nothing here changes clan, cwl_slot or
-transferred_from. Tag is the join key, never name.
+The CSV is canonical for allocation. The one thing laid over it is the publisher's latest publish, and only while the
+CSV is the one it was published against (server/plan.py). Tag is the join key, never name.
 
     uvicorn server.api:app --host 127.0.0.1 --port 8090
 """
 from __future__ import annotations
 
-import csv
 import os
 import sqlite3
 from pathlib import Path
 
-from fastapi import Depends, FastAPI, Header, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 
 from frosted.config import CLAN_TAGS, TAG_TO_CLAN
-from server import db
+from server import auth, db, plan, profiles
 
 DEFAULT_DB = "/opt/bots/frosted/data/frosted.db"
 ROSTER_FIELDS = ("tag", "name", "clan", "cwl_slot", "transferred_from", "tier", "final_score", "current_th", "flags")
@@ -30,11 +32,6 @@ app = FastAPI(title="Frosted Family CWL", docs_url=None, redoc_url=None, openapi
 
 def db_path() -> str:
     return os.environ.get("FROSTED_DB", DEFAULT_DB)
-
-
-def roster_path() -> Path:
-    # The unit sets FROSTED_ROSTER; the fallback is the repo root, where the service and tests run.
-    return Path(os.environ.get("FROSTED_ROSTER", "frosted_cwl_members.csv"))
 
 
 def open_db() -> sqlite3.Connection | None:
@@ -53,9 +50,9 @@ def blank_to_none(v):
     return None if v is None or v == "" else v
 
 
-def read_roster() -> list[dict]:
-    with roster_path().open(encoding="utf-8", newline="") as f:
-        return [{k: blank_to_none(row.get(k)) for k in ROSTER_FIELDS} for row in csv.DictReader(f)]
+def read_roster() -> tuple[list[dict], dict]:
+    rows, meta = plan.effective_roster()
+    return [{k: blank_to_none(row.get(k)) for k in ROSTER_FIELDS} for row in rows], meta
 
 
 def snapshot_view(s: dict | None) -> dict | None:
@@ -72,11 +69,12 @@ def roster():
     conn = open_db()
     latest = db.latest_members(conn) if conn else {}
     rows = []
-    for r in read_roster():
+    players, meta = read_roster()
+    for r in players:
         # Rows with no tag (joined between export and roster build) cannot be joined and show without a snapshot.
         r["snapshot"] = snapshot_view(latest.get(r["tag"])) if r["tag"] else None
         rows.append(r)
-    return {"players": rows, "last_poll": last_poll(conn)}
+    return {"players": rows, "allocation": meta, "last_poll": last_poll(conn)}
 
 
 def last_poll(conn) -> str | None:
@@ -125,7 +123,7 @@ def war_live():
 @app.get("/player/{tag}")
 def player(tag: str):
     tag = norm_tag(tag)
-    alloc = next((r for r in read_roster() if r["tag"] == tag), None)
+    alloc = next((r for r in read_roster()[0] if r["tag"] == tag), None)
     conn = open_db()
     snap = db.latest_members(conn).get(tag) if conn else None
     if not alloc and not snap:
@@ -150,25 +148,28 @@ def player(tag: str):
             "missed_attacks": sum(m["missed"] for m in missed)}
 
 
-# ─── leader-only endpoints: STUBS ─────────────────────────────────────────────
-# The Plan tab's draft and publish. Not built: Ka Wai has not decided how leaders sign in. Until then require_leader
-# refuses every request, so these routes cannot change anything. Replace it with the chosen auth, then build the
-# handlers. Publishing must still never write clan, cwl_slot or transferred_from without his decision.
+# ─── allocation, sign-in, plan, explore ───────────────────────────────────────
 
-def require_leader(authorization: str | None = Header(default=None)) -> None:
-    raise HTTPException(401, "leader sign-in is not set up yet")
+@app.get("/allocation.csv")
+def allocation():
+    return plan.allocation_csv()
 
 
-@app.get("/plan/draft", dependencies=[Depends(require_leader)])
-def get_draft():  # pragma: no cover - unreachable until auth exists
-    raise HTTPException(501, "not built")
+@app.get("/explore/{board}")
+def explore(board: str):
+    return profiles.board(open_db(), board)
 
 
-@app.put("/plan/draft", dependencies=[Depends(require_leader)])
-def put_draft():  # pragma: no cover
-    raise HTTPException(501, "not built")
+app.include_router(auth.router)
+app.include_router(plan.router)
 
 
-@app.post("/plan/publish", dependencies=[Depends(require_leader)])
-def publish():  # pragma: no cover
-    raise HTTPException(501, "not built")
+@app.middleware("http")
+async def private_responses(request: Request, call_next):
+    """Sign-in and plan answers are per leader. Caddy marks the public reads cacheable, so these say no-store, and
+    Vary: Cookie keeps any cache from handing one leader's answer to another."""
+    resp = await call_next(request)
+    if request.url.path.startswith(("/auth", "/plan", "/allocation")):
+        resp.headers["Cache-Control"] = "no-store, private"
+    resp.headers["Vary"] = "Cookie"
+    return resp
