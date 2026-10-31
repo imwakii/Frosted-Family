@@ -397,10 +397,12 @@ type PlanProps = { roster: Roster; me: Me; ready: boolean; wide: boolean; onSign
 
 export default function PlanTab({ roster, me, ready, wide, onSignOut }: PlanProps) {
   if (!ready) return <div aria-busy="true" aria-label="Loading" className="mx-auto mt-16 h-48 max-w-[380px] animate-pulse rounded-[20px] bg-well" />
-  // The board is open while Discord sign-in is not set up; Inactivity and Make room sit below it for everyone.
+  // Open to all only while Discord sign-in is not set up. Once it is, signed-out visitors and non-leaders
+  // see the sign-in card alone: no board, no Inactivity, no Make room.
+  if (me.configured && !me.role) return <Gate me={me} onSignOut={onSignOut} />
   return (
     <>
-      {me.role || !me.configured ? <Plan roster={roster} me={me} /> : <Gate me={me} onSignOut={onSignOut} />}
+      <Plan roster={roster} me={me} />
       <LeadersTools wide={wide} />
     </>
   )
