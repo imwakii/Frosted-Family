@@ -28,3 +28,23 @@ export async function mockMatrix(cat: Cat): Promise<Matrix> {
     }),
   }
 }
+
+export async function mockWar(scope: 'all' | 'cwl') {
+  const roster: Roster = await fetch('/roster.json').then((r) => r.json())
+  return {
+    kind: 'war', scope, since: '2026-10-31', season: scope === 'cwl' ? '2026-11' : null, updated_at: new Date().toISOString(),
+    players: roster.players.map((p) => {
+      const r = rnd(p.tag + scope)
+      const wars = scope === 'cwl' ? Math.floor(r() * 4) : Math.floor(r() * 6)
+      const owed = wars * (scope === 'cwl' ? 1 : 2)
+      const missed = Math.floor(owed * r() * r())
+      const attacks = owed - missed
+      const three = Math.floor(attacks * r())
+      return {
+        tag: p.tag, name: p.name, clan: p.clan, th: p.th,
+        war_stars: r() < 0.05 ? null : Math.floor(200 + r() * 2400),
+        war: attacks + missed ? { wars, attacks, stars: three * 3 + Math.floor((attacks - three) * 1.8), three_stars: three, missed, avg_destruction: attacks ? 70 + r() * 30 : null } : null,
+      }
+    }),
+  }
+}
