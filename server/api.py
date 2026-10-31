@@ -1,5 +1,5 @@
-"""Read API for the Frosted Family site, served at cwl-api.ngkawai.dev behind Caddy and reached by the site through a
-Vercel rewrite.
+"""Read API for the Frosted Family site, served at FROSTED_API_HOST (deploy/setup.sh) behind Caddy and reached by the
+site through a Vercel rewrite.
 
     GET /roster          every allocated player from frosted_cwl_members.csv, joined on tag to the latest snapshot
     GET /war/live        each clan's current war: CWL day, opponent, stars, attacks used

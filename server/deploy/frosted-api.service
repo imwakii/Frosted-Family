@@ -1,4 +1,4 @@
-# The read API (server/api.py) on 127.0.0.1:8090. Caddy serves it at cwl-api.ngkawai.dev (frosted.caddy).
+# The read API (server/api.py) on 127.0.0.1:8090. Caddy serves it at FROSTED_API_HOST (setup.sh, frosted.caddy).
 # It reads the collector's database and the repo's frosted_cwl_members.csv, and needs no token.
 [Unit]
 Description=Frosted Family CWL API

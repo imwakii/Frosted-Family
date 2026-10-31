@@ -5,10 +5,10 @@
 #
 #   bash setup.sh install   user, repo checkout (public, over HTTPS), venv, systemd units; starts the API, and the
 #                           collector timer once api.env has COC_API_TOKEN
-#   bash setup.sh caddy     the cwl-api.ngkawai.dev site block, imported into /etc/caddy/Caddyfile
+#   bash setup.sh caddy     the API's site block for FROSTED_API_HOST, imported into /etc/caddy/Caddyfile
 #   bash setup.sh status    units, last collector run, row counts
 #
-# Variables: FROSTED_BRANCH (main).
+# Variables: FROSTED_BRANCH (main), FROSTED_API_HOST (the API's public hostname, set once below).
 #
 # The finance setup.sh `web` phase rewrites /etc/caddy/Caddyfile and drops the import line. Rerun `setup.sh caddy`
 # after it, until the finance renderer emits the import itself.
@@ -19,6 +19,8 @@ BOTS=/opt/bots
 BOT=frosted
 BOT_HOME="$BOTS/$BOT"
 BRANCH="${FROSTED_BRANCH:-main}"
+# The one place the hostname is set. A free DuckDNS name pointed at this droplet; nothing on ngkawai.dev.
+FROSTED_API_HOST="${FROSTED_API_HOST:-frostedcwl.duckdns.org}"
 REPO_URL=https://github.com/imwakii/Frosted-Family.git
 DEPLOY="$BOT_HOME/repo/server/deploy"  # units come from the checkout, so a first run from a downloaded copy works
 SITES=/etc/caddy/sites
@@ -61,11 +63,12 @@ install_app() {
 
 caddy_site() {
   install -d -m 755 "$SITES"
-  install -m 644 "$DEPLOY/frosted.caddy" "$SITES/frosted.caddy"
+  sed "s/__FROSTED_API_HOST__/$FROSTED_API_HOST/g" "$DEPLOY/frosted.caddy" > "$SITES/frosted.caddy"
+  chmod 644 "$SITES/frosted.caddy"
   grep -qxF "$IMPORT_LINE" /etc/caddy/Caddyfile || printf '\n%s\n' "$IMPORT_LINE" >> /etc/caddy/Caddyfile
   caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile >/dev/null
   systemctl reload caddy
-  echo "cwl-api.ngkawai.dev served (needs the DNS A record to this droplet before Caddy can get a certificate)."
+  echo "$FROSTED_API_HOST served (the DuckDNS name must point at this droplet before Caddy can get a certificate)."
 }
 
 status() {
