@@ -21,8 +21,9 @@ War collector and read API for the Frosted Family site, on the bots droplet unde
   `frosted_cwl_members.csv` (allocation columns only) for Ka Wai to commit. The server never writes to GitHub.
 - `profiles.py` stores every member's `/players` profile (each level change kept in `player_unit_history`) and each
   clan's latest raid weekend every 2 hours, and serves `/explore/matrix?cat=heroes|equipment|troops|spells|pets|sieges` and
-  `/explore/{heroes|equipment|army|war|donations|capital}`, one row per current member. `war` counts the wars this
-  collector recorded. Each unit has `max` (the game's max level) and `cap` (the max at the player's town hall),
+  `/explore/{heroes|equipment|army|donations|capital}`, one row per current member. `/explore/war` is all-time war
+  stars from the profile plus the record over the wars this collector saw (`since`), with the current CWL season apart:
+  recorded history starts 31 Oct 2026. Each unit has `max` (the game's max level) and `cap` (the max at the player's town hall),
   which is always null: no source for per-TH caps is both official and current, so there is no rushed check yet.
   Pets, siege machines and super troops are told apart by the name lists in `data/unit_kinds.json`.
 
