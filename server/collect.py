@@ -17,7 +17,7 @@ from urllib.parse import quote
 import httpx
 
 from frosted.config import CLAN_TAGS
-from server import db, profiles
+from server import db, profiles, stats
 
 API = "https://api.clashofclans.com/v1"
 DEFAULT_DB = "/opt/bots/frosted/data/frosted.db"
@@ -135,6 +135,7 @@ def run(conn, client: httpx.Client, force_profiles: bool = False) -> Api:
     if tags and (force_profiles or profiles.profiles_due(conn, started)):
         collect_profiles(conn, api, tags, started)
     with conn:
+        stats.record_day(conn, started)  # today's clan_daily rows for /stats/clans
         conn.execute("INSERT OR REPLACE INTO polls VALUES (?,?,?,?)", (started, db.utcnow(), api.calls, api.errors))
     return api
 
