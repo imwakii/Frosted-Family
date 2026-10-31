@@ -89,7 +89,9 @@ const SUGGEST: Record<string, string> = { CORE: 'start', SUB: 'bench', OUT: 'out
 
 // Joined date and the backend's suggested slot for a new member; the reason is the chip's tooltip.
 function NewLine({ p }: { p: Player }) {
-  const joined = p.joinedAt ? new Date(p.joinedAt + 'T00:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' }) : null
+  // joined_at may be a date or a full timestamp.
+  const at = p.joinedAt ? new Date(p.joinedAt.length === 10 ? p.joinedAt + 'T00:00:00Z' : p.joinedAt) : null
+  const joined = at && !Number.isNaN(at.getTime()) ? at.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' }) : null
   if (!joined && !p.suggestedSlot) return null
   return (
     <span className="flex min-w-0 items-center gap-1.5 text-[11px] text-faint">
