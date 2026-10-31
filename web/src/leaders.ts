@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { ClanName } from './types'
 
-// GET /api/explore/upgrades (public) and the leaders-only /api/leaders/*.
+// GET /api/explore/upgrades and /api/leaders/*, all public for now.
 export type UpgradeCategory = 'hero' | 'equipment' | 'troop' | 'spell' | 'pet' | 'siege' | 'town_hall'
 export type Upgrade = {
   tag: string; name: string; clan: ClanName; th: number | null
@@ -41,7 +41,6 @@ export const useUpgrades = (days: number) =>
     ? import('./devMock').then((m) => m.mockUpgrades() as Promise<{ upgrades: Upgrade[]; as_of: string | null }>)
     : getJson<{ upgrades: Upgrade[]; as_of: string | null }>(`/api/explore/upgrades?days=${days}`).then((d) => (d && Array.isArray(d.upgrades) ? d : null))))
 
-/** Leaders only; pass enabled=false before unlocking so nothing is requested. */
 export const useInactivity = (enabled: boolean) =>
   useLoad<{ players: Inactive[]; as_of: string | null }>(enabled ? 'inactivity' : null, () => (mock()
     ? import('./devMock').then((m) => m.mockInactivity())
