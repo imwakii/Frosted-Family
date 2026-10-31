@@ -7,10 +7,12 @@ export type Me = {
   role: 'publisher' | 'leader' | null
   publishers: string[]
   csrf: string | null
+  /** False until the Discord app is set up on the server. */
+  configured: boolean
 }
 export type AuthState = { status: 'loading' | 'ready'; me: Me }
 
-const SIGNED_OUT: Me = { user: null, role: null, publishers: [], csrf: null }
+const SIGNED_OUT: Me = { user: null, role: null, publishers: [], csrf: null, configured: true }
 
 // Dev only: ?as=publisher|leader|member previews each signed-in state.
 function devMe(): Me | null {
@@ -22,6 +24,7 @@ function devMe(): Me | null {
     role: as === 'publisher' || as === 'leader' ? as : null,
     publishers: ['Waki'],
     csrf: 'dev',
+    configured: true,
   }
 }
 

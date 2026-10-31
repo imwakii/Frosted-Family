@@ -356,7 +356,7 @@ function Gate({ me, onSignOut }: { me: Me; onSignOut: () => void }) {
         <h2 className="m-0 text-xl font-extrabold tracking-[-0.02em]">Leaders only</h2>
         {failed && !me.user && (
           <span role="status" className="rounded-full bg-[#FEF3C7] px-3 py-1 text-[13px] font-bold text-[#92400E]">
-            {failed === 'denied' ? 'Sign-in cancelled' : 'Sign-in failed. Try again.'}
+            {failed === 'denied' ? 'Not a leader account' : 'Sign-in failed. Try again.'}
           </span>
         )}
         {me.user ? (
@@ -365,6 +365,10 @@ function Gate({ me, onSignOut }: { me: Me; onSignOut: () => void }) {
             <button type="button" onClick={onSignOut}
               className="min-h-11 w-full cursor-pointer rounded-[10px] border border-[#D5DBE5] bg-white text-sm font-semibold text-ink-2 hover:bg-page">Sign out</button>
           </>
+        ) : !me.configured ? (
+          <button type="button" disabled className="mt-1 flex min-h-12 w-full items-center justify-center gap-2.5 rounded-[12px] border-0 bg-[#E2E8F0] text-[15px] font-bold text-faint">
+            <Discord />Sign-in coming soon
+          </button>
         ) : (
           <a href={loginHref()}
             className="mt-1 flex min-h-12 w-full items-center justify-center gap-2.5 rounded-[12px] bg-[#5865F2] text-[15px] font-bold text-white no-underline hover:bg-[#4752C4]">
