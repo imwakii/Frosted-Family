@@ -171,6 +171,13 @@ def require_leader_write(leader: Leader = Depends(require_leader),
     return leader
 
 
+def require_discord_write(leader: Leader = Depends(require_leader_write)) -> Leader:
+    """Plan writes wait for Discord sign-in: a passcode session may read but not save."""
+    if leader.via != "discord":
+        raise HTTPException(403, "saving the plan needs Discord sign-in")
+    return leader
+
+
 def require_publisher(leader: Leader = Depends(require_leader_write)) -> Leader:
     if not leader.can_publish:
         raise HTTPException(403, "only the publisher can publish")

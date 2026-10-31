@@ -56,10 +56,11 @@ def clear_rate_limit():
 
 @pytest.fixture
 def passcode_only(timeline, monkeypatch):
-    """Discord not set up; the leaders' passcode is."""
+    """Discord not set up; the leaders' passcode is, and the leaders' lists are locked again (LEADERS_PUBLIC=false)."""
     for k in SESSION_VARS:
         monkeypatch.delenv(k, raising=False)
     monkeypatch.setenv("LEADER_PASSCODE", PASS)
+    monkeypatch.setenv("LEADERS_PUBLIC", "false")
     return timeline
 
 
@@ -89,9 +90,19 @@ def test_upgrades_filter_by_clan_and_days(timeline):
 
 # ─── leaders' passcode ────────────────────────────────────────────────────────
 
-def test_leaders_endpoints_401_without_a_passcode(timeline, monkeypatch):
+def test_leaders_lists_are_public_by_default(timeline, monkeypatch):
     for k in SESSION_VARS:
         monkeypatch.delenv(k, raising=False)
+    assert client().get("/leaders/inactivity").status_code == 200
+    assert client().get("/leaders/make-room", params={"clan": "Fire"}).status_code == 200
+    # Opening the lists opens nothing else: plan writes still need a session.
+    assert client().put("/plan/draft", json={"moves": []}).status_code == 401
+
+
+def test_leaders_endpoints_401_when_locked_without_a_passcode(timeline, monkeypatch):
+    for k in SESSION_VARS:
+        monkeypatch.delenv(k, raising=False)
+    monkeypatch.setenv("LEADERS_PUBLIC", "false")
     assert client().get("/leaders/inactivity").status_code == 401
     assert client().post("/auth/passcode", json={"passcode": "anything"}).status_code == 401
     assert client().get("/auth/me").json()["passcode_enabled"] is False
@@ -104,7 +115,8 @@ def test_passcode_signs_in_a_leader_who_cannot_publish(passcode_only):
     assert (me["role"], me["via"], me["user"]["name"], me["configured"]) == ("leader", "passcode", "Leader", False)
     assert c.get("/leaders/inactivity").status_code == 200
     assert c.post("/plan/publish", json={"moves": []}, headers=csrf).status_code == 403
-    assert c.put("/plan/draft", json={"moves": []}, headers=csrf).status_code == 200
+    # Plan writes wait for Discord: a passcode session cannot save a draft.
+    assert c.put("/plan/draft", json={"moves": []}, headers=csrf).status_code == 403
 
 
 def test_passcode_tries_are_rate_limited(passcode_only):
