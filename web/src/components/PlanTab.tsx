@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { loginHref, type Me } from '../auth'
-import { getDraft, HttpError, publishPlan, saveDraft } from '../data'
+import { loginHref, takeSigninError, type Me } from '../auth'
+import { checkPlan, getDraft, HttpError, publishPlan, saveDraft } from '../data'
 import { CLAN, CLANS, GROUPS, STATUS, coreAvg, fmtScore } from '../theme'
 import type { ClanName, Player, Roster, Slot } from '../types'
 import { Arrow, Th } from './ui'
@@ -91,6 +91,8 @@ function Plan({ roster, me }: { roster: Roster; me: Me }) {
   const [confirming, setConfirming] = useState(false)
   const [result, setResult] = useState<{ ok: boolean; n: number; why?: string } | null>(null)
   const [busy, setBusy] = useState(false)
+  const [override, setOverride] = useState(false)
+  const [server, setServer] = useState<{ problems: string[] } | 'checking' | null>(null)
   const [phoneClan, setPhoneClan] = useState<ClanName>('Fire')
 
   useEffect(() => { try { localStorage.setItem(DRAFT_KEY, JSON.stringify(moves)) } catch { /* private mode */ } }, [moves])
@@ -108,7 +110,7 @@ function Plan({ roster, me }: { roster: Roster; me: Me }) {
   const save = async () => {
     setSaving(true)
     try {
-      const d = await saveDraft(toList(moves))
+      const d = await saveDraft(toList(moves), me.csrf)
       setSaved({ moves, by: d.updated_by ?? me.user?.name ?? null })
     } catch {
       setResult({ ok: false, n: 0, why: 'Draft not saved. Try again.' })
@@ -165,20 +167,40 @@ function Plan({ roster, me }: { roster: Roster; me: Me }) {
   const step = (p: Player) => (p.clan === 'Cake' && moves[p.tag].clan !== 'Cake' ? 0 : p.clan !== 'Cake' && moves[p.tag].clan === 'Cake' ? 2 : 1)
   const changes = roster.players.filter((p) => moves[p.tag]).sort((a, b) => step(a) - step(b))
   const n = changes.length
-  const blocked = checks.some((k) => k.tone === 'bad' || k.tone === 'warn')
+  // The publisher may override the one-way valve, confirmed in the publish sheet.
+  const valveOnly = (k: Check) => k.key === 'valve' && canPublish
+  const blocked = checks.some((k) => (k.tone === 'bad' || k.tone === 'warn') && !valveOnly(k))
+  const valveHit = checks.some((k) => k.key === 'valve' && k.tone === 'bad')
   const cant = !n || blocked || busy
+  const list = () => changes.map((p) => ({ tag: p.tag, ...moves[p.tag] }))
+
+  const openConfirm = async () => {
+    setOverride(false)
+    setConfirming(true)
+    setServer('checking')
+    try {
+      const r = await checkPlan(list(), valveHit, me.csrf)
+      setServer({ problems: r.problems ?? [] })
+    } catch (e) {
+      setServer(e instanceof HttpError && e.problems.length ? { problems: e.problems } : null)
+    }
+  }
+  const serverProblems = server && server !== 'checking' ? server.problems : []
   const changeLabel = n ? `${n} ${n === 1 ? 'change' : 'changes'}` : 'No changes'
 
   const publish = async () => {
     setBusy(true)
     try {
-      await publishPlan(changes.map((p) => ({ tag: p.tag, ...moves[p.tag] })))
+      await publishPlan(list(), valveHit && override, me.csrf)
       setResult({ ok: true, n })
       setMoves({})
       setSaved({ moves: {}, by: me.user?.name ?? null })
     } catch (e) {
-      const auth = e instanceof HttpError && (e.status === 401 || e.status === 403)
-      setResult({ ok: false, n, why: auth ? 'Not published. Only the publisher can publish.' : 'Not published. The server is offline.' })
+      const err = e instanceof HttpError ? e : null
+      const why = err?.problems.length ? `Not published. ${err.problems.join('. ')}.`
+        : err && (err.status === 401 || err.status === 403) ? 'Not published. Sign in again as the publisher.'
+        : 'Not published. The server is offline.'
+      setResult({ ok: false, n, why })
     } finally {
       setBusy(false)
       setConfirming(false)
@@ -199,10 +221,10 @@ function Plan({ roster, me }: { roster: Roster; me: Me }) {
           )}
           <button type="button" onClick={save} disabled={!dirty || saving}
             className="min-h-10 cursor-pointer rounded-[10px] border border-[#D5DBE5] bg-white px-3 text-sm font-semibold text-ink-2 hover:bg-page disabled:cursor-default disabled:opacity-60">
-            {dirty ? 'Save' : 'Saved'}
+            {dirty || !saved ? 'Save' : 'Saved'}
           </button>
           {canPublish ? (
-            <button type="button" onClick={() => setConfirming(true)} disabled={cant}
+            <button type="button" onClick={openConfirm} disabled={cant}
               className="min-h-10 cursor-pointer rounded-[10px] border-0 bg-action px-4 text-sm font-bold text-white hover:bg-action-deep disabled:cursor-not-allowed disabled:bg-[#E2E8F0] disabled:text-faint">
               Publish
             </button>
@@ -295,10 +317,21 @@ function Plan({ roster, me }: { roster: Roster; me: Me }) {
                 </li>
               ))}
             </ul>
+            {valveHit && (
+              <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-[10px] bg-[#FEE2E2] px-3 text-sm font-bold text-[#B91C1C]">
+                <input type="checkbox" checked={override} onChange={(e) => setOverride(e.target.checked)} className="size-4 accent-[#B91C1C]" />
+                Override the one-way valve
+              </label>
+            )}
+            {serverProblems.length > 0 && (
+              <ul className="m-0 flex list-none flex-col gap-1 rounded-[10px] bg-[#FEF3C7] p-3 text-[13px] font-semibold text-[#92400E]">
+                {serverProblems.map((x) => <li key={x}>{x}</li>)}
+              </ul>
+            )}
             <div className="flex justify-end gap-2">
               <button type="button" autoFocus onClick={() => setConfirming(false)}
                 className="min-h-11 cursor-pointer rounded-[10px] border border-[#D5DBE5] bg-white px-4 text-sm font-semibold text-ink-2 hover:bg-page">Cancel</button>
-              <button type="button" onClick={publish} disabled={busy}
+              <button type="button" onClick={publish} disabled={busy || server === 'checking' || serverProblems.length > 0 || (valveHit && !override)}
                 className="min-h-11 cursor-pointer rounded-[10px] border-0 bg-action px-[18px] text-sm font-bold text-white hover:bg-action-deep disabled:opacity-60">Publish</button>
             </div>
           </section>
@@ -313,6 +346,7 @@ const Discord = () => (
 )
 
 function Gate({ me, onSignOut }: { me: Me; onSignOut: () => void }) {
+  const [failed] = useState(takeSigninError)
   return (
     <main className="mx-auto flex max-w-[1360px] justify-center px-4 pt-16">
       <section className="flex w-full max-w-[380px] flex-col items-center gap-3 rounded-[20px] border border-line bg-white px-6 py-8 text-center">
@@ -320,6 +354,11 @@ function Gate({ me, onSignOut }: { me: Me; onSignOut: () => void }) {
           <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="11" width="14" height="9" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></svg>
         </span>
         <h2 className="m-0 text-xl font-extrabold tracking-[-0.02em]">Leaders only</h2>
+        {failed && !me.user && (
+          <span role="status" className="rounded-full bg-[#FEF3C7] px-3 py-1 text-[13px] font-bold text-[#92400E]">
+            {failed === 'denied' ? 'Sign-in cancelled' : 'Sign-in failed. Try again.'}
+          </span>
+        )}
         {me.user ? (
           <>
             <span className="text-sm text-faint">Signed in as {me.user.name}</span>

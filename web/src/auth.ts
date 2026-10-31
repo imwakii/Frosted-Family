@@ -6,10 +6,11 @@ export type Me = {
   user: { id: string; name: string; avatar_url: string | null } | null
   role: 'publisher' | 'leader' | null
   publishers: string[]
+  csrf: string | null
 }
 export type AuthState = { status: 'loading' | 'ready'; me: Me }
 
-const SIGNED_OUT: Me = { user: null, role: null, publishers: [] }
+const SIGNED_OUT: Me = { user: null, role: null, publishers: [], csrf: null }
 
 // Dev only: ?as=publisher|leader|member previews each signed-in state.
 function devMe(): Me | null {
@@ -20,6 +21,7 @@ function devMe(): Me | null {
     user: { id: '0', name: as === 'publisher' ? 'Waki' : 'Leader', avatar_url: null },
     role: as === 'publisher' || as === 'leader' ? as : null,
     publishers: ['Waki'],
+    csrf: 'dev',
   }
 }
 
@@ -34,11 +36,23 @@ export function useAuth() {
       .catch(() => setState({ status: 'ready', me: SIGNED_OUT }))
   }, [])
   useEffect(load, [load])
+  const csrf = state.me.csrf
   const signOut = useCallback(async () => {
-    await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' }).catch(() => null)
+    await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin', headers: csrf ? { 'X-CSRF-Token': csrf } : {} }).catch(() => null)
     setState({ status: 'ready', me: SIGNED_OUT })
-  }, [])
+  }, [csrf])
   return { ...state, signOut }
+}
+
+/** ?signin=denied|failed, added by the callback on a failed sign-in; read once and dropped from the URL. */
+export function takeSigninError(): 'denied' | 'failed' | null {
+  const params = new URLSearchParams(window.location.search)
+  const v = params.get('signin')
+  if (v !== 'denied' && v !== 'failed') return null
+  params.delete('signin')
+  const qs = params.toString()
+  window.history.replaceState(null, '', window.location.pathname + (qs ? `?${qs}` : '') + window.location.hash)
+  return v
 }
 
 export const loginHref = () => `/api/auth/login?return_to=${encodeURIComponent('/#/plan')}`

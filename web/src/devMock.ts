@@ -15,6 +15,9 @@ function rnd(seed: string) {
   return () => { h = (h * 1103515245 + 12345) | 0; return ((h >>> 0) % 1000) / 1000 }
 }
 
+// ?mock=nocap mimics the API before a TH cap table exists.
+const noCap = new URLSearchParams(window.location.search).get('mock') === 'nocap'
+
 export async function mockPayload(src: Source) {
   const roster: Roster = await fetch('/roster.json').then((r) => r.json())
   const players: ExploreRow[] = roster.players.map((p) => {
@@ -24,7 +27,7 @@ export async function mockPayload(src: Source) {
     const fill = 0.45 + r() * 0.55
     const items = (list: [string, number][]) => list.map(([name, max]) => {
       const cap = Math.max(1, Math.round(max * scale))
-      return { name, level: Math.max(1, Math.round(cap * Math.min(1, fill + r() * 0.1))), cap, max }
+      return { name, level: Math.max(1, Math.round(cap * Math.min(1, fill + r() * 0.1))), cap: noCap ? null : cap, max }
     })
     const row: ExploreRow = { tag: p.tag, name: p.name, clan: p.clan, th }
     if (src === 'heroes') row.heroes = items(HEROES)

@@ -51,17 +51,25 @@ function Empty({ loading }: { loading: boolean }) {
 }
 
 export default function ExploreTab({ kind, q, setQ, wide }: { kind: string | null; q: string; setQ: (v: string) => void; wide: boolean }) {
-  const ex = EXPLORERS.find((e) => e.id === kind) ?? EXPLORERS[0]
+  // Rushed needs per-TH caps; the API sends cap: null until a cap table exists.
+  const heroes = useExplore(['heroes'])
+  const capsKnown = !!heroes.rows?.some((r) => r.heroes?.some((h) => h.cap))
+  const explorers = EXPLORERS.filter((e) => e.id !== 'rushed' || capsKnown)
+  const ex = explorers.find((e) => e.id === kind) ?? explorers[0]
   const [clan, setClan] = useState<ClanName | 'All'>(() => (read('ff-x-clan') as ClanName) || 'All')
   useEffect(() => write('ff-x-clan', clan), [clan])
   const { rows, loading, updated } = useExplore(ex.sources)
-  const cols = useMemo(() => ex.columns(rows ?? []), [ex, rows])
+  const allCols = useMemo(() => ex.columns(rows ?? []), [ex, rows])
+  // A column nobody has a value for is left out.
+  const cols = useMemo(() => (rows ? allCols.filter((c) => rows.some((r) => c.value(r) !== null)) : allCols), [allCols, rows])
+  const noData = !rows || !cols.length
   const [sort, setSort] = useState<Sort | null>(null)
   useEffect(() => setSort(null), [ex.id])
   const nav = useRef<HTMLElement>(null)
   useEffect(() => { nav.current?.querySelector('[aria-pressed="true"]')?.scrollIntoView({ inline: 'center', block: 'nearest' }) }, [ex.id])
-  const active: Sort = sort && cols.some((c) => c.key === sort.key) ? sort : { key: cols[0].key, asc: !!cols[0].low }
-  const col = cols.find((c) => c.key === active.key)!
+  const first = cols[0] ?? allCols[0]
+  const active: Sort = sort && cols.some((c) => c.key === sort.key) ? sort : { key: first.key, asc: !!first.low }
+  const col = cols.find((c) => c.key === active.key) ?? first
 
   const ranked = useMemo(() => {
     const pool = (rows ?? []).filter((r) => clan === 'All' || r.clan === clan)
@@ -85,7 +93,7 @@ export default function ExploreTab({ kind, q, setQ, wide }: { kind: string | nul
       </div>
 
       <nav ref={nav} aria-label="Explorer" className={`flex gap-2 overflow-x-auto [scrollbar-width:none] ${wide ? 'flex-wrap' : 'px-4'}`}>
-        {EXPLORERS.map((e) => <Chip key={e.id} on={e.id === ex.id} onClick={() => go.to(`#/explore/${e.id}`)}>{e.label}</Chip>)}
+        {explorers.map((e) => <Chip key={e.id} on={e.id === ex.id} onClick={() => go.to(`#/explore/${e.id}`)}>{e.label}</Chip>)}
       </nav>
 
       <div className={`flex flex-wrap items-center justify-between gap-3 ${wide ? '' : 'px-4'}`}>
@@ -101,7 +109,7 @@ export default function ExploreTab({ kind, q, setQ, wide }: { kind: string | nul
         {stamp && wide && <span className="text-xs font-semibold text-faint">Updated {stamp}</span>}
       </div>
 
-      {!rows ? <div className={wide ? '' : 'px-4'}><Empty loading={loading} /></div> : wide ? (
+      {noData ? <div className={wide ? '' : 'px-4'}><Empty loading={loading} /></div> : wide ? (
         <div className="overflow-x-auto rounded-[18px] border border-line bg-white">
           <table className="w-full border-collapse text-sm">
             <thead>
