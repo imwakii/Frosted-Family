@@ -313,12 +313,35 @@ def test_explore_army_groups_and_drops_super_troops(explored):
     assert all(u["cap"] is None for u in units)
 
 
-def test_explore_war_comes_from_recorded_wars(explored):
-    rows = by_name(explored.get("/explore/war").json())
+def test_explore_war_record_all(explored):
+    body = explored.get("/explore/war").json()
+    # since is the earliest recorded war: Cake's regular war, which started on 21 Oct.
+    assert (body["kind"], body["scope"], body["since"], body["season"]) == ("war", "all", "2026-10-21", "2026-11")
+    assert body["updated_at"]
+    rows = by_name(body)
+    assert rows["Waki renamed"]["war_stars"] == 2100
     assert rows["Waki renamed"]["war"] == {"wars": 2, "attacks": 2, "stars": 6, "three_stars": 2, "missed": 0,
-                                           "avg_destruction": 100.0, "from": "2026-11-03", "to": "2026-11-04"}
-    assert (rows["newbie"]["war"]["attacks"], rows["newbie"]["war"]["missed"]) == (0, 1)
-    assert rows["Maki"]["war"]["stars"] == 3 and rows["flake"]["war"] is None
+                                           "avg_destruction": 100.0, "avg_stars": 3.0, "three_star_rate": 1.0}
+    # Skipped CWL day 1 (ended); day 2 is still in war, so its unused attack is not yet missed.
+    assert rows["newbie"]["war"] == {"wars": 2, "attacks": 0, "stars": 0, "three_stars": 0, "missed": 1,
+                                     "avg_destruction": None, "avg_stars": None, "three_star_rate": None}
+    assert rows["cake two"]["war"] == {"wars": 1, "attacks": 2, "stars": 2, "three_stars": 0, "missed": 0,
+                                       "avg_destruction": 61.5, "avg_stars": 1.0, "three_star_rate": 0.0}
+    assert rows["Maki"]["war"]["missed"] == 1  # 1 of 2 regular-war attacks used
+    assert rows["flake"]["war"] is None and rows["flake"]["war_stars"] == 300
+    # Ranked by all-time war stars; no profile yet means unranked.
+    assert [(r["name"], r["rank"]) for r in body["players"]][:3] == [("Waki renamed", 1), ("Maki", 2), ("flake", 3)]
+    assert rows["newbie"]["rank"] is None
+
+
+def test_explore_war_record_cwl_season_only(explored):
+    body = explored.get("/explore/war", params={"scope": "cwl"}).json()
+    assert (body["scope"], body["season"]) == ("cwl", "2026-11")
+    rows = by_name(body)
+    assert rows["Waki renamed"]["war"]["wars"] == 2 and rows["newbie"]["war"]["missed"] == 1
+    # Cake's war was a regular war: not in the CWL season. War stars stay all-time.
+    assert rows["cake two"]["war"] is None and rows["Maki"]["war"] is None and rows["Maki"]["war_stars"] == 1900
+    assert explored.get("/explore/war", params={"scope": "month"}).status_code == 422
 
 
 def test_explore_donations_and_capital(explored):

@@ -6,7 +6,8 @@ site through a Vercel rewrite.
     GET /war/live        each clan's current war: CWL day, opponent, stars, attacks used
     GET /player/{tag}    one player's allocation, latest snapshot, wars, attacks and missed attacks
     GET /allocation.csv  the latest published allocation, for server/pull_allocation.py
-    GET /explore/{board} ranked boards from player profiles: heroes, equipment, army, war, donations, capital
+    GET /explore/war     every member's all-time war stars and their record over the recorded wars, plus this CWL season
+    GET /explore/{board} ranked boards from player profiles: heroes, equipment, army, donations, capital
     GET /explore/matrix?cat=heroes|equipment|troops|spells|pets|sieges   every member's level in every unit
     /auth/*, /plan/*     Discord sign-in for leaders (server/auth.py) and the Plan tab (server/plan.py)
 
@@ -170,6 +171,11 @@ def player(tag: str):
 @app.get("/allocation.csv")
 def allocation():
     return plan.allocation_csv()
+
+
+@app.get("/explore/war")  # before /explore/{board}, like matrix
+def explore_war(scope: str = "all"):
+    return profiles.war_record(open_db(), scope)
 
 
 @app.get("/explore/matrix")  # before /explore/{board}, which would otherwise take "matrix"
