@@ -29,7 +29,6 @@ CLAN_FORMAT = {
     "Cake":   "15v15 · MASTERS 2 · TH13-18",
 }
 N_SUBS_SHOWN = 14
-DASHBOARD_URL = "frosted-family.streamlit.app"
 
 # ─── geometry ─────────────────────────────────────────────────────────────────
 CANVAS_W     = 1700
