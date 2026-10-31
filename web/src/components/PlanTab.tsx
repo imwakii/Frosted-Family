@@ -1,0 +1,286 @@
+import { useEffect, useMemo, useState } from 'react'
+import { HttpError, publishPlan } from '../data'
+import { CLAN, CLANS, GROUPS, STATUS, coreAvg, fmtScore } from '../theme'
+import type { ClanName, Player, Roster, Slot } from '../types'
+import { Arrow, Th } from './ui'
+
+// Allocation rules: docs/specs/02-allocation-rules.md.
+const MAKI = '#CGJ8YR8J'
+const CAP = 50
+const STARTERS = 15
+const DRAFT_KEY = 'ff-plan-draft'
+
+type Place = { clan: ClanName; slot: Slot }
+type Moves = Record<string, Place>
+
+const OPTIONS: { value: string; label: string }[] = [
+  { value: 'Fire|CORE', label: 'Fire · start' },
+  { value: 'Fire|SUB', label: 'Fire · bench' },
+  { value: 'Fire|OUT', label: 'Fire · out' },
+  { value: 'Cake|CORE', label: 'Cake · start' },
+  { value: 'Cake|SUB', label: 'Cake · bench' },
+  { value: 'Cake|OUT', label: 'Cake · out' },
+  { value: 'Flakes|OUT', label: 'Flakes' },
+]
+const SHORT: Record<Slot, string> = { CORE: 'start', SUB: 'bench', OUT: 'out' }
+const placeLabel = (p: Place) => (p.clan === 'Flakes' ? 'Flakes' : `${p.clan} ${SHORT[p.slot]}`)
+
+type Check = { key: string; label: string; tip: string; tone: 'ok' | 'warn' | 'bad' | 'info' }
+const TONE = {
+  ok: { bg: '#DCFCE7', fg: '#166534' },
+  warn: { bg: '#FFEDD5', fg: '#9A3412' },
+  bad: { bg: '#FEE2E2', fg: '#B91C1C' },
+  info: { bg: '#DBEAFE', fg: '#1D4ED8' },
+}
+
+function readDraft(roster: Roster): Moves {
+  try {
+    const raw = JSON.parse(localStorage.getItem(DRAFT_KEY) || '{}') as Moves
+    const tags = new Set(roster.players.map((p) => p.tag))
+    return Object.fromEntries(Object.entries(raw).filter(([t]) => tags.has(t)))
+  } catch { return {} }
+}
+
+// On phones a passing chip repeats its column header, so only problems show there.
+function CheckChip({ k, className = '' }: { k: Check; className?: string }) {
+  const t = TONE[k.tone]
+  return (
+    <span title={k.tip} className={`min-h-[34px] items-center gap-1.5 rounded-full px-3 text-[13px] font-bold ${k.tone === 'ok' ? 'hidden md:flex' : 'flex'} ${className}`} style={{ background: t.bg, color: t.fg }}>
+      {k.tone === 'ok' ? (
+        <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12l5 5 9-10" /></svg>
+      ) : (
+        <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M12 7v6M12 17v.5" /></svg>
+      )}
+      <span>{k.label}</span>
+      <span className="sr-only">{k.tip}</span>
+    </span>
+  )
+}
+
+function PlanRow({ p, at, onPlace }: { p: Player; at: Place; onPlace: (v: Place) => void }) {
+  const moved = at.clan !== p.clan || at.slot !== p.slot
+  const s = STATUS[p.status]
+  const id = 'plan-' + p.tag.slice(1)
+  return (
+    <li className={`ff-plan-row flex min-h-11 items-center gap-2 rounded-[10px] py-[3px] pl-2.5 pr-1 ${moved ? 'bg-moved' : 'hover:bg-[#F8FAFF]'}`}>
+      <Th th={p.th} />
+      <span className="flex min-w-0 flex-auto items-center gap-1.5">
+        <span className="truncate text-sm font-semibold">{p.name}</span>
+        <span title={s.text} aria-label={s.text} className="size-2 flex-none rounded" style={{ background: s.dot }} />
+        {at.clan !== p.clan && <span className="flex-none text-[11px] font-bold text-action">← {p.clan}</span>}
+      </span>
+      <span className="w-[38px] flex-none text-right text-sm font-bold tabular-nums text-muted">{fmtScore(p.score)}</span>
+      <label htmlFor={id} className="sr-only">Place {p.name}</label>
+      <select id={id} value={`${at.clan}|${at.slot}`}
+        onChange={(e) => { const [clan, slot] = e.target.value.split('|') as [ClanName, Slot]; onPlace({ clan, slot }) }}
+        className="min-h-9 w-[108px] flex-none cursor-pointer rounded-lg border px-1 text-xs font-semibold text-ink-2">
+        {OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+      </select>
+    </li>
+  )
+}
+
+function Plan({ roster }: { roster: Roster }) {
+  const [moves, setMoves] = useState<Moves>(() => readDraft(roster))
+  const [confirming, setConfirming] = useState(false)
+  const [result, setResult] = useState<{ ok: boolean; n: number; why?: string } | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [phoneClan, setPhoneClan] = useState<ClanName>('Fire')
+
+  useEffect(() => { try { localStorage.setItem(DRAFT_KEY, JSON.stringify(moves)) } catch { /* private mode */ } }, [moves])
+
+  const at = (p: Player): Place => moves[p.tag] ?? { clan: p.clan, slot: p.slot }
+  const place = (p: Player, v: Place) => {
+    setResult(null)
+    setMoves((m) => {
+      const next = { ...m }
+      if (v.clan === p.clan && v.slot === p.slot) delete next[p.tag]
+      else next[p.tag] = v
+      return next
+    })
+  }
+
+  const { cols, checks } = useMemo(() => {
+    const checks: Check[] = []
+    const P = roster.players
+    const where = (p: Player) => moves[p.tag] ?? { clan: p.clan, slot: p.slot }
+    const cols = CLANS.map((clan) => {
+      const inCwl = !!roster.clans[clan]?.inCwl
+      const here = P.filter((p) => where(p).clan === clan)
+      const core = here.filter((p) => where(p).slot === 'CORE')
+      const avg = coreAvg(core.map((p) => p.score))
+      const was = coreAvg(P.filter((p) => p.clan === clan && p.slot === 'CORE').map((p) => p.score))
+      if (inCwl) checks.push({ key: clan + 'core', label: `${clan} ${core.length}/${STARTERS}`, tip: 'Starters', tone: core.length === STARTERS ? 'ok' : 'warn' })
+      checks.push({ key: clan + 'cap', label: `${clan} ${here.length}/${CAP}`, tip: 'Members', tone: here.length <= CAP ? 'ok' : 'bad' })
+      const groups = inCwl
+        ? GROUPS.map((g) => ({ label: g.label, dim: g.dim, rows: here.filter((p) => where(p).slot === g.slot) }))
+        : [{ label: 'Members', dim: false, rows: here }]
+      return { clan, inCwl, count: here.length, avg, delta: avg !== null && was !== null ? avg - was : 0, groups }
+    })
+    const valve = P.filter((p) => p.clan === 'Fire' && where(p).clan === 'Cake').length
+    checks.push({ key: 'valve', label: valve ? `${valve} Fire → Cake` : 'Valve', tip: 'One-way valve', tone: valve ? 'bad' : 'ok' })
+    const maki = P.find((p) => p.tag === MAKI)
+    if (maki) {
+      const w = where(maki)
+      const ok = w.clan === 'Cake' && w.slot === 'CORE'
+      checks.push({ key: 'maki', label: ok ? 'Maki' : 'Maki is locked', tip: 'Locked to Cake core', tone: ok ? 'ok' : 'bad' })
+    }
+    const intoCake = P.some((p) => p.clan !== 'Cake' && where(p).clan === 'Cake')
+    const outOfCake = P.some((p) => p.clan === 'Cake' && where(p).clan !== 'Cake')
+    if (intoCake && outOfCake) checks.push({ key: 'order', label: 'Out of Cake first', tip: 'Move order', tone: 'info' })
+    return { cols, checks }
+  }, [roster, moves])
+
+  // In execution order: out of Cake, then the rest, then into Cake (50-member cap).
+  const step = (p: Player) => (p.clan === 'Cake' && moves[p.tag].clan !== 'Cake' ? 0 : p.clan !== 'Cake' && moves[p.tag].clan === 'Cake' ? 2 : 1)
+  const changes = roster.players.filter((p) => moves[p.tag]).sort((a, b) => step(a) - step(b))
+  const n = changes.length
+  const blocked = checks.some((k) => k.tone === 'bad' || k.tone === 'warn')
+  const cant = !n || blocked || busy
+  const changeLabel = n ? `${n} ${n === 1 ? 'change' : 'changes'}` : 'No changes'
+
+  const publish = async () => {
+    setBusy(true)
+    try {
+      await publishPlan(changes.map((p) => ({ tag: p.tag, ...moves[p.tag] })))
+      setResult({ ok: true, n })
+      setMoves({})
+    } catch (e) {
+      const auth = e instanceof HttpError && (e.status === 401 || e.status === 403)
+      setResult({ ok: false, n, why: auth ? 'Not published. Leader sign-in is not set up yet.' : 'Not published. The server is offline.' })
+    } finally {
+      setBusy(false)
+      setConfirming(false)
+    }
+  }
+
+  return (
+    <>
+      <div className="sticky top-0 z-20 border-b border-line bg-white/95 backdrop-blur md:static md:border-0 md:bg-transparent md:backdrop-blur-none">
+        <div className="mx-auto flex max-w-[1360px] flex-wrap items-center gap-2 px-[clamp(16px,3vw,32px)] py-2.5 md:pt-5">
+          <span className="rounded-full bg-[#EEF1F6] px-3 py-1.5 text-[13px] font-bold text-ink-2">{changeLabel}</span>
+          <span className="flex-auto" />
+          <button type="button" onClick={() => { setMoves({}); setResult(null) }} disabled={!n}
+            className="min-h-10 cursor-pointer rounded-[10px] border border-[#D5DBE5] bg-white px-3.5 text-sm font-semibold text-ink-2 hover:bg-page disabled:cursor-not-allowed disabled:opacity-50">
+            Reset
+          </button>
+          <button type="button" onClick={() => setConfirming(true)} disabled={cant}
+            className="min-h-10 cursor-pointer rounded-[10px] border-0 bg-action px-4 text-sm font-bold text-white hover:bg-action-deep disabled:cursor-not-allowed disabled:bg-[#E2E8F0] disabled:text-faint">
+            Publish to CWL
+          </button>
+        </div>
+      </div>
+
+      <main className="mx-auto flex max-w-[1360px] flex-col gap-4 px-[clamp(16px,3vw,32px)] pb-12 pt-3 md:pt-1">
+        {result && (
+          <div role="status" className={`flex min-h-12 items-center gap-2.5 rounded-[14px] px-4 text-sm font-bold ${result.ok ? 'bg-[#DCFCE7] text-[#166534]' : 'bg-[#FEF3C7] text-[#92400E]'}`}>
+            <span className="flex-auto">{result.ok ? `Published · ${result.n} ${result.n === 1 ? 'change' : 'changes'} on the CWL tab` : result.why}</span>
+            {result.ok && <a href="#/" className="flex min-h-9 items-center rounded-[9px] bg-white px-3.5 text-[#166534] no-underline">Open CWL tab</a>}
+          </div>
+        )}
+
+        <section aria-label="Checks" className="flex flex-wrap gap-2">
+          {checks.map((k) => <CheckChip key={k.key} k={k} />)}
+          {checks.every((k) => k.tone === 'ok') && <CheckChip k={{ key: 'all', label: 'All rules pass', tip: '', tone: 'ok' }} className="!flex md:!hidden" />}
+        </section>
+
+        <div aria-label="Key" className="flex flex-wrap gap-x-[18px] gap-y-1.5 text-[13px] font-semibold text-muted">
+          {(['active', 'highMiss', 'inactive'] as const).map((s) => (
+            <span key={s} className="flex items-center gap-1.5"><span className="size-2 rounded" style={{ background: STATUS[s].dot }} />{STATUS[s].text}</span>
+          ))}
+          <span className="flex items-center gap-1.5"><span className="h-2.5 w-3.5 rounded-[3px] bg-moved" />Moved</span>
+        </div>
+
+        <nav aria-label="Clan" className="grid grid-cols-3 gap-1 rounded-xl bg-well p-1 md:hidden">
+          {cols.map((c) => (
+            <button key={c.clan} type="button" aria-pressed={c.clan === phoneClan} onClick={() => setPhoneClan(c.clan)}
+              className={`min-h-[42px] cursor-pointer rounded-[9px] border-0 text-[15px] font-bold ${c.clan === phoneClan ? 'bg-white shadow-[0_1px_3px_rgba(15,23,42,.12)]' : 'bg-transparent text-muted'}`}
+              style={c.clan === phoneClan ? { color: CLAN[c.clan].deep } : undefined}>
+              {c.clan} <span className={`font-semibold ${c.count > CAP ? 'text-[#B91C1C]' : 'opacity-60'}`}>{c.count}</span>
+            </button>
+          ))}
+        </nav>
+
+        <div className="grid items-start gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr))]">
+          {cols.map((c) => {
+            const t = CLAN[c.clan]
+            return (
+              <section key={c.clan} aria-label={c.clan} className={`overflow-hidden rounded-[18px] border border-line bg-white ${c.clan === phoneClan ? '' : 'max-md:hidden'}`}>
+                <div className="flex items-end justify-between p-4" style={{ background: t.tint }}>
+                  <div className="flex flex-col gap-0.5">
+                    <h2 className="m-0 text-[22px] font-extrabold tracking-[-0.02em]" style={{ color: t.deep }}>{c.clan}</h2>
+                    <span className={`text-[13px] font-semibold ${c.count > CAP ? 'text-[#B91C1C]' : 'text-muted'}`}>{c.count}/{CAP}</span>
+                  </div>
+                  {c.inCwl && (
+                    <div className="flex items-baseline gap-2">
+                      {Math.abs(c.delta) >= 0.05 && (
+                        <span className="text-[13px] font-bold tabular-nums" style={{ color: c.delta > 0 ? '#15803D' : '#C2410C' }}>
+                          {c.delta > 0 ? '+' : '−'}{Math.abs(c.delta).toFixed(1)}
+                        </span>
+                      )}
+                      <span className="text-[26px] font-extrabold leading-[1.05] tabular-nums" style={{ color: t.deep }}>{c.avg === null ? '—' : c.avg.toFixed(1)}</span>
+                    </div>
+                  )}
+                </div>
+                {c.groups.map((g) => (
+                  <div key={g.label}>
+                    <div className={`flex justify-between px-4 pb-1 pt-3 text-[11px] font-bold uppercase tracking-[0.06em] ${g.dim ? 'text-[#94A3B8]' : 'text-muted'}`}>
+                      <span>{g.label}</span><span>{g.rows.length}</span>
+                    </div>
+                    <ul className="m-0 list-none px-1.5 pb-1.5">
+                      {g.rows.map((p) => <PlanRow key={p.tag} p={p} at={at(p)} onPlace={(v) => place(p, v)} />)}
+                    </ul>
+                  </div>
+                ))}
+              </section>
+            )
+          })}
+        </div>
+      </main>
+
+      {confirming && (
+        <div className="ff-fade fixed inset-0 z-50 flex items-center justify-center bg-[rgba(15,23,42,.4)] p-4" onClick={(e) => { if (e.target === e.currentTarget) setConfirming(false) }}>
+          <section role="dialog" aria-modal="true" aria-label="Publish to CWL"
+            className="ff-sheet flex max-h-[80vh] w-full max-w-[440px] flex-col gap-3.5 overflow-auto rounded-[20px] bg-white p-[22px] shadow-[0_20px_50px_rgba(15,23,42,.25)]">
+            <h2 className="m-0 text-xl font-extrabold tracking-[-0.02em]">Publish {changeLabel}?</h2>
+            <ul className="m-0 flex list-none flex-col gap-0.5 p-0">
+              {changes.map((p) => (
+                <li key={p.tag} className="flex min-h-10 items-center gap-2 rounded-[10px] bg-page px-3 text-sm">
+                  <span className="min-w-0 flex-auto truncate font-semibold">{p.name}</span>
+                  <span className="whitespace-nowrap font-bold" style={{ color: CLAN[p.clan].deep }}>{placeLabel(p)}</span>
+                  <Arrow size={14} />
+                  <span className="whitespace-nowrap font-bold" style={{ color: CLAN[moves[p.tag].clan].deep }}>{placeLabel(moves[p.tag])}</span>
+                </li>
+              ))}
+            </ul>
+            <div className="flex justify-end gap-2">
+              <button type="button" autoFocus onClick={() => setConfirming(false)}
+                className="min-h-11 cursor-pointer rounded-[10px] border border-[#D5DBE5] bg-white px-4 text-sm font-semibold text-ink-2 hover:bg-page">Cancel</button>
+              <button type="button" onClick={publish} disabled={busy}
+                className="min-h-11 cursor-pointer rounded-[10px] border-0 bg-action px-[18px] text-sm font-bold text-white hover:bg-action-deep disabled:opacity-60">Publish</button>
+            </div>
+          </section>
+        </div>
+      )}
+    </>
+  )
+}
+
+// Placeholder gate until leader sign-in exists. Open in dev, or when the
+// deployment sets VITE_PLAN_OPEN=1.
+const OPEN = import.meta.env.DEV || import.meta.env.VITE_PLAN_OPEN === '1'
+
+export default function PlanTab({ roster }: { roster: Roster }) {
+  if (OPEN) return <Plan roster={roster} />
+  return (
+    <main className="mx-auto flex max-w-[1360px] justify-center px-4 pt-16">
+      <section className="flex w-full max-w-[380px] flex-col items-center gap-3 rounded-[20px] border border-line bg-white px-6 py-8 text-center">
+        <span className="flex size-12 items-center justify-center rounded-2xl bg-[#EEF1F6] text-ink-2">
+          <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="11" width="14" height="9" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></svg>
+        </span>
+        <h2 className="m-0 text-xl font-extrabold tracking-[-0.02em]">Leaders only</h2>
+        <button type="button" disabled className="min-h-11 w-full rounded-[10px] border-0 bg-[#E2E8F0] text-sm font-bold text-faint">Sign in · soon</button>
+      </section>
+    </main>
+  )
+}

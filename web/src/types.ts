@@ -1,0 +1,40 @@
+export type ClanName = 'Fire' | 'Cake' | 'Flakes'
+export type Slot = 'CORE' | 'SUB' | 'OUT'
+export type Status = 'active' | 'highMiss' | 'inactive' | 'thin'
+
+export interface Player {
+  tag: string
+  name: string
+  clan: ClanName
+  slot: Slot
+  from: ClanName | null
+  th: number | null
+  score: number | null
+  status: Status
+  threeStar: number | null
+  missPct: number | null
+  attacks: number | null
+  rank: number | null
+  history: { cycle: string; score: number | null }[]
+}
+
+export interface ClanInfo { league: string | null; inCwl: boolean }
+
+export interface Roster {
+  generatedAt: string
+  cwlStart: string | null
+  clans: Record<ClanName, ClanInfo>
+  window: { from: string; to: string } | null
+  cycles: string[]
+  players: Player[]
+}
+
+export interface LiveWar {
+  state: 'preparation' | 'inWar' | 'warEnded'
+  day: number | null
+  opponent: string
+  stars: number
+  opponentStars: number
+  attacks: number
+  teamSize: number
+}

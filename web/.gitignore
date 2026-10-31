@@ -1,0 +1,5 @@
+node_modules/
+dist/
+# Generated at build time from ../frosted_cwl_members.csv and ../data/score_history.csv
+public/roster.json
+*.tsbuildinfo
