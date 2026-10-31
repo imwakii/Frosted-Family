@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { useClans } from '../clash'
+import { groupUnits } from '../equipment'
 import { CATS, type Cat, competitionRanks, HIGH_MISS, isMaxed, type MatrixPlayer, missRate, progress, useMatrix, useWarBoard, type WarRow, type WarScope } from '../explore'
 import { go, playerHref } from '../route'
 import { CLAN, CLANS } from '../theme'
@@ -88,10 +89,16 @@ function MatrixBoard({ cat, q, setQ, wide }: BoardProps & { cat: Cat }) {
   const { data, loading } = useMatrix(cat)
   const [clan, setClan] = useClanPick()
   const [sort, setSort] = useState<{ col: number; asc: boolean }>({ col: -1, asc: false })
-  const [unit, setUnit] = useState(0)
-  useEffect(() => { setSort({ col: -1, asc: false }); setUnit(0) }, [cat])
+  const [unit, setUnit] = useState<number | null>(null)
+  useEffect(() => { setSort({ col: -1, asc: false }); setUnit(null) }, [cat])
 
   const units = useMemo(() => data?.units ?? [], [data])
+  // Equipment groups by hero; other categories are one group in the API's order.
+  const groups = useMemo(() => groupUnits(cat, units), [cat, units])
+  const order = groups.flatMap((g) => g.idx)
+  const opensGroup = new Set(groups.slice(1).map((g) => g.idx[0]))
+  const byHero = groups.some((g) => g.hero)
+  const divider = (i: number) => (opensGroup.has(i) ? 'border-l border-l-line' : '')
   const nq = norm(q.trim())
   const pool = useMemo(() => (data?.players ?? []).filter((p) => clan === 'All' || p.clan === clan), [data, clan])
   const counts = Object.fromEntries(CLANS.map((k) => [k, (data?.players ?? []).filter((p) => p.clan === k).length]))
@@ -136,20 +143,31 @@ function MatrixBoard({ cat, q, setQ, wide }: BoardProps & { cat: Cat }) {
             <section className="overflow-auto rounded-[18px] border border-line bg-white">
               <table className="min-w-full border-separate border-spacing-0 text-sm">
                 <thead>
+                  {byHero && (
+                    <tr>
+                      <th colSpan={3} className="sticky left-0 z-[2] bg-white" />
+                      {groups.map((g) => (
+                        <th key={g.hero ?? 'other'} colSpan={g.idx.length} title={g.hero ?? undefined}
+                          className={`bg-[#F8FAFC] pb-0.5 pt-1.5 ${divider(g.idx[0])}`}>
+                          {g.hero && <span className="flex justify-center"><UnitIcon name={g.hero} size={28} /></span>}
+                        </th>
+                      ))}
+                    </tr>
+                  )}
                   <tr>
                     <th className="sticky left-0 z-[2] w-12 min-w-12 border-b border-line bg-white py-2.5 pl-4 pr-1 text-left text-xs font-bold text-faint">#</th>
                     <th className="sticky left-12 z-[2] min-w-[210px] border-b border-line bg-white px-3 py-2.5 text-left text-xs font-bold text-faint">PLAYER</th>
                     <th className={`border-b border-line p-0 ${sort.col < 0 ? 'bg-[#EEF2FF]' : 'bg-white'}`} aria-sort={sort.col < 0 ? (sort.asc ? 'ascending' : 'descending') : undefined}>
                       <button type="button" onClick={() => pick(-1)} className="min-h-16 w-24 cursor-pointer border-0 bg-transparent text-xs font-bold text-ink-2 hover:bg-[#EEF2FF]">Progress</button>
                     </th>
-                    {units.map((u, i) => (
-                      <th key={u.name} className={`border-b border-line p-0 ${sort.col === i ? 'bg-[#EEF2FF]' : 'bg-white'}`} aria-sort={sort.col === i ? (sort.asc ? 'ascending' : 'descending') : undefined}>
+                    {order.map((i) => { const u = units[i]; return (
+                      <th key={u.name} className={`border-b border-line p-0 ${divider(i)} ${sort.col === i ? 'bg-[#EEF2FF]' : 'bg-white'}`} aria-sort={sort.col === i ? (sort.asc ? 'ascending' : 'descending') : undefined}>
                         <button type="button" onClick={() => pick(i)} title={`${u.name} · max ${u.max}`} aria-label={`Sort by ${u.name}`}
                           className="flex min-h-16 w-14 cursor-pointer flex-col items-center justify-center gap-0.5 border-0 bg-transparent px-0.5 py-1 hover:bg-[#EEF2FF]">
                           <UnitIcon name={u.name} size={36} />
                         </button>
                       </th>
-                    ))}
+                    ) })}
                   </tr>
                 </thead>
                 <tbody>
@@ -169,10 +187,11 @@ function MatrixBoard({ cat, q, setQ, wide }: BoardProps & { cat: Cat }) {
                           <span className="block h-[5px] overflow-hidden rounded-[3px] bg-[#E2E8F0]"><span className="block h-[5px] bg-ink" style={{ width: `${pct}%` }} /></span>
                         </span>
                       </td>
-                      {units.map((u, i) => {
+                      {order.map((i) => {
+                        const u = units[i]
                         const l = p.levels[i]
                         return (
-                          <td key={u.name} className={`h-11 border-b border-hair px-1 text-center tabular-nums group-hover:bg-hover ${sort.col === i ? 'bg-[#F5F7FF]' : ''} ${cellTone(l, u.max)}`}>
+                          <td key={u.name} className={`h-11 border-b border-hair px-1 text-center tabular-nums group-hover:bg-hover ${divider(i)} ${sort.col === i ? 'bg-[#F5F7FF]' : ''} ${cellTone(l, u.max)}`}>
                             {l ? l : '—'}{isMaxed(l, u) && <span className="ml-px align-[4px] text-[11px] text-gold">★</span>}
                           </td>
                         )
@@ -190,9 +209,10 @@ function MatrixBoard({ cat, q, setQ, wide }: BoardProps & { cat: Cat }) {
   }
 
   // Phone: one unit at a time, ranked.
-  const u = units[Math.min(unit, Math.max(0, units.length - 1))]
+  const ui = unit !== null && unit < units.length ? unit : order[0]
+  const u = ui === undefined ? undefined : units[ui]
   const sorted = u ? pool
-    .map((p) => ({ p, l: p.levels[units.indexOf(u)] ?? 0 }))
+    .map((p) => ({ p, l: p.levels[ui] ?? 0 }))
     .sort((a, b) => b.l - a.l || a.p.name.localeCompare(b.p.name)) : []
   const unitPlace = competitionRanks(sorted, (x) => x.l)
   const ranked = sorted.map((x) => ({ ...x, rank: unitPlace.get(x) ?? null }))
@@ -209,11 +229,18 @@ function MatrixBoard({ cat, q, setQ, wide }: BoardProps & { cat: Cat }) {
       {!data || !u ? <div className="px-4"><Empty loading={loading} /></div> : (
         <>
           <div ref={unitNav} role="listbox" aria-label="Unit" className="flex flex-none gap-2 overflow-x-auto px-4 pb-2 pt-1 [scrollbar-width:none]">
-            {units.map((x, i) => (
-              <button key={x.name} type="button" role="option" aria-selected={x === u} aria-label={x.name} onClick={() => setUnit(i)}
-                className={`flex size-[60px] flex-none cursor-pointer items-center justify-center rounded-2xl p-0 ${x === u ? 'border-2 border-action bg-[#EFF5FF] shadow-[0_2px_8px_rgba(37,99,235,.2)]' : 'border border-line bg-white'}`}>
-                <UnitIcon name={x.name} size={44} />
-              </button>
+            {groups.map((g, gi) => (
+              <Fragment key={g.hero ?? 'other'}>
+                {byHero && (g.hero
+                  ? <span title={g.hero} className={`flex flex-none items-center ${gi ? 'border-l border-line pl-2' : ''}`}><UnitIcon name={g.hero} size={26} /></span>
+                  : <span aria-hidden="true" className="w-px flex-none self-stretch bg-line" />)}
+                {g.idx.map((i) => { const x = units[i]; return (
+                  <button key={x.name} type="button" role="option" aria-selected={i === ui} aria-label={x.name} onClick={() => setUnit(i)}
+                    className={`flex size-[60px] flex-none cursor-pointer items-center justify-center rounded-2xl p-0 ${i === ui ? 'border-2 border-action bg-[#EFF5FF] shadow-[0_2px_8px_rgba(37,99,235,.2)]' : 'border border-line bg-white'}`}>
+                    <UnitIcon name={x.name} size={44} />
+                  </button>
+                ) })}
+              </Fragment>
             ))}
           </div>
           <div className="flex items-baseline justify-between gap-3 px-4">
