@@ -15,7 +15,7 @@ from pathlib import Path
 from statistics import mean
 
 from frosted.config import CLAN_TAGS, TAG_TO_CLAN
-from server import plan, trends
+from server import plan
 
 SEASON_RESET = 0.5   # season-to-date donations falling by half or more mark a new season
 
@@ -48,6 +48,12 @@ def record_day(conn, now: str) -> None:
                  war_league=excluded.war_league, updated_at=excluded.updated_at""",
             (date, clan_tag, m["n"], m["th"], h["lv"], h["mx"], m["don"], m["rec"], cap,
              league["war_league"] if league else None, now))
+
+
+def _trends():
+    # Imported on first read: it needs pandas, and the collector, which only writes, should not.
+    from server import trends
+    return trends
 
 
 # ─── reading ──────────────────────────────────────────────────────────────────
@@ -158,7 +164,7 @@ def clan_stats(conn, name: str, tags: list[str]) -> dict:
         "cwl_league": leagues(rows) if name != "Family" else [],
         "wars": wars(conn, tags),
         "score_by_cycle": cycle_scores(None if name == "Family" else name),
-        "trend": trends.trend(conn, tags),
+        "trend": _trends().trend(conn, tags),
     }
 
 
@@ -175,4 +181,4 @@ def clan_stats_empty(name: str) -> dict:
     return {"members": [], "avg_th": [], "hero_progress": [], "donations": [], "donations_by_season": [],
             "capital_by_raid": [], "cwl_league": [], "wars": [],
             "score_by_cycle": cycle_scores(None if name == "Family" else name),
-            "trend": trends.trend(None, list(CLAN_TAGS.values()) if name == "Family" else [CLAN_TAGS[name]])}
+            "trend": _trends().trend(None, list(CLAN_TAGS.values()) if name == "Family" else [CLAN_TAGS[name]])}
