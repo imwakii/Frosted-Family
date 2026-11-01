@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { useClans } from '../clash'
 import { groupUnits } from '../equipment'
+import OverallBoard from './OverallBoard'
 import UpgradesBoard from './UpgradesBoard'
 import { CATS, type Cat, competitionRanks, HIGH_MISS, isMaxed, type MatrixPlayer, missRate, progress, useMatrix, useWarBoard, type WarRow, type WarScope } from '../explore'
 import { go, playerHref } from '../route'
@@ -12,8 +13,8 @@ import { ClanBadge, Star, Th, UnitIcon } from './ui'
 export type ClanPick = ClanName | 'All'
 type BoardProps = { q: string; setQ: (v: string) => void; wide: boolean }
 
-// The unit categories, then the boards that are not a unit matrix.
-const NAV: { id: string; label: string; icon: string | null }[] = [...CATS, { id: 'war', label: 'War record', icon: 'War Record' }, { id: 'upgrades', label: 'Upgrades', icon: null }]
+// The overall ranking, the unit categories, then the boards that are not a unit matrix.
+const NAV: { id: string; label: string; icon: string | null }[] = [{ id: 'overall', label: 'Overall', icon: null }, ...CATS, { id: 'war', label: 'War record', icon: 'War Record' }, { id: 'upgrades', label: 'Upgrades', icon: null }]
 
 export function useClanPick() {
   const [clan, setClanState] = useState<ClanPick>(() => (read('ff-x-clan') as ClanPick) || 'All')
@@ -82,7 +83,8 @@ const cellTone = (l: number | null, max: number) =>
   l === null || l === 0 ? 'text-[#CBD5E1]' : l >= max ? 'font-extrabold text-ink' : l < max * 0.6 ? 'font-semibold text-[#94A3B8]' : 'font-semibold text-ink-2'
 
 export default function ExploreTab({ kind, ...rest }: BoardProps & { kind: string | null }) {
-  const id = NAV.find((c) => c.id === kind)?.id ?? 'heroes'
+  const id = NAV.find((c) => c.id === kind)?.id ?? 'overall'
+  if (id === 'overall') return <OverallBoard {...rest} />
   if (id === 'upgrades') return <UpgradesBoard {...rest} />
   return id === 'war' ? <WarBoardView {...rest} /> : <MatrixBoard cat={id as Cat} {...rest} />
 }
