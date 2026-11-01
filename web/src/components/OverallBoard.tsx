@@ -5,7 +5,7 @@ import { CLAN, CLANS } from '../theme'
 import type { ClanName } from '../types'
 import { norm, SearchBox } from './CwlTab'
 import { CategoryNav, ClanFilter, Empty, useClanPick } from './ExploreTab'
-import { Th } from './ui'
+import { Star, Th } from './ui'
 
 type Row = { tag: string; name: string; clan: ClanName; th: number | null; overall: number; cats: Partial<Record<Cat, number>> }
 
@@ -46,6 +46,10 @@ export default function OverallBoard({ q, setQ, wide }: { q: string; setQ: (v: s
   const ranked = all.filter((r) => clan === 'All' || r.clan === clan).sort((a, b) => key(b) - key(a) || b.overall - a.overall || a.name.localeCompare(b.name))
   const place = competitionRanks(ranked, (r) => Math.round(key(r) * 10) / 10)
   const shown = ranked.filter((r) => !nq || norm(r.name).includes(nq) || r.tag.toLowerCase().includes(nq))
+  // Fully maxed means every category at game max; the stamp is the newest of the six boards.
+  const maxedN = ranked.filter((r) => CATS.every((c) => (r.cats[c.id] ?? 0) >= 100)).length
+  const asOf = boards.map((b) => b.data?.as_of).filter((v): v is string => !!v).sort().pop()
+  const stamp = asOf ? `${new Date(asOf).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'UTC' })} UTC` : null
   const enter = () => { if (shown[0]) go.to(playerHref(shown[0].tag)) }
   const cols: { id: Cat | 'overall'; label: string }[] = [{ id: 'overall', label: 'Overall' }, ...CATS.map((c) => ({ id: c.id, label: c.label }))]
 
@@ -111,7 +115,16 @@ export default function OverallBoard({ q, setQ, wide }: { q: string; setQ: (v: s
           <CategoryNav current="overall" wide />
           <ClanFilter clan={clan} setClan={setClan} counts={counts} wide />
         </div>
-        <div className="ml-auto w-full max-w-[320px]"><SearchBox q={q} setQ={setQ} onEnter={enter} /></div>
+        <div className="flex flex-wrap items-center gap-2 text-sm text-muted">
+          {all.length > 0 && (
+            <>
+              <span className="rounded-full border border-line bg-white px-3 py-1.5 font-bold text-ink"><Star /> {maxedN} of {ranked.length} fully maxed</span>
+              <span className="rounded-full border border-line bg-white px-3 py-1.5 font-semibold">Ranked by {sort === 'overall' ? 'overall' : `${cols.find((c) => c.id === sort)!.label.toLowerCase()}`} progress</span>
+              {stamp && <span className="text-xs font-semibold text-faint">Updated {stamp}</span>}
+            </>
+          )}
+          <div className="ml-auto min-w-[200px] max-w-[320px] flex-auto"><SearchBox q={q} setQ={setQ} onEnter={enter} /></div>
+        </div>
         {board}
       </main>
     )
