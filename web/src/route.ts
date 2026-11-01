@@ -6,8 +6,8 @@ import { useEffect, useState } from 'react'
 export type Tab = 'cwl' | 'explore' | 'plan'
 export type Route = { tab: Tab; sub: string; kind: string | null; player: string | null; base: string }
 
-export const STATS_SUBS = ['players', 'war', 'upgrades', 'clans'] as const
-export const LEADERS_SUBS = ['builder', 'members'] as const
+export const STATS_SUBS = ['players', 'war', 'upgrades', 'donations', 'capital', 'clans'] as const
+export const LEADERS_SUBS = ['builder', 'attacks', 'members'] as const
 
 function parse(): Route {
   const h = window.location.hash.replace(/^#\/?/, '')

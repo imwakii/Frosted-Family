@@ -10,7 +10,7 @@ export const snake = (name: string) =>
 
 export const unitIcon = (name: string) => `/icons/${snake(name)}.png`
 
-const TH_ART = new Set([13, 14, 15, 17, 18])
+const TH_ART = new Set([13, 14, 15, 16, 17, 18])
 export const thIcon = (th: number | null) => (th && TH_ART.has(th) ? `/icons/th${th}.png` : null)
 
 const LEAGUE_ART = new Set(['champion_league_iii', 'master_league_ii', 'master_league_iii'])

@@ -2,6 +2,7 @@ import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { useClans } from '../clash'
 import { groupUnits } from '../equipment'
 import OverallBoard from './OverallBoard'
+import RankBoard, { type RankCol } from './RankBoard'
 import UpgradesBoard from './UpgradesBoard'
 import { CATS, type Cat, competitionRanks, HIGH_MISS, isMaxed, type MatrixPlayer, missRate, progress, useMatrix, useWarBoard, type WarRow, type WarScope } from '../explore'
 import { go, playerHref } from '../route'
@@ -21,7 +22,22 @@ const SUBS = [
   { id: 'players', label: 'Players', href: '#/stats/players' },
   { id: 'war', label: 'War', href: '#/stats/war' },
   { id: 'upgrades', label: 'Upgrades', href: '#/stats/upgrades' },
+  { id: 'donations', label: 'Donations', href: '#/stats/donations' },
+  { id: 'capital', label: 'Capital', href: '#/stats/capital' },
   { id: 'clans', label: 'Clans', href: '#/stats/clans' },
+]
+
+type Gift = { donated: number; received: number } | null
+type Cap = { contributed: number | null; raid_loot: number | null; raid_attacks: number | null } | null
+const DONATION_COLS: RankCol[] = [
+  { key: 'donated', label: 'Donated', value: (r) => (r.donations as Gift)?.donated ?? null },
+  { key: 'received', label: 'Received', value: (r) => (r.donations as Gift)?.received ?? null },
+  { key: 'ratio', label: 'Ratio', value: (r) => { const d = r.donations as Gift; return d && d.received ? d.donated / d.received : null }, fmt: (v) => v.toFixed(1) },
+]
+const CAPITAL_COLS: RankCol[] = [
+  { key: 'loot', label: 'Last raid loot', value: (r) => (r.capital as Cap)?.raid_loot ?? null },
+  { key: 'attacks', label: 'Last raid attacks', value: (r) => (r.capital as Cap)?.raid_attacks ?? null },
+  { key: 'contributed', label: 'All-time contributed', value: (r) => (r.capital as Cap)?.contributed ?? null },
 ]
 
 export function useClanPick() {
@@ -94,6 +110,8 @@ export default function ExploreTab({ sub, kind, ...rest }: BoardProps & { sub: s
   const id = NAV.find((c) => c.id === kind)?.id ?? 'overall'
   const board = sub === 'war' ? <WarBoardView {...rest} />
     : sub === 'upgrades' ? <UpgradesBoard {...rest} />
+    : sub === 'donations' ? <RankBoard key="donations" kind="donations" cols={DONATION_COLS} note="This season" {...rest} />
+    : sub === 'capital' ? <RankBoard key="capital" kind="capital" cols={CAPITAL_COLS} {...rest} />
     : sub === 'clans' ? (
       <main className={rest.wide ? 'mx-auto max-w-[1360px] px-[clamp(16px,3vw,32px)] pb-12 pt-5' : 'pb-6 pt-3'}><ClansBoard wide={rest.wide} /></main>
     )

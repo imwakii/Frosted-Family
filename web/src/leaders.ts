@@ -98,3 +98,13 @@ export function ago(iso: string | null, now = Date.now()) {
   if (m < 1440) return `${Math.round(m / 60)}h ago`
   return `${Math.round(m / 1440)}d ago`
 }
+
+// GET /api/leaders/attacks: each clan's war on its battle day, with every member's attacks used.
+export type WarAttacker = { tag: string; name: string; th: number | null; position: number | null; used: number; allowed: number; stars: number; best_destruction: number | null }
+export type ClanAttacks = {
+  clan: ClanName
+  war: { kind: string; state: 'inWar' | 'preparation'; day: number | null; start_time: string | null; end_time: string | null; team_size: number; attacks_allowed: number; opponent: string; stars: number; opponent_stars: number } | null
+  members: WarAttacker[]
+}
+
+export const loadAttacks = () => getJson<{ clans: ClanAttacks[]; last_poll: string | null }>('/api/leaders/attacks')

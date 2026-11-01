@@ -220,3 +220,18 @@ def test_leader_endpoints_refuse_until_auth_exists(client):
     assert client.get("/plan/draft").status_code == 401
     assert client.put("/plan/draft").status_code == 401
     assert client.post("/plan/publish", headers={"Authorization": "Bearer x"}).status_code == 401
+
+
+def test_attacks_left_lists_who_still_has_attacks(conn):
+    from datetime import datetime, timezone
+    from server import leaders
+    poll(conn, Recorder())
+    clans = {c["clan"]: c for c in leaders.attacks_left(conn, now=datetime(2026, 11, 4, 12, tzinfo=timezone.utc))["clans"]}
+    fire = clans["Fire"]
+    assert (fire["war"]["kind"], fire["war"]["day"], fire["war"]["attacks_allowed"]) == ("cwl", 2, 1)
+    # newbie has not attacked, so they lead; Waki used their one attack.
+    assert [(m["name"], m["used"], m["allowed"]) for m in fire["members"]] == [("newbie", 0, 1), ("Waki renamed", 1, 1)]
+    assert clans["Flakes"]["war"] is None and clans["Flakes"]["members"] == []
+    # Once day 2's end has passed, it is over, whatever state was last stored.
+    later = leaders.attacks_left(conn, now=datetime(2026, 11, 6, tzinfo=timezone.utc))["clans"]
+    assert next(c for c in later if c["clan"] == "Fire")["war"] is None
