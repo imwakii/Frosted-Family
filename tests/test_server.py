@@ -235,3 +235,20 @@ def test_attacks_left_lists_who_still_has_attacks(conn):
     # Once day 2's end has passed, it is over, whatever state was last stored.
     later = leaders.attacks_left(conn, now=datetime(2026, 11, 6, tzinfo=timezone.utc))["clans"]
     assert next(c for c in later if c["clan"] == "Fire")["war"] is None
+
+
+def test_a_member_who_joins_between_profile_runs_is_fetched_on_the_next_pass(conn):
+    poll(conn, Recorder())  # the first pass is an hourly profile run
+    fetched = [t for (t,) in conn.execute("SELECT player_tag FROM player_profiles")]
+    assert fetched
+    # As if they joined after that run: no profile yet, first seen after it.
+    with conn:
+        for table in ("player_units", "player_profiles"):
+            conn.execute(f"DELETE FROM {table} WHERE player_tag = ?", (fetched[0],))
+        conn.execute("UPDATE member_first_seen SET first_seen = '2099-01-01T00:00:00Z' WHERE player_tag = ?",
+                     (fetched[0],))
+    second = Recorder()
+    poll(conn, second)  # minutes later: not a profile run, but the one missing profile is fetched
+    players = [p for p in second.paths if p.startswith("/v1/players/")]
+    assert players == [f"/v1/players/%23{fetched[0].lstrip('#')}"]
+    assert conn.execute("SELECT COUNT(*) FROM player_profiles WHERE player_tag = ?", (fetched[0],)).fetchone()[0] == 1

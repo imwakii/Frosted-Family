@@ -134,6 +134,18 @@ def run(conn, client: httpx.Client, force_profiles: bool = False) -> Api:
             tags += collect_clan(conn, api, clan_tag, started)
     if tags and (force_profiles or profiles.profiles_due(conn, started)):
         collect_profiles(conn, api, tags, started)
+    elif tags:
+        # A member with no profile yet (just joined) is fetched now, not at the next hourly run, so they show on
+        # every Stats board within 10 minutes. Not a profile run: the hourly schedule is unchanged.
+        # Only members first seen since the last run, so a profile that cannot be fetched is not retried every pass.
+        have = {r[0] for r in conn.execute("SELECT player_tag FROM player_profiles")}
+        last = conn.execute("SELECT MAX(started_at) FROM profile_runs").fetchone()[0] or ""
+        joined = {r[0] for r in conn.execute("SELECT player_tag FROM member_first_seen WHERE first_seen > ?", (last,))}
+        for tag in (t for t in tags if t not in have and t in joined):
+            p = api.get(f"/players/{enc(tag)}", quiet=(404,))
+            if p:
+                with conn:
+                    profiles.upsert_profile(conn, p, started)
     with conn:
         stats.record_day(conn, started)  # today's clan_daily rows for /stats/clans
         conn.execute("INSERT OR REPLACE INTO polls VALUES (?,?,?,?)", (started, db.utcnow(), api.calls, api.errors))
