@@ -26,6 +26,7 @@ function combine(boards: (Matrix | null)[]): Row[] {
 }
 
 const pct = (v: number | undefined) => (v === undefined ? '—' : `${Math.round(v)}%`)
+const pct1 = (v: number) => `${(Math.floor(v * 10) / 10).toFixed(1)}%`
 
 function Bar({ v, color }: { v: number; color: string }) {
   return <span className="block h-1.5 w-full overflow-hidden rounded-full bg-well"><span className="block h-full rounded-full" style={{ width: `${Math.min(v, 100)}%`, background: color }} /></span>
@@ -77,7 +78,7 @@ export default function OverallBoard({ q, setQ, wide }: { q: string; setQ: (v: s
                 </span>
               </td>
               <td className="min-w-[150px] border-b border-hair px-4 py-1.5 group-hover:bg-hover">
-                <span className="flex items-center gap-2.5"><Bar v={r.overall} color={CLAN[r.clan].deep} /><span className="w-10 flex-none text-right font-extrabold tabular-nums text-ink">{pct(r.overall)}</span></span>
+                <span className="flex items-center gap-2.5"><Bar v={r.overall} color={CLAN[r.clan].deep} /><span className="w-14 flex-none text-right font-extrabold tabular-nums text-ink">{pct1(r.overall)}</span></span>
               </td>
               {CATS.map((c) => <td key={c.id} className="border-b border-hair px-4 py-1.5 text-right font-semibold tabular-nums text-ink-2 group-hover:bg-hover">{pct(r.cats[c.id])}</td>)}
             </tr>
@@ -96,7 +97,7 @@ export default function OverallBoard({ q, setQ, wide }: { q: string; setQ: (v: s
               <span className="truncate text-[15px] font-semibold">{r.name}</span>
               <Bar v={key(r)} color={CLAN[r.clan].deep} />
             </span>
-            <span className="w-11 flex-none text-right text-sm font-extrabold tabular-nums">{pct(key(r))}</span>
+            <span className="w-14 flex-none text-right text-sm font-extrabold tabular-nums">{sort === 'overall' ? pct1(key(r)) : pct(key(r))}</span>
           </a>
         </li>
       ))}
