@@ -18,13 +18,13 @@ export const STATUS: Record<Status, { text: string; bg: string; fg: string; dot:
 }
 
 export const GROUPS: { slot: Slot; label: string; dim: boolean }[] = [
-  { slot: 'CORE', label: 'Starting 15', dim: false },
-  { slot: 'SUB', label: 'Bench', dim: false },
-  { slot: 'OUT', label: 'Not playing', dim: true },
+  { slot: 'CORE', label: 'Core', dim: false },
+  { slot: 'SUB', label: 'Sub', dim: false },
+  { slot: 'OUT', label: 'Not in', dim: true },
   { slot: 'NEW', label: 'New', dim: false },
 ]
 
-export const SLOT_TEXT: Record<Slot, string> = { CORE: 'Starting', SUB: 'Bench', OUT: 'Not playing', NEW: 'New' }
+export const SLOT_TEXT: Record<Slot, string> = { CORE: 'Core', SUB: 'Sub', OUT: 'Not in', NEW: 'New' }
 
 export const fmtScore = (s: number | null) => (s === null ? '—' : s.toFixed(1))
 

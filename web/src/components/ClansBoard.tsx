@@ -1,14 +1,16 @@
 import { useEffect, useRef, useState, type PointerEvent, type ReactNode } from 'react'
 import { leagueIcon } from '../clash'
 import { type ClansStats, type Point, type StatClan, type StatsWar, useClanStats } from '../clanStats'
-import { CLAN, CLANS, cycleShort } from '../theme'
+import { CLANS, cycleShort } from '../theme'
 
 type Range = '30d' | 'all'
 const SERIES: StatClan[] = [...CLANS, 'Family']
 // Cake uses its accent: the deep blue sits too close to Flakes' violet for colour-blind readers.
-const COLOR: Record<StatClan, string> = { Fire: CLAN.Fire.deep, Cake: CLAN.Cake.accent, Flakes: CLAN.Flakes.deep, Family: '#334155' }
+// Mid-tone clan hues, softer than the badge colours, so lines and bars read calmly on white.
+const COLOR: Record<StatClan, string> = { Fire: '#F0905F', Cake: '#5A9BE3', Flakes: '#9686EE', Family: '#94A3B8' }
 const DASH: Partial<Record<StatClan, string>> = { Family: '4 3' }
-const OUTCOME = { won: '#16A34A', draw: '#94A3B8', lost: '#DC2626' } as const
+const OUTCOME = { won: '#BBEACB', draw: '#E2E8F0', lost: '#F9C9C9' } as const
+const OUTCOME_INK = { won: '#166534', draw: '#475569', lost: '#991B1B' } as const
 const DAY = 86_400_000
 
 const ms = (d: string) => Date.parse(`${d.slice(0, 10)}T00:00:00Z`)
@@ -207,8 +209,8 @@ function ResultsCard({ wars }: { wars: ReturnType<typeof warsIn> }) {
                 <span className="flex items-center gap-1.5 text-xs font-semibold text-ink-2"><Dot k={r.k} />{r.k}</span>
                 <div className="flex h-6 gap-[2px]" style={{ width: `${((r.won + r.draw + r.lost) / max) * 100}%` }}>
                   {(['won', 'draw', 'lost'] as const).filter((o) => r[o]).map((o, i, a) => (
-                    <span key={o} title={`${r[o]} ${o}`} className={`flex min-w-6 items-center justify-center text-[11px] font-bold text-white tabular-nums ${i === a.length - 1 ? 'rounded-r' : ''}`}
-                      style={{ flex: r[o], background: OUTCOME[o] }}>{r[o]}</span>
+                    <span key={o} title={`${r[o]} ${o}`} className={`flex min-w-6 items-center justify-center text-[11px] font-bold tabular-nums ${i === a.length - 1 ? 'rounded-r' : ''}`}
+                      style={{ flex: r[o], background: OUTCOME[o], color: OUTCOME_INK[o] }}>{r[o]}</span>
                   ))}
                 </div>
               </div>
@@ -243,13 +245,13 @@ function StarsCard({ wars }: { wars: ReturnType<typeof warsIn> }) {
                   <span className="flex items-center gap-1.5 text-xs font-semibold text-ink-2"><Dot k={r.k} />{r.k}</span>
                   <span className="pl-3.5 text-[11px] text-faint">{r.n} {r.n === 1 ? 'war' : 'wars'}</span>
                 </span>
-                <div className="flex flex-col gap-[3px]">{bar(r.us, COLOR[r.k], r.k)}{bar(r.them, '#CBD5E1', 'Opponents')}</div>
+                <div className="flex flex-col gap-[3px]">{bar(r.us, COLOR[r.k], r.k)}{bar(r.them, '#E2E8F0', 'Opponents')}</div>
               </div>
             ))}
           </div>
           <div className="flex gap-3 text-xs font-semibold text-ink-2">
             <span className="flex items-center gap-1.5"><span className="flex gap-px">{CLANS.map((k) => <span key={k} className="h-2.5 w-1.5 first:rounded-l-sm last:rounded-r-sm" style={{ background: COLOR[k] }} />)}</span>Ours</span>
-            <span className="flex items-center gap-1.5"><span className="size-2.5 rounded-sm bg-[#CBD5E1]" />Opponents</span>
+            <span className="flex items-center gap-1.5"><span className="size-2.5 rounded-sm bg-[#E2E8F0]" />Opponents</span>
           </div>
         </>
       )}

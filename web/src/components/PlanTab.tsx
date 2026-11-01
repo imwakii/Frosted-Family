@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { loginHref, takeSigninError, type Me } from '../auth'
 import { checkPlan, getDraft, HttpError, publishPlan, saveDraft } from '../data'
-import { CLAN, CLANS, GROUPS, STATUS, coreAvg, fmtScore } from '../theme'
+import { CLAN, CLANS, GROUPS, coreAvg, fmtScore } from '../theme'
 import type { ClanName, Player, Roster, Slot } from '../types'
 import { useClans } from '../clash'
 import LeadersTools from './LeadersTools'
-import { Arrow, ClanBadge, SubNav, Th } from './ui'
+import { Arrow, ClanBadge, StatusDot, StatusKey, SubNav, Th } from './ui'
 
 // Allocation rules: docs/specs/02-allocation-rules.md.
 const MAKI = '#CGJ8YR8J'
@@ -33,14 +33,13 @@ function readDraft(roster: Roster): Moves {
 
 function PlanRow({ p, at, onPlace }: { p: Player; at: Place; onPlace: (v: Place) => void }) {
   const moved = at.clan !== p.clan || at.slot !== p.slot
-  const s = STATUS[p.status]
   const id = 'plan-' + p.tag.slice(1)
   return (
     <li className={`ff-plan-row flex min-h-11 items-center gap-2 rounded-[10px] py-[3px] pl-2.5 pr-1 ${moved ? 'bg-moved' : 'hover:bg-[#F8FAFF]'}`}>
       <Th th={p.th} />
       <span className="flex min-w-0 flex-auto items-center gap-1.5">
         <span className="truncate text-sm font-semibold">{p.name}</span>
-        <span title={s.text} aria-label={s.text} className="size-2 flex-none rounded" style={{ background: s.dot }} />
+        <StatusDot status={p.status} />
         {at.clan !== p.clan && <span className="flex-none text-[11px] font-bold text-action">← {p.clan}</span>}
       </span>
       <span className="w-[38px] flex-none text-right text-sm font-bold tabular-nums text-muted">{fmtScore(p.score)}</span>
@@ -231,12 +230,7 @@ function Plan({ roster, me }: { roster: Roster; me: Me }) {
           </div>
         )}
 
-        <div aria-label="Key" className="flex flex-wrap gap-x-[18px] gap-y-1.5 text-[13px] font-semibold text-muted">
-          {(['active', 'highMiss', 'inactive'] as const).map((s) => (
-            <span key={s} className="flex items-center gap-1.5"><span className="size-2 rounded" style={{ background: STATUS[s].dot }} />{STATUS[s].text}</span>
-          ))}
-          <span className="flex items-center gap-1.5"><span className="h-2.5 w-3.5 rounded-[3px] bg-moved" />Moved</span>
-        </div>
+        <StatusKey extra={<span className="flex items-center gap-1.5"><span className="h-2.5 w-3.5 rounded-[3px] bg-moved" />Moved</span>} />
 
         <nav aria-label="Clan" className="grid grid-cols-3 gap-1 rounded-xl bg-well p-1 md:hidden">
           {cols.map((c) => (

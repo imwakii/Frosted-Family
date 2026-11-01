@@ -77,7 +77,7 @@ export function reasonLabel(r: Reason): { text: string; tone: 'amber' | 'grey' }
     case 'inactive_days': return { text: `Inactive ${r.value ?? '?'}d`, tone: 'amber' }
     case 'high_miss': return { text: 'High miss', tone: 'amber' }
     case 'missed_recent': return { text: `Missed ${r.value ?? ''}`.trim(), tone: 'amber' }
-    case 'sitting_out': return { text: 'Sitting out', tone: 'grey' }
+    case 'sitting_out': return { text: 'Not in', tone: 'grey' }
     case 'no_donations': return { text: 'No donations', tone: 'grey' }
     case 'low_th_for_clan': return { text: 'Low TH', tone: 'grey' }
     case 'new_and_unproven': return { text: 'New', tone: 'grey' }

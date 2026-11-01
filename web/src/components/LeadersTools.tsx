@@ -104,7 +104,7 @@ function groupByActivity(players: Candidate[]) {
   return out
 }
 
-const SLOT: Record<string, string> = { CORE: 'Starting', SUB: 'Bench', 'Sitting Out': 'Not playing', OUT: 'Not playing' }
+const SLOT: Record<string, string> = { CORE: 'Core', SUB: 'Sub', 'Sitting Out': 'Not in', OUT: 'Not in' }
 
 function MakeRoom() {
   const clans = useClans()

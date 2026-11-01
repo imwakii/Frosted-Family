@@ -3,7 +3,7 @@ import { CLAN, CLANS, GROUPS, SLOT_TEXT, coreAvg, fmtScore } from '../theme'
 import { playerHref } from '../route'
 import type { ClanName, LiveWar, Player, Roster } from '../types'
 import { useClans, type ClanMeta } from '../clash'
-import { ClanBadge, Eyebrow, LeaguePill, SearchIcon, StatusPill, Th, WarPill } from './ui'
+import { ClanBadge, Eyebrow, LeaguePill, SearchIcon, StatusDot, StatusKey, Th, WarPill } from './ui'
 
 type Props = { roster: Roster; war: Partial<Record<ClanName, LiveWar | null>>; wide: boolean; q: string; setQ: (v: string) => void }
 
@@ -53,7 +53,7 @@ function ClanCard({ roster, clan, meta, war, compact }: { roster: Roster; clan: 
       <div className="flex flex-none flex-col items-end">
         <span className="text-[11px] font-bold uppercase tracking-[0.06em] text-muted">{f.inCwl ? 'Core avg' : 'Top 15 avg'}</span>
         <span className={`font-display leading-none ${compact ? 'text-[26px]' : 'text-[30px]'}`} style={{ color: c.deep }}>{f.avg}</span>
-        {!f.inCwl && <span className="mt-1 text-xs font-semibold text-muted">{roster.players.filter((p) => p.clan === clan).length} members</span>}
+        <span className="mt-1 text-xs font-semibold text-muted">{roster.players.filter((p) => p.clan === clan).length} members</span>
       </div>
     </div>
   )
@@ -121,7 +121,7 @@ function Row({ p, n, hit, dense }: { p: Player; n: number; hit?: boolean; dense?
           </span>
           {p.slot === 'NEW' && <NewLine p={p} />}
         </span>
-        <StatusPill status={p.status} />
+        <StatusDot status={p.status} />
         <span className="w-10 flex-none text-right text-sm font-bold tabular-nums text-muted">{fmtScore(p.score)}</span>
       </a>
     </li>
@@ -173,7 +173,7 @@ function YouCard({ roster, tag, onClear }: { roster: Roster; tag: string; onClea
         <Th th={p.th} />
         <span className="min-w-0 truncate text-[15px] font-semibold">{p.name}</span>
         <span className="ml-auto flex-none whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-bold" style={{ background: CLAN[p.clan].tint, color: CLAN[p.clan].deep }}>
-          {p.clan} · {roster.clans[p.clan]?.inCwl ? SLOT_TEXT[p.slot] : 'Not playing'}
+          {p.clan} · {roster.clans[p.clan]?.inCwl ? SLOT_TEXT[p.slot] : 'Not in'}
         </span>
       </a>
       <button type="button" aria-label="Unpin" onClick={onClear}
@@ -196,6 +196,13 @@ function Phone({ roster, war, q, setQ }: Omit<Props, 'wide'>) {
   const results = nq ? roster.players.filter((p) => matches(p, nq)).slice(0, 12) : []
   const clans = useClans()
   const [you, setYou] = useYou()
+  // Switching clans while scrolled into a list starts the new list at the top, under the clan switch.
+  const clanNav = useRef<HTMLElement>(null)
+  const pick = (k: ClanName) => {
+    setClan(k)
+    const top = clanNav.current ? clanNav.current.getBoundingClientRect().top + window.scrollY - 80 : 0
+    if (window.scrollY > top) window.scrollTo({ top })
+  }
 
   return (
     <>
@@ -215,7 +222,7 @@ function Phone({ roster, war, q, setQ }: Omit<Props, 'wide'>) {
                     <FromPill from={p.from} />
                   </span>
                   <span className="flex-none whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-bold" style={{ background: CLAN[p.clan].tint, color: CLAN[p.clan].deep }}>
-                    {p.clan} · {roster.clans[p.clan]?.inCwl ? SLOT_TEXT[p.slot] : 'Not playing'}
+                    {p.clan} · {roster.clans[p.clan]?.inCwl ? SLOT_TEXT[p.slot] : 'Not in'}
                   </span>
                 </a>
               </li>
@@ -225,9 +232,9 @@ function Phone({ roster, war, q, setQ }: Omit<Props, 'wide'>) {
         ) : (
           <>
             {you && <YouCard roster={roster} tag={you} onClear={() => setYou(null)} />}
-            <nav aria-label="Clan" className="grid grid-cols-3 gap-1 rounded-xl bg-well p-1">
+            <nav ref={clanNav} aria-label="Clan" className="grid grid-cols-3 gap-1 rounded-xl bg-well p-1">
               {CLANS.map((k) => (
-                <button key={k} type="button" aria-pressed={k === clan} onClick={() => setClan(k)}
+                <button key={k} type="button" aria-pressed={k === clan} onClick={() => pick(k)}
                   className={`flex min-h-[42px] cursor-pointer items-center justify-center gap-1 rounded-[9px] border-0 text-[15px] font-bold ${k === clan ? 'bg-white shadow-[0_1px_3px_rgba(15,23,42,.12)]' : 'bg-transparent text-muted'}`}
                   style={k === clan ? { color: CLAN[k].deep } : undefined}>
                   <ClanBadge src={clans[k]?.badge} size={22} />
@@ -236,6 +243,7 @@ function Phone({ roster, war, q, setQ }: Omit<Props, 'wide'>) {
               ))}
             </nav>
             <ClanCard roster={roster} clan={clan} meta={clans[clan]} war={war[clan]} />
+            <StatusKey className="px-1" />
             <Groups roster={roster} clan={clan} />
           </>
         )}
@@ -266,6 +274,7 @@ function Desktop({ roster, war, q, setQ }: Omit<Props, 'wide'>) {
         </div>
         {you && <div className="w-full max-w-[480px]"><YouCard roster={roster} tag={you} onClear={() => setYou(null)} /></div>}
       </div>
+      <StatusKey />
       <div ref={grid} onClickCapture={(e) => { const a = (e.target as HTMLElement).closest<HTMLElement>('a[data-tag]'); if (nq && a?.dataset.tag) setYou(a.dataset.tag) }} className="grid items-start gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr))]">
         {CLANS.map((clan) => {
           return (

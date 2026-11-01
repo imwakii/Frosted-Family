@@ -51,12 +51,30 @@ export const Display = ({ children, className = '', style }: { children: ReactNo
 
 export function StatusPill({ status, className = '' }: { status: Status; className?: string }) {
   const s = STATUS[status]
-  // Active is the usual case, so it is a quiet dot; only the exceptions get a pill.
-  if (status === 'active') return <span title={s.text} className={`flex w-2 flex-none justify-center ${className}`}><span className="size-2 rounded" style={{ background: s.dot }} /><span className="sr-only">{s.text}</span></span>
   return (
     <span className={`flex-none whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-semibold ${className}`} style={{ background: s.bg, color: s.fg }}>
       {s.text}
     </span>
+  )
+}
+
+// Few attacks is a hollow ring, so it reads apart from Inactive's solid grey.
+function Dot({ status }: { status: Status }) {
+  const s = STATUS[status]
+  return <span className="size-2 flex-none rounded-full" style={status === 'thin' ? { boxShadow: `inset 0 0 0 1.5px ${s.dot}` } : { background: s.dot }} />
+}
+
+/** A member's status as a dot; StatusKey says what each colour means. */
+export function StatusDot({ status }: { status: Status }) {
+  return <span title={STATUS[status].text} className="flex w-2 flex-none justify-center"><Dot status={status} /><span className="sr-only">{STATUS[status].text}</span></span>
+}
+
+export function StatusKey({ only, extra, className = '' }: { only?: Status[]; extra?: ReactNode; className?: string }) {
+  return (
+    <div aria-label="Key" className={`flex flex-wrap gap-x-[18px] gap-y-1.5 text-[13px] font-semibold text-muted ${className}`}>
+      {(only ?? (Object.keys(STATUS) as Status[])).map((k) => <span key={k} className="flex items-center gap-1.5"><Dot status={k} />{STATUS[k].text}</span>)}
+      {extra}
+    </div>
   )
 }
 
