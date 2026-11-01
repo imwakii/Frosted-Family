@@ -187,7 +187,7 @@ function MakeRoom() {
 export default function LeadersTools({ wide }: { wide: boolean }) {
   const [view, setView] = useState<'inactivity' | 'room'>('inactivity')
   return (
-    <section aria-label="Members" className="mx-auto flex max-w-[1360px] flex-col gap-4 border-t border-line px-[clamp(16px,3vw,32px)] pb-12 pt-6">
+    <section aria-label="Members" className="mx-auto flex max-w-[1360px] flex-col gap-4 px-[clamp(16px,3vw,32px)] pb-12 pt-5">
       <div role="group" aria-label="Members" className="inline-grid w-max auto-cols-max grid-flow-col gap-1 rounded-xl bg-well p-1">
         {([['inactivity', 'Inactivity'], ['room', 'Make room']] as const).map(([k, label]) => (
           <button key={k} type="button" aria-pressed={k === view} onClick={() => setView(k)}

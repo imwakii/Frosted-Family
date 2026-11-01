@@ -1,25 +1,44 @@
 import { useEffect, useState } from 'react'
 
-// Hash routes: #/ (CWL), #/explore/<kind>, #/plan. A player sheet opens over
-// CWL or Explore by appending /p/<tag without #>, and closes by dropping it.
+// Hash routes: #/ (Lineups), #/stats/<sub>[/<category>], #/leaders/<sub>. A player sheet opens over
+// Lineups or Stats by appending /p/<tag without #>, and closes by dropping it.
+// Old links (#/explore/<kind>, #/plan) are rewritten to their new place.
 export type Tab = 'cwl' | 'explore' | 'plan'
-export type Route = { tab: Tab; kind: string | null; player: string | null; base: string }
+export type Route = { tab: Tab; sub: string; kind: string | null; player: string | null; base: string }
+
+export const STATS_SUBS = ['players', 'war', 'upgrades', 'clans'] as const
+export const LEADERS_SUBS = ['builder', 'members'] as const
 
 function parse(): Route {
   const h = window.location.hash.replace(/^#\/?/, '')
   const [path, tag] = h.split(/\/?p\//)
   const player = tag ? '#' + decodeURIComponent(tag) : null
-  const parts = path.split('/').filter(Boolean)
-  const base = '#/' + parts.join('/')
-  if (parts[0] === 'plan') return { tab: 'plan', kind: null, player: null, base }
-  if (parts[0] === 'explore') return { tab: 'explore', kind: parts[1] ?? null, player, base }
-  return { tab: 'cwl', kind: null, player, base: '#/' }
+  let parts = path.split('/').filter(Boolean)
+  if (parts[0] === 'plan') parts = ['leaders', 'builder']
+  if (parts[0] === 'explore') parts = parts[1] === 'war' || parts[1] === 'upgrades' ? ['stats', parts[1]] : ['stats', 'players', ...parts.slice(1, 2)]
+  if (parts[0] === 'leaders') {
+    const sub = (LEADERS_SUBS as readonly string[]).includes(parts[1]) ? parts[1] : 'builder'
+    return { tab: 'plan', sub, kind: null, player: null, base: `#/leaders/${sub}` }
+  }
+  if (parts[0] === 'stats') {
+    const sub = (STATS_SUBS as readonly string[]).includes(parts[1]) ? parts[1] : 'players'
+    const kind = sub === 'players' ? parts[2] ?? null : null
+    return { tab: 'explore', sub, kind, player, base: `#/stats/${sub}${kind ? '/' + kind : ''}` }
+  }
+  return { tab: 'cwl', sub: '', kind: null, player, base: '#/' }
 }
 
 export function useRoute() {
   const [route, setRoute] = useState(parse)
   useEffect(() => {
-    const on = () => setRoute(parse())
+    const on = () => {
+      const r = parse()
+      // Rewrite an old link in place, so the address bar shows the new route.
+      const want = r.base === '#/' ? null : r.base + (r.player ? `/p/${encodeURIComponent(r.player.slice(1))}` : '')
+      if (want && window.location.hash !== want) history.replaceState(null, '', want)
+      setRoute(r)
+    }
+    on()
     window.addEventListener('hashchange', on)
     return () => window.removeEventListener('hashchange', on)
   }, [])

@@ -47,7 +47,7 @@ function ClanCard({ roster, clan, meta, war, compact }: { roster: Roster; clan: 
       <ClanBadge src={f.badge} size={compact ? 52 : 64} className="drop-shadow-[0_2px_4px_rgba(15,23,42,.18)]" />
       <div className="flex min-w-0 flex-auto flex-col gap-1">
         <h2 className={`font-display m-0 truncate leading-none ${compact ? 'text-[22px]' : 'text-2xl'}`} style={{ color: c.deep }}>{f.name}</h2>
-        <LeaguePill league={f.league} text={f.format} />
+        <LeaguePill league={f.league} text={f.format.replace('League ', '')} />
         <WarPill war={war} />
       </div>
       <div className="flex flex-none flex-col items-end">
@@ -151,6 +151,37 @@ function Groups({ roster, clan, q, dense }: { roster: Roster; clan: ClanName; q?
   )
 }
 
+const YOU_KEY = 'ff-you'
+
+function useYou() {
+  const [you, setYouState] = useState<string | null>(() => { try { return localStorage.getItem(YOU_KEY) } catch { return null } })
+  const setYou = (tag: string | null) => {
+    setYouState(tag)
+    try { if (tag) localStorage.setItem(YOU_KEY, tag); else localStorage.removeItem(YOU_KEY) } catch { /* private mode */ }
+  }
+  return [you, setYou] as const
+}
+
+// The member this device last searched for, pinned above the lineups.
+function YouCard({ roster, tag, onClear }: { roster: Roster; tag: string; onClear: () => void }) {
+  const p = roster.players.find((x) => x.tag === tag)
+  if (!p) return null
+  return (
+    <div className="flex min-h-[60px] items-center gap-3 rounded-2xl border-2 bg-white py-1.5 pl-3.5 pr-1.5" style={{ borderColor: CLAN[p.clan].tint }}>
+      <a href={href(p)} className="flex min-w-0 flex-auto items-center gap-3 text-ink no-underline">
+        <span className="flex-none rounded-md bg-ink px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-[0.06em] text-white">You</span>
+        <Th th={p.th} />
+        <span className="min-w-0 truncate text-[15px] font-semibold">{p.name}</span>
+        <span className="ml-auto flex-none whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-bold" style={{ background: CLAN[p.clan].tint, color: CLAN[p.clan].deep }}>
+          {p.clan} · {roster.clans[p.clan]?.inCwl ? SLOT_TEXT[p.slot] : 'Not playing'}
+        </span>
+      </a>
+      <button type="button" aria-label="Unpin" onClick={onClear}
+        className="flex size-9 flex-none cursor-pointer items-center justify-center rounded-full border-0 bg-transparent text-lg leading-none text-faint hover:bg-page hover:text-ink">×</button>
+    </div>
+  )
+}
+
 function readClan(): ClanName {
   try {
     const v = sessionStorage.getItem('ff-clan')
@@ -164,18 +195,19 @@ function Phone({ roster, war, q, setQ }: Omit<Props, 'wide'>) {
   const nq = norm(q.trim())
   const results = nq ? roster.players.filter((p) => matches(p, nq)).slice(0, 12) : []
   const clans = useClans()
+  const [you, setYou] = useYou()
 
   return (
     <>
       <div className="sticky top-0 z-10 bg-page px-4 pb-3 pt-1">
-        <SearchBox q={q} setQ={setQ} onEnter={() => { if (results[0]) window.location.hash = href(results[0]) }} />
+        <SearchBox q={q} setQ={setQ} onEnter={() => { if (results[0]) { setYou(results[0].tag); window.location.hash = href(results[0]) } }} />
       </div>
       <div className="flex flex-col gap-3 px-4 pb-6">
         {nq ? (
           <ul className="m-0 list-none rounded-2xl border border-line bg-white py-1">
             {results.map((p, i) => (
               <li key={p.tag}>
-                <a href={href(p)}
+                <a href={href(p)} onClick={() => setYou(p.tag)}
                   className={`flex min-h-[52px] items-center gap-3 px-3.5 py-1.5 text-ink no-underline hover:bg-hover ${i ? 'border-t border-hair' : ''}`}>
                   <Th th={p.th} />
                   <span className="flex min-w-0 flex-auto items-center gap-1.5">
@@ -192,6 +224,7 @@ function Phone({ roster, war, q, setQ }: Omit<Props, 'wide'>) {
           </ul>
         ) : (
           <>
+            {you && <YouCard roster={roster} tag={you} onClear={() => setYou(null)} />}
             <nav aria-label="Clan" className="grid grid-cols-3 gap-1 rounded-xl bg-well p-1">
               {CLANS.map((k) => (
                 <button key={k} type="button" aria-pressed={k === clan} onClick={() => setClan(k)}
@@ -216,6 +249,7 @@ function Desktop({ roster, war, q, setQ }: Omit<Props, 'wide'>) {
   const grid = useRef<HTMLDivElement>(null)
   const clans = useClans()
   const hits = useMemo(() => (nq ? roster.players.filter((p) => matches(p, nq)) : []), [nq, roster])
+  const [you, setYou] = useYou()
 
   useEffect(() => {
     if (!hits.length) return
@@ -225,11 +259,14 @@ function Desktop({ roster, war, q, setQ }: Omit<Props, 'wide'>) {
 
   return (
     <main className="mx-auto flex max-w-[1320px] flex-col gap-4 px-[clamp(16px,3vw,32px)] pb-12 pt-6">
-      <div className="flex max-w-[480px] flex-col gap-1">
-        <SearchBox q={q} setQ={setQ} tall onEnter={() => { if (hits[0]) window.location.hash = href(hits[0]) }} />
-        {nq && !hits.length && <span className="px-1 text-sm text-faint">No one by that name</span>}
+      <div className="flex flex-wrap items-start gap-3">
+        <div className="flex w-full max-w-[480px] flex-col gap-1">
+          <SearchBox q={q} setQ={setQ} tall onEnter={() => { if (hits[0]) { setYou(hits[0].tag); window.location.hash = href(hits[0]) } }} />
+          {nq && !hits.length && <span className="px-1 text-sm text-faint">No one by that name</span>}
+        </div>
+        {you && <div className="w-full max-w-[480px]"><YouCard roster={roster} tag={you} onClear={() => setYou(null)} /></div>}
       </div>
-      <div ref={grid} className="grid items-start gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr))]">
+      <div ref={grid} onClickCapture={(e) => { const a = (e.target as HTMLElement).closest<HTMLElement>('a[data-tag]'); if (nq && a?.dataset.tag) setYou(a.dataset.tag) }} className="grid items-start gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr))]">
         {CLANS.map((clan) => {
           return (
             <section key={clan} aria-label={clan} className="overflow-hidden rounded-[18px] border border-line bg-white pb-2.5">

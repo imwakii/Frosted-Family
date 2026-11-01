@@ -8,13 +8,21 @@ import { go, playerHref } from '../route'
 import { CLAN, CLANS } from '../theme'
 import type { ClanName } from '../types'
 import { norm, SearchBox } from './CwlTab'
-import { ClanBadge, Star, Th, UnitIcon } from './ui'
+import ClansBoard from './ClansBoard'
+import { ClanBadge, Star, SubNav, Th, UnitIcon } from './ui'
 
 export type ClanPick = ClanName | 'All'
 type BoardProps = { q: string; setQ: (v: string) => void; wide: boolean }
 
-// The overall ranking, the unit categories, then the boards that are not a unit matrix.
-const NAV: { id: string; label: string; icon: string | null }[] = [{ id: 'overall', label: 'Overall', icon: null }, ...CATS, { id: 'war', label: 'War record', icon: 'War Record' }, { id: 'upgrades', label: 'Upgrades', icon: null }]
+// Players: the overall ranking, then one unit matrix per category.
+const NAV: { id: string; label: string; icon: string | null }[] = [{ id: 'overall', label: 'Overall', icon: null }, ...CATS]
+
+const SUBS = [
+  { id: 'players', label: 'Players', href: '#/stats/players' },
+  { id: 'war', label: 'War', href: '#/stats/war' },
+  { id: 'upgrades', label: 'Upgrades', href: '#/stats/upgrades' },
+  { id: 'clans', label: 'Clans', href: '#/stats/clans' },
+]
 
 export function useClanPick() {
   const [clan, setClanState] = useState<ClanPick>(() => (read('ff-x-clan') as ClanPick) || 'All')
@@ -26,10 +34,10 @@ export function CategoryNav({ current, wide }: { current: string; wide: boolean 
   useEffect(() => { navRef.current?.querySelector('[aria-pressed="true"]')?.scrollIntoView({ inline: 'center', block: 'nearest' }) }, [current])
   if (wide) {
     return (
-      <nav aria-label="Category" className="flex flex-wrap gap-1 rounded-[14px] bg-well p-1">
+      <nav aria-label="Category" className="flex max-w-full flex-none gap-1 overflow-x-auto rounded-[14px] bg-well p-1 [scrollbar-width:none]">
         {NAV.map((c) => (
-          <button key={c.id} type="button" aria-pressed={c.id === current} onClick={() => go.to(`#/explore/${c.id}`)}
-            className={`flex min-h-[42px] cursor-pointer items-center gap-1.5 rounded-[10px] border-0 text-sm font-bold ${c.icon ? 'pl-2.5 pr-3.5' : 'px-3.5'} ${c.id === current ? 'bg-white text-ink shadow-[0_1px_3px_rgba(15,23,42,.12)]' : 'bg-transparent text-muted hover:text-ink'}`}>
+          <button key={c.id} type="button" aria-pressed={c.id === current} onClick={() => go.to(`#/stats/players/${c.id}`)}
+            className={`flex min-h-[42px] flex-none cursor-pointer whitespace-nowrap items-center gap-1.5 rounded-[10px] border-0 text-sm font-bold ${c.icon ? 'pl-2.5 pr-3.5' : 'px-3.5'} ${c.id === current ? 'bg-white text-ink shadow-[0_1px_3px_rgba(15,23,42,.12)]' : 'bg-transparent text-muted hover:text-ink'}`}>
             {c.icon && <UnitIcon name={c.icon} size={24} />}{c.label}
           </button>
         ))}
@@ -39,7 +47,7 @@ export function CategoryNav({ current, wide }: { current: string; wide: boolean 
   return (
     <nav ref={navRef} aria-label="Category" className="flex flex-none gap-1.5 overflow-x-auto px-4 [scrollbar-width:none]">
       {NAV.map((c) => (
-        <button key={c.id} type="button" aria-pressed={c.id === current} onClick={() => go.to(`#/explore/${c.id}`)}
+        <button key={c.id} type="button" aria-pressed={c.id === current} onClick={() => go.to(`#/stats/players/${c.id}`)}
           className={`min-h-10 flex-none cursor-pointer rounded-full border px-3.5 text-sm font-bold ${c.id === current ? 'border-ink bg-ink text-white' : 'border-line bg-white text-muted'}`}>
           {c.label}
         </button>
@@ -82,11 +90,15 @@ export function Empty({ loading }: { loading: boolean }) {
 const cellTone = (l: number | null, max: number) =>
   l === null || l === 0 ? 'text-[#CBD5E1]' : l >= max ? 'font-extrabold text-ink' : l < max * 0.6 ? 'font-semibold text-[#94A3B8]' : 'font-semibold text-ink-2'
 
-export default function ExploreTab({ kind, ...rest }: BoardProps & { kind: string | null }) {
+export default function ExploreTab({ sub, kind, ...rest }: BoardProps & { sub: string; kind: string | null }) {
   const id = NAV.find((c) => c.id === kind)?.id ?? 'overall'
-  if (id === 'overall') return <OverallBoard {...rest} />
-  if (id === 'upgrades') return <UpgradesBoard {...rest} />
-  return id === 'war' ? <WarBoardView {...rest} /> : <MatrixBoard cat={id as Cat} {...rest} />
+  const board = sub === 'war' ? <WarBoardView {...rest} />
+    : sub === 'upgrades' ? <UpgradesBoard {...rest} />
+    : sub === 'clans' ? (
+      <main className={rest.wide ? 'mx-auto max-w-[1360px] px-[clamp(16px,3vw,32px)] pb-12 pt-5' : 'pb-6 pt-3'}><ClansBoard wide={rest.wide} /></main>
+    )
+    : id === 'overall' ? <OverallBoard {...rest} /> : <MatrixBoard cat={id as Cat} {...rest} />
+  return <><SubNav items={SUBS} current={sub} wide={rest.wide} />{board}</>
 }
 
 function MatrixBoard({ cat, q, setQ, wide }: BoardProps & { cat: Cat }) {
@@ -389,7 +401,6 @@ function WarBoardView({ q, setQ, wide }: BoardProps) {
     return (
       <main className="mx-auto flex max-w-[1360px] flex-col gap-3.5 px-[clamp(16px,3vw,32px)] pb-12 pt-5">
         <div className="flex flex-wrap items-center gap-2.5">
-          <CategoryNav current="war" wide />
           <ClanFilter clan={clan} setClan={setClan} counts={counts} wide />
         </div>
         <div className="flex flex-wrap items-center gap-3">
@@ -468,7 +479,6 @@ function WarBoardView({ q, setQ, wide }: BoardProps) {
     <div className="flex flex-col gap-2.5 pb-6">
       <div className="sticky top-0 z-10 bg-page px-4 pb-2 pt-1"><SearchBox q={q} setQ={setQ} onEnter={enter} /></div>
       <div className="px-4"><ClanFilter clan={clan} setClan={setClan} counts={counts} wide={false} /></div>
-      <CategoryNav current="war" wide={false} />
       {(scopeToggle || sinceChip) && <div className="flex items-center justify-between gap-3 px-4">{scopeToggle}{sinceChip}</div>}
       {!data || !col ? <div className="px-4"><Empty loading={loading} /></div> : (
         <>

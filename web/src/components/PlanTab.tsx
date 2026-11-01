@@ -5,7 +5,7 @@ import { CLAN, CLANS, GROUPS, STATUS, coreAvg, fmtScore } from '../theme'
 import type { ClanName, Player, Roster, Slot } from '../types'
 import { useClans } from '../clash'
 import LeadersTools from './LeadersTools'
-import { Arrow, ClanBadge, Th } from './ui'
+import { Arrow, ClanBadge, SubNav, Th } from './ui'
 
 // Allocation rules: docs/specs/02-allocation-rules.md.
 const MAKI = '#CGJ8YR8J'
@@ -16,15 +16,9 @@ const DRAFT_KEY = 'ff-plan-draft'
 type Place = { clan: ClanName; slot: Slot }
 type Moves = Record<string, Place>
 
-const OPTIONS: { value: string; label: string }[] = [
-  { value: 'Fire|CORE', label: 'Fire · start' },
-  { value: 'Fire|SUB', label: 'Fire · bench' },
-  { value: 'Fire|OUT', label: 'Fire · out' },
-  { value: 'Cake|CORE', label: 'Cake · start' },
-  { value: 'Cake|SUB', label: 'Cake · bench' },
-  { value: 'Cake|OUT', label: 'Cake · out' },
-  { value: 'Flakes|OUT', label: 'Flakes' },
-]
+// Within the row's clan, plain words; other clans sit under "Move to…".
+const HERE: Record<Slot, string> = { CORE: 'Start', SUB: 'Bench', OUT: 'Out', NEW: 'New' }
+const clanOptions = (clan: ClanName): Slot[] => (clan === 'Flakes' ? ['OUT'] : ['CORE', 'SUB', 'OUT'])
 const SHORT: Record<Slot, string> = { CORE: 'start', SUB: 'bench', OUT: 'out', NEW: 'new' }
 const placeLabel = (p: Place) => (p.clan === 'Flakes' && p.slot !== 'NEW' ? 'Flakes' : `${p.clan} ${SHORT[p.slot]}`)
 
@@ -53,9 +47,14 @@ function PlanRow({ p, at, onPlace }: { p: Player; at: Place; onPlace: (v: Place)
       <label htmlFor={id} className="sr-only">Place {p.name}</label>
       <select id={id} value={`${at.clan}|${at.slot}`}
         onChange={(e) => { const [clan, slot] = e.target.value.split('|') as [ClanName, Slot]; onPlace({ clan, slot }) }}
-        className="min-h-9 w-[108px] flex-none cursor-pointer rounded-lg border px-1 text-xs font-semibold text-ink-2">
-        {p.slot === 'NEW' && <option value={`${p.clan}|NEW`}>{p.clan} · new</option>}
-        {OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+        className="min-h-9 w-[92px] flex-none cursor-pointer rounded-lg border px-1 text-xs font-semibold text-ink-2">
+        {at.slot === 'NEW' && <option value={`${at.clan}|NEW`}>New</option>}
+        {clanOptions(at.clan).map((slot) => <option key={slot} value={`${at.clan}|${slot}`}>{at.clan === 'Flakes' ? 'In Flakes' : HERE[slot]}</option>)}
+        <optgroup label="Move to…">
+          {CLANS.filter((c) => c !== at.clan).flatMap((c) => clanOptions(c).map((slot) => (
+            <option key={c + slot} value={`${c}|${slot}`}>{c === 'Flakes' ? 'Flakes' : `${c} · ${HERE[slot].toLowerCase()}`}</option>
+          )))}
+        </optgroup>
       </select>
     </li>
   )
@@ -366,15 +365,20 @@ function Gate({ me, onSignOut }: { me: Me; onSignOut: () => void }) {
 
 type PlanProps = { roster: Roster; me: Me; ready: boolean; wide: boolean; onSignOut: () => void }
 
-export default function PlanTab({ roster, me, ready, wide, onSignOut }: PlanProps) {
+const SUBS = [
+  { id: 'builder', label: 'Lineup builder', href: '#/leaders/builder' },
+  { id: 'members', label: 'Members', href: '#/leaders/members' },
+]
+
+export default function PlanTab({ sub, roster, me, ready, wide, onSignOut }: PlanProps & { sub: string }) {
   if (!ready) return <div aria-busy="true" aria-label="Loading" className="mx-auto mt-16 h-48 max-w-[380px] animate-pulse rounded-[20px] bg-well" />
   // Open to all only while Discord sign-in is not set up. Once it is, signed-out visitors and non-leaders
-  // see the sign-in card alone: no board, no Inactivity, no Make room.
+  // see the sign-in card alone, on both sections.
   if (me.configured && !me.role) return <Gate me={me} onSignOut={onSignOut} />
   return (
     <>
-      <Plan roster={roster} me={me} />
-      <LeadersTools wide={wide} />
+      <SubNav items={SUBS} current={sub} wide={wide} />
+      {sub === 'members' ? <LeadersTools wide={wide} /> : <Plan roster={roster} me={me} />}
     </>
   )
 }

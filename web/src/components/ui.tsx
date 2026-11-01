@@ -51,6 +51,8 @@ export const Display = ({ children, className = '', style }: { children: ReactNo
 
 export function StatusPill({ status, className = '' }: { status: Status; className?: string }) {
   const s = STATUS[status]
+  // Active is the usual case, so it is a quiet dot; only the exceptions get a pill.
+  if (status === 'active') return <span title={s.text} className={`flex w-2 flex-none justify-center ${className}`}><span className="size-2 rounded" style={{ background: s.dot }} /><span className="sr-only">{s.text}</span></span>
   return (
     <span className={`flex-none whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-semibold ${className}`} style={{ background: s.bg, color: s.fg }}>
       {s.text}
@@ -98,7 +100,7 @@ export function WarPill({ war, now = Date.now() }: { war: LiveWar | null | undef
   }
   if (war.state === 'preparation') {
     return (
-      <span title={`vs ${war.opponent}`} className={`${box} bg-[#FEF3C7] text-[#92400E]`}>
+      <span title={`vs ${war.opponent}`} className={`${box} bg-[#FFEDD5] text-[#C2410C]`}>
         Prep{war.startTime ? ` · starts ${until(war.startTime - now)}` : ''}
       </span>
     )
@@ -116,8 +118,8 @@ export function WarPill({ war, now = Date.now() }: { war: LiveWar | null | undef
   return (
     <span className="relative inline-flex max-w-full self-start">
       <button type="button" aria-expanded={open} title={`vs ${war.opponent}`} onClick={() => setOpen((o) => !o)}
-        className={`${box} cursor-pointer border-0 bg-white text-[#B91C1C] shadow-[0_1px_2px_rgba(15,23,42,.08)]`}>
-        <span className="ff-live size-2 flex-none rounded bg-[#DC2626]" />
+        className={`${box} cursor-pointer border-0 bg-white text-[#15803D] shadow-[0_1px_2px_rgba(15,23,42,.08)]`}>
+        <span className="ff-live size-2 flex-none rounded bg-[#16A34A]" />
         {war.day ? `Day ${war.day}` : 'Live'}
         <span className="font-display text-[13px] font-normal text-ink tabular-nums"><Star /> {war.stars}–{war.opponentStars}</span>
       </button>
@@ -131,5 +133,21 @@ export function WarPill({ war, now = Date.now() }: { war: LiveWar | null | undef
         </span>
       )}
     </span>
+  )
+}
+
+// A tab's own sections, as links under the top bar; underlined, so it reads as a level below the tabs.
+export function SubNav({ items, current, wide }: { items: { id: string; label: string; href: string }[]; current: string; wide: boolean }) {
+  return (
+    <div className={wide ? 'border-b border-line bg-white' : 'px-4'}>
+      <nav aria-label="Section" className={`flex gap-5 overflow-x-auto [scrollbar-width:none] ${wide ? 'mx-auto max-w-[1360px] px-[clamp(16px,3vw,32px)]' : 'border-b border-line'}`}>
+        {items.map((s) => (
+          <a key={s.id} href={s.href} aria-current={s.id === current ? 'page' : undefined}
+            className={`-mb-px flex min-h-11 flex-none items-center whitespace-nowrap border-b-2 text-[15px] font-bold no-underline ${s.id === current ? 'border-ink text-ink' : 'border-transparent text-faint hover:text-ink'}`}>
+            {s.label}
+          </a>
+        ))}
+      </nav>
+    </div>
   )
 }

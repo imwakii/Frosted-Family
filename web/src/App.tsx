@@ -10,8 +10,8 @@ import { fmtStart } from './theme'
 
 const TABS = [
   { id: 'cwl', label: 'Lineups', href: '#/', icon: <path d="M4 6h16M4 12h16M4 18h10" /> },
-  { id: 'explore', label: 'Stats', href: '#/explore', icon: <path d="M5 20V10M12 20V4M19 20v-7" /> },
-  { id: 'plan', label: 'Leaders', href: '#/plan', icon: <path d="M7 4v16M17 4v16M3 8h8M13 16h8" /> },
+  { id: 'explore', label: 'Stats', href: '#/stats/players', icon: <path d="M5 20V10M12 20V4M19 20v-7" /> },
+  { id: 'plan', label: 'Leaders', href: '#/leaders/builder', icon: <path d="M7 4v16M17 4v16M3 8h8M13 16h8" /> },
 ] as const
 
 function Account({ me, onSignOut }: { me: Me; onSignOut: () => void }) {
@@ -46,9 +46,12 @@ export default function App() {
   const auth = useAuth()
   const [q, setQ] = useState('')
   const closeSheet = useCallback(() => go.closePlayer(), [])
-  const start = fmtStart(roster?.cwlStart ?? null)
+  // Before CWL its start; during it the day; hidden once the league has run its course.
+  const cwlDay = Math.max(0, ...Object.values(war).map((w) => (w?.kind === 'cwl' && w.state !== 'warEnded' ? w.day ?? 0 : 0)))
+  const startAt = roster?.cwlStart ? Date.parse(roster.cwlStart) : NaN
+  const start = cwlDay ? `Day ${cwlDay} of 7` : startAt > Date.now() - 9 * 86_400_000 ? fmtStart(roster?.cwlStart ?? null) : null
   const corner = route.tab === 'plan' && auth.me.user ? <Account me={auth.me} onSignOut={auth.signOut} /> : start && (
-    <span className="whitespace-nowrap rounded-full border border-line bg-white px-2.5 py-[5px] text-xs font-bold text-muted md:px-3 md:py-1.5 md:text-[13px]">CWL · {start}</span>
+    <span className={`whitespace-nowrap rounded-full border px-2.5 py-[5px] text-xs font-bold md:px-3 md:py-1.5 md:text-[13px] ${cwlDay ? 'border-[#BBF7D0] bg-[#F0FDF4] text-[#15803D]' : 'border-line bg-white text-muted'}`}>CWL · {start}</span>
   )
 
   return (
@@ -82,9 +85,9 @@ export default function App() {
           {[48, 120, 46, 320].map((h, i) => <div key={i} className="animate-pulse rounded-2xl bg-well" style={{ height: h }} />)}
         </div>
       ) : route.tab === 'plan' ? (
-        <PlanTab roster={roster} me={auth.me} ready={auth.status === 'ready'} wide={wide} onSignOut={auth.signOut} />
+        <PlanTab sub={route.sub} roster={roster} me={auth.me} ready={auth.status === 'ready'} wide={wide} onSignOut={auth.signOut} />
       ) : route.tab === 'explore' ? (
-        <ExploreTab kind={route.kind} q={q} setQ={setQ} wide={wide} />
+        <ExploreTab sub={route.sub} kind={route.kind} q={q} setQ={setQ} wide={wide} />
       ) : (
         <CwlTab roster={roster} war={war} wide={wide} q={q} setQ={setQ} />
       )}

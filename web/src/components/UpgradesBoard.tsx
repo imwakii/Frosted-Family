@@ -3,7 +3,7 @@ import { thIcon } from '../clash'
 import { ago, type Upgrade, type UpgradeCategory, useUpgrades } from '../leaders'
 import { go, playerHref } from '../route'
 import { CLAN, CLANS } from '../theme'
-import { CategoryNav, ClanFilter, Empty, useClanPick } from './ExploreTab'
+import { ClanFilter, Empty, useClanPick } from './ExploreTab'
 import { norm, SearchBox } from './CwlTab'
 import { Th, UnitIcon } from './ui'
 
@@ -100,7 +100,6 @@ export default function UpgradesBoard({ q, setQ, wide }: { q: string; setQ: (v: 
     return (
       <main className="mx-auto flex max-w-[1360px] flex-col gap-3.5 px-[clamp(16px,3vw,32px)] pb-12 pt-5">
         <div className="flex flex-wrap items-center gap-2.5">
-          <CategoryNav current="upgrades" wide />
           <ClanFilter clan={clan} setClan={setClan} counts={counts} wide />
         </div>
         <div className="flex flex-wrap items-center gap-3">
@@ -115,7 +114,6 @@ export default function UpgradesBoard({ q, setQ, wide }: { q: string; setQ: (v: 
     <div className="flex flex-col gap-2.5 pb-6">
       <div className="sticky top-0 z-10 bg-page px-4 pb-2 pt-1"><SearchBox q={q} setQ={setQ} onEnter={enter} /></div>
       <div className="px-4"><ClanFilter clan={clan} setClan={setClan} counts={counts} wide={false} /></div>
-      <CategoryNav current="upgrades" wide={false} />
       {kinds}
       <div className="px-4">{feed}</div>
     </div>
