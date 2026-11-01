@@ -54,7 +54,8 @@ def export_members(folder: Path, clan_tag: str) -> dict[str, int]:
 def add(a: dict | None, b: dict | None) -> dict | None:
     if not a or not b:
         return a or b
-    return {k: a.get(k, 0) + b.get(k, 0) for k in set(a) | set(b)}
+    # Counts add up; an export row's last_war date is not a count and is dropped.
+    return {k: a.get(k, 0) + b.get(k, 0) for k in set(a) | set(b) if not isinstance(a.get(k, b.get(k)), str)}
 
 
 def inputs(c: dict, th: int) -> dict:

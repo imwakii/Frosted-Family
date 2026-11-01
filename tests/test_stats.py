@@ -116,3 +116,11 @@ def test_trend_daily_carries_the_latest_export_forward(exports):
     assert [d["date"] for d in fire["daily"]] == [body["since"]]
     day = fire["daily"][0]
     assert day["cycle"] == "2026-11" and day["n"] >= 1 and day["score"] > 0
+
+
+def test_trend_adds_an_export_row_to_recorded_wars():
+    from server import trends
+    base = {"attacks": 10, "three": 7, "missed": 1, "tth": 180.0, "tn": 10, "last_war": "2026-10-29"}
+    rec = {"attacks": 2, "three": 1, "missed": 0, "wars": 1, "destruction": 180.0}
+    assert trends.add(base, rec) == {"attacks": 12, "three": 8, "missed": 1, "tth": 180.0, "tn": 10, "wars": 1,
+                                     "destruction": 180.0}
