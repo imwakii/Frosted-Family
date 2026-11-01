@@ -16,6 +16,8 @@ export type StatsWar = {
   opponent_destruction: number | null
   three_star_rate: number | null
 }
+// Monthly points from the exports, dated at each cycle's pull; daily points carry the latest export forward.
+export type TrendPoint = { date: string; cycle: string; score: number; n: number; three_star_rate: number | null; miss_rate: number | null; members?: number; avg_th?: number }
 export type CycleScore = { cycle: string; avg_score: number | null; n: number; core_avg_score: number | null; core_n: number | null }
 
 export interface ClanStats {
@@ -28,6 +30,7 @@ export interface ClanStats {
   cwl_league: { season: string; league: string | null }[]
   wars: StatsWar[]
   score_by_cycle: CycleScore[]
+  trend?: { monthly: TrendPoint[]; daily: TrendPoint[] }
 }
 
 export interface ClansStats { since: string; as_of: string; clans: Record<StatClan, ClanStats> }

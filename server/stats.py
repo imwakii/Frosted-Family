@@ -15,7 +15,7 @@ from pathlib import Path
 from statistics import mean
 
 from frosted.config import CLAN_TAGS, TAG_TO_CLAN
-from server import plan
+from server import plan, trends
 
 SEASON_RESET = 0.5   # season-to-date donations falling by half or more mark a new season
 
@@ -158,6 +158,7 @@ def clan_stats(conn, name: str, tags: list[str]) -> dict:
         "cwl_league": leagues(rows) if name != "Family" else [],
         "wars": wars(conn, tags),
         "score_by_cycle": cycle_scores(None if name == "Family" else name),
+        "trend": trends.trend(conn, tags),
     }
 
 
@@ -173,4 +174,5 @@ def clans(conn) -> dict:
 def clan_stats_empty(name: str) -> dict:
     return {"members": [], "avg_th": [], "hero_progress": [], "donations": [], "donations_by_season": [],
             "capital_by_raid": [], "cwl_league": [], "wars": [],
-            "score_by_cycle": cycle_scores(None if name == "Family" else name)}
+            "score_by_cycle": cycle_scores(None if name == "Family" else name),
+            "trend": trends.trend(None, list(CLAN_TAGS.values()) if name == "Family" else [CLAN_TAGS[name]])}

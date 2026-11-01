@@ -1,4 +1,6 @@
 """GET /stats/clans from a fixture poll, and Discord sign-in with exactly the six api.env lines."""
+from pathlib import Path
+
 import pytest
 
 from server import auth, db, stats
@@ -90,3 +92,27 @@ def test_discord_co_leader_reads_and_saves_but_cannot_publish(env, monkeypatch):
     assert c.get("/leaders/make-room", params={"clan": "Fire"}).status_code == 200
     assert c.put("/plan/draft", json={"moves": []}, headers=csrf).status_code == 200
     assert c.post("/plan/publish", json={"moves": []}, headers=csrf).status_code == 403
+
+
+@pytest.fixture
+def exports(polled, monkeypatch):
+    monkeypatch.setenv("FROSTED_RAW", str(Path(__file__).parents[1] / "data" / "raw"))  # the committed exports
+    return polled
+
+
+def test_trend_monthly_matches_the_cycle_scores(exports):
+    fire = client().get("/stats/clans").json()["clans"]["Fire"]
+    monthly, by_cycle = fire["trend"]["monthly"], {c["cycle"]: c["avg_score"] for c in fire["score_by_cycle"]}
+    assert [m["cycle"] for m in monthly] == ["2026-07", "2026-08", "2026-09", "2026-10", "2026-11"]
+    assert monthly == sorted(monthly, key=lambda m: m["date"])
+    # Same exports, same formula: only the exports' rounded percentages separate the two.
+    assert all(abs(m["score"] - by_cycle[m["cycle"]]) < 0.5 for m in monthly)
+    assert all(0 < m["three_star_rate"] <= 1 and 0 <= m["miss_rate"] < 1 for m in monthly)
+
+
+def test_trend_daily_carries_the_latest_export_forward(exports):
+    body = client().get("/stats/clans").json()
+    fire = body["clans"]["Fire"]["trend"]
+    assert [d["date"] for d in fire["daily"]] == [body["since"]]
+    day = fire["daily"][0]
+    assert day["cycle"] == "2026-11" and day["n"] >= 1 and day["score"] > 0

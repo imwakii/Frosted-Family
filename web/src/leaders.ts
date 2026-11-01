@@ -38,22 +38,27 @@ export type MakeRoom = { clan: ClanName; members: number; cap: number; as_of: st
 
 const mock = () => import.meta.env.DEV && new URLSearchParams(window.location.search).has('mock')
 
+/** Thrown when the server wants a leader's sign-in, so the page can ask for one instead of showing no data. */
+export class Denied extends Error {}
+
 async function getJson<T>(url: string): Promise<T | null> {
   const r = await fetch(url, { headers: { Accept: 'application/json' }, credentials: 'same-origin' }).catch(() => null)
+  if (r && (r.status === 401 || r.status === 403)) throw new Denied()
   return r?.ok && r.headers.get('content-type')?.includes('json') ? r.json() : null
 }
 
 function useLoad<T>(key: string | null, load: () => Promise<T | null>) {
-  const [state, setState] = useState<{ key: string | null; data: T | null; loading: boolean }>({ key, data: null, loading: true })
+  const [state, setState] = useState<{ key: string | null; data: T | null; loading: boolean; denied?: boolean }>({ key, data: null, loading: true })
   useEffect(() => {
     if (key === null) return
     let live = true
     setState({ key, data: null, loading: true })
-    load().then((data) => { if (live) setState({ key, data, loading: false }) }, () => { if (live) setState({ key, data: null, loading: false }) })
+    load().then((data) => { if (live) setState({ key, data, loading: false }) },
+      (e) => { if (live) setState({ key, data: null, loading: false, denied: e instanceof Denied }) })
     return () => { live = false }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key])
-  return state.key === key ? state : { key, data: null, loading: key !== null }
+  return state.key === key ? state : { key, data: null, loading: key !== null, denied: false }
 }
 
 export const useUpgrades = (days: number) =>

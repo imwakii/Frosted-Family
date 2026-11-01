@@ -9,7 +9,7 @@ import { CLAN, CLANS } from '../theme'
 import type { ClanName } from '../types'
 import { norm, SearchBox } from './CwlTab'
 import ClansBoard from './ClansBoard'
-import { ClanBadge, Star, SubNav, Th, UnitIcon } from './ui'
+import { ClanBadge, Star, StatusKey, SubNav, Th, UnitIcon } from './ui'
 
 export type ClanPick = ClanName | 'All'
 type BoardProps = { q: string; setQ: (v: string) => void; wide: boolean }
@@ -395,6 +395,7 @@ function WarBoardView({ q, setQ, wide }: BoardProps) {
     </div>
   )
   const sinceChip = since && <span className="flex-none text-xs font-semibold text-faint">{since}</span>
+  const key = <StatusKey only={['active', 'highMiss']} className="!text-xs" />
   const enter = () => { if (shown[0]) go.to(playerHref(shown[0].r.tag)) }
 
   if (wide) {
@@ -404,7 +405,7 @@ function WarBoardView({ q, setQ, wide }: BoardProps) {
           <ClanFilter clan={clan} setClan={setClan} counts={counts} wide />
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          {scopeToggle}{sinceChip}
+          {scopeToggle}{sinceChip}{key}
           <div className="ml-auto min-w-[200px] max-w-[320px] flex-auto"><SearchBox q={q} setQ={setQ} onEnter={enter} /></div>
         </div>
         {!data || !col ? <Empty loading={loading} /> : (
@@ -479,7 +480,7 @@ function WarBoardView({ q, setQ, wide }: BoardProps) {
     <div className="flex flex-col gap-2.5 pb-6">
       <div className="sticky top-0 z-10 bg-page px-4 pb-2 pt-1"><SearchBox q={q} setQ={setQ} onEnter={enter} /></div>
       <div className="px-4"><ClanFilter clan={clan} setClan={setClan} counts={counts} wide={false} /></div>
-      {(scopeToggle || sinceChip) && <div className="flex items-center justify-between gap-3 px-4">{scopeToggle}{sinceChip}</div>}
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-4">{scopeToggle}{sinceChip}{key}</div>
       {!data || !col ? <div className="px-4"><Empty loading={loading} /></div> : (
         <>
           <div role="group" aria-label="Sort by" className="-mb-1 flex gap-1 overflow-x-auto px-4 [scrollbar-width:none]">

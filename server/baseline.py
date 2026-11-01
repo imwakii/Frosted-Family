@@ -70,10 +70,15 @@ def load(cycle_dir: Path) -> Baseline:
                 if not tag:
                     continue
                 p = players.setdefault(tag, {"attacks": 0, "three": 0, "two": 0, "one": 0, "missed": 0,
-                                             "defenses": 0, "d_three": 0, "d_two": 0, "d_one": 0})
+                                             "defenses": 0, "d_three": 0, "d_two": 0, "d_one": 0, "tth": 0.0, "tn": 0})
                 # A player who moved clans inside the window has a row in each export: their wars add up.
                 for k, col in ATTACK_COLS.items():
                     p[k] += as_int(r.get(col))
+                # Target town halls as a sum and a count, so rows from two exports average correctly (trends.py).
+                n = as_int(r.get(ATTACK_COLS["attacks"]))
+                if n and r.get("Attack: Average TH of targets"):
+                    p["tth"] += float(r["Attack: Average TH of targets"]) * n
+                    p["tn"] += n
                 for k, col in DEFENSE_COLS.items():
                     p["defenses" if k == "defenses" else f"d_{k}"] += as_int(r.get(col))
                 last = (r.get("Date last war") or "").strip()

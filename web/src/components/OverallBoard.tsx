@@ -121,14 +121,6 @@ export default function OverallBoard({ q, setQ, wide }: { q: string; setQ: (v: s
       <div className="sticky top-0 z-10 bg-page px-4 pb-2 pt-1"><SearchBox q={q} setQ={setQ} onEnter={enter} /></div>
       <div className="px-4"><ClanFilter clan={clan} setClan={setClan} counts={counts} wide={false} /></div>
       <CategoryNav current="overall" wide={false} />
-      <div role="group" aria-label="Rank by" className="flex gap-1 overflow-x-auto px-4 [scrollbar-width:none]">
-        {cols.map((c) => (
-          <button key={c.id} type="button" aria-pressed={c.id === sort} onClick={() => setSort(c.id)}
-            className={`flex min-h-8 flex-none cursor-pointer items-center whitespace-nowrap rounded-lg border px-2.5 text-[13px] font-bold ${c.id === sort ? 'border-ink-2 bg-white text-ink' : 'border-transparent bg-transparent text-faint'}`}>
-            {c.label}
-          </button>
-        ))}
-      </div>
       <div className="px-4">{board}</div>
     </div>
   )

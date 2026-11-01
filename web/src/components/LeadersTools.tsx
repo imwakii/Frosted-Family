@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useClans } from '../clash'
+import { loginHref } from '../auth'
 import { ACTIVITY_LABEL, type Activity, ago, type Candidate, heroChip, type Inactive, reasonLabel, useInactivity, useMakeRoom } from '../leaders'
 import { go, playerHref } from '../route'
 import { CLAN, CLANS } from '../theme'
@@ -27,7 +28,7 @@ function DaysChip({ p }: { p: Inactive }) {
 }
 
 function Inactivity({ wide }: { wide: boolean }) {
-  const { data, loading } = useInactivity(true)
+  const { data, loading, denied } = useInactivity(true)
   const [clan, setClan] = useState<ClanPick>('All')
   const rows = (data?.players ?? [])
     .filter((p) => clan === 'All' || p.clan === clan)
@@ -36,7 +37,7 @@ function Inactivity({ wide }: { wide: boolean }) {
   return (
     <div className="flex flex-col gap-3">
       <ClanFilter clan={clan} setClan={setClan} counts={counts} wide={wide} />
-      {!data ? <Empty loading={loading} /> : wide ? (
+      {denied ? <SignIn /> : !data ? <Empty loading={loading} /> : wide ? (
         <section className="overflow-auto rounded-[18px] border border-line bg-white">
           <table className="min-w-full border-separate border-spacing-0 text-sm">
             <thead>
@@ -109,7 +110,7 @@ const SLOT: Record<string, string> = { CORE: 'Core', SUB: 'Sub', 'Sitting Out': 
 function MakeRoom() {
   const clans = useClans()
   const [clan, setClan] = useState<ClanName>('Cake')
-  const { data, loading } = useMakeRoom(clan, true)
+  const { data, loading, denied } = useMakeRoom(clan, true)
   const full = data && data.members >= data.cap
   return (
     <div className="flex flex-col gap-3">
@@ -129,7 +130,7 @@ function MakeRoom() {
           </span>
         )}
       </div>
-      {!data ? <Empty loading={loading} /> : !data.players.length ? (
+      {denied ? <SignIn /> : !data ? <Empty loading={loading} /> : !data.players.length ? (
         <div className="rounded-2xl border border-line bg-white p-4 text-sm text-faint">No candidates</div>
       ) : (
         // The server's order is the removal order; consecutive rows share an activity heading.
@@ -180,6 +181,16 @@ function MakeRoom() {
           ))}
         </div>
       )}
+    </div>
+  )
+}
+
+// The server refused: leader tools are locked and this browser is not signed in as a leader.
+function SignIn() {
+  return (
+    <div className="flex flex-col items-center gap-3 rounded-2xl border border-line bg-white px-6 py-12 text-center">
+      <span className="text-sm font-semibold text-muted">Leaders only</span>
+      <a href={loginHref()} className="flex min-h-11 items-center rounded-xl bg-[#5865F2] px-5 text-sm font-bold text-white no-underline hover:bg-[#4752C4]">Sign in with Discord</a>
     </div>
   )
 }
