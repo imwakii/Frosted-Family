@@ -89,7 +89,14 @@ def roster():
         rows.append(r)
     if conn:
         csv_tags = {r["tag"] for r in players if r["tag"]}
-        rows += members.new_member_rows(conn, csv_tags, leaders.hero_strength(conn), snapshot_view)
+        new = members.new_member_rows(conn, csv_tags, leaders.hero_strength(conn), snapshot_view)
+        # A new member's score from what the family has on them: the current export's row, if any, and wars since.
+        from server import trends
+        scores = trends.current_scores(conn, [r["tag"] for r in new if r["cwl_slot"] == "New"])
+        for r in new:
+            if r["tag"] in scores:
+                r["final_score"] = f"{scores[r['tag']]:.2f}"
+        rows += new
     return {"players": rows, "allocation": meta, "last_poll": last_poll(conn)}
 
 

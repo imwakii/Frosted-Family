@@ -159,3 +159,26 @@ def _daily_uncached(conn, clan_tags: list[str]) -> list[dict]:
 
 def trend(conn, clan_tags: list[str]) -> dict:
     return {"monthly": monthly(clan_tags), "daily": daily(conn, clan_tags) if conn is not None else []}
+
+
+def current_scores(conn, tags: list[str]) -> dict[str, float]:
+    """Today's score for players outside the roster CSV, such as new members: the current export's row if they have
+    one, plus the wars recorded after its pull date. A player with neither has no score until their first war here."""
+    known = cycles()
+    if not known or not tags or conn is None:
+        return {}
+    base = base_of(known[-1][1])
+    today = conn.execute("SELECT MAX(snapshot_date) FROM member_snapshots").fetchone()[0] or known[-1][2]
+    rec = recorded_upto(conn, today, base.pull_dates)
+    ths = {r["player_tag"]: r["town_hall"] or 0 for r in conn.execute(
+        f"SELECT player_tag, town_hall FROM member_snapshots WHERE snapshot_date = ? AND player_tag IN ({','.join('?' * len(tags))})",
+        (today, *tags))}
+    rows = []
+    for t in tags:
+        c = add(base.players.get(t), rec.get(t))
+        if c:
+            rows.append({"tag": t, **inputs(c, ths.get(t, 0))})
+    if not rows:
+        return {}
+    scored = add_scores(pd.DataFrame(rows))
+    return {r["tag"]: round(float(r["final_score"]), 2) for _, r in scored.iterrows()}

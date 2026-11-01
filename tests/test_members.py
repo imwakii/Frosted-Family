@@ -105,3 +105,19 @@ def test_the_publish_checks_leave_departed_players_out(family):
     rows = [{"tag": WAKI, "clan": "Fire", "cwl_slot": "CORE"}, {"tag": FIRE_LEFT, "clan": "Fire", "cwl_slot": "CORE"},
             {"tag": FIRE_NEVER, "clan": "Fire", "cwl_slot": "SUB"}]
     assert [r["tag"] for r in members.live_allocation(conn, rows)] == [WAKI]
+
+
+def test_new_members_are_scored_from_what_the_family_has(family, monkeypatch):
+    """Someone in the current export but not the roster (ariyenhowladar left before the cycle was cut) is scored
+    from their export row at once; a brand-new player with no war here has no score yet."""
+    from pathlib import Path
+    monkeypatch.setenv("FROSTED_RAW", str(Path(__file__).parents[1] / "data" / "raw"))
+    conn = db.connect(family / "frosted.db")
+    with conn:
+        db.upsert_members(conn, CAKE, [member(CAKE_STAYS, "cake regular", 17), member("#PYYRQVPJQ", "ariyenhowladar", 18)],
+                          P2)
+    conn.close()
+    rows = by_tag(client().get("/roster").json())
+    ari = rows["#PYYRQVPJQ"]
+    assert ari["cwl_slot"] == "New" and abs(float(ari["final_score"]) - 72.05) < 0.5  # 72.05 in the October roster
+    assert rows["#2NEW1"]["final_score"] is None
