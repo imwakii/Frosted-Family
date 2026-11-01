@@ -41,6 +41,11 @@ function PlanRow({ p, at, onPlace }: { p: Player; at: Place; onPlace: (v: Place)
         <span className="truncate text-sm font-semibold">{p.name}</span>
         <StatusDot status={p.status} />
         {at.clan !== p.clan && <span className="flex-none text-[11px] font-bold text-action">← {p.clan}</span>}
+        {at.slot === 'NEW' && p.suggestedSlot && (
+          <span title={p.suggestedReason ?? undefined} className="flex-none rounded-full border border-line px-1.5 text-[11px] font-semibold text-muted">
+            Suggest {HERE[p.suggestedSlot].toLowerCase()}
+          </span>
+        )}
       </span>
       <span className="w-[38px] flex-none text-right text-sm font-bold tabular-nums text-muted">{fmtScore(p.score)}</span>
       <label htmlFor={id} className="sr-only">Place {p.name}</label>
