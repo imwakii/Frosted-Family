@@ -17,9 +17,9 @@ type Place = { clan: ClanName; slot: Slot }
 type Moves = Record<string, Place>
 
 // Within the row's clan, plain words; other clans sit under "Move to…".
-const HERE: Record<Slot, string> = { CORE: 'Start', SUB: 'Bench', OUT: 'Out', NEW: 'New' }
+const HERE: Record<Slot, string> = { CORE: 'Core', SUB: 'Sub', OUT: 'Not in', NEW: 'New' }
 const clanOptions = (clan: ClanName): Slot[] => (clan === 'Flakes' ? ['OUT'] : ['CORE', 'SUB', 'OUT'])
-const SHORT: Record<Slot, string> = { CORE: 'start', SUB: 'bench', OUT: 'out', NEW: 'new' }
+const SHORT: Record<Slot, string> = { CORE: 'core', SUB: 'sub', OUT: 'not in', NEW: 'new' }
 const placeLabel = (p: Place) => (p.clan === 'Flakes' && p.slot !== 'NEW' ? 'Flakes' : `${p.clan} ${SHORT[p.slot]}`)
 
 type Check = { key: string; label: string; tip: string; tone: 'ok' | 'warn' | 'bad' | 'info' }
