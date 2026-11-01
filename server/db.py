@@ -11,6 +11,21 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 SCHEMA = """
+-- Each tagged player's last allocation in the roster CSV (with any publish laid over it), rewritten every collector
+-- pass. It outlives their row: a player dropped from the CSV after leaving gets their slot back if they rejoin the same
+-- clan (members.py).
+CREATE TABLE IF NOT EXISTS slot_memory (
+    player_tag TEXT PRIMARY KEY,
+    name TEXT,
+    clan TEXT NOT NULL,
+    cwl_slot TEXT NOT NULL,
+    transferred_from TEXT,
+    tier TEXT,
+    final_score TEXT,
+    current_th TEXT,
+    updated_at TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS member_snapshots (
     clan_tag TEXT NOT NULL,
     player_tag TEXT NOT NULL,

@@ -203,12 +203,15 @@ def test_rule_checks(env):
     rows = roster_rows(env)
     c, csrf = signed_in()
     fire_core, fire_sub = pick(rows, "Fire", "CORE"), pick(rows, "Fire", "SUB")
-    cake_out, flake = pick(rows, "Cake", "Sitting Out"), pick(rows, "Flakes", "Sitting Out")
+    cake_out = pick(rows, "Cake", "Sitting Out")
     assert problems(c, csrf, [{"tag": fire_core, "clan": "Fire", "slot": "SUB"},
                               {"tag": fire_sub, "clan": "Fire", "slot": "CORE"}]) == []
     assert problems(c, csrf, [{"tag": fire_core, "clan": "Fire", "slot": "SUB"}]) == \
         ["Fire has 14 CORE, needs exactly 15"]
-    assert problems(c, csrf, [{"tag": flake, "clan": "Cake", "slot": "OUT"}]) == \
+    # Enough Flakes moved in to take Cake one past the cap, whatever the roster holds.
+    cake_n = sum(r["clan"] == "Cake" for r in rows if r["tag"])
+    flakes = [r["tag"] for r in rows if r["tag"] and r["clan"] == "Flakes"][:plan.CAP + 1 - cake_n]
+    assert problems(c, csrf, [{"tag": t, "clan": "Cake", "slot": "OUT"} for t in flakes]) == \
         ["Cake has 51 members, above the 50 cap"]
     valve = [{"tag": fire_sub, "clan": "Cake", "slot": "SUB"}, {"tag": cake_out, "clan": "Flakes", "slot": "OUT"}]
     assert [p.split(":")[0] for p in problems(c, csrf, valve)] == ["one-way valve"]

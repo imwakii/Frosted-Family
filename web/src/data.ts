@@ -27,7 +27,7 @@ type ApiPlayer = {
   tag: string; name: string; clan: ClanName; cwl_slot: string; transferred_from: string | null
   tier: string; final_score: number | string | null; current_th: number | string | null
   snapshot: { name?: string; town_hall?: number } | null
-  left?: boolean; joined_at?: string | null; suggested_slot?: string | null; suggested_reason?: string | null
+  left?: boolean; joined_at?: string | null; suggested_slot?: string | null; suggested_reason?: string | null; rejoined?: boolean
 }
 type ApiWar = {
   state: string; kind?: string | null; day: number | null; team_size: number; opponent: { name: string } | null
@@ -79,6 +79,7 @@ function mergeRoster(api: { players: ApiPlayer[] }, base: Roster | null): Roster
       joinedAt: a.joined_at ?? null,
       suggestedSlot: a.suggested_slot ? SLOT[a.suggested_slot] ?? null : null,
       suggestedReason: a.suggested_reason ?? null,
+      rejoined: !!a.rejoined,
     }
   })
   return {

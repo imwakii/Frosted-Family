@@ -110,6 +110,21 @@ that rule. **It lists candidates and never removes anyone.** Who leaves is still
 
 ---
 
+## Members who leave, and members who come back
+
+Set by Ka Wai on 1 November 2026: people who leave the clan should not appear in the allocations, and people who
+leave and rejoin should be slotted back in where they were.
+
+- **Leaving.** The server marks a player as gone once their clan's member polls have not shown them for 30 minutes.
+  They drop out of the lineups, the Lineup builder and the publish checks (core count, the 50 cap) at once. Their row
+  can then be removed from `frosted_cwl_members.csv`, and the posters re-rendered without them. Do not rewrite a
+  departed player's slot to Sitting Out: that erased what they had.
+- **Coming back.** Every collector pass records each player's allocation in `slot_memory`, which outlives their CSV
+  row. A player who rejoins the clan they were allocated to is back in that slot at once, marked "Back" on Lineups.
+  One who rejoins a different clan shows as New, with their old slot named in the suggestion.
+- **A returning starter can make 16 CORE** if their place was filled while they were away. The builder's check shows
+  it; which of the two starts is the leaders' call.
+
 ## Open, and not to be recorded as settled
 
 **Variant B.** Proposed 28 August 2026, never adopted or rejected. Applying the one-way valve

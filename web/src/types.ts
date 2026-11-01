@@ -20,6 +20,8 @@ export interface Player {
   joinedAt?: string | null
   suggestedSlot?: Slot | null
   suggestedReason?: string | null
+  /** Back in the clan after leaving, in the slot they had. */
+  rejoined?: boolean
 }
 
 export interface ClanInfo { league: string | null; inCwl: boolean }

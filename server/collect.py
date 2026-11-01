@@ -137,6 +137,13 @@ def run(conn, client: httpx.Client, force_profiles: bool = False) -> Api:
     with conn:
         stats.record_day(conn, started)  # today's clan_daily rows for /stats/clans
         conn.execute("INSERT OR REPLACE INTO polls VALUES (?,?,?,?)", (started, db.utcnow(), api.calls, api.errors))
+    try:
+        # Each player's allocation, kept after their CSV row goes, so a rejoiner gets their slot back.
+        from server import members, plan
+        with conn:
+            members.remember_slots(conn, plan.effective_roster()[0], started)
+    except Exception as e:  # never let the roster file stop war collection
+        log(f"slot memory not updated: {e}")
     return api
 
 

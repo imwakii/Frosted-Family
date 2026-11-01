@@ -80,3 +80,28 @@ def test_suggest_rules():
 def test_war_record_says_new_members_have_recorded_history_only(family):
     rows = by_tag(client().get("/explore/war").json())
     assert rows["#2NEW1"]["history"] == "recorded only"
+
+
+def test_a_rejoiner_gets_their_remembered_slot_back(family):
+    """Removed from the CSV after leaving, back in the same clan: their old slot, not New. In another clan: New, with
+    the old slot named in the reason."""
+    conn = db.connect(family / "frosted.db")
+    with conn:
+        members.remember_slots(conn, [
+            {"tag": "#2NEW1", "name": "Newbie One", "clan": "Fire", "cwl_slot": "CORE", "tier": "PROVEN", "final_score": "90.1"},
+            {"tag": "#2NEW3", "name": "Newbie Three", "clan": "Fire", "cwl_slot": "SUB"},
+        ], P2)
+    conn.close()
+    rows = by_tag(client().get("/roster").json())
+    back = rows["#2NEW1"]
+    assert (back["clan"], back["cwl_slot"], back["tier"], back["final_score"]) == ("Fire", "CORE", "PROVEN", "90.1")
+    assert back["rejoined"] is True and back["new"] is False and back["left"] is False
+    moved = rows["#2NEW3"]  # remembered in Fire, rejoined Cake
+    assert moved["cwl_slot"] == "New" and moved["suggested_reason"].startswith("was SUB in Fire")
+
+
+def test_the_publish_checks_leave_departed_players_out(family):
+    conn = db.connect_readonly(family / "frosted.db")
+    rows = [{"tag": WAKI, "clan": "Fire", "cwl_slot": "CORE"}, {"tag": FIRE_LEFT, "clan": "Fire", "cwl_slot": "CORE"},
+            {"tag": FIRE_NEVER, "clan": "Fire", "cwl_slot": "SUB"}]
+    assert [r["tag"] for r in members.live_allocation(conn, rows)] == [WAKI]

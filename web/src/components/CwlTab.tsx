@@ -118,6 +118,7 @@ function Row({ p, n, hit, dense }: { p: Player; n: number; hit?: boolean; dense?
           <span className="flex min-w-0 items-center gap-1.5">
             <span className={`min-w-0 truncate font-semibold ${dense ? 'text-sm' : 'text-[15px]'}`}>{p.name}</span>
             <FromPill from={p.from} />
+            {p.rejoined && <span title="Rejoined, back in their slot" className="flex-none rounded-full bg-[#DCFCE7] px-1.5 py-px text-[10px] font-extrabold uppercase tracking-[0.04em] text-[#166534]">Back</span>}
           </span>
           {p.slot === 'NEW' && <NewLine p={p} />}
         </span>

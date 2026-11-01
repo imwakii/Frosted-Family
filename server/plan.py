@@ -10,6 +10,7 @@ The rule checks re-run here before anything is stored, whatever the page already
   - no clan above 50 members
   - the one-way valve: nobody moves Fire to Cake unless the publish sets override_valve
   - Maki is Cake CORE
+Departed players are left out and rejoiners counted in their old slots (members.live_allocation), as on the site.
 All four are settled rules in docs/specs/02-allocation-rules.md. Move order against the 50 cap is the leaders'
 job in game and is not checked here.
 """
@@ -39,6 +40,7 @@ CAP = 50
 MAKI = "#CGJ8YR8J"
 SLOT_IN = {"CORE": "CORE", "SUB": "SUB", "OUT": "Sitting Out", "Sitting Out": "Sitting Out"}
 ALLOC_COLS = ("clan", "cwl_slot", "transferred_from")
+DEFAULT_DB = "/opt/bots/frosted/data/frosted.db"
 
 router = APIRouter(prefix="/plan")
 
@@ -161,10 +163,24 @@ def put_draft(body: DraftBody, leader: Leader = Depends(require_discord_write)):
         return draft_view(conn)
 
 
+def live_rows() -> list[dict]:
+    """effective_roster without departed players and with rejoiners in their old slots, as the lineups show it."""
+    from server import members
+    rows, _ = effective_roster()
+    path = Path(os.environ.get("FROSTED_DB", DEFAULT_DB))
+    if not path.exists():
+        return rows
+    conn = db.connect_readonly(path)
+    try:
+        return members.live_allocation(conn, rows)
+    finally:
+        conn.close()
+
+
 @router.post("/check")
 def check(body: PublishBody, leader: Leader = Depends(require_leader_write)):
     """The publish rule checks without publishing."""
-    rows, _ = effective_roster()
+    rows = live_rows()
     before, _ = apply_moves(rows, [])
     after, unknown = apply_moves(rows, body.moves)
     problems = [f"not on the roster: {t}" for t in unknown] + check_rules(before, after, body.override_valve)
@@ -173,7 +189,7 @@ def check(body: PublishBody, leader: Leader = Depends(require_leader_write)):
 
 @router.post("/publish")
 def publish(body: PublishBody, leader: Leader = Depends(require_publisher)):
-    rows, meta = effective_roster()
+    rows = live_rows()
     _, sha = read_csv()
     before, _ = apply_moves(rows, [])
     after, unknown = apply_moves(rows, body.moves)
