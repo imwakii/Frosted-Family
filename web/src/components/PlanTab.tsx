@@ -25,8 +25,8 @@ const OPTIONS: { value: string; label: string }[] = [
   { value: 'Cake|OUT', label: 'Cake · out' },
   { value: 'Flakes|OUT', label: 'Flakes' },
 ]
-const SHORT: Record<Slot, string> = { CORE: 'start', SUB: 'bench', OUT: 'out' }
-const placeLabel = (p: Place) => (p.clan === 'Flakes' ? 'Flakes' : `${p.clan} ${SHORT[p.slot]}`)
+const SHORT: Record<Slot, string> = { CORE: 'start', SUB: 'bench', OUT: 'out', NEW: 'new' }
+const placeLabel = (p: Place) => (p.clan === 'Flakes' && p.slot !== 'NEW' ? 'Flakes' : `${p.clan} ${SHORT[p.slot]}`)
 
 type Check = { key: string; label: string; tip: string; tone: 'ok' | 'warn' | 'bad' | 'info' }
 function readDraft(roster: Roster): Moves {
@@ -54,6 +54,7 @@ function PlanRow({ p, at, onPlace }: { p: Player; at: Place; onPlace: (v: Place)
       <select id={id} value={`${at.clan}|${at.slot}`}
         onChange={(e) => { const [clan, slot] = e.target.value.split('|') as [ClanName, Slot]; onPlace({ clan, slot }) }}
         className="min-h-9 w-[108px] flex-none cursor-pointer rounded-lg border px-1 text-xs font-semibold text-ink-2">
+        {p.slot === 'NEW' && <option value={`${p.clan}|NEW`}>{p.clan} · new</option>}
         {OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
       </select>
     </li>
@@ -129,7 +130,7 @@ function Plan({ roster, me }: { roster: Roster; me: Me }) {
       if (inCwl) checks.push({ key: clan + 'core', label: `${clan} ${core.length}/${STARTERS}`, tip: 'Starters', tone: core.length === STARTERS ? 'ok' : 'warn' })
       checks.push({ key: clan + 'cap', label: `${clan} ${here.length}/${CAP}`, tip: 'Members', tone: here.length <= CAP ? 'ok' : 'bad' })
       const groups = inCwl
-        ? GROUPS.map((g) => ({ label: g.label, dim: g.dim, rows: here.filter((p) => where(p).slot === g.slot) }))
+        ? GROUPS.map((g) => ({ label: g.label, dim: g.dim, rows: here.filter((p) => where(p).slot === g.slot) })).filter((g) => g.label !== 'New' || g.rows.length)
         : [{ label: 'Members', dim: false, rows: here }]
       return { clan, inCwl, count: here.length, avg, delta: avg !== null && was !== null ? avg - was : 0, groups }
     })

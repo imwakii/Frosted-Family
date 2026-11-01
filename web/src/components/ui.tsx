@@ -90,7 +90,8 @@ function until(ms: number) {
  */
 export function WarPill({ war, now = Date.now() }: { war: LiveWar | null | undefined; now?: number }) {
   const [open, setOpen] = useState(false)
-  const box = 'inline-flex h-7 max-w-full items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 text-xs font-bold'
+  // self-start keeps the pill compact inside the header's flex column.
+  const box = 'inline-flex h-7 max-w-full items-center gap-1.5 self-start whitespace-nowrap rounded-full px-2.5 text-xs font-bold'
   const ended = war?.state === 'warEnded' && (war.endTime === null || now - war.endTime < ENDED_SHOWN)
   if (!war || (war.state === 'warEnded' && !ended)) {
     return <span className={`${box} bg-white/60 font-semibold text-[#94A3B8]`}>No war</span>
@@ -107,13 +108,13 @@ export function WarPill({ war, now = Date.now() }: { war: LiveWar | null | undef
     const draw = war.stars === war.opponentStars && war.destruction === war.opponentDestruction
     return (
       <span title={`vs ${war.opponent}`} className={`${box} bg-white/60 font-semibold text-muted`}>
-        {draw ? 'Draw' : won ? `Won ${war.stars}–${war.opponentStars}` : `Lost ${war.stars}–${war.opponentStars}`}
+        {draw ? 'Draw' : won ? 'Won' : 'Lost'} {war.stars}–{war.opponentStars}
       </span>
     )
   }
   const pct = (v: number | null) => (v === null ? '—' : `${Math.round(v)}%`)
   return (
-    <span className="relative inline-flex max-w-full">
+    <span className="relative inline-flex max-w-full self-start">
       <button type="button" aria-expanded={open} title={`vs ${war.opponent}`} onClick={() => setOpen((o) => !o)}
         className={`${box} cursor-pointer border-0 bg-white text-[#B91C1C] shadow-[0_1px_2px_rgba(15,23,42,.08)]`}>
         <span className="ff-live size-2 flex-none rounded bg-[#DC2626]" />

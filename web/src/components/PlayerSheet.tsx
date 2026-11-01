@@ -69,7 +69,7 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
 
   const p: Player | undefined = base && { ...base, ...extra, history: extra?.history ?? base.history }
   const inCwl = p ? !!roster.clans[p.clan]?.inCwl : false
-  const where = p ? `${p.clan} · ${inCwl ? { CORE: 'starting 15', SUB: 'bench', OUT: 'not playing' }[p.slot] : 'not in CWL'}` : ''
+  const where = p ? `${p.clan} · ${p.slot === 'NEW' ? 'new' : inCwl ? { CORE: 'starting 15', SUB: 'bench', OUT: 'not playing' }[p.slot] : 'not in CWL'}` : ''
   const c = p && CLAN[p.clan]
   const pct = (v: number | null) => (v === null ? '—' : `${v.toFixed(1)}%`)
 

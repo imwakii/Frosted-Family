@@ -105,3 +105,20 @@ export async function mockMakeRoom(clan: 'Fire' | 'Cake' | 'Flakes') {
   }).sort((a, b) => order.indexOf(a.activity) - order.indexOf(b.activity) || (a.hero_pct ?? 999) - (b.hero_pct ?? 999))
   return { clan, members: mine.length, cap: 50, as_of: new Date().toISOString(), players: players.map((p, i) => ({ ...p, position: i + 1 })) }
 }
+
+// ?mock=new: the /api/roster shape from roster.json, with two new members and one departed player.
+export async function mockRosterApi() {
+  const roster: Roster = await fetch('/roster.json').then((r) => r.json())
+  const slot = { CORE: 'CORE', SUB: 'SUB', OUT: 'Sitting Out', NEW: 'New' } as const
+  const players = roster.players.map((p, i) => ({
+    tag: p.tag, name: p.name, clan: p.clan, cwl_slot: slot[p.slot], transferred_from: p.from, tier: 'PROVEN', final_score: p.score, current_th: p.th,
+    snapshot: null, left: i === 5,
+  }))
+  players.push(
+    { tag: '#NEWFIRE1', name: 'Snowfall Rookie', clan: 'Fire', cwl_slot: 'New', transferred_from: null, tier: 'NEW', final_score: null, current_th: 17, snapshot: null, left: false,
+      joined_at: '2026-10-30', suggested_slot: 'SUB', suggested_reason: 'TH17 with no war record yet' } as never,
+    { tag: '#NEWCAKE1', name: 'Frostbite with a very long name', clan: 'Cake', cwl_slot: 'New', transferred_from: null, tier: 'NEW', final_score: null, current_th: 18, snapshot: null, left: false,
+      joined_at: '2026-10-31', suggested_slot: 'CORE', suggested_reason: 'TH18, heroes at the TH median' } as never,
+  )
+  return { players }
+}
