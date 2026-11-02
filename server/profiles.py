@@ -330,13 +330,13 @@ def badges_for(conn, tag: str, heroes: list[dict]) -> list[dict]:
     w = mine["war"] if mine else None
     if w and w["attacks"] >= BADGE_MIN_RECORD:
         if (w["three_star_rate"] or 0) >= BADGE_SHARPSHOOTER:
-            out.append({"id": "sharpshooter", "label": "Sharpshooter", "detail": f"{round(w['three_star_rate'] * 100)}% three stars"})
+            out.append({"id": "sharpshooter", "label": "Three-Star General", "detail": f"{round(w['three_star_rate'] * 100)}% three stars"})
         if w["missed"] == 0:
-            out.append({"id": "never_misses", "label": "Never Misses", "detail": f"{w['attacks']} attacks, none missed"})
+            out.append({"id": "never_misses", "label": "Battle Ready", "detail": f"{w['attacks']} attacks, none missed"})
     held = sorted((r["war"]["defense"]["avg_stars_conceded"], r["tag"]) for r in rows
                   if r["war"] and r["war"]["defense"]["defenses"] >= BADGE_MIN_RECORD)
     if tag in [t for _, t in held[:BADGE_WALLS]]:
-        out.append({"id": "wall", "label": "The Wall", "detail": f"{next(v for v, t in held if t == tag)} stars conceded per attack"})
+        out.append({"id": "wall", "label": "Unbreakable", "detail": f"{next(v for v, t in held if t == tag)} stars conceded per attack"})
     upsets = conn.execute("""SELECT COUNT(*) FROM attacks a
         JOIN war_members m ON m.war_key = a.war_key AND m.player_tag = a.attacker_tag
         JOIN war_members d ON d.war_key = a.war_key AND d.player_tag = a.defender_tag
@@ -346,9 +346,9 @@ def badges_for(conn, tag: str, heroes: list[dict]) -> list[dict]:
     givers = sorted((r for r in current_members(conn) if r["donations"]), key=lambda r: -r["donations"])
     top = [r["tag"] for r in givers[:BADGE_DONORS]]
     if tag in top:
-        out.append({"id": "top_donor", "label": "Top Donor", "detail": f"#{top.index(tag) + 1} in the family this season"})
+        out.append({"id": "top_donor", "label": "Friend in Need", "detail": f"#{top.index(tag) + 1} in the family this season"})
     if heroes and all(h["max"] and h["level"] >= h["max"] for h in heroes):
-        out.append({"id": "maxed_heroes", "label": "Maxed Heroes", "detail": "Every hero at max level"})
+        out.append({"id": "maxed_heroes", "label": "Hero Hall Legend", "detail": "Every hero at max level"})
     return out
 
 

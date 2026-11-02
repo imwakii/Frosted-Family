@@ -6,7 +6,53 @@ import { CLAN, cycleLong, cycleShort, fmtScore, fmtWindow } from '../theme'
 import type { Player, Roster } from '../types'
 import { Arrow, PlayDays, Stars, StatusPill, Th, UnitIcon } from './ui'
 
-const BADGE_ICON: Record<string, string> = { sharpshooter: '🎯', never_misses: '✅', wall: '🛡️', giant_slayer: '⚔️', top_donor: '🎁', maxed_heroes: '👑' }
+// Named from the game. Each says what earns it; the server adds what earned it for this player.
+const BADGES: Record<string, { icon: string; label: string; means: string }> = {
+  sharpshooter: { icon: '⭐', label: 'Three-Star General', means: 'Three stars on at least 85% of war attacks, over 20 or more attacks.' },
+  never_misses: { icon: '⚔️', label: 'Battle Ready', means: 'No missed war attacks, over 20 or more attacks.' },
+  wall: { icon: '🛡️', label: 'Unbreakable', means: 'One of the five bases giving up the fewest stars per attack, over 20 or more defences.' },
+  giant_slayer: { icon: '🪓', label: 'Giant Slayer', means: 'Three-starred a higher town hall in war.' },
+  top_donor: { icon: '🤝', label: 'Friend in Need', means: 'One of the three biggest donors in the family this season.' },
+  maxed_heroes: { icon: '👑', label: 'Hero Hall Legend', means: 'Every hero at max level.' },
+}
+
+// Explained on hover with a mouse, and on tap on a phone. Tapping elsewhere closes it.
+function Badges({ badges }: { badges: NonNullable<PlayerCard['badges']> }) {
+  const [hover, setHover] = useState<string | null>(null)
+  const [pinned, setPinned] = useState<string | null>(null)
+  const open = badges.find((b) => b.id === (hover ?? pinned))
+  const box = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!pinned) return
+    const away = (e: PointerEvent) => { if (!box.current?.contains(e.target as Node)) setPinned(null) }
+    document.addEventListener('pointerdown', away)
+    return () => document.removeEventListener('pointerdown', away)
+  }, [pinned])
+  return (
+    <div ref={box} className="relative">
+      <ul aria-label="Badges" className="m-0 flex list-none flex-wrap gap-1.5 p-0">
+        {badges.map((b) => (
+          <li key={b.id}>
+            <button type="button" aria-expanded={open?.id === b.id}
+              onPointerEnter={(e) => { if (e.pointerType === 'mouse') setHover(b.id) }}
+              onPointerLeave={(e) => { if (e.pointerType === 'mouse') setHover(null) }}
+              onClick={() => setPinned((p) => (p === b.id ? null : b.id))}
+              className={`flex cursor-pointer items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-bold ${open?.id === b.id ? 'border-[#92400E] bg-[#FEF3C7] text-[#92400E]' : 'border-[#F5D98A] bg-[#FFFBEB] text-[#92400E]'}`}>
+              <span aria-hidden="true">{BADGES[b.id]?.icon}</span>{BADGES[b.id]?.label ?? b.label}
+            </button>
+          </li>
+        ))}
+      </ul>
+      {open && (
+        <div role="tooltip" className="absolute inset-x-0 top-full z-10 mt-1.5 flex flex-col gap-0.5 rounded-xl bg-ink px-3 py-2.5 text-white shadow-[0_8px_24px_rgba(15,23,42,.3)]">
+          <span className="text-[13px] font-bold">{BADGES[open.id]?.label ?? open.label}</span>
+          {BADGES[open.id] && <span className="text-xs">{BADGES[open.id].means}</span>}
+          <span className="text-xs font-semibold text-[#FDE68A]">{open.detail}</span>
+        </div>
+      )}
+    </div>
+  )
+}
 
 // The card's one section: a small heading, with an optional note on the right.
 function Section({ title, note, children }: { title: string; note?: string | null; children: ReactNode }) {
@@ -171,15 +217,7 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
                 </div>
               )}
             </div>
-            {card?.badges?.length ? (
-              <ul aria-label="Badges" className="m-0 flex list-none flex-wrap gap-1.5 p-0">
-                {card.badges.map((b) => (
-                  <li key={b.id} title={b.detail} className="flex items-center gap-1.5 rounded-full border border-[#F5D98A] bg-[#FFFBEB] px-2.5 py-1 text-xs font-bold text-[#92400E]">
-                    <span aria-hidden="true">{BADGE_ICON[b.id]}</span>{b.label}
-                  </li>
-                ))}
-              </ul>
-            ) : null}
+            {card?.badges?.length ? <Badges badges={card.badges} /> : null}
             <Section title="War record" note={fmtWindow(roster.window)}>
               <div className="grid grid-cols-3 gap-2">
                 <Stat label="Three stars" value={pct(p.threeStar)} />
