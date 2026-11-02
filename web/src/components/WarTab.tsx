@@ -19,7 +19,7 @@ const left = (ms: number) => {
   const m = Math.max(0, Math.round(ms / 60000))
   return m < 60 ? `${m}m` : `${Math.floor(m / 60)}h ${m % 60}m`
 }
-const ENEMY = '#94A3B8'
+const ENEMY = '#D5DBE5'
 
 // The tab's crossed swords between the two clans; they clash, with a spark, while the war is live.
 function Swords({ live, color }: { live: boolean; color: string }) {
@@ -135,7 +135,7 @@ function WarBoard({ clan, war, now }: { clan: ClanName; war: ClanWar; now: numbe
               {score(war.opponent_stars, war.opponent_destruction, war.opponent_attacks_used, '#475569', true)}
             </div>
           </div>
-          <TugBar us={war.stars} them={war.opponent_stars} color={t.accent} />
+          <TugBar us={war.stars} them={war.opponent_stars} color={t.deep} />
           {/* The same lines in every state, so each clan's list starts at the same height. */}
           <span className="text-center text-xs font-bold" style={{ color: !live ? '#64748B' : toAttack ? '#B45309' : '#15803D' }}>
             {live ? (toAttack ? `${toAttack} yet to attack` : 'All attacked') : over ? `Ended ${end ? ago(new Date(end).toISOString(), now) : ''}` : `${war.team_size} v ${war.team_size}`}
@@ -179,14 +179,14 @@ function WarBoard({ clan, war, now }: { clan: ClanName; war: ClanWar; now: numbe
               <button type="button" onClick={() => setPicked(null)} className="min-h-8 flex-none cursor-pointer rounded-full border border-line bg-white px-2.5 text-xs font-bold text-ink-2 hover:bg-page">Show all</button>
             ) : (
               <span className="flex flex-none items-center gap-3 text-xs font-semibold text-muted">
-                <span className="flex items-center gap-1.5"><span className="h-3 w-[3px] rounded" style={{ background: t.accent }} />Ours</span>
+                <span className="flex items-center gap-1.5"><span className="h-3 w-[3px] rounded" style={{ background: t.deep }} />Ours</span>
                 <span className="flex items-center gap-1.5"><span className="h-3 w-[3px] rounded" style={{ background: ENEMY }} />Enemy</span>
               </span>
             )}
           </div>
           {log.length ? (
             <ol className="m-0 list-none p-0">
-              {log.map((a) => <LogRow key={a.order} a={a} accent={t.accent} now={now} />)}
+              {log.map((a) => <LogRow key={a.order} a={a} accent={t.deep} now={now} />)}
             </ol>
           ) : <p className="m-0 border-t border-hair px-3.5 py-5 text-sm text-faint">No attacks yet</p>}
         </section>
