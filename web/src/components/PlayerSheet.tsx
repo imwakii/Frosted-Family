@@ -6,6 +6,8 @@ import { CLAN, cycleLong, cycleShort, fmtScore, fmtWindow } from '../theme'
 import type { Player, Roster } from '../types'
 import { Arrow, PlayDays, Stars, StatusPill, Th, UnitIcon } from './ui'
 
+const BADGE_ICON: Record<string, string> = { sharpshooter: '🎯', never_misses: '✅', wall: '🛡️', giant_slayer: '⚔️', top_donor: '🎁', maxed_heroes: '👑' }
+
 function Trend({ p, cycles }: { p: Player; cycles: string[] }) {
   const pts = cycles.map((c) => ({ c, s: p.history.find((h) => h.cycle === c)?.score ?? null }))
   const vals = pts.map((x) => x.s).filter((s): s is number => s !== null)
@@ -114,6 +116,15 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
                 <span className="font-bold" style={{ color: c.deep }}>{p.clan}</span>
               </div>
             )}
+            {card?.badges?.length ? (
+              <ul aria-label="Badges" className="m-0 flex list-none flex-wrap gap-1.5 p-0">
+                {card.badges.map((b) => (
+                  <li key={b.id} title={b.detail} className="flex items-center gap-1.5 rounded-full border border-[#F5D98A] bg-[#FFFBEB] px-2.5 py-1 text-xs font-bold text-[#92400E]">
+                    <span aria-hidden="true">{BADGE_ICON[b.id]}</span>{b.label}
+                  </li>
+                ))}
+              </ul>
+            ) : null}
             {p.days && (
               <div className="flex min-h-12 items-center justify-between gap-2 rounded-[14px] border border-line px-4">
                 <span className="text-sm font-semibold text-muted">CWL days</span>
@@ -144,17 +155,42 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
               </div>
               {roster.window && <span className="text-xs text-faint">{fmtWindow(roster.window)}</span>}
             </div>
-            {card && card.heroes.length > 0 && (
-              <section aria-label="Heroes" className="flex flex-col gap-1.5">
-                <span className="text-xs font-bold uppercase tracking-[0.06em] text-faint">Heroes</span>
-                <div className="grid grid-cols-4 gap-2">
-                  {card.heroes.map((h) => (
-                    <div key={h.name} title={h.name} className="flex flex-col items-center gap-1 rounded-xl border border-line py-2">
-                      <UnitIcon name={h.name} size={34} />
-                      <span className={`text-xs font-bold tabular-nums ${h.max && h.level >= h.max ? 'text-gold' : 'text-ink-2'}`}>{h.level}{h.max ? <span className="font-semibold text-faint">/{h.max}</span> : null}</span>
-                    </div>
-                  ))}
+            {card?.streaks && (card.streaks.three_stars > 1 || card.streaks.three_stars_best > 1 || card.streaks.clean_wars > 0) && (
+              <div className="grid grid-cols-2 gap-2">
+                <div className="flex flex-col gap-0.5 rounded-xl border border-line p-3">
+                  <span className="text-xs text-faint">3★ streak</span>
+                  <span className="flex items-baseline gap-1.5 text-[19px] font-bold tabular-nums">
+                    {card.streaks.three_stars > 1 && <span aria-hidden="true">🔥</span>}{card.streaks.three_stars}
+                    <span className="text-xs font-semibold text-faint">best {card.streaks.three_stars_best}</span>
+                  </span>
                 </div>
+                <div className="flex flex-col gap-0.5 rounded-xl border border-line p-3">
+                  <span className="text-xs text-faint">Wars with no miss</span>
+                  <span className="text-[19px] font-bold tabular-nums">{card.streaks.clean_wars}</span>
+                </div>
+              </div>
+            )}
+            {card && card.heroes.length > 0 && (
+              <section aria-label="Heroes and gear" className="flex flex-col gap-1.5">
+                <span className="text-xs font-bold uppercase tracking-[0.06em] text-faint">Heroes and gear</span>
+                <ul className="m-0 flex list-none flex-col rounded-xl border border-line p-0">
+                  {card.heroes.map((h, i) => (
+                    <li key={h.name} className={`flex items-center gap-2 px-3 py-1.5 ${i ? 'border-t border-hair' : ''}`}>
+                      <span title={h.name} className="flex flex-none items-center gap-1.5">
+                        <UnitIcon name={h.name} size={34} />
+                        <span className={`w-[52px] text-xs font-bold tabular-nums ${h.max && h.level >= h.max ? 'text-gold' : 'text-ink-2'}`}>{h.level}{h.max ? <span className="font-semibold text-faint">/{h.max}</span> : null}</span>
+                      </span>
+                      <span className="ml-auto flex items-center gap-2.5">
+                        {h.gear?.map((g) => (
+                          <span key={g.name} title={g.name} className="flex items-center gap-1">
+                            <UnitIcon name={g.name} size={28} />
+                            <span className={`text-[11px] font-bold tabular-nums ${g.max && g.level >= g.max ? 'text-gold' : 'text-muted'}`}>{g.level}</span>
+                          </span>
+                        ))}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
               </section>
             )}
             {card && card.attacks.length > 0 && (

@@ -248,8 +248,8 @@ function Plan({ roster, me }: { roster: Roster; me: Me }) {
       <main className="mx-auto flex max-w-[1360px] flex-col gap-4 px-[clamp(16px,3vw,32px)] pb-12 pt-3 md:pt-1">
         {result && (
           <div role="status" className={`flex min-h-12 items-center gap-2.5 rounded-[14px] px-4 text-sm font-bold ${result.ok ? 'bg-[#DCFCE7] text-[#166534]' : 'bg-[#FEF3C7] text-[#92400E]'}`}>
-            <span className="flex-auto">{result.ok ? `Published · ${result.n} ${result.n === 1 ? 'change' : 'changes'} on Lineups` : result.why}</span>
-            {result.ok && <a href="#/" className="flex min-h-9 items-center rounded-[9px] bg-white px-3.5 text-[#166534] no-underline">Open Lineups</a>}
+            <span className="flex-auto">{result.ok ? `Published · ${result.n} ${result.n === 1 ? 'change' : 'changes'} on CWL` : result.why}</span>
+            {result.ok && <a href="#/" className="flex min-h-9 items-center rounded-[9px] bg-white px-3.5 text-[#166534] no-underline">Open CWL</a>}
           </div>
         )}
 

@@ -324,5 +324,46 @@ def test_the_player_card_has_heroes_totals_attacks_and_upgrades(conn):
     assert card["war_stars"] is not None and "upgrades" in card
     hit = card["attacks"][0]
     assert {"stars", "destruction", "opponent", "target"} <= set(hit) and hit["opponent"]
-    assert profiles.player_card(conn, "#NOBODY") == {"heroes": [], "attacks": [], "upgrades": [], "war_stars": None,
-                                                     "donations": None, "donations_received": None, "capital": None}
+    assert profiles.player_card(conn, "#NOBODY") == {
+        "heroes": [], "attacks": [], "upgrades": [], "badges": [], "war_stars": None, "donations": None,
+        "donations_received": None, "capital": None,
+        "streaks": {"three_stars": 0, "three_stars_best": 0, "clean_wars": 0}}
+
+
+def _attack(conn, key, order, tag, stars):
+    conn.execute("INSERT INTO attacks VALUES (?,?,?,?,?,?,?,?)", (key, order, tag, "#D", "#C", stars, 90.0, 60))
+
+
+def _war(conn, key, prep, state="warEnded"):
+    conn.execute("""INSERT INTO wars (war_key, kind, state, attacks_per_member, preparation_start, clan_tag, opponent_tag, updated_at)
+                    VALUES (?,'regular',?,2,?,'#C','#O','x')""", (key, state, prep))
+
+
+def test_streaks_count_the_current_and_best_runs_and_clean_wars(conn):
+    from server import profiles
+    with conn:
+        _war(conn, "old", "2026-01"), _war(conn, "mid", "2026-02"), _war(conn, "new", "2026-03")
+        # Oldest first: 3, 3, 3, 1, then 3, 3: a best run of three, and two right now.
+        for key, order, stars in (("old", 1, 3), ("old", 2, 3), ("mid", 1, 3), ("mid", 2, 1), ("new", 1, 3), ("new", 2, 3)):
+            _attack(conn, key, order, "#P", stars)
+        # All attacks used in the newest two; one missed in the oldest.
+        for key, used in (("old", 1), ("mid", 2), ("new", 2)):
+            conn.execute("INSERT INTO war_members VALUES (?,?,?,?,?,?,?,?)", (key, "#P", "#C", "P", 18, 1, used, 0))
+    assert profiles.streaks_for(conn, "#P") == {"three_stars": 2, "three_stars_best": 3, "clean_wars": 2}
+
+
+def test_badges_are_earned_from_the_record(conn, monkeypatch):
+    from server import profiles
+    war = lambda attacks, three, missed, conceded, defenses=30: {
+        "attacks": attacks, "three_star_rate": three, "missed": missed,
+        "defense": {"defenses": defenses, "avg_stars_conceded": conceded}}
+    rows = [{"tag": "#ACE", "war": war(40, 0.9, 0, 1.0)}, {"tag": "#NEW", "war": war(5, 1.0, 0, 3.0, defenses=2)}]
+    rows += [{"tag": f"#X{i}", "war": war(40, 0.5, 3, 1.5 + i / 10)} for i in range(6)]
+    monkeypatch.setattr(profiles, "war_record", lambda c: {"players": rows})
+    monkeypatch.setattr(profiles, "current_members", lambda c: [{"tag": "#ACE", "donations": 900}, {"tag": "#X0", "donations": 0}])
+    maxed = [{"level": 100, "max": 100}]
+    ids = lambda tag, heroes=(): [b["id"] for b in profiles.badges_for(conn, tag, list(heroes))]
+    assert ids("#ACE", maxed) == ["sharpshooter", "never_misses", "wall", "top_donor", "maxed_heroes"]
+    assert ids("#NEW") == []  # too few attacks or defences to count
+    assert "wall" in ids("#X3") and "wall" not in ids("#X4")  # the five who concede least
+    assert ids("#X0", [{"level": 90, "max": 100}]) == ["wall"]

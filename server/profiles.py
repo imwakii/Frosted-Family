@@ -24,6 +24,11 @@ PETS, SIEGE, SUPER = set(KINDS["pets"]), set(KINDS["siege_machines"]), set(KINDS
 
 
 CARD_ATTACKS, CARD_UPGRADES, CARD_UPGRADE_DAYS = 8, 6, 30
+# Badge lines, set against the family's numbers on 2 Nov 2026 so each is earned by a handful of members.
+BADGE_MIN_RECORD = 20        # attacks or defences before a rate counts
+BADGE_SHARPSHOOTER = 0.85    # three-star rate
+BADGE_WALLS = 5              # members conceding the fewest stars per defence
+BADGE_DONORS = 3             # top donors this season
 
 def profiles_due(conn: sqlite3.Connection, now: str) -> bool:
     last = conn.execute("SELECT MAX(started_at) FROM profile_runs").fetchone()[0]
@@ -294,12 +299,70 @@ BOARDS = {"heroes": heroes, "equipment": equipment, "army": army, "donations": d
 
 # ─── The player card ──────────────────────────────────────────────────────────
 
+def streaks_for(conn, tag: str) -> dict:
+    """Over the wars the collector has recorded: the current and best run of three-star attacks, and how many ended
+    wars in a row, newest back, the player used every attack."""
+    now = best = run = 0
+    current = True
+    for a in conn.execute("""SELECT a.stars FROM attacks a JOIN wars w USING (war_key) WHERE a.attacker_tag=?
+                             ORDER BY w.preparation_start DESC, a.attack_order DESC""", (tag,)):
+        if a["stars"] == 3:
+            run += 1
+            now += current
+        else:
+            current = False
+            run = 0
+        best = max(best, run)
+    clean = 0
+    for w in conn.execute("""SELECT m.attacks_used, w.attacks_per_member AS allowed FROM war_members m JOIN wars w USING (war_key)
+                             WHERE m.player_tag=? AND w.state='warEnded' ORDER BY w.preparation_start DESC""", (tag,)):
+        if w["attacks_used"] < (w["allowed"] or 1):
+            break
+        clean += 1
+    return {"three_stars": now, "three_stars_best": best, "clean_wars": clean}
+
+
+def badges_for(conn, tag: str, heroes: list[dict]) -> list[dict]:
+    """Earned from the player's war record (the export plus recorded wars) and profile, with what earned each."""
+    out = []
+    rows = war_record(conn)["players"]
+    mine = next((r for r in rows if r["tag"] == tag), None)
+    w = mine["war"] if mine else None
+    if w and w["attacks"] >= BADGE_MIN_RECORD:
+        if (w["three_star_rate"] or 0) >= BADGE_SHARPSHOOTER:
+            out.append({"id": "sharpshooter", "label": "Sharpshooter", "detail": f"{round(w['three_star_rate'] * 100)}% three stars"})
+        if w["missed"] == 0:
+            out.append({"id": "never_misses", "label": "Never Misses", "detail": f"{w['attacks']} attacks, none missed"})
+    held = sorted((r["war"]["defense"]["avg_stars_conceded"], r["tag"]) for r in rows
+                  if r["war"] and r["war"]["defense"]["defenses"] >= BADGE_MIN_RECORD)
+    if tag in [t for _, t in held[:BADGE_WALLS]]:
+        out.append({"id": "wall", "label": "The Wall", "detail": f"{next(v for v, t in held if t == tag)} stars conceded per attack"})
+    upsets = conn.execute("""SELECT COUNT(*) FROM attacks a
+        JOIN war_members m ON m.war_key = a.war_key AND m.player_tag = a.attacker_tag
+        JOIN war_members d ON d.war_key = a.war_key AND d.player_tag = a.defender_tag
+        WHERE a.attacker_tag=? AND a.stars = 3 AND d.town_hall > m.town_hall""", (tag,)).fetchone()[0]
+    if upsets:
+        out.append({"id": "giant_slayer", "label": "Giant Slayer", "detail": f"{upsets} three-star {'hit' if upsets == 1 else 'hits'} on a higher town hall"})
+    givers = sorted((r for r in current_members(conn) if r["donations"]), key=lambda r: -r["donations"])
+    top = [r["tag"] for r in givers[:BADGE_DONORS]]
+    if tag in top:
+        out.append({"id": "top_donor", "label": "Top Donor", "detail": f"#{top.index(tag) + 1} in the family this season"})
+    if heroes and all(h["max"] and h["level"] >= h["max"] for h in heroes):
+        out.append({"id": "maxed_heroes", "label": "Maxed Heroes", "detail": "Every hero at max level"})
+    return out
+
+
 def player_card(conn, tag: str) -> dict:
-    """What the player sheet adds to the roster row: heroes, season totals, latest attacks and upgrades."""
+    """What the player sheet adds to the roster row: heroes and their gear, badges, streaks, season totals, latest
+    attacks and upgrades."""
     from server import leaders  # leaders imports this module
     prof = conn.execute("SELECT * FROM player_profiles WHERE player_tag=?", (tag,)).fetchone()
-    heroes = [{"name": u["name"], "level": u["level"], "max": u["max_level"]} for u in conn.execute(
-        "SELECT * FROM player_units WHERE player_tag=? AND kind='hero' ORDER BY position", (tag,))]
+    gear: dict[str, list[dict]] = {}
+    for u in conn.execute("""SELECT * FROM player_units WHERE player_tag=? AND kind='equipment' AND hero IS NOT NULL
+                             ORDER BY position""", (tag,)):
+        gear.setdefault(u["hero"], []).append({"name": u["name"], "level": u["level"], "max": u["max_level"]})
+    heroes = [{"name": u["name"], "level": u["level"], "max": u["max_level"], "gear": gear.get(u["name"], [])}
+              for u in conn.execute("SELECT * FROM player_units WHERE player_tag=? AND kind='hero' ORDER BY position", (tag,))]
     attacks = []
     for a in conn.execute(
         """SELECT a.stars, a.destruction, a.attacker_clan_tag, w.kind, w.round, w.clan_tag, w.clan_name, w.opponent_name,
@@ -312,7 +375,8 @@ def player_card(conn, tag: str) -> dict:
                         "target": a["target"], "target_th": a["target_th"], "target_position": a["target_position"]})
     mine = [u for u in leaders.upgrades(conn, CARD_UPGRADE_DAYS)["upgrades"] if u["tag"] == tag][:CARD_UPGRADES]
     return {
-        "heroes": heroes, "attacks": attacks, "upgrades": mine,
+        "heroes": heroes, "attacks": attacks, "upgrades": mine, "badges": badges_for(conn, tag, heroes),
+        "streaks": streaks_for(conn, tag),
         "war_stars": prof["war_stars"] if prof else None, "donations": prof["donations"] if prof else None,
         "donations_received": prof["donations_received"] if prof else None,
         "capital": prof["capital_contributions"] if prof else None,

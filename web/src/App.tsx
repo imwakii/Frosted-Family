@@ -11,9 +11,9 @@ import { go, useRoute } from './route'
 import { UtcClock } from './components/ui'
 
 const TABS = [
-  { id: 'cwl', label: 'Lineups', href: '#/', icon: <path d="M4 6h16M4 12h16M4 18h10" /> },
-  { id: 'explore', label: 'Stats', href: '#/stats/players', icon: <path d="M5 20V10M12 20V4M19 20v-7" /> },
   { id: 'war', label: 'War', href: '#/war', icon: <path d="M5 5l14 14M19 5L5 19M4 16l4 4M20 16l-4 4" /> },
+  { id: 'cwl', label: 'CWL', href: '#/', icon: <path d="M4 6h16M4 12h16M4 18h10" /> },
+  { id: 'explore', label: 'Stats', href: '#/stats/players', icon: <path d="M5 20V10M12 20V4M19 20v-7" /> },
   { id: 'plan', label: 'Plan', href: '#/plan/builder', icon: <path d="M7 4v16M17 4v16M3 8h8M13 16h8" /> },
 ] as const
 
