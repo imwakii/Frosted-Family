@@ -21,6 +21,29 @@ const left = (ms: number) => {
 }
 const ENEMY = '#94A3B8'
 
+// The tab's crossed swords between the two clans; they clash, with a spark, while the war is live.
+function Swords({ live, color }: { live: boolean; color: string }) {
+  return (
+    <span className="flex size-11 items-center justify-center rounded-full bg-white shadow-[0_2px_8px_rgba(15,23,42,.12)]">
+      <svg aria-hidden="true" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.4" strokeLinecap="round" className="overflow-visible">
+        <g className={live ? 'ff-sword-a' : ''}><path d="M5 5l14 14M16 20l4-4" /></g>
+        <g className={live ? 'ff-sword-b' : ''}><path d="M19 5L5 19M4 16l4 4" /></g>
+        {live && <circle cx="12" cy="10" r="2.2" fill="#F59E0B" stroke="none" className="ff-spark" />}
+      </svg>
+    </span>
+  )
+}
+
+// Share of the stars taken so far: ours from the left, theirs from the right.
+function TugBar({ us, them, color }: { us: number; them: number; color: string }) {
+  const share = us + them ? (100 * us) / (us + them) : 50
+  return (
+    <div aria-label={`Stars ${us} to ${them}`} className="flex h-2 overflow-hidden rounded-full" style={{ background: ENEMY }}>
+      <span className="h-full rounded-r-full transition-[width] duration-700 ease-out" style={{ width: `${share}%`, background: color }} />
+    </div>
+  )
+}
+
 function Base({ b, right, live, picked, onPick }: { b: WarBase | null; right?: boolean; live: boolean; picked: boolean; onPick: () => void }) {
   if (!b) return <span />
   return (
@@ -66,7 +89,7 @@ function WarBoard({ clan, war, now }: { clan: ClanName; war: ClanWar; now: numbe
   const clans = useClans()
   const [picked, setPicked] = useState<string | null>(null)
   const [openOnly, setOpenOnly] = useState(false)
-  const [you] = useYou()
+  const { yous } = useYou()
   useEffect(() => { setPicked(null); setOpenOnly(false) }, [clan])
   const end = at(war.end_time), start = at(war.start_time)
   const live = war.state === 'inWar', over = war.state === 'warEnded', prep = war.state === 'preparation'
@@ -77,8 +100,10 @@ function WarBoard({ clan, war, now }: { clan: ClanName; war: ClanWar; now: numbe
   // Bases still worth hitting: not yet three-starred.
   const open = war.pairs.filter((p) => p.them && p.them.best !== 3)
   const rows = openOnly ? open : war.pairs
-  const mine = war.pairs.find((p) => p.us?.tag === you)?.us
-  const mineLeft = mine ? mine.allowed - mine.used : 0
+  // All your accounts in this war, together; tapping goes to the first with an attack left.
+  const accounts = war.pairs.flatMap((p) => (p.us && yous.includes(p.us.tag) ? [p.us] : []))
+  const mineLeft = accounts.reduce((n, b) => n + b.allowed - b.used, 0)
+  const mine = accounts.find((b) => b.used < b.allowed) ?? accounts[0]
   const log = picked ? war.log.filter((a) => a.attacker.tag === picked || a.defender.tag === picked) : war.log
   const pickedName = picked ? war.pairs.flatMap((p) => [p.us, p.them]).find((b) => b?.tag === picked)?.name : null
   const toggle = (tag?: string) => tag && setPicked((p) => (p === tag ? null : tag))
@@ -97,18 +122,20 @@ function WarBoard({ clan, war, now }: { clan: ClanName; war: ClanWar; now: numbe
               {war.kind === 'cwl' ? `Day ${war.day ?? '?'} · ` : ''}{live ? (end ? `${left(end - now)} left` : 'Live') : over ? (draw ? 'Draw' : won ? 'Won' : 'Lost') : start ? `Starts in ${left(start - now)}` : 'Prep'}
             </span>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-2">
             <div className="flex min-w-0 flex-col items-start gap-1.5">
               <span className="h-11"><ClanBadge src={war.badge ?? clans[clan]?.badge} size={44} /></span>
               <span className="font-display max-w-full truncate text-[17px] leading-tight" style={{ color: t.deep }}>{clan}</span>
               {score(war.stars, war.destruction, war.attacks_used, t.deep)}
             </div>
+            <Swords live={live} color={t.deep} />
             <div className="flex min-w-0 flex-col items-end gap-1.5 text-right">
               <span className="h-11"><ClanBadge src={war.opponent_badge} size={44} /></span>
               <span className="font-display max-w-full truncate text-[17px] leading-tight text-ink-2">{war.opponent}</span>
               {score(war.opponent_stars, war.opponent_destruction, war.opponent_attacks_used, '#475569', true)}
             </div>
           </div>
+          <TugBar us={war.stars} them={war.opponent_stars} color={t.accent} />
           {/* The same lines in every state, so each clan's list starts at the same height. */}
           <span className="text-center text-xs font-bold" style={{ color: !live ? '#64748B' : toAttack ? '#B45309' : '#15803D' }}>
             {live ? (toAttack ? `${toAttack} of ours still to attack` : 'All of ours attacked') : over ? `Ended ${end ? ago(new Date(end).toISOString(), now) : ''}` : `${war.team_size} v ${war.team_size}`}
@@ -171,12 +198,12 @@ function WarBoard({ clan, war, now }: { clan: ClanName; war: ClanWar; now: numbe
 export default function WarTab({ wide }: { wide: boolean }) {
   const { data, loading } = useWarBoard()
   const [pick, setPick] = useState<ClanName | null>(null)
-  const [you] = useYou()
+  const { yous } = useYou()
   const now = useNow(30_000)
   const wars = (data?.clans ?? []).filter((c) => c.war)
   // Opens on your own war if you are in one.
   const clan = wars.find((c) => c.clan === pick)
-    ?? wars.find((c) => c.war!.state !== 'warEnded' && c.war!.pairs.some((p) => p.us?.tag === you))
+    ?? wars.find((c) => c.war!.state !== 'warEnded' && c.war!.pairs.some((p) => p.us && yous.includes(p.us.tag)))
     ?? wars.find((c) => c.war!.state === 'inWar') ?? wars[0]
   return (
     <main className={wide ? 'mx-auto flex max-w-[1360px] flex-col gap-4 px-[clamp(16px,3vw,32px)] pb-12 pt-5' : 'flex flex-col gap-3 px-4 pb-6 pt-3'}>

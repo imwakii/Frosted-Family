@@ -43,3 +43,12 @@ input[type="search"]:focus, select:focus-visible { outline: none; border-color: 
 .ff-plan-row select { border-color: transparent; background-color: transparent; }
 .ff-plan-row:hover select, .ff-plan-row select:focus { border-color: #CBD5E1; background-color: #FFFFFF; }
 @media (hover: none) { .ff-plan-row select { border-color: #E3E7EF; background-color: #FFFFFF; } }
+
+/* War tab: the swords clash while a war is live. Each pivots on its hilt. */
+@keyframes ff-sword-a { 0%, 55%, 100% { transform: rotate(-7deg); } 72% { transform: rotate(9deg); } 82% { transform: rotate(2deg); } }
+@keyframes ff-sword-b { 0%, 55%, 100% { transform: rotate(7deg); } 72% { transform: rotate(-9deg); } 82% { transform: rotate(-2deg); } }
+@keyframes ff-spark { 0%, 66%, 100% { opacity: 0; transform: scale(.3); } 72% { opacity: 1; transform: scale(1.5); } 86% { opacity: 0; transform: scale(2); } }
+.ff-sword-a { transform-box: view-box; transform-origin: 19px 19px; animation: ff-sword-a 2.4s ease-in-out infinite; }
+.ff-sword-b { transform-box: view-box; transform-origin: 5px 19px; animation: ff-sword-b 2.4s ease-in-out infinite; }
+.ff-spark { transform-box: fill-box; transform-origin: center; animation: ff-spark 2.4s ease-out infinite; }
+@media (prefers-reduced-motion: reduce) { .ff-sword-a, .ff-sword-b { animation: none; } .ff-spark { display: none; } }

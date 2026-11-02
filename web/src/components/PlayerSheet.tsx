@@ -52,7 +52,8 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
   const base = roster.players.find((p) => p.tag === tag)
   const [extra, setExtra] = useState<Partial<Player> | null>(null)
   const [card, setCard] = useState<PlayerCard | null>(null)
-  const [you, setYou] = useYou()
+  const { yous, addYou, removeYou } = useYou()
+  const isMine = yous.includes(tag)
   const close = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
@@ -101,9 +102,9 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
 
         {p && c && (
           <>
-            <button type="button" onClick={() => setYou(you === tag ? null : tag)}
-              className={`-mt-2 self-start cursor-pointer rounded-full border px-2.5 py-1 text-xs font-bold ${you === tag ? 'border-ink bg-ink text-white' : 'border-line bg-white text-ink-2 hover:bg-page'}`}>
-              {you === tag ? 'You · not me?' : 'This is me'}
+            <button type="button" onClick={() => (isMine ? removeYou(tag) : addYou(tag))}
+              className={`-mt-2 self-start cursor-pointer rounded-full border px-2.5 py-1 text-xs font-bold ${isMine ? 'border-ink bg-ink text-white' : 'border-line bg-white text-ink-2 hover:bg-page'}`}>
+              {isMine ? 'You · not me?' : yous.length ? 'This is also me' : 'This is me'}
             </button>
             {p.inClan && p.inClan !== p.clan && (
               <div className="flex min-h-12 items-center gap-2 rounded-[14px] bg-[#EFF4FF] px-4 text-sm font-semibold text-action-deep">

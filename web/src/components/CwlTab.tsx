@@ -170,6 +170,30 @@ function Groups({ roster, clan, q, dense, day }: { roster: Roster; clan: ClanNam
 }
 
 // The member this device last searched for, pinned above the lineups.
+// Your account, or a switcher across them if you have alts, and a way to add another.
+function YouPanel({ roster, day }: { roster: Roster; day: number }) {
+  const { yous, removeYou } = useYou()
+  const [pick, setPick] = useState<string | null>(null)
+  const [adding, setAdding] = useState(false)
+  const mine = yous.map((t) => roster.players.find((p) => p.tag === t)).filter((p): p is Player => !!p)
+  if (!mine.length) return null
+  const open = mine.find((p) => p.tag === pick) ?? mine[0]
+  return (
+    <div className="flex w-full flex-col gap-1.5">
+      <YouCard roster={roster} tag={open.tag} day={day} onClear={() => removeYou(open.tag)} />
+      <div className="flex items-center gap-1.5 overflow-x-auto [scrollbar-width:none]">
+        {mine.length > 1 && mine.map((p) => (
+          <button key={p.tag} type="button" aria-pressed={p === open} onClick={() => setPick(p.tag)}
+            className={`min-h-8 flex-none cursor-pointer rounded-full border px-2.5 text-xs font-bold ${p === open ? 'border-ink bg-ink text-white' : 'border-line bg-white text-ink-2 hover:bg-page'}`}>{p.name}</button>
+        ))}
+        <button type="button" aria-expanded={adding} onClick={() => setAdding((v) => !v)}
+          className="min-h-8 flex-none cursor-pointer border-0 bg-transparent px-1.5 text-xs font-bold text-action">+ Add an alt</button>
+      </div>
+      {adding && <YouPrompt roster={roster} onDone={() => setAdding(false)} />}
+    </div>
+  )
+}
+
 function YouCard({ roster, tag, day, onClear }: { roster: Roster; tag: string; day: number; onClear: () => void }) {
   const p = roster.players.find((x) => x.tag === tag)
   const board = useWarBoard().data
@@ -277,7 +301,6 @@ function Phone({ roster, war, q, setQ }: Omit<Props, 'wide'>) {
   const nq = norm(q.trim())
   const results = nq ? roster.players.filter((p) => matches(p, nq)).slice(0, 12) : []
   const clans = useClans()
-  const [you, setYou] = useYou()
   const { planned, day, setDay, live } = useDay(roster, war)
   // Switching clans while scrolled into a list starts the new list at the top, under the clan switch.
   const clanNav = useRef<HTMLElement>(null)
@@ -318,7 +341,7 @@ function Phone({ roster, war, q, setQ }: Omit<Props, 'wide'>) {
         ) : (
           <>
             <YouPrompt roster={roster} />
-            {you && <YouCard roster={roster} tag={you} day={live} onClear={() => setYou(null)} />}
+            <YouPanel roster={roster} day={live} />
             {planned && <DayPicker day={day} setDay={setDay} live={live} />}
             <nav ref={clanNav} aria-label="Clan" className="grid grid-cols-3 gap-1 rounded-xl bg-well p-1">
               {CLANS.map((k) => (
@@ -345,7 +368,6 @@ function Desktop({ roster, war, q, setQ }: Omit<Props, 'wide'>) {
   const grid = useRef<HTMLDivElement>(null)
   const clans = useClans()
   const hits = useMemo(() => (nq ? roster.players.filter((p) => matches(p, nq)) : []), [nq, roster])
-  const [you, setYou] = useYou()
   const { planned, day, setDay, live } = useDay(roster, war)
 
   useEffect(() => {
@@ -361,7 +383,7 @@ function Desktop({ roster, war, q, setQ }: Omit<Props, 'wide'>) {
           <SearchBox q={q} setQ={setQ} onEnter={() => { if (hits[0]) window.location.hash = href(hits[0]) }} />
           {nq && !hits.length && <span className="px-1 text-sm text-faint">No one by that name</span>}
         </div>
-        {you && <div className="w-full max-w-[480px]"><YouCard roster={roster} tag={you} day={live} onClear={() => setYou(null)} /></div>}
+        <div className="w-full max-w-[480px] empty:hidden"><YouPanel roster={roster} day={live} /></div>
         <div className="w-full max-w-[480px] empty:hidden"><YouPrompt roster={roster} /></div>
         <div className="w-full max-w-[480px]"><Countdown roster={roster} war={war} /></div>
       </div>
