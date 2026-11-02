@@ -271,7 +271,7 @@ def test_day_planner_sees_each_cwl_day_with_lineup_and_stars(conn):
     assert set(day["stars"]) <= set(day["lineup"])
 
 
-def test_expected_enemy_is_the_mean_top_15_of_group_clans_not_yet_faced(conn):
+def test_expected_enemy_is_the_mean_top_15_of_group_clans_not_yet_faced(conn, monkeypatch):
     from frosted.config import CLAN_TAGS
     from server import collect, days
     fire = CLAN_TAGS["Fire"]
@@ -281,6 +281,7 @@ def test_expected_enemy_is_the_mean_top_15_of_group_clans_not_yet_faced(conn):
         {"tag": "#A", "name": "Strong", "members": roster(18)},
         {"tag": "#B", "name": "Weak", "members": roster(14)},
         {"tag": "#C", "name": "Faced", "members": roster(10)}]}
+    monkeypatch.setattr(collect, "collect_group_strength", lambda *a: None)
     collect.collect_league_group(conn, Recorder(), group, fire)
     assert days.upcoming(conn, "2031-01", "Fire", {"#C"}) == [16.0] * 15
     assert days.upcoming(conn, "2031-01", "Fire", {"#A", "#B", "#C"}) == []

@@ -134,7 +134,36 @@ CREATE TABLE IF NOT EXISTS war_clan_badges (
     badge TEXT
 );
 
--- CWL war tags seen in a league group, so ended wars and other clans' wars are not fetched again.
+-- The score of every war in each of our league groups, other clans' too, for the group table.
+CREATE TABLE IF NOT EXISTS cwl_group_wars (
+    war_tag TEXT PRIMARY KEY,
+    season TEXT,
+    round INTEGER,
+    state TEXT,
+    team_size INTEGER,
+    end_time TEXT,
+    clan_tag TEXT,
+    clan_stars INTEGER,
+    clan_destruction REAL,
+    opponent_tag TEXT,
+    opponent_stars INTEGER,
+    opponent_destruction REAL,
+    updated_at TEXT
+);
+
+-- Each group clan's likely lineup, for comparing with ours: the averages over its 15 strongest signed-up players.
+CREATE TABLE IF NOT EXISTS cwl_group_strength (
+    season TEXT NOT NULL,
+    clan_tag TEXT NOT NULL,
+    players INTEGER,
+    war_stars REAL,
+    heroes REAL,                          -- total home hero levels
+    equipment REAL,                       -- total hero equipment levels
+    updated_at TEXT,
+    PRIMARY KEY (season, clan_tag)
+);
+
+-- CWL war tags seen in a league group, so ended wars are not fetched again.
 CREATE TABLE IF NOT EXISTS cwl_war_tags (
     war_tag TEXT PRIMARY KEY,
     season TEXT,
@@ -323,6 +352,23 @@ def war_key(war: dict, war_tag: str | None) -> str:
     return f"{war['clan']['tag']}|{war['opponent']['tag']}|{war['preparationStartTime']}"
 
 
+def store_badge(conn: sqlite3.Connection, clan: dict) -> None:
+    urls = clan.get("badgeUrls") or {}
+    badge = urls.get("medium") or urls.get("large") or urls.get("small")
+    if badge:
+        conn.execute("INSERT INTO war_clan_badges VALUES (?,?) ON CONFLICT (clan_tag) DO UPDATE SET badge=excluded.badge",
+                     (clan["tag"], badge))
+
+
+def upsert_group_war(conn: sqlite3.Connection, war: dict, *, war_tag: str, season: str | None, round_no: int) -> None:
+    clan, opp = war["clan"], war["opponent"]
+    conn.execute(
+        """INSERT OR REPLACE INTO cwl_group_wars VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+        (war_tag, season, round_no, war.get("state"), war.get("teamSize"), war.get("endTime"),
+         clan["tag"], clan.get("stars", 0), clan.get("destructionPercentage", 0),
+         opp["tag"], opp.get("stars", 0), opp.get("destructionPercentage", 0), utcnow()))
+
+
 def upsert_war(conn: sqlite3.Connection, war: dict, *, kind: str, war_tag: str | None = None,
                season: str | None = None, round_no: int | None = None) -> str:
     """Store one war, its members and every attack in it. Returns the war key."""
@@ -352,11 +398,7 @@ def upsert_war(conn: sqlite3.Connection, war: dict, *, kind: str, war_tag: str |
     if war.get("state") == "preparation":
         conn.execute("DELETE FROM war_members WHERE war_key=?", (key,))
     for side in (clan, opp):
-        urls = side.get("badgeUrls") or {}
-        badge = urls.get("medium") or urls.get("large") or urls.get("small")
-        if badge:
-            conn.execute("INSERT INTO war_clan_badges VALUES (?,?) ON CONFLICT (clan_tag) DO UPDATE SET badge=excluded.badge",
-                         (side["tag"], badge))
+        store_badge(conn, side)
         for m in side.get("members", []):
             attacks = m.get("attacks", [])
             for a in attacks:

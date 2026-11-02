@@ -121,7 +121,7 @@ export function YouChip({ roster, compact }: { roster: Roster; compact?: boolean
     return (
       <>
         <button type="button" aria-label="Add me" onClick={() => setPicking(true)}
-          className={`flex min-h-9 flex-none cursor-pointer items-center justify-center gap-1 whitespace-nowrap rounded-full border-0 bg-action text-[13px] font-bold text-white hover:bg-action-deep ${compact ? 'w-9' : 'px-3'}`}>
+          className={`flex min-h-9 flex-none cursor-pointer items-center justify-center gap-1 whitespace-nowrap rounded-full border border-line bg-white text-[13px] font-bold text-ink-2 hover:bg-hover ${compact ? 'w-9' : 'px-3'}`}>
           <span aria-hidden="true" className="text-base leading-none">+</span>
           {!compact && <><span className="lg:hidden">Add me</span><span className="max-lg:hidden">Add yourself</span></>}
         </button>

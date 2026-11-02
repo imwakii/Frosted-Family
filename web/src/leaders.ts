@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useSyncExternalStore } from 'react'
 import type { ClanName } from './types'
 
 // GET /api/explore/upgrades and /api/leaders/*, all public for now.
@@ -136,6 +136,38 @@ export type ClanWar = {
 export const loadWarBoard = () => getJson<{ clans: { clan: ClanName; war: ClanWar | null; next?: ClanWar | null }[]; last_poll: string | null }>('/api/war/board')
 
 /** Refetched every minute, keeping the last answer on screen meanwhile. */
+export type CwlRow = { tag: string; name: string; badge: string | null; ours: boolean; stars: number; destruction: number; won: number; lost: number; town_halls: number[]; strength: { war_stars: number; heroes: number; equipment: number } | null }
+export type CwlDay = { day: number; war_key: string; state: string; opponent: string; opponent_badge: string | null; stars: number; opponent_stars: number; destruction: number; opponent_destruction: number }
+export type EightRow = { tag: string; name: string; th: number | null; played: number; stars: number }
+export type CwlGroup = { season: string; table: CwlRow[]; days: CwlDay[]; eight: EightRow[] }
+const loadCwlGroups = () => getJson<{ clans: { clan: ClanName; group: CwlGroup | null }[] }>('/api/war/cwl')
+
+// Fetched on opening and every minute, keeping the last answer through a failed fetch.
+function usePolled<T>(key: string, load: () => Promise<T | null>) {
+  const [state, setState] = useState<{ key: string; data: T | null; loading: boolean }>({ key, data: null, loading: true })
+  useEffect(() => {
+    let live = true
+    setState({ key, data: null, loading: true })
+    const tick = () => load().then((data) => { if (live) setState((s) => ({ key, data: data ?? s.data, loading: false })) }, () => { if (live) setState((s) => ({ ...s, loading: false })) })
+    tick()
+    const id = window.setInterval(tick, 60_000)
+    return () => { live = false; window.clearInterval(id) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key])
+  return state
+}
+
+// The CWL day picked on War or Lineups: both stay on it. null follows the day being fought; 'all' is Lineups' roster.
+let dayPick: number | 'all' | null = null
+const dayListeners = new Set<() => void>()
+const onDayPick = (run: () => void) => { dayListeners.add(run); return () => { dayListeners.delete(run) } }
+export const setDayPick = (d: number | 'all' | null) => { dayPick = d; dayListeners.forEach((run) => run()) }
+export const useDayPick = () => useSyncExternalStore(onDayPick, () => dayPick)
+
+export const useCwlGroups = () => usePolled('groups', loadCwlGroups)
+export const useCwlDay = (clan: ClanName, key: string) =>
+  usePolled(`${clan}${key}`, () => getJson<ClanWar>(`/api/war/cwl/day?clan=${clan}&key=${encodeURIComponent(key)}`))
+
 export function useWarBoard() {
   const [state, setState] = useState<{ data: Awaited<ReturnType<typeof loadWarBoard>>; loading: boolean }>({ data: null, loading: true })
   useEffect(() => {

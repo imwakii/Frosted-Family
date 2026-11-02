@@ -15,6 +15,8 @@ site through a Vercel rewrite.
     GET /explore/{board} ranked boards from player profiles: heroes, equipment, army, donations, capital
     GET /explore/matrix?cat=heroes|equipment|troops|spells|pets|sieges   every member's level in every unit
     GET /war/board       each clan's war, side by side, with its attack log (server/war.py)
+    GET /war/cwl         each clan's league group: table with town halls, days played, stars toward the 8
+    GET /war/cwl/day     one CWL war by its key, for the day strip
     /auth/*, /plan/*     Discord sign-in for leaders (server/auth.py) and the Plan tab (server/plan.py)
 
 The CSV is canonical for allocation. The one thing laid over it is the publisher's latest publish, and only while the
@@ -168,6 +170,19 @@ def war_live():
 @app.get("/war/board")
 def war_board():
     return war.board(open_db())
+
+
+@app.get("/war/cwl")
+def war_cwl():
+    return war.cwl_groups(open_db())
+
+
+@app.get("/war/cwl/day")
+def war_cwl_day(clan: str, key: str):
+    day = war.cwl_day(open_db(), clan, key)
+    if not day:
+        raise HTTPException(404, "No such war")
+    return day
 
 
 @app.get("/player/{tag}")

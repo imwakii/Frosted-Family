@@ -3,11 +3,11 @@ import WarRecap from './WarRecap'
 import { useYou, YouTag } from './You'
 import { useClans } from '../clash'
 import { useWide } from '../data'
-import { ago, type ClanWar, useWarBoard, type WarAttack, type WarBase } from '../leaders'
-import { playerHref } from '../route'
+import { ago, type ClanWar, setDayPick, useCwlDay, useCwlGroups, useDayPick, useWarBoard, type WarAttack, type WarBase } from '../leaders'
+import { clanHref, playerHref } from '../route'
 import { CLAN, CLANS } from '../theme'
 import type { ClanName } from '../types'
-import { chip, ClanBadge, ClanSwitch, KEY_ROW, POINT, Stars, Th, useNow } from './ui'
+import { ClanBadge, ClanSwitch, DayRow, KEY_ROW, POINT, Stars, Th, useNow } from './ui'
 
 // Each clan's war, side by side: our bases and badge on the left, the enemy's on the right, facing by map position.
 // The attack log says who hit whom, how well and roughly when: we stay on the left and they on the right, and each row
@@ -90,14 +90,14 @@ function Base({ b, right, live, prep, picked, onPick }: { b: WarBase | null; rig
       <Th th={b.th} />
       <span className={`flex min-w-0 flex-auto flex-col gap-0.5 ${right ? 'items-end' : 'items-start'}`}>
         <span className="max-w-full truncate text-[13px] font-semibold text-ink"><YouTag tag={b.tag} />{b.name}</span>
-        <span className={`flex items-center gap-1.5 text-[11px] leading-none ${right ? 'flex-row-reverse' : ''}`}>
+        {!prep && <span className={`flex items-center gap-1.5 text-[11px] leading-none ${right ? 'flex-row-reverse' : ''}`}>
           {live && (
             <span aria-label={`${b.used} of ${b.allowed} attacks used`} className="flex gap-[3px]">
               {Array.from({ length: b.allowed }, (_, k) => <span key={k} className={`size-[7px] rounded-full ${k < b.used ? 'bg-[#16A34A]' : 'border-[1.5px] border-[#A3957C]'}`} />)}
             </span>
           )}
-          {prep ? <span className="font-semibold text-faint">{b.th ? `TH${b.th}` : ''}</span> : <Stars n={b.best ?? 0} />}
-        </span>
+          <Stars n={b.best ?? 0} />
+        </span>}
       </span>
     </button>
   )
@@ -126,7 +126,7 @@ function LogRow({ a, tint, now }: { a: WarAttack; tint: string; now: number }) {
   )
 }
 
-function WarBoard({ clan, war, now }: { clan: ClanName; war: ClanWar; now: number }) {
+export function WarBoard({ clan, war, now }: { clan: ClanName; war: ClanWar; now: number }) {
   const t = CLAN[clan]
   const clans = useClans()
   const [picked, setPicked] = useState<string | null>(null)
@@ -178,15 +178,15 @@ function WarBoard({ clan, war, now }: { clan: ClanName; war: ClanWar; now: numbe
         <div className="flex flex-col gap-2 p-3.5" style={{ background: t.tint }}>
           <div className="flex justify-center">
             <span className={`whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-bold ${live ? 'bg-white text-[#15803D]' : over ? 'bg-white/60 text-muted' : 'bg-[#FFEDD5] text-[#B4451A]'}`}>
-              {war.kind === 'cwl' ? `Day ${war.day ?? '?'} · ` : ''}{live ? (end ? `${left(end - now)} left` : 'Live') : over ? (draw ? 'Draw' : won ? 'Won' : 'Lost') : 'Preparation'}
+              {live ? (end ? `${left(end - now)} left` : 'Live') : over ? (draw ? 'Draw' : won ? 'Won' : 'Lost') : 'Preparation'}
             </span>
           </div>
           <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-2">
             <div className="flex min-w-0 flex-col items-center gap-1.5">
-              <span className="flex max-w-full flex-col items-center gap-1.5">
+              <a href={clanHref(clan)} className="flex max-w-full flex-col items-center gap-1.5 no-underline">
                 <span className={`h-11 ${live ? 'ff-recoil-l' : ''}`}><ClanBadge src={war.badge ?? clans[clan]?.badge} size={44} /></span>
                 <span className="font-display max-w-full truncate text-[17px] leading-tight" style={{ color: t.deep }}>{clans[clan]?.name ?? `Frosted ${clan}`}</span>
-              </span>
+              </a>
               {score(war.stars, war.destruction, war.attacks_used, t.deep)}
             </div>
             <Swords live={live} sway={prep} color={t.deep} />
@@ -205,7 +205,7 @@ function WarBoard({ clan, war, now }: { clan: ClanName; war: ClanWar; now: numbe
           <span className="text-center text-[11px] font-semibold text-faint">Updated {ago(war.updated_at, now)}</span>
         </div>
         {over && war.recap && <WarRecap clan={clan} war={war} result={draw ? 'Draw' : won ? 'Won' : 'Lost'} recap={war.recap} />}
-        <div className="flex min-h-[53px] items-center gap-2 border-b border-hair px-3 py-2">
+        {(!prep || mine || under > 0) && <div className="flex min-h-[53px] items-center gap-2 border-b border-hair px-3 py-2">
             {live ? (
               <>
                 {mine && (
@@ -225,14 +225,12 @@ function WarBoard({ clan, war, now }: { clan: ClanName; war: ClanWar; now: numbe
                     You: base {mine.position}
                   </button>
                 )}
-                <span className={`ml-auto text-right text-[13px] font-semibold ${under ? 'text-[#B45309]' : 'text-[#15803D]'}`}>
-                  {under ? `${under} ${under === 1 ? 'base' : 'bases'} under their town hall` : 'Every base matches theirs or better'}
-                </span>
+                {under > 0 && <span className="ml-auto text-right text-[13px] font-semibold text-[#B45309]">{under} {under === 1 ? 'base' : 'bases'} under their town hall</span>}
               </>
             ) : (
               <span className="text-[13px] font-semibold text-muted">{war.pairs.filter((p) => p.them?.best === 3).length} of {war.team_size} bases three-starred</span>
             )}
-        </div>
+        </div>}
         {!prep && <div aria-label="Key" className={`${KEY_ROW} border-b border-hair px-3 py-2`}>
           {live && <>
             <span className="flex items-center gap-1.5"><span className="size-2 rounded-full border-[1.5px] border-[#A3957C]" />Attack left</span>
@@ -286,6 +284,12 @@ function WarBoard({ clan, war, now }: { clan: ClanName; war: ClanWar; now: numbe
   )
 }
 
+function OtherDay({ clan, warKey, now }: { clan: ClanName; warKey: string; now: number }) {
+  const { data, loading } = useCwlDay(clan, warKey)
+  if (!data) return loading ? <div aria-busy="true" className="h-64 animate-pulse rounded-2xl bg-well" /> : <div className="rounded-2xl border border-line bg-white p-5 text-sm text-faint">Unavailable right now</div>
+  return <WarBoard key={warKey} clan={clan} war={data} now={now} />
+}
+
 export default function WarTab({ wide }: { wide: boolean }) {
   const { data, loading } = useWarBoard()
   const [pick, setPick] = useState<ClanName | null>(null)
@@ -296,9 +300,15 @@ export default function WarTab({ wide }: { wide: boolean }) {
   const clan = wars.find((c) => c.clan === pick)
     ?? wars.find((c) => c.war!.state !== 'warEnded' && c.war!.pairs.some((p) => p.us && yous.includes(p.us.tag)))
     ?? wars.find((c) => c.war!.state === 'inWar') ?? wars.find((c) => c.war!.state === 'preparation') ?? wars[0]
-  const [nextDay, setNextDay] = useState(false)
-  useEffect(() => { setNextDay(false) }, [clan?.clan])
-  const shown = clan && (nextDay && clan.next ? clan.next : clan.war!)
+  // During CWL a day's war runs while the next day's prepares; the day row reaches those and the days before them.
+  const groups = useCwlGroups().data
+  const dayPick = useDayPick()
+  const onCwl = clan?.war?.kind === 'cwl'
+  const fallback = clan ? [clan.war, clan.next].flatMap((w) => (w?.day ? [{ ...w, day: w.day, war_key: w.war_key ?? '' }] : [])) : []
+  const days = groups?.clans.find((c) => c.clan === clan?.clan)?.group?.days ?? fallback
+  const picked = onCwl && typeof dayPick === 'number' && days.some((d) => d.day === dayPick) ? dayPick : null
+  const nearby = clan && (picked === null || picked === clan.war!.day ? clan.war! : picked === clan.next?.day ? clan.next : null)
+  const other = !nearby && days.find((d) => d.day === picked)
   return (
     <main className={wide ? 'mx-auto flex max-w-[1360px] flex-col gap-4 px-[clamp(16px,3vw,32px)] pb-12 pt-5' : 'flex flex-col gap-3 px-4 pb-6 pt-1'}>
       <ClanSwitch value={clan?.clan ?? 'Fire'} onPick={setPick}
@@ -310,14 +320,8 @@ export default function WarTab({ wide }: { wide: boolean }) {
         <div className="rounded-2xl border border-line bg-white px-6 py-14 text-center text-sm font-semibold text-faint">No war on</div>
       ) : (
         <>
-          {/* During CWL a day's war runs while the next day's prepares. */}
-          {clan.next && (
-            <div role="group" aria-label="Day" className="flex gap-1.5">
-              <button type="button" aria-pressed={!nextDay} onClick={() => setNextDay(false)} className={chip(!nextDay)}>{clan.war!.day ? `Day ${clan.war!.day} · ` : ''}Live</button>
-              <button type="button" aria-pressed={nextDay} onClick={() => setNextDay(true)} className={chip(nextDay)}>{clan.next.day ? `Day ${clan.next.day} · ` : ''}Preparation</button>
-            </div>
-          )}
-          <WarBoard key={shown!.start_time} clan={clan.clan} war={shown!} now={now} />
+          {onCwl && <DayRow days={days} pick={picked ?? clan.war!.day ?? null} onPick={setDayPick} drawnOnly />}
+          {nearby ? <WarBoard key={nearby.war_key} clan={clan.clan} war={nearby} now={now} /> : other ? <OtherDay clan={clan.clan} warKey={other.war_key} now={now} /> : null}
         </>
       )}
     </main>

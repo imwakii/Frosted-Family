@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
+import type { ClanName } from './types'
 
-// Hash routes: #/war (where the app opens), #/cwl, #/log, #/stats/<sub>[/<category>], #/plan/<sub>. A player sheet opens over
-// Lineups or Stats by appending /p/<tag without #>, and closes by dropping it.
+// Hash routes: #/war (where the app opens), #/cwl[/group], #/log, #/stats/<sub>[/<category>], #/plan/<sub>. A player sheet opens over
+// Lineups or Stats by appending /p/<tag without #>, and closes by dropping it; a clan card the same way with /c/<clan>.
 // Old links (#/explore/<kind>, #/leaders/<sub>) are rewritten to their new place.
 export type Tab = 'cwl' | 'explore' | 'log' | 'war' | 'plan'
-export type Route = { tab: Tab; sub: string; kind: string | null; player: string | null; base: string }
+export type Route = { tab: Tab; sub: string; kind: string | null; player: string | null; clan: ClanName | null; base: string }
 
 export const STATS_SUBS = ['players', 'badges', 'war', 'donations', 'capital', 'trends', 'history'] as const
 export const LEADERS_SUBS = ['builder', 'days', 'members'] as const
@@ -16,9 +17,14 @@ export function decodeTag(raw: string) {
 
 function parse(): Route {
   const h = window.location.hash.replace(/^#\/?/, '')
-  const [path, tag] = h.split(/\/?p\//)
+  const [head, tag] = h.split(/(?:^|\/)p\//)
   const decoded = tag ? decodeTag(tag) : null
   const player = decoded ? '#' + decoded : null
+  const card = head.match(/(?:^|\/)c\/(Fire|Cake|Flakes)$/)
+  return { ...place(card ? head.slice(0, card.index) : head, player), clan: card ? (card[1] as ClanName) : null }
+}
+
+function place(path: string, player: string | null): Omit<Route, 'clan'> {
   let parts = path.split('/').filter(Boolean)
   if (parts[0] === 'explore') parts = parts[1] === 'war' || parts[1] === 'upgrades' ? ['stats', parts[1]] : ['stats', 'players', ...parts.slice(1, 2)]
   if ((parts[0] === 'plan' || parts[0] === 'leaders') && parts[1] === 'attacks') parts = ['war']  // moved 2 Nov 2026
@@ -34,7 +40,10 @@ function parse(): Route {
     return { tab: 'explore', sub, kind, player, base: `#/stats/${sub}${kind ? '/' + kind : ''}` }
   }
   if (parts[0] === 'log') return { tab: 'log', sub: '', kind: null, player, base: '#/log' }
-  if (parts[0] === 'cwl') return { tab: 'cwl', sub: '', kind: null, player, base: '#/cwl' }
+  if (parts[0] === 'cwl') {
+    const group = parts[1] === 'group'
+    return { tab: 'cwl', sub: group ? 'group' : 'lineups', kind: null, player, base: group ? '#/cwl/group' : '#/cwl' }
+  }
   return { tab: 'war', sub: '', kind: null, player, base: '#/war' }
 }
 
@@ -44,7 +53,7 @@ export function useRoute() {
     const on = () => {
       const r = parse()
       // Rewrite an old link in place, so the address bar shows the new route.
-      const want = r.base + (r.player ? `/p/${encodeURIComponent(r.player.slice(1))}` : '')
+      const want = r.base + (r.clan ? `/c/${r.clan}` : '') + (r.player ? `/p/${encodeURIComponent(r.player.slice(1))}` : '')
       if (want && window.location.hash !== want) history.replaceState(null, '', want)
       setRoute(r)
     }
@@ -60,6 +69,9 @@ export const playerHref = (tag: string) => {
   const base = parse().base
   return `${base}/p/${encodeURIComponent(tag.replace(/^#/, ''))}`
 }
+
+/** Link to a clan's card over the current view. */
+export const clanHref = (clan: ClanName) => `${parse().base}/c/${clan}`
 
 // A tap on a player card's figure opens the ranking behind it: that unit or column, across the family, with the player's
 // row shown. Boards read it once they hold the data it names.

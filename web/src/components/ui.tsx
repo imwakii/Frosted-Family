@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { leagueIcon, thIcon, unitIcon, useClans } from '../clash'
 import { CLAN, CLANS, STATUS } from '../theme'
-import type { ClanName, LiveWar, Status } from '../types'
+import type { ClanName, Status } from '../types'
 
 export function Th({ th, size = 'sm' }: { th: number | null; size?: 'sm' | 'lg' }) {
   const img = thIcon(th)
@@ -100,63 +100,6 @@ export const Eyebrow = ({ children, className = '' }: { children: ReactNode; cla
 
 export const Star = () => <span aria-hidden="true" className="text-gold">★</span>
 
-const ENDED_SHOWN = 24 * 3600_000
-
-function until(ms: number) {
-  const m = Math.max(0, Math.round(ms / 60000))
-  return m < 60 ? `${m}m` : `${Math.round(m / 60)}h`
-}
-
-/**
- * War status for a clan header: one fixed-height pill whatever the state, so
- * every clan's header and list start at the same height.
- */
-export function WarPill({ war, now = Date.now() }: { war: LiveWar | null | undefined; now?: number }) {
-  const [open, setOpen] = useState(false)
-  // self-start keeps the pill compact inside the header's flex column.
-  const box = 'inline-flex h-8 max-w-full items-center gap-1.5 self-start whitespace-nowrap rounded-full px-2.5 text-xs font-bold'
-  const ended = war?.state === 'warEnded' && (war.endTime === null || now - war.endTime < ENDED_SHOWN)
-  if (!war || (war.state === 'warEnded' && !ended)) {
-    return <span className={`${box} bg-white/60 font-semibold text-[#A3957C]`}>No war</span>
-  }
-  if (war.state === 'preparation') {
-    return (
-      <span title={`vs ${war.opponent}`} className={`${box} bg-[#FFEDD5] text-[#B4451A]`}>
-        Prep{war.startTime ? ` · starts ${until(war.startTime - now)}` : ''}
-      </span>
-    )
-  }
-  if (war.state === 'warEnded') {
-    const won = war.stars > war.opponentStars || (war.stars === war.opponentStars && (war.destruction ?? 0) > (war.opponentDestruction ?? 0))
-    const draw = war.stars === war.opponentStars && war.destruction === war.opponentDestruction
-    return (
-      <span title={`vs ${war.opponent}`} className={`${box} bg-white/60 font-semibold text-muted`}>
-        {draw ? 'Draw' : won ? 'Won' : 'Lost'} {war.stars}–{war.opponentStars}
-      </span>
-    )
-  }
-  const pct = (v: number | null) => (v === null ? '—' : `${Math.round(v)}%`)
-  return (
-    <span className="relative inline-flex max-w-full self-start">
-      <button type="button" aria-expanded={open} title={`vs ${war.opponent}`} onClick={() => setOpen((o) => !o)}
-        className={`${box} cursor-pointer border-0 bg-white text-[#15803D] shadow-[0_1px_2px_rgba(43,33,20,.08)]`}>
-        <span className="ff-live size-2 flex-none rounded bg-[#16A34A]" />
-        {war.day ? `Day ${war.day}` : 'War'}
-        <span className="font-display text-[13px] font-normal text-ink tabular-nums"><Star /> {war.stars}–{war.opponentStars}</span>
-      </button>
-      {open && <span aria-hidden="true" className="fixed inset-0 z-30" onClick={() => setOpen(false)} />}
-      {open && (
-        <span role="dialog" aria-label="War" className="ff-fade absolute left-0 top-[calc(100%+6px)] z-40 flex w-60 flex-col gap-1.5 rounded-xl border border-line bg-white p-3 text-left text-[13px] font-semibold text-ink-2 shadow-[0_10px_30px_rgba(43,33,20,.14)]">
-          <span className="truncate font-bold text-ink">vs <bdi>{war.opponent}</bdi></span>
-          <span className="flex justify-between"><span className="text-faint">Stars</span><span className="tabular-nums">{war.stars} – {war.opponentStars}</span></span>
-          <span className="flex justify-between"><span className="text-faint">Destruction</span><span className="tabular-nums">{pct(war.destruction)} – {pct(war.opponentDestruction)}</span></span>
-          <span className="flex justify-between"><span className="text-faint">Attacks used</span><span className="tabular-nums">{war.attacks}/{war.teamSize}</span></span>
-        </span>
-      )}
-    </span>
-  )
-}
-
 // A tab's own sections, as links under the top bar; underlined, so it reads as a level below the tabs.
 export function SubNav({ items, current, wide }: { items: { id: string; label: string; href: string }[]; current: string; wide: boolean }) {
   const ref = useRef<HTMLElement>(null)
@@ -215,6 +158,41 @@ export function Stars({ n }: { n: number }) {
     <span aria-label={`${n} stars`} className="flex-none tracking-[-1px]">
       {[0, 1, 2].map((i) => <span key={i} className={i < n ? 'text-gold' : 'text-[#C9BCA0]'}>{i < n ? '★' : '☆'}</span>)}
     </span>
+  )
+}
+
+type DayFacts = { day: number; state: string; stars: number; opponent_stars: number; destruction: number; opponent_destruction: number }
+
+const dayWon = (d: DayFacts) => (d.stars !== d.opponent_stars ? d.stars > d.opponent_stars : d.destruction !== d.opponent_destruction ? d.destruction > d.opponent_destruction : null)
+
+/** The seven CWL days, the same row on War and Lineups: each day's result once it has one. */
+export function DayRow({ days = [], pick, onPick, live = 0, roster, drawnOnly }: {
+  days?: DayFacts[]; pick: number | 'all' | null; onPick: (d: number | 'all') => void; live?: number; roster?: boolean; drawnOnly?: boolean
+}) {
+  const cell = 'relative flex min-h-[46px] min-w-0 cursor-pointer flex-col items-center justify-center rounded-[9px] border-0 tabular-nums disabled:cursor-default disabled:opacity-40'
+  const ring = 'shadow-[inset_0_0_0_2px_var(--color-ink)]'
+  return (
+    <nav aria-label="CWL day" className={`grid w-full max-w-[480px] gap-1 rounded-xl bg-well p-1 ${roster ? 'grid-cols-[1.7fr_repeat(7,1fr)]' : 'grid-cols-7'}`}>
+      {roster && (
+        <button type="button" aria-pressed={pick === 'all'} onClick={() => onPick('all')}
+          className={`${cell} text-[13px] font-bold ${pick === 'all' ? `bg-white text-ink ${ring}` : 'bg-transparent text-muted'}`}>Roster</button>
+      )}
+      {[1, 2, 3, 4, 5, 6, 7].map((n) => {
+        const d = days.find((x) => x.day === n)
+        const over = d?.state === 'warEnded', fighting = d?.state === 'inWar' || (!d && n === live)
+        const won = d && over ? dayWon(d) : null
+        const background = over ? (won === true ? '#DCEFD5' : won === false ? '#F8D5CF' : '#EFE6D2') : pick === n || fighting ? '#FFFBF1' : 'transparent'
+        return (
+          <button key={n} type="button" aria-pressed={pick === n} aria-label={`Day ${n}`} disabled={drawnOnly && !d} onClick={() => onPick(n)}
+            className={`${cell} ${pick === n ? ring : ''}`} style={{ background }}>
+            <span className={`text-sm font-bold leading-tight ${pick === n ? 'text-ink' : 'text-muted'}`}>{n}</span>
+            {d && (over || fighting) && <span className={`text-[10px] font-bold leading-tight ${fighting ? 'text-[#15803D]' : 'text-ink-2'}`}>{d.stars}–{d.opponent_stars}</span>}
+            {d?.state === 'preparation' && <span className="text-[10px] font-bold leading-tight text-[#B4451A]">Prep</span>}
+            {fighting && <span className="ff-live absolute right-1 top-1 size-1.5 rounded bg-[#16A34A]" />}
+          </button>
+        )
+      })}
+    </nav>
   )
 }
 

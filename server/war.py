@@ -8,6 +8,7 @@ whatever state was stored. A war that is over has a recap: its MVP and any three
 """
 from __future__ import annotations
 
+import json
 import sqlite3
 from datetime import datetime, timedelta, timezone
 
@@ -16,6 +17,7 @@ from frosted.config import CLAN_TAGS
 ENDED_SHOWN = timedelta(days=3)
 UPSET_TH_GAP = 2           # one town hall up is routine now
 UPSETS_SHOWN = 3
+WIN_BONUS = 10             # stars a CWL win adds in the group table
 
 
 def stamp(t: datetime) -> str:
@@ -125,6 +127,76 @@ def war_view(conn, w, clan_tag: str, over: bool) -> dict:
         "war_key": w["war_key"],
         "recap": recap(log) if over else None,
     }
+
+
+def group_table(clans: list, wars: list, now_s: str) -> list[dict]:
+    """The group table as the game ranks it: stars, ten more for each win, then total destruction."""
+    rows = {c["clan_tag"]: {"tag": c["clan_tag"], "name": c["name"], "stars": 0, "destruction": 0.0, "won": 0, "lost": 0,
+                            "town_halls": json.loads(c["town_halls"])} for c in clans}
+    for w in wars:
+        sides = [(w["clan_tag"], w["clan_stars"], w["clan_destruction"]), (w["opponent_tag"], w["opponent_stars"], w["opponent_destruction"])]
+        over = w["state"] == "warEnded" or bool(w["end_time"] and w["end_time"][:15] < now_s)
+        for (tag, stars, pct), (_, their_stars, their_pct) in (sides, sides[::-1]):
+            row = rows.get(tag)
+            if not row:
+                continue
+            row["stars"] += stars
+            row["destruction"] += pct * (w["team_size"] or 0)
+            if over:
+                beat = (stars, pct) > (their_stars, their_pct)
+                row["won"] += beat
+                row["lost"] += (stars, pct) < (their_stars, their_pct)
+                row["stars"] += WIN_BONUS * beat
+    return sorted(rows.values(), key=lambda r: (-r["stars"], -r["destruction"], r["name"] or ""))
+
+
+def eight_stars(conn, clan_tag: str, season: str) -> list[dict]:
+    """Each player's stars this season, toward the 8 for the CWL bonus."""
+    rows = conn.execute(
+        """SELECT m.player_tag AS tag, MAX(m.name) AS name, MAX(m.town_hall) AS th, COUNT(DISTINCT m.war_key) AS played,
+                  COALESCE(SUM(a.stars), 0) AS stars
+           FROM war_members m JOIN wars w ON w.war_key=m.war_key AND w.kind='cwl' AND w.season=? AND w.state<>'preparation'
+           LEFT JOIN attacks a ON a.war_key=m.war_key AND a.attacker_tag=m.player_tag
+           WHERE m.clan_tag=? GROUP BY m.player_tag ORDER BY stars DESC, played, name""", (season, clan_tag))
+    return [dict(r) for r in rows]
+
+
+def group_view(conn, clan_tag: str, now: datetime) -> dict | None:
+    latest = conn.execute("SELECT MAX(season) FROM cwl_group_clans WHERE our_clan_tag=?", (clan_tag,)).fetchone()[0]
+    if not latest:
+        return None
+    clans = conn.execute("SELECT * FROM cwl_group_clans WHERE season=? AND our_clan_tag=?", (latest, clan_tag)).fetchall()
+    tags = [c["clan_tag"] for c in clans]
+    marks = ",".join("?" * len(tags))
+    wars = conn.execute(f"SELECT * FROM cwl_group_wars WHERE season=? AND clan_tag IN ({marks})", (latest, *tags)).fetchall()
+    now_s = stamp(now)
+    days = []
+    for w in conn.execute("SELECT * FROM wars WHERE kind='cwl' AND season=? AND ? IN (clan_tag, opponent_tag) ORDER BY round", (latest, clan_tag)):
+        us, them = ("clan", "opponent") if w["clan_tag"] == clan_tag else ("opponent", "clan")
+        over = w["state"] == "warEnded" or bool(w["end_time"] and w["end_time"][:15] < now_s)
+        days.append({"day": w["round"], "war_key": w["war_key"], "state": "warEnded" if over else w["state"], "opponent": w[f"{them}_name"],
+                     "opponent_badge": badge_of(conn, w[f"{them}_tag"]), "stars": w[f"{us}_stars"], "opponent_stars": w[f"{them}_stars"],
+                     "destruction": w[f"{us}_destruction"], "opponent_destruction": w[f"{them}_destruction"]})
+    power = {r["clan_tag"]: r for r in conn.execute("SELECT * FROM cwl_group_strength WHERE season=? AND players>0", (latest,))}
+    table = [{**r, "badge": badge_of(conn, r["tag"]), "ours": r["tag"] == clan_tag,
+              "strength": {k: power[r["tag"]][k] for k in ("war_stars", "heroes", "equipment")} if r["tag"] in power else None}
+             for r in group_table(clans, wars, now_s)]
+    return {"season": latest, "table": table, "days": days, "eight": eight_stars(conn, clan_tag, latest)}
+
+
+def cwl_groups(conn, now: datetime | None = None) -> dict:
+    now = now or datetime.now(timezone.utc)
+    return {"clans": [{"clan": name, "group": group_view(conn, tag, now) if conn else None} for name, tag in CLAN_TAGS.items()]}
+
+
+def cwl_day(conn, clan: str, war_key: str, now: datetime | None = None) -> dict | None:
+    """One clan's CWL war by its key, for the day strip. Any other war is not served here."""
+    tag = CLAN_TAGS.get(clan)
+    w = conn.execute("SELECT * FROM wars WHERE war_key=? AND kind='cwl' AND ? IN (clan_tag, opponent_tag)", (war_key, tag)).fetchone() if conn and tag else None
+    if not w:
+        return None
+    over = w["state"] == "warEnded" or bool(w["end_time"] and w["end_time"][:15] < stamp(now or datetime.now(timezone.utc)))
+    return war_view(conn, w, tag, over)
 
 
 def board(conn, now: datetime | None = None) -> dict:

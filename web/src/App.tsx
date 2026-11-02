@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useAuth, type Me } from './auth'
 import CwlTab from './components/CwlTab'
+import ClanSheet from './components/ClanSheet'
+import CwlGroup from './components/CwlGroup'
 import ExploreTab from './components/ExploreTab'
 import LogTab from './components/LogTab'
 import PlanTab from './components/PlanTab'
@@ -11,7 +13,9 @@ import { JumpToYou, YouChip } from './components/You'
 import { fetchPlayer, useRoster, useWar, useWide } from './data'
 import { useVisits } from './visits'
 import { decodeTag, go, onDrill, useRoute } from './route'
-import { UtcClock } from './components/ui'
+import { SubNav, UtcClock } from './components/ui'
+
+const CWL_SUBS = [{ id: 'lineups', label: 'Lineups', href: '#/cwl' }, { id: 'group', label: 'Group', href: '#/cwl/group' }]
 
 const TABS = [
   { id: 'war', label: 'War', href: '#/war', icon: <path d="M5 5l14 14M19 5L5 19M4 16l4 4M20 16l-4 4" /> },
@@ -116,7 +120,10 @@ export default function App() {
       ) : route.tab === 'explore' ? (
         <ExploreTab sub={route.sub} kind={route.kind} q={q} setQ={setQ} wide={wide} />
       ) : (
-        <CwlTab roster={roster} war={war} wide={wide} q={q} setQ={setQ} />
+        <>
+          <SubNav items={CWL_SUBS} current={route.sub} wide={wide} />
+          {route.sub === 'group' ? <CwlGroup wide={wide} /> : <CwlTab roster={roster} war={war} wide={wide} q={q} setQ={setQ} />}
+        </>
       )}
 
       {!!visits?.total && (
@@ -132,6 +139,7 @@ export default function App() {
       {!route.player && (install.show ? <InstallHint onDismiss={install.dismiss} /> : route.tab !== 'plan' && <JumpToYou wide={wide} />)}
 
       {roster && route.player &&<PlayerSheet tag={route.player} roster={roster} wide={wide} onClose={closeSheet} />}
+      {roster && route.clan && !route.player && <ClanSheet clan={route.clan} roster={roster} wide={wide} onClose={closeSheet} />}
 
       {!wide && (
         <nav aria-label="Sections" className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-gold-line bg-white pb-[env(safe-area-inset-bottom)]">

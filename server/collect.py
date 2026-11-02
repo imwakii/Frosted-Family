@@ -24,6 +24,9 @@ from server import db, profiles, stats
 API = "https://api.clashofclans.com/v1"
 DEFAULT_DB = "/opt/bots/frosted/data/frosted.db"
 OUR_TAGS = set(CLAN_TAGS.values())
+OTHER_WARS_EVERY = timedelta(minutes=10)
+STRENGTH_EVERY = timedelta(days=1)
+LINEUP = 15
 
 
 class Api:
@@ -88,9 +91,40 @@ def collect_wars(conn, api: Api, clan_tag: str) -> None:
         collect_league_group(conn, api, group, clan_tag)
 
 
+def strength(p: dict) -> dict:
+    return {
+        "th": p.get("townHallLevel") or 0,
+        "war_stars": p.get("warStars") or 0,
+        "heroes": sum(h.get("level", 0) for h in p.get("heroes") or [] if h.get("village", "home") == "home"),
+        "equipment": sum(e.get("level", 0) for e in p.get("heroEquipment") or [] if e.get("village", "home") == "home"),
+    }
+
+
+def collect_group_strength(conn, api: Api, group: dict) -> None:
+    """One group clan per pass, oldest first, so a day's refresh never lands as one burst of calls. The 15 strongest
+    signed-up players stand in for the lineup, which is not known until each war is drawn."""
+    season = group.get("season")
+    since = (datetime.now(timezone.utc) - STRENGTH_EVERY).strftime("%Y-%m-%dT%H:%M:%SZ")
+    done = {r["clan_tag"]: r["updated_at"] for r in conn.execute("SELECT clan_tag, updated_at FROM cwl_group_strength WHERE season=?", (season,))}
+    due = sorted((c for c in group.get("clans", []) if done.get(c["tag"], "") < since and any(m.get("tag") for m in c.get("members", []))),
+                 key=lambda c: done.get(c["tag"], ""))
+    if not due:
+        return
+    clan = due[0]
+    found = (api.get(f"/players/{enc(m['tag'])}", quiet=(404,)) for m in clan["members"] if m.get("tag"))
+    rows = sorted((strength(p) for p in found if p), key=lambda r: (r["th"], r["heroes"]), reverse=True)[:LINEUP]
+    avg = lambda k: sum(r[k] for r in rows) / len(rows) if rows else None
+    # Stamped even when nothing came back, so a failing clan is tried again tomorrow rather than every minute.
+    conn.execute("INSERT OR REPLACE INTO cwl_group_strength VALUES (?,?,?,?,?,?,?)",
+                 (season, clan["tag"], len(rows), avg("war_stars"), avg("heroes"), avg("equipment"), db.utcnow()))
+
+
 def collect_league_group(conn, api: Api, group: dict, our_clan_tag: str) -> None:
     season = group.get("season")
+    # Other clans' wars only feed the group table, so they need not be as fresh as ours.
+    others_from = (datetime.now(timezone.utc) - OTHER_WARS_EVERY).strftime("%Y-%m-%dT%H:%M:%SZ")
     for c in group.get("clans", []):
+        db.store_badge(conn, c)
         ths = sorted((m["townHallLevel"] for m in c.get("members", []) if m.get("townHallLevel")), reverse=True)
         if ths:
             conn.execute(
@@ -101,8 +135,12 @@ def collect_league_group(conn, api: Api, group: dict, our_clan_tag: str) -> None
         for tag in rnd.get("warTags", []):
             if tag == "#0":  # round not drawn yet
                 continue
-            known = conn.execute("SELECT ours, state FROM cwl_war_tags WHERE war_tag=?", (tag,)).fetchone()
-            if known and (known["ours"] == 0 or known["state"] == "warEnded"):
+            known = conn.execute(
+                """SELECT t.ours, t.state, g.state AS group_state, g.updated_at FROM cwl_war_tags t
+                   LEFT JOIN cwl_group_wars g USING (war_tag) WHERE t.war_tag=?""", (tag,)).fetchone()
+            if known and known["group_state"] == "warEnded":
+                continue
+            if known and known["ours"] == 0 and known["updated_at"] and known["updated_at"] >= others_from:
                 continue
             war = api.get(f"/clanwarleagues/wars/{enc(tag)}")
             if not war or war.get("state") in (None, "notInWar"):
@@ -113,8 +151,10 @@ def collect_league_group(conn, api: Api, group: dict, our_clan_tag: str) -> None
                    ON CONFLICT (war_tag) DO UPDATE SET ours=excluded.ours, state=excluded.state""",
                 (tag, season, i, ours, war.get("state")),
             )
+            db.upsert_group_war(conn, war, war_tag=tag, season=season, round_no=i)
             if ours:
                 db.upsert_war(conn, war, kind="cwl", war_tag=tag, season=season, round_no=i)
+    collect_group_strength(conn, api, group)
 
 
 def collect_profiles(conn, api: Api, tags: list[str], now: str) -> None:

@@ -1,11 +1,11 @@
-import { Fragment, type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
+import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
 import { CLAN, CLANS, GROUPS, SLOT_TEXT, coreAvg, fmtScore, fmtStart } from '../theme'
-import { playerHref } from '../route'
+import { clanHref, playerHref } from '../route'
 import type { ClanName, LiveWar, Player, Roster } from '../types'
 import { useClans, type ClanMeta } from '../clash'
-import { useWarBoard } from '../leaders'
+import { setDayPick, useCwlGroups, useDayPick, useWarBoard } from '../leaders'
 import { useYou, YouPrompt, YouTag } from './You'
-import { ClanBadge, ClanSwitch, Eyebrow, LeaguePill, PlayDays, SearchIcon, StatusDot, StatusKey, Th, useNow, WarPill, RowChevron } from './ui'
+import { ClanBadge, ClanSwitch, DayRow, Eyebrow, LeaguePill, PlayDays, SearchIcon, StatusDot, StatusKey, Th, useNow, RowChevron } from './ui'
 
 type Props = {
   roster: Roster; war: Partial<Record<ClanName, LiveWar | null>>; wide: boolean; q: string; setQ: (v: string) => void
@@ -42,7 +42,7 @@ function groupsFor(roster: Roster, clan: ClanName, day: DayPick = 'all') {
   return fresh.rows.length ? [...groups, fresh] : groups
 }
 
-function clanFacts(roster: Roster, clan: ClanName, meta?: ClanMeta) {
+export function clanFacts(roster: Roster, clan: ClanName, meta?: ClanMeta) {
   const info = roster.clans[clan]
   const core = roster.players.filter((p) => p.clan === clan && p.slot === 'CORE')
   // Clans out of CWL have no core, so they show the average of their best 15.
@@ -59,25 +59,20 @@ function clanFacts(roster: Roster, clan: ClanName, meta?: ClanMeta) {
   }
 }
 
-// Badge, name and league; core average (best 15 for clans out of CWL) and member count.
-function ClanCard({ roster, clan, meta, war, compact, below }: { roster: Roster; clan: ClanName; meta?: ClanMeta; war: LiveWar | null | undefined; compact?: boolean; below?: ReactNode }) {
+// Badge, name and league, opening the clan's card.
+function ClanCard({ roster, clan, meta, compact, below }: { roster: Roster; clan: ClanName; meta?: ClanMeta; compact?: boolean; below?: ReactNode }) {
   const f = clanFacts(roster, clan, meta)
   const c = CLAN[clan]
   return (
-    <div className={`flex flex-col gap-2.5 ${compact ? 'px-4 py-3.5' : 'rounded-2xl p-3.5'}`} style={{ background: c.tint }}>
-      <div className="flex items-center gap-3">
-      <ClanBadge src={f.badge} size={compact ? 52 : 64} className="drop-shadow-[0_2px_4px_rgba(43,33,20,.18)]" />
-      <div className="flex min-w-0 flex-auto flex-col gap-1">
-        <h2 className={`font-display m-0 truncate leading-none ${compact ? 'text-[22px]' : 'text-2xl'}`} style={{ color: c.deep }}>{f.name}</h2>
-        <LeaguePill league={f.league} text={f.format.replace('League ', '')} />
-        <WarPill war={war} />
-      </div>
-      <div className="flex flex-none flex-col items-end">
-        <span className="text-[11px] font-bold uppercase tracking-[0.06em] text-muted">{f.inCwl ? 'Core avg' : 'Top 15 avg'}</span>
-        <span className={`font-display leading-none ${compact ? 'text-[26px]' : 'text-[30px]'}`} style={{ color: c.deep }}>{f.avg}</span>
-        <span className="mt-1 text-xs font-semibold text-muted">{roster.players.filter((p) => p.clan === clan).length} members</span>
-      </div>
-      </div>
+    <div className={`flex flex-col gap-1.5 ${compact ? 'px-4 py-2.5' : 'rounded-2xl px-3.5 py-2.5'}`} style={{ background: c.tint }}>
+      <a href={clanHref(clan)} aria-label={`${f.name} card`} className="flex min-w-0 items-center gap-2.5 no-underline">
+        <ClanBadge src={f.badge} size={40} className="drop-shadow-[0_2px_4px_rgba(43,33,20,.18)]" />
+        <span className="flex min-w-0 flex-auto flex-col gap-0.5">
+          <span className="font-display truncate text-[19px] leading-none" style={{ color: c.deep }}>{f.name}</span>
+          <LeaguePill league={f.league} text={f.format.replace('League ', '')} />
+        </span>
+        <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#A3957C" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" className="flex-none"><path d="M9 6l6 6-6 6" /></svg>
+      </a>
       {below}
     </div>
   )
@@ -237,25 +232,16 @@ const until = (ms: number) => {
   return d ? `${d}d ${h}h` : h ? `${h}h ${m % 60}m` : `${m}m`
 }
 
-// Before CWL, the time to its start; during it, the day; hidden once it has run its course.
+// Before CWL, the time to its start. Once it is on, the War tab has the day.
 function Countdown({ roster, war, slim }: { roster: Roster; war: Props['war']; slim?: boolean }) {
   const now = useNow()
   const day = liveDay(war)
   const start = roster.cwlStart ? Date.parse(roster.cwlStart) : NaN
   if (slim) {
-    if (day) return <span className="flex items-center gap-2 text-[13px] font-bold text-[#15803D]"><span className="ff-live size-2 flex-none rounded bg-[#16A34A]" />CWL · Day {day} of 7</span>
-    if (!(start > now)) return null
+    if (day || !(start > now)) return null
     return <span className="text-[13px] font-bold text-ink">CWL starts in <span className="tabular-nums">{until(start - now)}</span></span>
   }
-  if (day) {
-    return (
-      <div className="flex min-h-12 items-center gap-2.5 rounded-2xl border border-[#BBF7D0] bg-[#E9F0D8] px-4 text-[#15803D]">
-        <span className="ff-live size-2 flex-none rounded bg-[#16A34A]" />
-        <span className="text-[15px] font-bold">CWL · Day {day} of 7</span>
-      </div>
-    )
-  }
-  if (!(start > now)) return null
+  if (day || !(start > now)) return null
   return (
     <div className="flex min-h-12 items-center justify-between gap-3 rounded-2xl border border-line bg-white px-4">
       <span className="text-[15px] font-bold text-ink">CWL starts in <span className="font-display text-[19px] tabular-nums">{until(start - now)}</span></span>
@@ -264,35 +250,18 @@ function Countdown({ roster, war, slim }: { roster: Roster; war: Props['war']; s
   )
 }
 
-const liveDay = (war: Props['war']) =>
-  Math.max(0, ...Object.values(war).map((w) => (w?.kind === 'cwl' && w.state !== 'warEnded' ? w.day ?? 0 : 0)))
+const stateDay = (war: Props['war'], state: string) =>
+  Math.max(0, ...Object.values(war).map((w) => (w?.kind === 'cwl' && w.state === state ? w.day ?? 0 : 0)))
+const liveDay = (war: Props['war']) => stateDay(war, 'inWar')
 
 // Once a day plan is published the page opens on the day being fought, or day 1 before CWL starts.
 function useDay(roster: Roster, war: Props['war']) {
   const planned = roster.players.some((p) => p.days)
-  const [pick, setPick] = useState<DayPick | null>(null)
-  return { planned, day: (planned ? pick ?? (liveDay(war) || 1) : 'all') as DayPick, setDay: setPick, live: liveDay(war) }
+  const pick = useDayPick()
+  return { planned, day: (planned ? pick ?? (liveDay(war) || stateDay(war, 'preparation') || 1) : 'all') as DayPick, setDay: setDayPick, live: liveDay(war) }
 }
 
-function DayPicker({ day, setDay, live }: { day: DayPick; setDay: (d: DayPick) => void; live: number }) {
-  const on = 'bg-white text-ink shadow-[0_1px_3px_rgba(43,33,20,.12)]'
-  return (
-    <nav aria-label="CWL day" className="grid w-full max-w-[480px] grid-cols-[1.8fr_auto_repeat(7,1fr)] gap-1 rounded-xl bg-well p-1">
-      {(['all', 1, 2, 3, 4, 5, 6, 7] as DayPick[]).map((d) => (
-        <Fragment key={d}>
-        {d === 1 && <span aria-hidden="true" className="self-center px-1 text-xs font-bold text-faint">Day</span>}
-        <button type="button" aria-pressed={d === day} aria-label={d === 'all' ? 'Roster' : `Day ${d}`} onClick={() => setDay(d)}
-          className={`relative min-h-[38px] cursor-pointer rounded-[9px] border-0 text-sm font-bold tabular-nums ${d === day ? on : 'bg-transparent text-muted'}`}>
-          {d === 'all' ? 'Roster' : d}
-          {d === live && <span className="ff-live absolute right-1 top-1 size-1.5 rounded bg-[#16A34A]" />}
-        </button>
-        </Fragment>
-      ))}
-    </nav>
-  )
-}
-
-function readClan(): ClanName {
+export function readClan(): ClanName {
   try {
     const v = sessionStorage.getItem('ff-clan')
     return v === 'Cake' || v === 'Flakes' ? v : 'Fire'
@@ -308,10 +277,11 @@ function Phone({ roster, war, q, setQ, lock }: Omit<Props, 'wide'>) {
   const results = nq ? roster.players.filter((p) => matches(p, nq)).slice(0, 12) : []
   const clans = useClans()
   const { planned, day, setDay, live } = useDay(roster, war)
+  const days = useCwlGroups().data?.clans.find((c) => c.clan === clan)?.group?.days
 
   return (
     <>
-      <div className="px-4 pb-2.5 pt-1"><ClanSwitch<ClanName> value={clan} onPick={lock?.onPick ?? setOwn} options={lock?.options} /></div>
+      <div className="px-4 pb-2.5 pt-3"><ClanSwitch<ClanName> value={clan} onPick={lock?.onPick ?? setOwn} options={lock?.options} /></div>
       <div className="sticky top-0 z-10 bg-page px-4 pb-3 pt-1">
         <SearchBox q={q} setQ={setQ} onEnter={() => { if (results[0]) window.location.hash = href(results[0]) }} />
       </div>
@@ -342,8 +312,8 @@ function Phone({ roster, war, q, setQ, lock }: Omit<Props, 'wide'>) {
         ) : (
           <>
             <YouPanel roster={roster} day={live} />
-            {planned && inCwl && <DayPicker day={day} setDay={setDay} live={live} />}
-            <ClanCard roster={roster} clan={clan} meta={clans[clan]} war={war[clan]} below={inCwl ? <Countdown roster={roster} war={war} slim /> : undefined} />
+            {planned && inCwl && <DayRow days={days} pick={day} onPick={setDay} live={live} roster />}
+            <ClanCard roster={roster} clan={clan} meta={clans[clan]} below={inCwl ? <Countdown roster={roster} war={war} slim /> : undefined} />
             <StatusKey className="px-1" />
             <Groups roster={roster} clan={clan} day={day} />
           </>
@@ -376,13 +346,13 @@ function Desktop({ roster, war, q, setQ, lock }: Omit<Props, 'wide'>) {
         <div className="w-full max-w-[480px] empty:hidden"><YouPanel roster={roster} day={live} /></div>
         <div className="w-full max-w-[480px]"><Countdown roster={roster} war={war} /></div>
       </div>
-      {planned && <DayPicker day={day} setDay={setDay} live={live} />}
+      {planned && <DayRow pick={day} onPick={setDay} live={live} roster />}
       <StatusKey />
       <div ref={grid} className="grid items-start gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr))]">
         {(lock?.options ?? CLANS).map((clan) => {
           return (
             <section key={clan} aria-label={clan} className="overflow-hidden rounded-2xl border border-line bg-white pb-2.5">
-              <ClanCard roster={roster} clan={clan} meta={clans[clan]} war={war[clan]} compact />
+              <ClanCard roster={roster} clan={clan} meta={clans[clan]} compact />
               <Groups roster={roster} clan={clan} q={nq} dense day={day} />
             </section>
           )
