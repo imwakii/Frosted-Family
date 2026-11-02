@@ -126,6 +126,24 @@ function LogRow({ a, tint, now }: { a: WarAttack; tint: string; now: number }) {
   )
 }
 
+// Beside the board before a war starts: the log's shape, empty, so the page is the same before and during a war.
+function GhostLog({ tint }: { tint: string }) {
+  return (
+    <ol aria-hidden="true" className="m-0 flex list-none flex-col gap-1 px-2 pb-2 [mask-image:linear-gradient(to_bottom,black_30%,transparent)]">
+      {[true, false, true, true, false, true, false, false, true, false].map((ours, i) => {
+        const point = ours ? POINT.right : POINT.left
+        return (
+          <li key={i} className={`grid min-h-[46px] grid-cols-[minmax(0,1fr)_88px_minmax(0,1fr)] items-center gap-1.5 py-1 ${point.cls}`} style={{ ...point.style, background: ours ? tint : ENEMY_ROW }}>
+            <span className="h-2 w-3/5 rounded-full bg-[#2B2114]/10" />
+            <span className="h-2 w-10 justify-self-center rounded-full bg-[#2B2114]/10" />
+            <span className="h-2 w-3/5 justify-self-end rounded-full bg-[#2B2114]/10" />
+          </li>
+        )
+      })}
+    </ol>
+  )
+}
+
 export function WarBoard({ clan, war, now }: { clan: ClanName; war: ClanWar; now: number }) {
   const t = CLAN[clan]
   const clans = useClans()
@@ -262,7 +280,8 @@ export function WarBoard({ clan, war, now }: { clan: ClanName; war: ClanWar; now
         </ol>
       </section>
 
-      {!prep && (
+      {/* On a phone the log sits under the board, so before the war it would only push the page longer. */}
+      {(!prep || sideBySide) && (
         <section aria-label="Attacks" className="overflow-hidden rounded-2xl border border-line bg-white">
           <div className="flex items-center justify-between gap-2 px-3.5 py-2.5">
             <span className="min-w-0 truncate text-sm font-bold text-ink">{(sideBySide && pickedName) || 'Attacks'}</span>
@@ -277,7 +296,8 @@ export function WarBoard({ clan, war, now }: { clan: ClanName; war: ClanWar; now
             <ol className="m-0 flex list-none flex-col gap-1 px-2 pb-2">
               {log.map((a) => <LogRow key={a.order} a={a} tint={t.tint} now={now} />)}
             </ol>
-          ) : <p className="m-0 border-t border-hair px-3.5 py-5 text-sm text-faint">No attacks yet</p>}
+          ) : prep ? <><p className="m-0 px-3.5 pb-2.5 text-sm text-faint">No attacks yet</p><GhostLog tint={t.tint} /></>
+            : <p className="m-0 border-t border-hair px-3.5 py-5 text-sm text-faint">No attacks yet</p>}
         </section>
       )}
     </div>
