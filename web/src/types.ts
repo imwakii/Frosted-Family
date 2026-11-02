@@ -22,6 +22,8 @@ export interface Player {
   suggestedReason?: string | null
   /** Back in the clan after leaving, in the slot they had. */
   rejoined?: boolean
+  /** The clan the member is in now, in game; differs from clan until they make their move. */
+  inClan?: ClanName | null
 }
 
 export interface ClanInfo { league: string | null; inCwl: boolean }

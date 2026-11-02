@@ -76,13 +76,45 @@ export function SearchBox({ q, setQ, tall, onEnter }: { q: string; setQ: (v: str
 
 // A move into this clan before sign-up, shown after the name as on the poster,
 // tinted with the clan the player comes from.
-function FromPill({ from }: { from: ClanName | null }) {
-  if (!from) return null
+function FromPill({ p }: { p: Player }) {
+  const pending = p.inClan && p.inClan !== p.clan
+  if (pending) {
+    return (
+      <span title={`Still in ${p.inClan}: move to ${p.clan}`}
+        className="flex-none whitespace-nowrap rounded-full bg-[#FEF3C7] px-1.5 py-px text-[10px] font-extrabold uppercase tracking-[0.04em] text-[#92400E]">
+        In {p.inClan} · to move
+      </span>
+    )
+  }
+  if (!p.from) return null
   return (
     <span className="flex-none whitespace-nowrap rounded-full px-1.5 py-px text-[10px] font-extrabold uppercase tracking-[0.04em]"
-      style={{ background: CLAN[from].tint, color: CLAN[from].deep }}>
-      From {from}
+      style={{ background: CLAN[p.from].tint, color: CLAN[p.from].deep }}>
+      From {p.from}
     </span>
+  )
+}
+
+// Members whose clan in game is not the one they are allocated to, with where to go. Hidden once everyone has moved.
+function MovesToDo({ roster }: { roster: Roster }) {
+  const todo = roster.players.filter((p) => p.inClan && p.inClan !== p.clan)
+  if (!todo.length) return null
+  return (
+    <section aria-label="Moves to make" className="flex flex-col gap-1.5 rounded-2xl border border-[#FDE68A] bg-[#FFFBEB] px-4 py-3">
+      <span className="text-[13px] font-bold text-[#92400E]">Moves to make</span>
+      <ul className="m-0 flex list-none flex-wrap gap-x-4 gap-y-1 p-0">
+        {todo.map((p) => (
+          <li key={p.tag}>
+            <a href={href(p)} className="flex items-center gap-1.5 text-sm text-ink no-underline">
+              <span className="font-semibold">{p.name}</span>
+              <span className="text-xs font-bold" style={{ color: CLAN[p.inClan!].deep }}>{p.inClan}</span>
+              <span className="text-faint">→</span>
+              <span className="text-xs font-bold" style={{ color: CLAN[p.clan].deep }}>{p.clan}</span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    </section>
   )
 }
 
@@ -106,7 +138,7 @@ function Row({ p, n, hit, dense }: { p: Player; n: number; hit?: boolean; dense?
         <span className="flex min-w-0 flex-auto flex-col">
           <span className="flex min-w-0 items-center gap-1.5">
             <span className={`min-w-0 truncate font-semibold ${dense ? 'text-sm' : 'text-[15px]'}`}>{p.name}</span>
-            <FromPill from={p.from} />
+            <FromPill p={p} />
             {p.rejoined && <span title="Rejoined, back in their slot" className="flex-none rounded-full bg-[#DCFCE7] px-1.5 py-px text-[10px] font-extrabold uppercase tracking-[0.04em] text-[#166534]">Back</span>}
           </span>
           {p.slot === 'NEW' && <NewLine p={p} />}
@@ -127,7 +159,6 @@ function Groups({ roster, clan, q, dense }: { roster: Roster; clan: ClanName; q?
           {g.label !== 'Members' || dense ? (
             <div className={`flex justify-between ${dense ? 'px-2.5 pt-3' : 'px-1'}`}>
               <Eyebrow className={dense ? 'text-[11px]' : ''}>{g.label}</Eyebrow>
-              <Eyebrow className={dense ? 'text-[11px]' : ''}>{g.rows.length}</Eyebrow>
             </div>
           ) : null}
           {g.rows.length ? (
@@ -237,7 +268,7 @@ function Phone({ roster, war, q, setQ }: Omit<Props, 'wide'>) {
                   <Th th={p.th} />
                   <span className="flex min-w-0 flex-auto items-center gap-1.5">
                     <span className="min-w-0 truncate text-[15px] font-semibold">{p.name}</span>
-                    <FromPill from={p.from} />
+                    <FromPill p={p} />
                   </span>
                   <span className="flex-none whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-bold" style={{ background: CLAN[p.clan].tint, color: CLAN[p.clan].deep }}>
                     {p.clan} · {roster.clans[p.clan]?.inCwl ? SLOT_TEXT[p.slot] : 'Not in'}
@@ -250,6 +281,7 @@ function Phone({ roster, war, q, setQ }: Omit<Props, 'wide'>) {
         ) : (
           <>
             <Countdown roster={roster} war={war} />
+            <MovesToDo roster={roster} />
             {you && <YouCard roster={roster} tag={you} onClear={() => setYou(null)} />}
             <nav ref={clanNav} aria-label="Clan" className="grid grid-cols-3 gap-1 rounded-xl bg-well p-1">
               {CLANS.map((k) => (
@@ -294,6 +326,7 @@ function Desktop({ roster, war, q, setQ }: Omit<Props, 'wide'>) {
         {you && <div className="w-full max-w-[480px]"><YouCard roster={roster} tag={you} onClear={() => setYou(null)} /></div>}
         <div className="w-full max-w-[480px]"><Countdown roster={roster} war={war} /></div>
       </div>
+      <MovesToDo roster={roster} />
       <StatusKey />
       <div ref={grid} onClickCapture={(e) => { const a = (e.target as HTMLElement).closest<HTMLElement>('a[data-tag]'); if (nq && a?.dataset.tag) setYou(a.dataset.tag) }} className="grid items-start gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr))]">
         {CLANS.map((clan) => {

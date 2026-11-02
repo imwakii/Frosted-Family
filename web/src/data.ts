@@ -26,7 +26,7 @@ const getStatic = () => (staticRoster ??= getJson<Roster>('/roster.json'))
 type ApiPlayer = {
   tag: string; name: string; clan: ClanName; cwl_slot: string; transferred_from: string | null
   tier: string; final_score: number | string | null; current_th: number | string | null
-  snapshot: { name?: string; town_hall?: number } | null
+  snapshot: { name?: string; town_hall?: number; clan?: string | null } | null
   left?: boolean; joined_at?: string | null; suggested_slot?: string | null; suggested_reason?: string | null; rejoined?: boolean
 }
 type ApiWar = {
@@ -80,6 +80,7 @@ function mergeRoster(api: { players: ApiPlayer[] }, base: Roster | null): Roster
       suggestedSlot: a.suggested_slot ? SLOT[a.suggested_slot] ?? null : null,
       suggestedReason: a.suggested_reason ?? null,
       rejoined: !!a.rejoined,
+      inClan: asClan(a.snapshot?.clan),
     }
   })
   return {

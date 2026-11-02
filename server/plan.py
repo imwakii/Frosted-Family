@@ -66,7 +66,8 @@ def latest_publish(conn: sqlite3.Connection) -> dict | None:
 
 
 def effective_roster() -> tuple[list[dict], dict]:
-    """CSV rows with the latest publish laid over them by tag, if it was made against this CSV."""
+    """CSV rows with the latest publish laid over them by tag, if it was made against this CSV. A published player
+    who is not in the CSV (a new member placed in the builder) is added as a row of their own."""
     rows, sha = read_csv()
     with appdb.connect() as conn:
         pub = latest_publish(conn)
@@ -79,6 +80,9 @@ def effective_roster() -> tuple[list[dict], dict]:
                 a = pub["allocation"].get(r.get("tag") or "")
                 if a:
                     r.update({k: a[k] or "" for k in ALLOC_COLS})
+            tags = {r.get("tag") for r in rows}
+            rows += [{"tag": t, "name": "", "tier": "NEW", "final_score": "", **{k: a[k] or "" for k in ALLOC_COLS}}
+                     for t, a in sorted(pub["allocation"].items()) if t not in tags and a.get("cwl_slot") != "New"]
         else:
             meta["superseded"] = True  # the CSV changed after this publish; the CSV wins
     return rows, meta

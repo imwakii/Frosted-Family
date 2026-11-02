@@ -104,7 +104,10 @@ def test_the_publish_checks_leave_departed_players_out(family):
     conn = db.connect_readonly(family / "frosted.db")
     rows = [{"tag": WAKI, "clan": "Fire", "cwl_slot": "CORE"}, {"tag": FIRE_LEFT, "clan": "Fire", "cwl_slot": "CORE"},
             {"tag": FIRE_NEVER, "clan": "Fire", "cwl_slot": "SUB"}]
-    assert [r["tag"] for r in members.live_allocation(conn, rows)] == [WAKI]
+    alloc = {r["tag"]: r for r in members.live_allocation(conn, rows)}
+    assert WAKI in alloc and FIRE_LEFT not in alloc and FIRE_NEVER not in alloc
+    # Live members outside the CSV come in as New, so the builder can place them.
+    assert (alloc["#2NEW1"]["clan"], alloc["#2NEW1"]["cwl_slot"]) == ("Fire", "New")
 
 
 def test_new_members_are_scored_from_what_the_family_has(family, monkeypatch):
@@ -121,3 +124,20 @@ def test_new_members_are_scored_from_what_the_family_has(family, monkeypatch):
     ari = rows["#PYYRQVPJQ"]
     assert ari["cwl_slot"] == "New" and abs(float(ari["final_score"]) - 72.05) < 0.5  # 72.05 in the October roster
     assert rows["#2NEW1"]["final_score"] is None
+
+
+def test_a_new_member_can_be_placed_and_published(family):
+    """The builder's moves accept a new member, and a publish that places one puts them on the roster in that slot."""
+    import json
+    from server import appdb, plan
+    conn = db.connect_readonly(family / "frosted.db")
+    rows = members.live_allocation(conn, plan.effective_roster()[0])
+    after, unknown = plan.apply_moves(rows, [plan.Move(tag="#2NEW1", clan="Fire", slot="SUB")])
+    assert unknown == [] and after["#2NEW1"]["cwl_slot"] == "SUB"
+    _, sha = plan.read_csv()
+    with appdb.connect() as a:
+        a.execute("INSERT INTO publishes VALUES (?,?,?,?,?,?,?)", (P2, "1001", "Waki", sha, 0, "[]", json.dumps(after)))
+    rows = by_tag(client().get("/roster").json())
+    one = rows["#2NEW1"]
+    assert (one["clan"], one["cwl_slot"], one["left"]) == ("Fire", "SUB", False)
+    assert rows["#2NEW2"]["cwl_slot"] == "New"  # left New in the publish: still a new member

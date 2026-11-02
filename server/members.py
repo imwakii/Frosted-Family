@@ -106,9 +106,15 @@ def rejoined(conn, csv_tags: set[str]) -> list[dict]:
 
 
 def live_allocation(conn, rows: list[dict]) -> list[dict]:
-    """The allocation the lineups and the publish checks use: CSV rows minus departed players, plus rejoiners."""
+    """The allocation the lineups and the publish checks use: CSV rows minus departed players, plus rejoiners in their
+    old slots and new members as New, so the builder can place them."""
     gone = departed(conn, rows)
-    return [r for r in rows if r.get("tag") not in gone] + rejoined(conn, {r["tag"] for r in rows if r.get("tag")})
+    keep = [r for r in rows if r.get("tag") not in gone]
+    back = rejoined(conn, {r["tag"] for r in rows if r.get("tag")})
+    known = {r.get("tag") for r in keep + back}
+    fresh = [{"tag": t, "name": "", "clan": TAG_TO_CLAN.get(p["clan_tag"]), "cwl_slot": "New", "transferred_from": None}
+             for t, p in presence(conn).items() if p["live"] and t not in known and TAG_TO_CLAN.get(p["clan_tag"])]
+    return keep + back + fresh
 
 
 def new_member_rows(conn, csv_tags: set[str], heroes: dict[str, dict], snapshot_view) -> list[dict]:

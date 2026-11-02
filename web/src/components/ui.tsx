@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { leagueIcon, thIcon, unitIcon } from '../clash'
 import { STATUS } from '../theme'
 import type { LiveWar, Status } from '../types'
@@ -156,9 +156,13 @@ export function WarPill({ war, now = Date.now() }: { war: LiveWar | null | undef
 
 // A tab's own sections, as links under the top bar; underlined, so it reads as a level below the tabs.
 export function SubNav({ items, current, wide }: { items: { id: string; label: string; href: string }[]; current: string; wide: boolean }) {
+  const ref = useRef<HTMLElement>(null)
+  // A section past the edge is scrolled into view when it is the one open.
+  useEffect(() => { ref.current?.querySelector('[aria-current="page"]')?.scrollIntoView({ inline: 'nearest', block: 'nearest' }) }, [current])
   return (
     <div className={wide ? 'border-b border-line bg-white' : 'px-4'}>
-      <nav aria-label="Section" className={`flex gap-5 overflow-x-auto [scrollbar-width:none] ${wide ? 'mx-auto max-w-[1360px] px-[clamp(16px,3vw,32px)]' : 'border-b border-line'}`}>
+      {/* On phones the row is tighter, and fades at the right edge when it runs past it, so it reads as scrollable. */}
+      <nav ref={ref} aria-label="Section" className={`flex overflow-x-auto [scrollbar-width:none] ${wide ? 'mx-auto max-w-[1360px] gap-5 px-[clamp(16px,3vw,32px)]' : 'gap-4 border-b border-line [mask-image:linear-gradient(to_right,black_88%,transparent)] pr-6'}`}>
         {items.map((s) => (
           <a key={s.id} href={s.href} aria-current={s.id === current ? 'page' : undefined}
             className={`-mb-px flex min-h-11 flex-none items-center whitespace-nowrap border-b-2 text-[15px] font-bold no-underline ${s.id === current ? 'border-ink text-ink' : 'border-transparent text-faint hover:text-ink'}`}>
