@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { CLAN, CLANS, GROUPS, SLOT_TEXT, coreAvg, fmtScore } from '../theme'
+import { CLAN, CLANS, GROUPS, SLOT_TEXT, coreAvg, fmtScore, fmtStart } from '../theme'
 import { playerHref } from '../route'
 import type { ClanName, LiveWar, Player, Roster } from '../types'
 import { useClans, type ClanMeta } from '../clash'
-import { ClanBadge, Eyebrow, LeaguePill, SearchIcon, StatusDot, StatusKey, Th, WarPill } from './ui'
+import { ClanBadge, Eyebrow, LeaguePill, SearchIcon, StatusDot, StatusKey, Th, useNow, WarPill } from './ui'
 
 type Props = { roster: Roster; war: Partial<Record<ClanName, LiveWar | null>>; wide: boolean; q: string; setQ: (v: string) => void }
 
@@ -172,6 +172,34 @@ function YouCard({ roster, tag, onClear }: { roster: Roster; tag: string; onClea
   )
 }
 
+const until = (ms: number) => {
+  const m = Math.max(0, Math.floor(ms / 60000))
+  const d = Math.floor(m / 1440), h = Math.floor((m % 1440) / 60)
+  return d ? `${d}d ${h}h` : h ? `${h}h ${m % 60}m` : `${m}m`
+}
+
+// Before CWL, the time to its start; during it, the day; hidden once it has run its course.
+function Countdown({ roster, war }: { roster: Roster; war: Props['war'] }) {
+  const now = useNow()
+  const day = Math.max(0, ...Object.values(war).map((w) => (w?.kind === 'cwl' && w.state !== 'warEnded' ? w.day ?? 0 : 0)))
+  const start = roster.cwlStart ? Date.parse(roster.cwlStart) : NaN
+  if (day) {
+    return (
+      <div className="flex min-h-12 items-center gap-2.5 rounded-2xl border border-[#BBF7D0] bg-[#F0FDF4] px-4 text-[#15803D]">
+        <span className="ff-live size-2 flex-none rounded bg-[#16A34A]" />
+        <span className="text-[15px] font-bold">CWL · Day {day} of 7</span>
+      </div>
+    )
+  }
+  if (!(start > now)) return null
+  return (
+    <div className="flex min-h-12 items-center justify-between gap-3 rounded-2xl border border-line bg-white px-4">
+      <span className="text-[15px] font-bold text-ink">CWL starts in <span className="font-display text-[19px] tabular-nums">{until(start - now)}</span></span>
+      <span className="text-xs font-semibold text-faint">{fmtStart(roster.cwlStart)}</span>
+    </div>
+  )
+}
+
 function readClan(): ClanName {
   try {
     const v = sessionStorage.getItem('ff-clan')
@@ -221,6 +249,7 @@ function Phone({ roster, war, q, setQ }: Omit<Props, 'wide'>) {
           </ul>
         ) : (
           <>
+            <Countdown roster={roster} war={war} />
             {you && <YouCard roster={roster} tag={you} onClear={() => setYou(null)} />}
             <nav ref={clanNav} aria-label="Clan" className="grid grid-cols-3 gap-1 rounded-xl bg-well p-1">
               {CLANS.map((k) => (
@@ -263,6 +292,7 @@ function Desktop({ roster, war, q, setQ }: Omit<Props, 'wide'>) {
           {nq && !hits.length && <span className="px-1 text-sm text-faint">No one by that name</span>}
         </div>
         {you && <div className="w-full max-w-[480px]"><YouCard roster={roster} tag={you} onClear={() => setYou(null)} /></div>}
+        <div className="w-full max-w-[480px]"><Countdown roster={roster} war={war} /></div>
       </div>
       <StatusKey />
       <div ref={grid} onClickCapture={(e) => { const a = (e.target as HTMLElement).closest<HTMLElement>('a[data-tag]'); if (nq && a?.dataset.tag) setYou(a.dataset.tag) }} className="grid items-start gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr))]">

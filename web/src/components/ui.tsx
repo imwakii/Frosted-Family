@@ -1,4 +1,4 @@
-import { useState, type CSSProperties, type ReactNode } from 'react'
+import { useEffect, useState, type CSSProperties, type ReactNode } from 'react'
 import { leagueIcon, thIcon, unitIcon } from '../clash'
 import { STATUS } from '../theme'
 import type { LiveWar, Status } from '../types'
@@ -167,5 +167,25 @@ export function SubNav({ items, current, wide }: { items: { id: string; label: s
         ))}
       </nav>
     </div>
+  )
+}
+
+/** Re-renders every `ms` with the current time. */
+export function useNow(ms = 15_000) {
+  const [now, setNow] = useState(Date.now())
+  useEffect(() => { const id = window.setInterval(() => setNow(Date.now()), ms); return () => window.clearInterval(id) }, [ms])
+  return now
+}
+
+/** The time now in UTC, the zone every time on the site is in. */
+export function UtcClock({ wide }: { wide: boolean }) {
+  const now = useNow()
+  const d = new Date(now)
+  const time = d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'UTC' })
+  const day = d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' })
+  return (
+    <span className="whitespace-nowrap rounded-full border border-line bg-white px-2.5 py-[5px] text-xs font-bold text-muted tabular-nums md:px-3 md:py-1.5 md:text-[13px]">
+      {wide && <span className="font-semibold text-faint">{day} · </span>}{time} UTC
+    </span>
   )
 }
