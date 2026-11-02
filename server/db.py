@@ -348,6 +348,9 @@ def upsert_war(conn: sqlite3.Connection, war: dict, *, kind: str, war_tag: str |
          utcnow()),
     )
     now = utcnow()
+    # A lineup can still change in preparation: whoever has been swapped out is no longer in this war.
+    if war.get("state") == "preparation":
+        conn.execute("DELETE FROM war_members WHERE war_key=?", (key,))
     for side in (clan, opp):
         urls = side.get("badgeUrls") or {}
         badge = urls.get("medium") or urls.get("large") or urls.get("small")

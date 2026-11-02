@@ -65,3 +65,16 @@ def test_the_next_days_preparation_shows_behind_the_live_war(tmp_path):
     fire = next(c for c in war.board(conn, now=NOW)["clans"] if c["clan"] == "Fire")
     assert (fire["war"]["day"], fire["war"]["state"], fire["next"]["day"], fire["next"]["state"]) == (1, "inWar", 2, "preparation")
 
+
+
+def test_someone_swapped_out_in_preparation_leaves_the_war(tmp_path):
+    conn = db.connect(tmp_path / "f.db")
+    def payload(state, enemies):
+        return {"state": state, "teamSize": 1, "preparationStartTime": "20261103T000000.000Z",
+                "startTime": "20261104T000000.000Z", "endTime": "20261105T000000.000Z",
+                "clan": {"tag": FIRE, "name": "Fire", "members": [{"tag": "#A", "name": "a", "townhallLevel": 18, "mapPosition": 1}]},
+                "opponent": {"tag": "#E", "name": "E", "members": [{"tag": t, "name": t, "townhallLevel": 18, "mapPosition": 1} for t in enemies]}}
+    db.upsert_war(conn, payload("preparation", ["#X"]), kind="cwl", war_tag="#W", round_no=1)
+    db.upsert_war(conn, payload("preparation", ["#Y"]), kind="cwl", war_tag="#W", round_no=1)
+    tags = [r[0] for r in conn.execute("SELECT player_tag FROM war_members ORDER BY player_tag")]
+    assert tags == ["#A", "#Y"]

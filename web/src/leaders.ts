@@ -128,7 +128,7 @@ export type WarRecap = { mvp: WarSide & { stars: number[]; destruction: number; 
 export type WarBase = WarSide & { used: number; allowed: number; best: number | null }
 export type ClanWar = {
   kind: string; state: 'inWar' | 'preparation' | 'warEnded'; day: number | null; team_size: number; updated_at: string
-  start_time: string | null; end_time: string | null; attacks_allowed: number; opponent: string
+  preparation_start?: string | null; start_time: string | null; end_time: string | null; attacks_allowed: number; opponent: string
   stars: number; opponent_stars: number; destruction: number; opponent_destruction: number
   attacks_used: number; opponent_attacks_used: number; badge: string | null; opponent_badge: string | null; log: WarAttack[]; recap?: WarRecap | null; war_key?: string
   pairs: { position: number; us: WarBase | null; them: WarBase | null }[]

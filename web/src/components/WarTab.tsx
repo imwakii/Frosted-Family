@@ -32,10 +32,10 @@ const SPARKS = [[0, -34, '#F59E0B'], [25, -25, '#EF4444'], [36, -4, '#FBBF24'], 
 
 // The tab's crossed swords between the two clans. While the war is live they wind up and strike, with a flash,
 // a shockwave and flying sparks; the two badges recoil from the blow.
-function Swords({ live, color }: { live: boolean; color: string }) {
+function Swords({ live, sway, color }: { live: boolean; sway: boolean; color: string }) {
   return (
     <span className={`relative z-[1] flex size-11 items-center justify-center rounded-full bg-white shadow-[0_2px_8px_rgba(43,33,20,.12)] ${live ? 'ff-shake' : ''}`}>
-      <svg aria-hidden="true" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.4" strokeLinecap="round" className="overflow-visible">
+      <svg aria-hidden="true" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.4" strokeLinecap="round" className={`overflow-visible ${sway ? 'ff-sway' : ''}`}>
         <g className={live ? 'ff-sword-a' : ''}><path d="M5 5l14 14M16 20l4-4" /></g>
         <g className={live ? 'ff-sword-b' : ''}><path d="M19 5L5 19M4 16l4 4" /></g>
         {live && <>
@@ -50,6 +50,28 @@ function Swords({ live, color }: { live: boolean; color: string }) {
   )
 }
 
+// Preparation: a clock to the first attack, and a bar that fills as it nears. Each digit keeps its width, so the clock holds still.
+function Countdown({ to, from, color }: { to: number; from: number | null; color: string }) {
+  const now = useNow(1000)
+  const ms = Math.max(0, to - now)
+  const s = Math.floor(ms / 1000)
+  const clock = [Math.floor(s / 3600), Math.floor(s / 60) % 60, s % 60].map((n) => String(n).padStart(2, '0')).join(':')
+  const share = from && to > from ? Math.min(100, (100 * (now - from)) / (to - from)) : 0
+  return (
+    <div className="flex flex-col gap-2">
+      <div role="timer" aria-label={ms ? `War starts in ${left(ms)}` : 'War starting'} className="flex flex-col items-center gap-0.5">
+        <span className="text-[11px] font-bold uppercase tracking-[0.06em] text-faint">{ms ? 'War starts in' : 'War starting'}</span>
+        <span aria-hidden="true" className="font-display flex text-[34px] leading-none" style={{ color }}>
+          {[...clock].map((c, i) => <span key={i} className={`text-center ${c === ':' ? 'w-[.36em]' : 'w-[.6em]'}`}>{c}</span>)}
+        </span>
+      </div>
+      <div aria-hidden="true" className="flex h-2 overflow-hidden rounded-full" style={{ background: ENEMY }}>
+        <span className="h-full rounded-r-full transition-[width] duration-1000 ease-linear" style={{ width: `${share}%`, background: color }} />
+      </div>
+    </div>
+  )
+}
+
 // Share of the stars taken so far: ours from the left, theirs from the right.
 function TugBar({ us, them, color }: { us: number; them: number; color: string }) {
   const share = us + them ? (100 * us) / (us + them) : 50
@@ -60,7 +82,7 @@ function TugBar({ us, them, color }: { us: number; them: number; color: string }
   )
 }
 
-function Base({ b, right, live, picked, onPick }: { b: WarBase | null; right?: boolean; live: boolean; picked: boolean; onPick: () => void }) {
+function Base({ b, right, live, prep, picked, onPick }: { b: WarBase | null; right?: boolean; live: boolean; prep: boolean; picked: boolean; onPick: () => void }) {
   if (!b) return <span />
   return (
     <button type="button" aria-pressed={picked} onClick={onPick}
@@ -74,7 +96,7 @@ function Base({ b, right, live, picked, onPick }: { b: WarBase | null; right?: b
               {Array.from({ length: b.allowed }, (_, k) => <span key={k} className={`size-[7px] rounded-full ${k < b.used ? 'bg-[#16A34A]' : 'border-[1.5px] border-[#A3957C]'}`} />)}
             </span>
           )}
-          <Stars n={b.best ?? 0} />
+          {prep ? <span className="font-semibold text-faint">{b.th ? `TH${b.th}` : ''}</span> : <Stars n={b.best ?? 0} />}
         </span>
       </span>
     </button>
@@ -143,8 +165,9 @@ function WarBoard({ clan, war, now }: { clan: ClanName; war: ClanWar; now: numbe
       <button type="button" onClick={() => setPicked(null)} className="min-h-8 cursor-pointer rounded-full border border-line bg-white px-2.5 text-xs font-bold text-ink-2 hover:bg-page">{sideBySide ? 'Show all' : 'Close'}</button>
     </span>
   )
-  const score = (stars: number, pct: number, used: number, deep: string) => (
-    <span className={`flex flex-col items-center gap-0.5 ${prep ? 'invisible' : ''}`}>
+  const under = war.pairs.filter((p) => p.us?.th && p.them?.th && p.us.th < p.them.th).length
+  const score = (stars: number, pct: number, used: number, deep: string) => !prep && (
+    <span className="flex flex-col items-center gap-0.5">
       <span className="font-display flex items-baseline gap-1 text-[26px] leading-none tabular-nums" style={{ color: deep }}>{stars}<span className="text-base text-gold">★</span></span>
       <span className="text-[11px] font-semibold tabular-nums text-muted">{Math.round(pct)}% · {used}/{total}</span>
     </span>
@@ -155,7 +178,7 @@ function WarBoard({ clan, war, now }: { clan: ClanName; war: ClanWar; now: numbe
         <div className="flex flex-col gap-2 p-3.5" style={{ background: t.tint }}>
           <div className="flex justify-center">
             <span className={`whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-bold ${live ? 'bg-white text-[#15803D]' : over ? 'bg-white/60 text-muted' : 'bg-[#FFEDD5] text-[#B4451A]'}`}>
-              {war.kind === 'cwl' ? `Day ${war.day ?? '?'} · ` : ''}{live ? (end ? `${left(end - now)} left` : 'Live') : over ? (draw ? 'Draw' : won ? 'Won' : 'Lost') : start ? `Starts in ${left(start - now)}` : 'Prep'}
+              {war.kind === 'cwl' ? `Day ${war.day ?? '?'} · ` : ''}{live ? (end ? `${left(end - now)} left` : 'Live') : over ? (draw ? 'Draw' : won ? 'Won' : 'Lost') : 'Preparation'}
             </span>
           </div>
           <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-2">
@@ -166,7 +189,7 @@ function WarBoard({ clan, war, now }: { clan: ClanName; war: ClanWar; now: numbe
               </span>
               {score(war.stars, war.destruction, war.attacks_used, t.deep)}
             </div>
-            <Swords live={live} color={t.deep} />
+            <Swords live={live} sway={prep} color={t.deep} />
             <div className="flex min-w-0 flex-col items-center gap-1.5">
               <span className="flex max-w-full flex-col items-center gap-1.5">
                 <span className={`h-11 ${live ? 'ff-recoil-r' : ''}`}><ClanBadge src={war.opponent_badge} size={44} /></span>
@@ -175,8 +198,7 @@ function WarBoard({ clan, war, now }: { clan: ClanName; war: ClanWar; now: numbe
               {score(war.opponent_stars, war.opponent_destruction, war.opponent_attacks_used, '#5E5240')}
             </div>
           </div>
-          <TugBar us={war.stars} them={war.opponent_stars} color={t.deep} />
-          {/* The same lines in every state, so each clan's list starts at the same height. */}
+          {prep && start ? <Countdown to={start} from={at(war.preparation_start ?? null)} color={t.deep} /> : <TugBar us={war.stars} them={war.opponent_stars} color={t.deep} />}
           <span className="text-center text-xs font-bold" style={{ color: !live ? '#7A6C55' : toAttack ? '#B45309' : '#15803D' }}>
             {live ? (toAttack ? `${toAttack} yet to attack` : 'All attacked') : over ? `Ended ${end ? ago(new Date(end).toISOString(), now) : ''}` : `${war.team_size} v ${war.team_size}`}
           </span>
@@ -196,24 +218,35 @@ function WarBoard({ clan, war, now }: { clan: ClanName; war: ClanWar; now: numbe
                   Open bases {open.length}
                 </button>
               </>
+            ) : prep ? (
+              <>
+                {mine && (
+                  <button type="button" onClick={() => toggle(mine.tag)} className="min-h-9 flex-none cursor-pointer rounded-full border-0 bg-[#F7E8BC] px-3 text-[13px] font-bold text-[#92400E]">
+                    You: base {mine.position}
+                  </button>
+                )}
+                <span className={`ml-auto text-right text-[13px] font-semibold ${under ? 'text-[#B45309]' : 'text-[#15803D]'}`}>
+                  {under ? `${under} ${under === 1 ? 'base' : 'bases'} under their town hall` : 'Every base matches theirs or better'}
+                </span>
+              </>
             ) : (
-              <span className="text-[13px] font-semibold text-muted">{over ? `${war.pairs.filter((p) => p.them?.best === 3).length} of ${war.team_size} bases three-starred` : 'Preparation day'}</span>
+              <span className="text-[13px] font-semibold text-muted">{war.pairs.filter((p) => p.them?.best === 3).length} of {war.team_size} bases three-starred</span>
             )}
         </div>
-        <div aria-label="Key" className={`${KEY_ROW} border-b border-hair px-3 py-2`}>
+        {!prep && <div aria-label="Key" className={`${KEY_ROW} border-b border-hair px-3 py-2`}>
           {live && <>
             <span className="flex items-center gap-1.5"><span className="size-2 rounded-full border-[1.5px] border-[#A3957C]" />Attack left</span>
             <span className="flex items-center gap-1.5"><span className="size-2 rounded-full bg-[#16A34A]" />Used</span>
           </>}
           <span className="flex items-center gap-1.5"><span className="text-gold">★</span>Best on this base</span>
-        </div>
+        </div>}
         <ol className="m-0 list-none px-1.5 py-1">
           {rows.map((p, i) => (
             <Fragment key={p.position}>
-              <li className={`grid grid-cols-[minmax(0,1fr)_18px_minmax(0,1fr)] items-center gap-0.5 ${i ? 'border-t border-hair' : ''}`}>
-                <Base b={p.us} live={live} picked={!!p.us && p.us.tag === picked} onPick={() => toggle(p.us?.tag)} />
+              <li className={`grid grid-cols-[minmax(0,1fr)_18px_minmax(0,1fr)] items-center gap-0.5 ${i ? 'border-t border-hair' : ''} ${prep ? 'ff-rise' : ''}`} style={prep ? { animationDelay: `${i * 30}ms` } : undefined}>
+                <Base b={p.us} live={live} prep={prep} picked={!!p.us && p.us.tag === picked} onPick={() => toggle(p.us?.tag)} />
                 <span className="text-center text-[11px] font-bold tabular-nums text-faint">{p.position}</span>
-                <Base b={p.them} right live={live} picked={!!p.them && p.them.tag === picked} onPick={() => toggle(p.them?.tag)} />
+                <Base b={p.them} right live={live} prep={prep} picked={!!p.them && p.them.tag === picked} onPick={() => toggle(p.them?.tag)} />
               </li>
               {!sideBySide && picked && (p.us?.tag === picked || p.them?.tag === picked) && (
                 <li ref={opened} className="mb-1.5 scroll-mb-[72px] overflow-hidden rounded-xl border border-line bg-white">
