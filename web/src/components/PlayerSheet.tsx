@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { type ReactNode, useEffect, useRef, useState } from 'react'
 import { loadPlayer, loadPlayerCard, type PlayerCard } from '../data'
 import { ago } from '../leaders'
 import { useYou } from './You'
@@ -7,6 +7,33 @@ import type { Player, Roster } from '../types'
 import { Arrow, PlayDays, Stars, StatusPill, Th, UnitIcon } from './ui'
 
 const BADGE_ICON: Record<string, string> = { sharpshooter: '🎯', never_misses: '✅', wall: '🛡️', giant_slayer: '⚔️', top_donor: '🎁', maxed_heroes: '👑' }
+
+// The card's one section: a small heading, with an optional note on the right.
+function Section({ title, note, children }: { title: string; note?: string | null; children: ReactNode }) {
+  return (
+    <section aria-label={title} className="flex flex-col gap-1.5">
+      <div className="flex items-baseline justify-between gap-2">
+        <span className="text-xs font-bold uppercase tracking-[0.06em] text-faint">{title}</span>
+        {note && <span className="truncate text-xs text-faint">{note}</span>}
+      </div>
+      {children}
+    </section>
+  )
+}
+
+// The card's one tile.
+function Stat({ label, value, sub }: { label: string; value: ReactNode; sub?: string }) {
+  return (
+    <div className="flex min-w-0 flex-col gap-0.5 rounded-xl border border-line px-2.5 py-2">
+      <span className="truncate text-[11px] text-faint">{label}</span>
+      <span className="truncate text-[17px] font-bold leading-tight tabular-nums">{value}</span>
+      {sub && <span className="truncate text-[11px] font-semibold text-faint">{sub}</span>}
+    </div>
+  )
+}
+
+const LIST = 'm-0 flex list-none flex-col rounded-xl border border-line p-0'
+const num = (v: number | null | undefined) => (v === null || v === undefined ? '—' : v >= 1_000_000 ? `${(v / 1_000_000).toFixed(1)}M` : v.toLocaleString('en-GB'))
 
 function Trend({ p, cycles }: { p: Player; cycles: string[] }) {
   const pts = cycles.map((c) => ({ c, s: p.history.find((h) => h.cycle === c)?.score ?? null }))
@@ -28,8 +55,7 @@ function Trend({ p, cycles }: { p: Player; cycles: string[] }) {
   const label = pts.map((pt) => `${cycleLong(pt.c)} ${fmtScore(pt.s)}`).join(', ')
 
   return (
-    <div className="flex flex-col gap-2">
-      <span className="text-sm font-bold">Score by cycle</span>
+    <Section title="Score by cycle">
       <svg role="img" aria-label={`Score by cycle: ${label}`} viewBox="-8 -12 366 130" className="h-auto w-full overflow-visible">
         <line x1="0" y1={H} x2={W} y2={H} stroke="#EEF1F6" />
         {runs.map((r) => <polyline key={r} points={r} fill="none" stroke={accent} strokeWidth="3" strokeLinejoin="round" strokeLinecap="round" />)}
@@ -46,7 +72,7 @@ function Trend({ p, cycles }: { p: Player; cycles: string[] }) {
             textAnchor={i === 0 ? 'start' : i === pts.length - 1 ? 'end' : 'middle'}>{cycleShort(pt.c)}</text>
         ))}
       </svg>
-    </div>
+    </Section>
   )
 }
 
@@ -94,7 +120,15 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
           {p && <Th th={p.th} size="lg" />}
           <div className="flex min-w-0 flex-auto flex-col">
             <span className="font-display truncate text-[26px] leading-tight">{p?.name ?? 'Not on the roster'}</span>
-            <span className="truncate text-[13px] text-faint">{tag}{p ? ` · ${where}` : ''}</span>
+            <span className="flex min-w-0 items-center gap-2 text-[13px] text-faint">
+              <span className="min-w-0 truncate">{p ? where : tag}</span>
+              {p && (
+                <button type="button" onClick={() => (isMine ? removeYou(tag) : addYou(tag))}
+                  className={`flex-none cursor-pointer whitespace-nowrap rounded-md border-0 px-1.5 py-px text-[11px] font-bold ${isMine ? 'bg-ink text-white' : 'bg-[#EEF1F6] text-ink-2 hover:bg-well'}`}>
+                  {isMine ? 'You · undo' : yous.length ? 'Also me' : 'This is me'}
+                </button>
+              )}
+            </span>
           </div>
           <button ref={close} type="button" aria-label="Close" onClick={onClose}
             className="flex size-11 flex-none cursor-pointer items-center justify-center rounded-full border-0 bg-[#F1F4F9] text-muted hover:bg-well">
@@ -104,10 +138,6 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
 
         {p && c && (
           <>
-            <button type="button" onClick={() => (isMine ? removeYou(tag) : addYou(tag))}
-              className={`-mt-2 self-start cursor-pointer rounded-full border px-2.5 py-1 text-xs font-bold ${isMine ? 'border-ink bg-ink text-white' : 'border-line bg-white text-ink-2 hover:bg-page'}`}>
-              {isMine ? 'You · not me?' : yous.length ? 'This is also me' : 'This is me'}
-            </button>
             {p.inClan && p.inClan !== p.clan && (
               <div className="flex min-h-12 items-center gap-2 rounded-[14px] bg-[#EFF4FF] px-4 text-sm font-semibold text-action-deep">
                 <span className="flex-auto">Move before sign-up</span>
@@ -116,6 +146,27 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
                 <span className="font-bold" style={{ color: c.deep }}>{p.clan}</span>
               </div>
             )}
+            <div className="flex flex-col gap-3 rounded-2xl p-4" style={{ background: c.tint }}>
+              <div className="flex items-end justify-between gap-3">
+                <div className="flex flex-col">
+                  <span className="text-xs font-bold uppercase tracking-[0.06em]" style={{ color: c.label }}>Score</span>
+                  <span className="font-display text-5xl leading-none tabular-nums" style={{ color: c.deep }}>{fmtScore(p.score)}</span>
+                </div>
+                <div className="flex flex-col items-end gap-1">
+                  <StatusPill status={p.status} className="!px-2.5 !py-[3px] !text-xs !font-bold" />
+                  {p.rank && <span className="text-[13px] font-semibold text-muted">#{p.rank} in the family</span>}
+                  {p.attackScore != null && p.defenceScore != null && (
+                    <span className="text-xs font-semibold tabular-nums text-muted">Attack {p.attackScore.toFixed(1)} + Defence {p.defenceScore.toFixed(1)}</span>
+                  )}
+                </div>
+              </div>
+              {p.days && (
+                <div className="flex items-center justify-between gap-2 border-t pt-2.5" style={{ borderColor: 'rgba(15,23,42,.08)' }}>
+                  <span className="text-[13px] font-semibold text-muted">CWL days</span>
+                  <PlayDays days={p.days} clan={p.clan} size={22} />
+                </div>
+              )}
+            </div>
             {card?.badges?.length ? (
               <ul aria-label="Badges" className="m-0 flex list-none flex-wrap gap-1.5 p-0">
                 {card.badges.map((b) => (
@@ -125,64 +176,31 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
                 ))}
               </ul>
             ) : null}
-            {p.days && (
-              <div className="flex min-h-12 items-center justify-between gap-2 rounded-[14px] border border-line px-4">
-                <span className="text-sm font-semibold text-muted">CWL days</span>
-                <PlayDays days={p.days} clan={p.clan} size={24} />
-              </div>
-            )}
-            <div className="flex items-end justify-between rounded-2xl p-4" style={{ background: c.tint }}>
-              <div className="flex flex-col">
-                <span className="text-xs font-bold uppercase tracking-[0.06em]" style={{ color: c.label }}>Score</span>
-                <span className="font-display text-5xl leading-none tabular-nums" style={{ color: c.deep }}>{fmtScore(p.score)}</span>
-              </div>
-              <div className="flex flex-col items-end gap-1.5">
-                <StatusPill status={p.status} className="!px-2.5 !py-[3px] !text-xs !font-bold" />
-                {p.rank && <span className="text-[13px] font-semibold text-muted">#{p.rank} in the family</span>}
-                {p.attackScore != null && p.defenceScore != null && (
-                  <span className="text-xs font-semibold tabular-nums text-muted">Attack {p.attackScore.toFixed(1)} + Defence {p.defenceScore.toFixed(1)}</span>
-                )}
-              </div>
-            </div>
-            <div className="flex flex-col gap-1.5">
+            <Section title="War record" note={fmtWindow(roster.window)}>
               <div className="grid grid-cols-3 gap-2">
-                {[['Three stars', pct(p.threeStar)], ['Missed', pct(p.missPct)], ['Attacks', p.attacks ?? '—']].map(([k, v]) => (
-                  <div key={k} className="flex flex-col gap-0.5 rounded-xl border border-line p-3">
-                    <span className="text-xs text-faint">{k}</span>
-                    <span className="text-[19px] font-bold tabular-nums">{v}</span>
-                  </div>
-                ))}
+                <Stat label="Three stars" value={pct(p.threeStar)} />
+                <Stat label="Missed" value={pct(p.missPct)} />
+                <Stat label="Attacks" value={p.attacks ?? '—'} />
+                {card && <>
+                  {card.streaks && <Stat label="3★ streak" value={<>{card.streaks.three_stars > 1 && <span aria-hidden="true">🔥 </span>}{card.streaks.three_stars}</>} sub={`best ${card.streaks.three_stars_best}`} />}
+                  {card.streaks && <Stat label="No-miss wars" value={card.streaks.clean_wars} sub="in a row" />}
+                  <Stat label="War stars" value={num(card.war_stars)} sub="all time" />
+                </>}
               </div>
-              {roster.window && <span className="text-xs text-faint">{fmtWindow(roster.window)}</span>}
-            </div>
-            {card?.streaks && (card.streaks.three_stars > 1 || card.streaks.three_stars_best > 1 || card.streaks.clean_wars > 0) && (
-              <div className="grid grid-cols-2 gap-2">
-                <div className="flex flex-col gap-0.5 rounded-xl border border-line p-3">
-                  <span className="text-xs text-faint">3★ streak</span>
-                  <span className="flex items-baseline gap-1.5 text-[19px] font-bold tabular-nums">
-                    {card.streaks.three_stars > 1 && <span aria-hidden="true">🔥</span>}{card.streaks.three_stars}
-                    <span className="text-xs font-semibold text-faint">best {card.streaks.three_stars_best}</span>
-                  </span>
-                </div>
-                <div className="flex flex-col gap-0.5 rounded-xl border border-line p-3">
-                  <span className="text-xs text-faint">Wars with no miss</span>
-                  <span className="text-[19px] font-bold tabular-nums">{card.streaks.clean_wars}</span>
-                </div>
-              </div>
-            )}
+            </Section>
+            <Trend p={p} cycles={roster.cycles} />
             {card && card.heroes.length > 0 && (
-              <section aria-label="Heroes and gear" className="flex flex-col gap-1.5">
-                <span className="text-xs font-bold uppercase tracking-[0.06em] text-faint">Heroes and gear</span>
-                <ul className="m-0 flex list-none flex-col rounded-xl border border-line p-0">
+              <Section title="Heroes and gear">
+                <ul className={LIST}>
                   {card.heroes.map((h, i) => (
                     <li key={h.name} className={`flex items-center gap-2 px-3 py-1.5 ${i ? 'border-t border-hair' : ''}`}>
                       <span title={h.name} className="flex flex-none items-center gap-1.5">
-                        <UnitIcon name={h.name} size={34} />
+                        <UnitIcon name={h.name} size={32} />
                         <span className={`w-[52px] text-xs font-bold tabular-nums ${h.max && h.level >= h.max ? 'text-gold' : 'text-ink-2'}`}>{h.level}{h.max ? <span className="font-semibold text-faint">/{h.max}</span> : null}</span>
                       </span>
                       <span className="ml-auto flex items-center gap-2.5">
                         {h.gear?.map((g) => (
-                          <span key={g.name} title={g.name} className="flex items-center gap-1">
+                          <span key={g.name} title={g.name} className="flex w-[52px] items-center gap-1">
                             <UnitIcon name={g.name} size={28} />
                             <span className={`text-[11px] font-bold tabular-nums ${g.max && g.level >= g.max ? 'text-gold' : 'text-muted'}`}>{g.level}</span>
                           </span>
@@ -191,14 +209,13 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
                     </li>
                   ))}
                 </ul>
-              </section>
+              </Section>
             )}
             {card && card.attacks.length > 0 && (
-              <section aria-label="Latest attacks" className="flex flex-col gap-1.5">
-                <span className="text-xs font-bold uppercase tracking-[0.06em] text-faint">Latest attacks</span>
-                <ul className="m-0 flex list-none flex-col rounded-xl border border-line p-0">
-                  {card.attacks.map((a, i) => (
-                    <li key={i} className={`flex items-center gap-2 px-3 py-2 ${i ? 'border-t border-hair' : ''}`}>
+              <Section title="Latest attacks">
+                <ul className={LIST}>
+                  {card.attacks.slice(0, 5).map((a, i) => (
+                    <li key={i} className={`flex items-center gap-2 px-3 py-1.5 ${i ? 'border-t border-hair' : ''}`}>
                       <Th th={a.target_th} />
                       <span className="flex min-w-0 flex-auto flex-col">
                         <span className="truncate text-[13px] font-semibold text-ink">{a.target ?? 'Unknown'}</span>
@@ -209,33 +226,32 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
                     </li>
                   ))}
                 </ul>
-              </section>
+              </Section>
             )}
             {card && card.upgrades.length > 0 && (
-              <section aria-label="Latest upgrades" className="flex flex-col gap-1.5">
-                <span className="text-xs font-bold uppercase tracking-[0.06em] text-faint">Latest upgrades</span>
-                <ul className="m-0 flex list-none flex-col gap-1 p-0">
-                  {card.upgrades.map((u) => (
-                    <li key={`${u.unit}-${u.to}`} className="flex items-center gap-2 text-[13px]">
-                      <UnitIcon name={u.unit} size={24} />
-                      <span className="min-w-0 flex-auto truncate font-semibold text-ink-2">{u.unit} <span className="font-bold tabular-nums text-faint">{u.from} → {u.to}</span></span>
-                      <span className="flex-none text-xs text-faint">{ago(u.at)}</span>
+              <Section title="Latest upgrades">
+                <ul className={LIST}>
+                  {card.upgrades.slice(0, 4).map((u, i) => (
+                    <li key={`${u.unit}-${u.to}`} className={`flex items-center gap-2 px-3 py-1.5 text-[13px] ${i ? 'border-t border-hair' : ''}`}>
+                      <UnitIcon name={u.unit} size={26} />
+                      <span className="min-w-0 flex-auto truncate font-semibold text-ink">{u.unit}</span>
+                      <span className="flex-none text-xs font-bold tabular-nums text-ink-2">{u.from} → {u.to}</span>
+                      <span className="w-14 flex-none text-right text-[11px] text-faint">{ago(u.at)}</span>
                     </li>
                   ))}
                 </ul>
-              </section>
+              </Section>
             )}
             {card && (
-              <div className="grid grid-cols-2 gap-2">
-                {([['Donated this season', card.donations], ['Received this season', card.donations_received], ['War stars, lifetime', card.war_stars], ['Capital, lifetime', card.capital]] as const).map(([k, v]) => (
-                  <div key={k} className="flex flex-col gap-0.5 rounded-xl border border-line p-3">
-                    <span className="text-xs text-faint">{k}</span>
-                    <span className="text-[17px] font-bold tabular-nums">{v === null ? '—' : v.toLocaleString('en-GB')}</span>
-                  </div>
-                ))}
-              </div>
+              <Section title="Giving">
+                <div className="grid grid-cols-3 gap-2">
+                  <Stat label="Donated" value={num(card.donations)} sub="this season" />
+                  <Stat label="Received" value={num(card.donations_received)} sub="this season" />
+                  <Stat label="Capital" value={num(card.capital)} sub="all time" />
+                </div>
+              </Section>
             )}
-            <Trend p={p} cycles={roster.cycles} />
+            <span className="text-center text-xs text-faint">{tag}</span>
           </>
         )}
       </section>
