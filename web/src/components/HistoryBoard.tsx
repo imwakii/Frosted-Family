@@ -21,7 +21,7 @@ type History = {
 // Checked with the colourblind validator on white: Cake's deep blue beside these lighter Fire and Flakes.
 const BAR: Record<ClanName, string> = { Fire: '#E8703A', Cake: '#1D5FB0', Flakes: '#8B7BEB' }
 const fullDate = (d: string) => new Date(`${d}T00:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' })
-const LONGEST_SHOWN = 15
+const LONGEST_SHOWN = 10
 // How long since a date, to the month; under a month, in days.
 function tenure(since: string, now = Date.now()) {
   const from = new Date(`${since}T00:00:00Z`), to = new Date(now)
@@ -118,7 +118,8 @@ export default function HistoryBoard({ wide }: { wide: boolean }) {
       </div>
 
       <Section title="Longest in the family" note="Current members">
-        <ol className="m-0 list-none rounded-2xl border border-line bg-white py-1">
+        {/* The full list scrolls in place, so opening it leaves the page where it is. */}
+        <ol className={`m-0 list-none rounded-2xl border border-line bg-white py-1 ${showAll ? 'max-h-[530px] overflow-y-auto overscroll-contain' : ''}`}>
           {longest.map((r, i) => (
             <li key={r.tag}>
               <a href={playerHref(r.tag)} className={`flex min-h-[52px] items-center gap-2.5 px-3.5 py-1.5 text-ink no-underline hover:bg-hover ${i ? 'border-t border-hair' : ''}`}>
