@@ -6,7 +6,7 @@ import { go } from '../route'
 import { CLAN } from '../theme'
 import type { ClanName, Roster } from '../types'
 import { clanFacts } from './CwlTab'
-import { ClanBadge, DayRow, Eyebrow, LeaguePill } from './ui'
+import { ClanBadge, DayRow, dayWon, Eyebrow, LeaguePill, RowChevron } from './ui'
 
 // A clan's card, as a player has one: its size and place, how strong it is at war, its town halls and this CWL so far.
 
@@ -124,6 +124,21 @@ export default function ClanSheet({ clan, roster, wide, onClose }: { clan: ClanN
           <section aria-label="This CWL" className="flex flex-col gap-1.5">
             <Eyebrow>This CWL</Eyebrow>
             <DayRow days={group.days} pick={null} onPick={(d) => { setWarClan(clan); setDayPick(d); go.to('#/war') }} drawnOnly />
+          </section>
+        )}
+
+        {group?.before && (
+          <section aria-label="Before CWL" className="flex flex-col gap-1.5">
+            <Eyebrow>Before CWL</Eyebrow>
+            <button type="button" onClick={() => { setWarClan(clan); setDayPick(0); go.to('#/war') }}
+              className="flex min-h-11 w-full cursor-pointer items-center gap-2 rounded-xl border-0 bg-[#F6EEDC] px-3 text-left text-sm font-semibold text-ink hover:bg-well">
+              <ClanBadge src={group.before.opponent_badge} size={24} />
+              <bdi className="min-w-0 flex-auto truncate">{group.before.opponent}</bdi>
+              <span className={`flex-none text-[13px] font-bold tabular-nums ${dayWon(group.before) === false ? 'text-[#B91C1C]' : dayWon(group.before) ? 'text-[#15803D]' : 'text-ink-2'}`}>
+                {dayWon(group.before) === null ? 'Draw' : dayWon(group.before) ? 'Won' : 'Lost'} {group.before.stars}–{group.before.opponent_stars}
+              </span>
+              <RowChevron />
+            </button>
           </section>
         )}
 

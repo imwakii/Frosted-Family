@@ -235,7 +235,7 @@ export function WarBoard({ clan, war, now, roster }: { clan: ClanName; war: Clan
           <span className="text-center text-[11px] font-semibold text-faint">Updated {ago(war.updated_at, now)}</span>
         </div>
         {over && war.recap && <WarRecap clan={clan} war={war} result={draw ? 'Draw' : won ? 'Won' : 'Lost'} recap={war.recap} />}
-        {(!prep || mine) && <div className="flex min-h-[53px] items-center gap-2 border-b border-hair px-3 py-2">
+        {!prep && <div className="flex min-h-[53px] items-center gap-2 border-b border-hair px-3 py-2">
             {live ? (
               <>
                 {mine && (
@@ -247,14 +247,6 @@ export function WarBoard({ clan, war, now, roster }: { clan: ClanName; war: Clan
                   className={`ml-auto min-h-9 cursor-pointer rounded-full border px-3 text-[13px] font-bold disabled:cursor-default disabled:opacity-50 ${openOnly ? 'border-ink bg-ink text-white' : 'border-line bg-white text-ink-2 hover:bg-page'}`}>
                   Open bases {open.length}
                 </button>
-              </>
-            ) : prep ? (
-              <>
-                {mine && (
-                  <button type="button" onClick={() => toggle(mine.tag)} className="min-h-9 flex-none cursor-pointer rounded-full border-0 bg-[#F7E8BC] px-3 text-[13px] font-bold text-[#92400E]">
-                    You: base {mine.position}
-                  </button>
-                )}
               </>
             ) : (
               <span className="text-[13px] font-semibold text-muted">{war.pairs.filter((p) => p.them?.best === 3).length} of {war.team_size} bases three-starred</span>
@@ -371,7 +363,7 @@ export default function WarTab({ wide, roster }: { wide: boolean; roster: Roster
         <div className="rounded-2xl border border-line bg-white px-6 py-14 text-center text-sm font-semibold text-faint">No war on</div>
       ) : (
         <>
-          {onCwl && <DayRow days={days} last={before} pick={picked ?? clan.war!.day ?? null} onPick={setDayPick} drawnOnly />}
+          {onCwl && <DayRow days={days} pick={picked ?? clan.war!.day ?? null} onPick={setDayPick} drawnOnly />}
           {nearby ? <WarBoard key={nearby.war_key} clan={clan.clan} war={nearby} now={now} roster={roster} /> : other ? <OtherDay clan={clan.clan} warKey={other.war_key} now={now} roster={roster} /> : null}
         </>
       )}

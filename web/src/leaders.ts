@@ -157,7 +157,8 @@ function usePolled<T>(key: string, load: () => Promise<T | null>) {
   return state
 }
 
-// The CWL day picked on War or Lineups: both stay on it. null follows the day being fought; 'all' is Lineups' roster.
+// The CWL day picked on War or Lineups: both stay on it. null follows the day being fought; 'all' is Lineups' roster;
+// 0 is the war before CWL, opened from a clan card.
 let dayPick: number | 'all' | null = null
 const dayListeners = new Set<() => void>()
 const onDayPick = (run: () => void) => { dayListeners.add(run); return () => { dayListeners.delete(run) } }
