@@ -122,7 +122,31 @@ def test_strength_averages_the_15_strongest_one_clan_a_pass(tmp_path):
     assert api.calls == 17  # nothing due until tomorrow
 
 
-def test_a_day_is_served_only_for_a_cwl_war_of_that_clan(tmp_path):
+def test_before_is_the_regular_war_just_ahead_of_the_first_day(tmp_path):
+    conn = db.connect(tmp_path / "x.db")
+    setup(conn, [])
+    side = lambda tag, stars=0: {"tag": tag, "name": tag, "stars": stars, "destructionPercentage": 0, "attacks": 0, "members": []}
+    def stored(kind, start, opp, stars=0, **kw):
+        w = {"state": "warEnded", "teamSize": 15, "preparationStartTime": f"202611{start}T000000.000Z", "startTime": f"202611{start}T120000.000Z",
+             "endTime": f"202611{start}T235900.000Z", "clan": side(FIRE, stars), "opponent": side(opp)}
+        db.upsert_war(conn, w, kind=kind, **kw)
+    stored("regular", "01", "#OLD")
+    stored("regular", "02", "#LAST", stars=40)
+    stored("cwl", "03", "#B", war_tag="#D1", season="2026-11-02", round_no=1)
+    stored("regular", "04", "#AFTER")
+    g = war.group_view(conn, FIRE, NOW)
+    assert (g["before"]["opponent"], g["before"]["stars"], g["before"]["day"], g["before"]["state"]) == ("#LAST", 40, 0, "warEnded")
+    assert war.cwl_day(conn, "Fire", g["before"]["war_key"], NOW)["opponent"] == "#LAST"
+    assert war.cwl_day(conn, "Cake", g["before"]["war_key"], NOW) is None
+
+
+def test_no_cwl_war_yet_means_no_war_before(tmp_path):
+    conn = db.connect(tmp_path / "x.db")
+    setup(conn, [])
+    assert war.group_view(conn, FIRE, NOW)["before"] is None
+
+
+def test_a_day_is_served_only_for_a_war_of_that_clan(tmp_path):
     conn = db.connect(tmp_path / "x.db")
     side = lambda tag: {"tag": tag, "name": tag, "stars": 0, "destructionPercentage": 0, "attacks": 0, "members": []}
     w = {"state": "inWar", "teamSize": 15, "preparationStartTime": "20261103T000000.000Z", "startTime": "20261104T000000.000Z",

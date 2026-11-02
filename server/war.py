@@ -161,6 +161,14 @@ def eight_stars(conn, clan_tag: str, season: str) -> list[dict]:
     return [dict(r) for r in rows]
 
 
+def day_facts(conn, w, clan_tag: str, now_s: str) -> dict:
+    us, them = ("clan", "opponent") if w["clan_tag"] == clan_tag else ("opponent", "clan")
+    over = w["state"] == "warEnded" or bool(w["end_time"] and w["end_time"][:15] < now_s)
+    return {"day": w["round"] or 0, "war_key": w["war_key"], "state": "warEnded" if over else w["state"], "opponent": w[f"{them}_name"],
+            "opponent_badge": badge_of(conn, w[f"{them}_tag"]), "stars": w[f"{us}_stars"], "opponent_stars": w[f"{them}_stars"],
+            "destruction": w[f"{us}_destruction"], "opponent_destruction": w[f"{them}_destruction"]}
+
+
 def group_view(conn, clan_tag: str, now: datetime) -> dict | None:
     latest = conn.execute("SELECT MAX(season) FROM cwl_group_clans WHERE our_clan_tag=?", (clan_tag,)).fetchone()[0]
     if not latest:
@@ -170,18 +178,19 @@ def group_view(conn, clan_tag: str, now: datetime) -> dict | None:
     marks = ",".join("?" * len(tags))
     wars = conn.execute(f"SELECT * FROM cwl_group_wars WHERE season=? AND clan_tag IN ({marks})", (latest, *tags)).fetchall()
     now_s = stamp(now)
-    days = []
-    for w in conn.execute("SELECT * FROM wars WHERE kind='cwl' AND season=? AND ? IN (clan_tag, opponent_tag) ORDER BY round", (latest, clan_tag)):
-        us, them = ("clan", "opponent") if w["clan_tag"] == clan_tag else ("opponent", "clan")
-        over = w["state"] == "warEnded" or bool(w["end_time"] and w["end_time"][:15] < now_s)
-        days.append({"day": w["round"], "war_key": w["war_key"], "state": "warEnded" if over else w["state"], "opponent": w[f"{them}_name"],
-                     "opponent_badge": badge_of(conn, w[f"{them}_tag"]), "stars": w[f"{us}_stars"], "opponent_stars": w[f"{them}_stars"],
-                     "destruction": w[f"{us}_destruction"], "opponent_destruction": w[f"{them}_destruction"]})
+    rounds = conn.execute("SELECT * FROM wars WHERE kind='cwl' AND season=? AND ? IN (clan_tag, opponent_tag) ORDER BY round", (latest, clan_tag)).fetchall()
+    days = [day_facts(conn, w, clan_tag, now_s) for w in rounds]
+    # The regular war that came just before this CWL's first.
+    first = min((w["preparation_start"] for w in rounds if w["preparation_start"]), default=None)
+    last = conn.execute(
+        """SELECT * FROM wars WHERE kind='regular' AND ? IN (clan_tag, opponent_tag) AND preparation_start<?
+           ORDER BY preparation_start DESC LIMIT 1""", (clan_tag, first)).fetchone() if first else None
     power = {r["clan_tag"]: r for r in conn.execute("SELECT * FROM cwl_group_strength WHERE season=? AND players>0", (latest,))}
     table = [{**r, "badge": badge_of(conn, r["tag"]), "ours": r["tag"] == clan_tag,
               "strength": {k: power[r["tag"]][k] for k in ("war_stars", "heroes", "equipment")} if r["tag"] in power else None}
              for r in group_table(clans, wars, now_s)]
-    return {"season": latest, "table": table, "days": days, "eight": eight_stars(conn, clan_tag, latest)}
+    return {"season": latest, "table": table, "days": days, "before": day_facts(conn, last, clan_tag, now_s) if last else None,
+            "eight": eight_stars(conn, clan_tag, latest)}
 
 
 def cwl_groups(conn, now: datetime | None = None) -> dict:
@@ -190,9 +199,9 @@ def cwl_groups(conn, now: datetime | None = None) -> dict:
 
 
 def cwl_day(conn, clan: str, war_key: str, now: datetime | None = None) -> dict | None:
-    """One clan's CWL war by its key, for the day strip. Any other war is not served here."""
+    """One of a clan's wars by its key, for the day row: a CWL day or the war before them. Another clan's war is not served here."""
     tag = CLAN_TAGS.get(clan)
-    w = conn.execute("SELECT * FROM wars WHERE war_key=? AND kind='cwl' AND ? IN (clan_tag, opponent_tag)", (war_key, tag)).fetchone() if conn and tag else None
+    w = conn.execute("SELECT * FROM wars WHERE war_key=? AND ? IN (clan_tag, opponent_tag)", (war_key, tag)).fetchone() if conn and tag else None
     if not w:
         return None
     over = w["state"] == "warEnded" or bool(w["end_time"] and w["end_time"][:15] < stamp(now or datetime.now(timezone.utc)))

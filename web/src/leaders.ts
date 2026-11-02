@@ -139,7 +139,7 @@ export const loadWarBoard = () => getJson<{ clans: { clan: ClanName; war: ClanWa
 export type CwlRow = { tag: string; name: string; badge: string | null; ours: boolean; stars: number; destruction: number; won: number; lost: number; town_halls: number[]; strength: { war_stars: number; heroes: number; equipment: number } | null }
 export type CwlDay = { day: number; war_key: string; state: string; opponent: string; opponent_badge: string | null; stars: number; opponent_stars: number; destruction: number; opponent_destruction: number }
 export type EightRow = { tag: string; name: string; th: number | null; played: number; stars: number }
-export type CwlGroup = { season: string; table: CwlRow[]; days: CwlDay[]; eight: EightRow[] }
+export type CwlGroup = { season: string; table: CwlRow[]; days: CwlDay[]; before?: CwlDay | null; eight: EightRow[] }
 const loadCwlGroups = () => getJson<{ clans: { clan: ClanName; group: CwlGroup | null }[] }>('/api/war/cwl')
 
 // Fetched on opening and every minute, keeping the last answer through a failed fetch.

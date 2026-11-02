@@ -165,27 +165,27 @@ type DayFacts = { day: number; state: string; stars: number; opponent_stars: num
 
 const dayWon = (d: DayFacts) => (d.stars !== d.opponent_stars ? d.stars > d.opponent_stars : d.destruction !== d.opponent_destruction ? d.destruction > d.opponent_destruction : null)
 
-/** The seven CWL days, the same row on War and Lineups: each day's result once it has one. */
-export function DayRow({ days = [], pick, onPick, live = 0, roster, drawnOnly }: {
-  days?: DayFacts[]; pick: number | 'all' | null; onPick: (d: number | 'all') => void; live?: number; roster?: boolean; drawnOnly?: boolean
+/** The seven CWL days, the same row on War and Lineups: each day's result once it has one. War puts the war before them first, as day 0. */
+export function DayRow({ days = [], last, pick, onPick, live = 0, roster, drawnOnly }: {
+  days?: DayFacts[]; last?: DayFacts | null; pick: number | 'all' | null; onPick: (d: number | 'all') => void; live?: number; roster?: boolean; drawnOnly?: boolean
 }) {
   const cell = 'relative flex min-h-[46px] min-w-0 cursor-pointer flex-col items-center justify-center rounded-[9px] border-0 tabular-nums disabled:cursor-default disabled:opacity-40'
   const ring = 'shadow-[inset_0_0_0_2px_var(--color-ink)]'
   return (
-    <nav aria-label="CWL day" className={`grid w-full max-w-[480px] gap-1 rounded-xl bg-well p-1 ${roster ? 'grid-cols-[1.7fr_repeat(7,1fr)]' : 'grid-cols-7'}`}>
+    <nav aria-label="CWL day" className={`grid w-full max-w-[480px] gap-1 rounded-xl bg-well p-1 ${roster ? 'grid-cols-[1.7fr_repeat(7,1fr)]' : last ? 'grid-cols-[1.25fr_repeat(7,1fr)]' : 'grid-cols-7'}`}>
       {roster && (
         <button type="button" aria-pressed={pick === 'all'} onClick={() => onPick('all')}
           className={`${cell} text-[13px] font-bold ${pick === 'all' ? `bg-white text-ink ${ring}` : 'bg-transparent text-muted'}`}>Roster</button>
       )}
-      {[1, 2, 3, 4, 5, 6, 7].map((n) => {
-        const d = days.find((x) => x.day === n)
+      {[...(last ? [0] : []), 1, 2, 3, 4, 5, 6, 7].map((n) => {
+        const d = n ? days.find((x) => x.day === n) : last
         const over = d?.state === 'warEnded', fighting = d?.state === 'inWar' || (!d && n === live)
         const won = d && over ? dayWon(d) : null
         const background = over ? (won === true ? '#DCEFD5' : won === false ? '#F8D5CF' : '#EFE6D2') : pick === n || fighting ? '#FFFBF1' : 'transparent'
         return (
-          <button key={n} type="button" aria-pressed={pick === n} aria-label={`Day ${n}`} disabled={drawnOnly && !d} onClick={() => onPick(n)}
+          <button key={n} type="button" aria-pressed={pick === n} aria-label={n ? `Day ${n}` : 'Last war'} disabled={drawnOnly && !d} onClick={() => onPick(n)}
             className={`${cell} ${pick === n ? ring : ''}`} style={{ background }}>
-            <span className={`text-sm font-bold leading-tight ${pick === n ? 'text-ink' : 'text-muted'}`}>{n}</span>
+            <span className={`text-sm font-bold leading-tight ${pick === n ? 'text-ink' : 'text-muted'} ${n ? '' : 'text-xs'}`}>{n || 'Last'}</span>
             {d && (over || fighting) && <span className={`text-[10px] font-bold leading-tight ${fighting ? 'text-[#15803D]' : 'text-ink-2'}`}>{d.stars}–{d.opponent_stars}</span>}
             {d?.state === 'preparation' && <span className="text-[10px] font-bold leading-tight text-[#B4451A]">Prep</span>}
             {fighting && <span className="ff-live absolute right-1 top-1 size-1.5 rounded bg-[#16A34A]" />}

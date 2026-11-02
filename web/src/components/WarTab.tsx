@@ -354,10 +354,12 @@ export default function WarTab({ wide, roster }: { wide: boolean; roster: Roster
   const dayPick = useDayPick()
   const onCwl = clan?.war?.kind === 'cwl'
   const fallback = clan ? [clan.war, clan.next].flatMap((w) => (w?.day ? [{ ...w, day: w.day, war_key: w.war_key ?? '' }] : [])) : []
-  const days = groups?.clans.find((c) => c.clan === clan?.clan)?.group?.days ?? fallback
-  const picked = onCwl && typeof dayPick === 'number' && days.some((d) => d.day === dayPick) ? dayPick : null
+  const group = groups?.clans.find((c) => c.clan === clan?.clan)?.group
+  const days = group?.days ?? fallback
+  const before = group?.before
+  const picked = onCwl && typeof dayPick === 'number' && (dayPick ? days.some((d) => d.day === dayPick) : !!before) ? dayPick : null
   const nearby = clan && (picked === null || picked === clan.war!.day ? clan.war! : picked === clan.next?.day ? clan.next : null)
-  const other = !nearby && days.find((d) => d.day === picked)
+  const other = !nearby && (picked === 0 ? before : days.find((d) => d.day === picked))
   return (
     <main className={wide ? 'mx-auto flex max-w-[1360px] flex-col gap-4 px-[clamp(16px,3vw,32px)] pb-12 pt-5' : 'flex flex-col gap-3 px-4 pb-6 pt-1'}>
       <ClanSwitch value={clan?.clan ?? 'Fire'} onPick={setWarClan}
@@ -369,7 +371,7 @@ export default function WarTab({ wide, roster }: { wide: boolean; roster: Roster
         <div className="rounded-2xl border border-line bg-white px-6 py-14 text-center text-sm font-semibold text-faint">No war on</div>
       ) : (
         <>
-          {onCwl && <DayRow days={days} pick={picked ?? clan.war!.day ?? null} onPick={setDayPick} drawnOnly />}
+          {onCwl && <DayRow days={days} last={before} pick={picked ?? clan.war!.day ?? null} onPick={setDayPick} drawnOnly />}
           {nearby ? <WarBoard key={nearby.war_key} clan={clan.clan} war={nearby} now={now} roster={roster} /> : other ? <OtherDay clan={clan.clan} warKey={other.war_key} now={now} roster={roster} /> : null}
         </>
       )}
