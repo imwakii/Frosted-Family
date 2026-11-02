@@ -19,7 +19,7 @@ row,tag,name,clan,cwl_slot,transferred_from,current_th,avg_war_th,attack_count,t
 18,#80YVU9J8U,shyla,Cake,CORE,,18,18.0,83.0,69.88,9.78,-0.06,62.86,28.37,91.22,False,False,False,False,,False,PROVEN
 19,#QV2V0JL8R,Death Eaters 3,Cake,CORE,,17,16.59,56.0,78.57,0.0,-0.27,77.51,13.2,90.71,False,False,False,False,,False,PROVEN
 20,#2YVPP8PL,Raspberri,Fire,CORE,,18,17.29,31.0,87.1,0.0,-1.26,81.61,7.82,89.43,False,False,False,False,,False,PROVEN
-21,#2VGQLPVP0,LOGAN,Fire,CORE,,18,17.47,60.0,75.0,0.0,-0.65,72.56,16.1,88.66,False,False,False,False,,False,PROVEN
+21,#2VGQLPVP0,LOGAN,Cake,CORE,Fire,18,17.47,60.0,75.0,0.0,-0.65,72.56,16.1,88.66,False,False,False,False,,False,PROVEN
 22,#YCPJ9UYG,Potetsalat,Fire,CORE,,18,18.0,88.0,79.55,8.33,-0.12,72.49,16.1,88.59,False,False,False,False,,False,PROVEN
 23,#PG9U0CV2J,Calpis,Fire,SUB,,18,18.0,35.0,80.0,23.91,-0.09,60.6,27.6,88.2,True,False,False,False,HIGH MISS,False,UNRELIABLE (HM)
 24,#V8VRQ2RV,Ale,Cake,SUB,,16,15.94,63.0,66.67,0.0,0.84,69.47,18.55,88.02,False,False,False,False,,False,PROVEN
@@ -30,11 +30,11 @@ row,tag,name,clan,cwl_slot,transferred_from,current_th,avg_war_th,attack_count,t
 29,#GJGCGVQYV,wamr,Cake,CORE,Fire,17,16.85,37.0,64.86,0.0,0.54,66.61,15.4,82.01,False,False,False,False,,False,PROVEN
 30,#20Q0V8LCL,Charlie,Fire,SUB,,18,18.0,55.0,76.36,12.7,-0.04,66.53,13.8,80.33,False,False,False,,,,PROVEN
 31,#89YC9R90Y,RedSky,Cake,CORE,,18,18.0,40.0,70.0,20.0,-0.02,55.94,23.77,79.71,False,False,False,,,,PROVEN
-32,#8YUYULG0V,Pulkit,Fire,SUB,,18,18.0,28.0,71.43,9.68,-0.04,64.39,13.42,77.8,False,False,False,False,,False,PROVEN
+32,#8YUYULG0V,Pulkit,Fire,CORE,,18,18.0,28.0,71.43,9.68,-0.04,64.39,13.42,77.8,False,False,False,False,,False,PROVEN
 33,#YJGG9LVJQ,Game Changer,Fire,CORE,,18,18.0,62.0,66.13,16.22,-0.06,55.24,22.23,77.47,False,False,False,False,,False,PROVEN
 34,#JQJUYLJR,JayDogg II,Fire,SUB,,17,16.24,36.0,83.33,14.29,-0.69,68.96,7.7,76.66,False,False,False,False,,True,PROVEN
 35,#J9V9GR,AstonishGaming,Fire,SUB,,18,18.0,69.0,66.67,16.87,-0.06,55.26,21.08,76.34,False,False,False,False,,False,PROVEN
-36,#QJPPV0GU8,Death Eaters 2,Cake,CORE,,17,17.0,60.0,63.33,4.76,-0.1,60.01,16.13,76.15,False,False,False,False,,False,PROVEN
+36,#QJPPV0GU8,Death Eaters 2,Cake,SUB,,17,17.0,60.0,63.33,4.76,-0.1,60.01,16.13,76.15,False,False,False,False,,False,PROVEN
 37,#28QP0RUL0,Brazy.,Fire,SUB,,18,18.0,55.0,81.82,23.61,-0.05,62.35,13.8,76.15,True,False,False,False,HIGH MISS,False,LAPSING
 38,#GR0V20YRY,DemonJuan,Flakes,Sitting Out,,14,14.0,45.0,55.56,2.17,0.4,55.44,16.78,72.22,False,False,False,False,,False,PROVEN
 40,#8PL0UCY2Y,Clowned Prince,Flakes,Sitting Out,,14,13.0,50.0,54.0,7.41,-0.54,48.65,17.42,66.07,False,False,False,False,,False,PROVEN
