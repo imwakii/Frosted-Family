@@ -22,7 +22,7 @@
 
 .font-display { font-weight: 400; letter-spacing: 0.01em; }
 
-html { background: var(--color-page); -webkit-text-size-adjust: 100%; }
+html { background: var(--color-page); -webkit-text-size-adjust: 100%; scrollbar-gutter: stable; }
 body { margin: 0; background: var(--color-page); color: var(--color-ink); font-family: var(--font-sans); }
 button, a, input, select { transition: background-color .15s ease, color .15s ease, box-shadow .15s ease, border-color .15s ease; }
 input[type="search"]:focus, select:focus-visible { outline: none; border-color: var(--color-action); box-shadow: 0 0 0 3px rgba(37, 99, 235, .15); }

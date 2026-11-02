@@ -65,4 +65,4 @@ export function takeSigninError(): 'denied' | 'failed' | null {
   return v
 }
 
-export const loginHref = () => `/api/auth/login?return_to=${encodeURIComponent('/#/leaders/builder')}`
+export const loginHref = () => `/api/auth/login?return_to=${encodeURIComponent('/#/plan/builder')}`

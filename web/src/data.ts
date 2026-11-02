@@ -182,7 +182,6 @@ export function useWide(query = '(min-width: 768px)') {
 
 // Writes under /plan and /auth/logout need the CSRF token from /auth/me.
 export type PlanMove = { tag: string; clan: ClanName; slot: Slot }
-export type Draft = { moves: PlanMove[]; updated_at?: string | null; updated_by?: string | null }
 
 const send = <T,>(url: string, method: string, csrf: string | null, body?: unknown) =>
   getJson<T>(url, {
@@ -192,8 +191,6 @@ const send = <T,>(url: string, method: string, csrf: string | null, body?: unkno
     body: body === undefined ? undefined : JSON.stringify(body),
   })
 
-export const getDraft = () => getJson<Draft>('/api/plan/draft', { credentials: 'same-origin' })
-export const saveDraft = (moves: PlanMove[], csrf: string | null) => send<Draft>('/api/plan/draft', 'PUT', csrf, { moves })
 export const checkPlan = (moves: PlanMove[], overrideValve: boolean, csrf: string | null) =>
   send<{ ok: boolean; problems: string[] }>('/api/plan/check', 'POST', csrf, { moves, ...(overrideValve ? { override_valve: true } : {}) })
 export const publishPlan = (moves: PlanMove[], overrideValve: boolean, csrf: string | null) =>
@@ -204,5 +201,21 @@ type DayClans = Partial<Record<'Fire' | 'Cake', ClanDays>>
 type DaySaved = { clans: DayClans; updated_at: string; updated_by: string | null }
 export type DayPlans = { season: string; draft: DaySaved | null; published: DaySaved | null; wars: Record<'Fire' | 'Cake', Wars>; upcoming?: Record<'Fire' | 'Cake', number[]> }
 export const getDays = () => getJson<DayPlans>('/api/plan/days', { credentials: 'same-origin' })
-export const saveDays = (season: string, clans: DayClans, csrf: string | null) => send<DayPlans>('/api/plan/days', 'PUT', csrf, { season, clans })
 export const publishDays = (season: string, clans: DayClans, csrf: string | null) => send<DayPlans>('/api/plan/days/publish', 'POST', csrf, { season, clans })
+
+// Leaders' proposals under /plan/proposals: one open per leader, readable by all, decided by the publisher.
+export type ProposalKind = 'days' | 'lineup'
+export type Proposal<B> = {
+  id: number; kind: ProposalKind; season: string; author: string; mine: boolean; body: B
+  status: 'open' | 'accepted' | 'rejected'; updated_at: string; decided_by: string | null; decided_at: string | null
+}
+export type DayBody = { clans: DayClans }
+export type LineupBody = { moves: PlanMove[] }
+export const getProposals = <B,>(kind: ProposalKind) =>
+  getJson<{ season: string; open: Proposal<B>[]; decided: Proposal<B>[] }>(`/api/plan/proposals?kind=${kind}`, { credentials: 'same-origin' })
+export const saveProposal = <B,>(kind: ProposalKind, season: string, body: B, csrf: string | null) =>
+  send<Proposal<B>>('/api/plan/proposals', 'PUT', csrf, { kind, season, body })
+export const withdrawProposal = (id: number, csrf: string | null) => send<{ ok: boolean }>(`/api/plan/proposals/${id}`, 'DELETE', csrf)
+export const acceptProposal = (id: number, override: boolean, csrf: string | null) =>
+  send<{ ok: boolean }>(`/api/plan/proposals/${id}/accept`, 'POST', csrf, { override_valve: override })
+export const rejectProposal = (id: number, csrf: string | null) => send<{ ok: boolean }>(`/api/plan/proposals/${id}/reject`, 'POST', csrf)

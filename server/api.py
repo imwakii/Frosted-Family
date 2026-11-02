@@ -29,7 +29,7 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException, Request
 
 from frosted.config import CLAN_TAGS, TAG_TO_CLAN
-from server import auth, days, db, leaders, members, plan, profiles, stats
+from server import auth, days, db, leaders, members, plan, profiles, proposals, stats
 
 DEFAULT_DB = "/opt/bots/frosted/data/frosted.db"
 ROSTER_FIELDS = ("tag", "name", "clan", "cwl_slot", "transferred_from", "tier", "final_score", "current_th", "flags")
@@ -225,6 +225,7 @@ def explore(board: str):
 app.include_router(auth.router)
 app.include_router(plan.router)
 app.include_router(days.router)
+app.include_router(proposals.router)
 app.include_router(leaders.router)
 
 

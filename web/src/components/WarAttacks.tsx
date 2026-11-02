@@ -79,7 +79,7 @@ function ClanCard({ c, now }: { c: ClanAttacks; now: number }) {
   )
 }
 
-/** Leaders → Attacks: who still has attacks in each clan's war, CWL or regular, refreshed every minute. */
+/** Plan → Attacks: who still has attacks in each clan's war, CWL or regular, refreshed every minute. */
 export default function WarAttacks({ wide }: { wide: boolean }) {
   const { data, loading, denied } = useAttacksLive()
   const [now, setNow] = useState(Date.now())

@@ -23,6 +23,18 @@ CREATE TABLE IF NOT EXISTS publishes (
     moves TEXT NOT NULL,              -- as submitted
     allocation TEXT NOT NULL          -- {tag: {clan, cwl_slot, transferred_from}} for every tagged player
 );
+CREATE TABLE IF NOT EXISTS proposals (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    kind TEXT NOT NULL,               -- 'days' or 'lineup'
+    season TEXT NOT NULL,             -- the CWL season for days; '' for lineup
+    author_id TEXT NOT NULL,
+    author_name TEXT,
+    body TEXT NOT NULL,
+    status TEXT NOT NULL,             -- open, accepted, rejected or withdrawn
+    updated_at TEXT NOT NULL,
+    decided_by TEXT,
+    decided_at TEXT
+);
 CREATE TABLE IF NOT EXISTS leaders (
     user_id TEXT PRIMARY KEY,
     name TEXT,

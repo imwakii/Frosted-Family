@@ -171,5 +171,11 @@ Keeping the league and promoting is the priority. In that order:
 5. Weakest of all, consecutive days are easier for members to remember. Between equal fits, once anyone who needs every
    day left for 8 stars is in, a player who played the day before stays in.
 
-Days whose war is on or over are fixed to the game's lineup. Fire and Cake leaders may edit and save the shared draft;
-only Ka Wai publishes, and members see their days on Lineups only once he has.
+Days whose war is on or over are fixed to the game's lineup. Members see their days on Lineups only once they are
+published.
+
+## Proposals
+
+Fire and Cake leaders each keep their own proposal, for the lineup builder and for the day planner, so nobody overwrites
+anyone. All leaders can read all of them and build their own from one. Only Ka Wai accepts or rejects; accepting
+publishes through the same rule checks as a direct publish (`server/proposals.py`).

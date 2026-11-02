@@ -193,6 +193,10 @@ def check(body: PublishBody, leader: Leader = Depends(require_leader_write)):
 
 @router.post("/publish")
 def publish(body: PublishBody, leader: Leader = Depends(require_publisher)):
+    return do_publish(body, leader)
+
+
+def do_publish(body: PublishBody, leader: Leader) -> dict:
     rows = live_rows()
     _, sha = read_csv()
     before, _ = apply_moves(rows, [])

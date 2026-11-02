@@ -189,6 +189,10 @@ def put_days(body: DayPlan, leader: Leader = Depends(require_discord_write)):
 
 @router.post("/publish")
 def publish_days(body: DayPlan, leader: Leader = Depends(require_publisher)):
+    return do_publish(body, leader)
+
+
+def do_publish(body: DayPlan, leader: Leader) -> dict:
     problems = check(body, plan.live_rows())
     if problems:
         raise HTTPException(422, {"problems": problems})

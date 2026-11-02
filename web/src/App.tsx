@@ -11,7 +11,7 @@ import { UtcClock } from './components/ui'
 const TABS = [
   { id: 'cwl', label: 'Lineups', href: '#/', icon: <path d="M4 6h16M4 12h16M4 18h10" /> },
   { id: 'explore', label: 'Stats', href: '#/stats/players', icon: <path d="M5 20V10M12 20V4M19 20v-7" /> },
-  { id: 'plan', label: 'Leaders', href: '#/leaders/builder', icon: <path d="M7 4v16M17 4v16M3 8h8M13 16h8" /> },
+  { id: 'plan', label: 'Plan', href: '#/plan/builder', icon: <path d="M7 4v16M17 4v16M3 8h8M13 16h8" /> },
 ] as const
 
 function Account({ me, onSignOut }: { me: Me; onSignOut: () => void }) {
@@ -46,7 +46,7 @@ export default function App() {
   const auth = useAuth()
   const [q, setQ] = useState('')
   const closeSheet = useCallback(() => go.closePlayer(), [])
-  // The live UTC clock; on Leaders a signed-in account sits beside it (in its place on phones).
+  // The live UTC clock; on Plan a signed-in account sits beside it (in its place on phones).
   const account = route.tab === 'plan' && auth.me.user ? <Account me={auth.me} onSignOut={auth.signOut} /> : null
   const corner = wide
     ? <span className="flex items-center gap-2"><UtcClock wide />{account}</span>

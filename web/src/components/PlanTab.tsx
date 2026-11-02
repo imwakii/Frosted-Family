@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import { loginHref, takeSigninError, type Me } from '../auth'
-import { checkPlan, getDraft, HttpError, publishPlan, saveDraft } from '../data'
+import { checkPlan, getProposals, HttpError, type LineupBody, type PlanMove, type Proposal, publishPlan, saveProposal, withdrawProposal } from '../data'
 import { CLAN, CLANS, GROUPS, coreAvg, fmtScore } from '../theme'
 import type { ClanName, Player, Roster, Slot } from '../types'
 import { useClans } from '../clash'
 import LeadersTools from './LeadersTools'
 import DayPlanner from './DayPlanner'
+import { ProposalBar, useProposals } from './Proposals'
 import WarAttacks from './WarAttacks'
 import { Arrow, ClanBadge, StatusDot, StatusKey, SubNav, Th } from './ui'
 
@@ -33,7 +34,7 @@ function readDraft(roster: Roster): Moves {
   } catch { return {} }
 }
 
-function PlanRow({ p, at, onPlace }: { p: Player; at: Place; onPlace: (v: Place) => void }) {
+function PlanRow({ p, at, onPlace, locked }: { p: Player; at: Place; onPlace: (v: Place) => void; locked: boolean }) {
   const moved = at.clan !== p.clan || at.slot !== p.slot
   const id = 'plan-' + p.tag.slice(1)
   return (
@@ -51,9 +52,9 @@ function PlanRow({ p, at, onPlace }: { p: Player; at: Place; onPlace: (v: Place)
       </span>
       <span className="w-[38px] flex-none text-right text-sm font-bold tabular-nums text-muted">{fmtScore(p.score)}</span>
       <label htmlFor={id} className="sr-only">Place {p.name}</label>
-      <select id={id} value={`${at.clan}|${at.slot}`}
+      <select id={id} value={`${at.clan}|${at.slot}`} disabled={locked}
         onChange={(e) => { const [clan, slot] = e.target.value.split('|') as [ClanName, Slot]; onPlace({ clan, slot }) }}
-        className="min-h-9 w-[92px] flex-none cursor-pointer rounded-lg border px-1 text-xs font-semibold text-ink-2">
+        className="min-h-9 w-[92px] flex-none cursor-pointer rounded-lg border px-1 text-xs font-semibold text-ink-2 disabled:cursor-default disabled:opacity-70">
         {at.slot === 'NEW' && <option value={`${at.clan}|NEW`}>New</option>}
         {clanOptions(at.clan).map((slot) => <option key={slot} value={`${at.clan}|${slot}`}>{at.clan === 'Flakes' ? 'In Flakes' : HERE[slot]}</option>)}
         <optgroup label="Move to…">
@@ -70,7 +71,18 @@ const toList = (m: Moves) => Object.entries(m).map(([tag, v]) => ({ tag, ...v })
 const sameMoves = (a: Moves, b: Moves) => JSON.stringify(toList(a)) === JSON.stringify(toList(b))
 
 function Plan({ roster, me }: { roster: Roster; me: Me }) {
-  const [moves, setMoves] = useState<Moves>(() => readDraft(roster))
+  const [mine, setMine] = useState<Moves>(() => readDraft(roster))
+  const proposals = useProposals<LineupBody>('lineup')
+  const [viewId, setViewId] = useState<number | null>(null)
+  const viewing = proposals.open.find((p) => p.id === viewId) ?? null
+  // A proposal's moves that still change anything on the current roster.
+  const toMoves = (list: PlanMove[]): Moves => {
+    const by = new Map(roster.players.map((p) => [p.tag, p]))
+    return Object.fromEntries(list.filter((m) => { const p = by.get(m.tag); return p && (p.clan !== m.clan || p.slot !== m.slot) })
+      .map((m) => [m.tag, { clan: m.clan, slot: m.slot }]))
+  }
+  // The board shows your own moves, or the proposal you have open.
+  const moves = viewing ? toMoves(viewing.body.moves) : mine
   const [saved, setSaved] = useState<{ moves: Moves; by: string | null } | null>(null)
   const [saving, setSaving] = useState(false)
   const [confirming, setConfirming] = useState(false)
@@ -81,30 +93,32 @@ function Plan({ roster, me }: { roster: Roster; me: Me }) {
   const [phoneClan, setPhoneClan] = useState<ClanName>('Fire')
   const clans = useClans()
 
-  useEffect(() => { try { localStorage.setItem(DRAFT_KEY, JSON.stringify(moves)) } catch { /* private mode */ } }, [moves])
+  useEffect(() => { try { localStorage.setItem(DRAFT_KEY, JSON.stringify(mine)) } catch { /* private mode */ } }, [mine])
 
-  // The shared draft on the server; it fills the board unless this browser has unsaved moves.
+  // Your proposal on the server; it fills the board unless this browser has unsaved moves.
   useEffect(() => {
-    const tags = new Set(roster.players.map((p) => p.tag))
-    getDraft().then((d) => {
-      const server: Moves = Object.fromEntries((d.moves ?? []).filter((m) => tags.has(m.tag)).map((m) => [m.tag, { clan: m.clan, slot: m.slot }]))
-      setSaved({ moves: server, by: d.updated_by ?? null })
-      setMoves((local) => (Object.keys(local).length ? local : server))
+    getProposals<LineupBody>('lineup').then((d) => {
+      const own = d.open.find((p) => p.mine)
+      const server = toMoves(own?.body.moves ?? [])
+      setSaved({ moves: server, by: own?.author ?? null })
+      setMine((local) => (Object.keys(local).length ? local : server))
     }).catch(() => setSaved(null))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roster])
 
   const save = async () => {
     setSaving(true)
     try {
-      const d = await saveDraft(toList(moves), me.csrf)
-      setSaved({ moves, by: d.updated_by ?? me.user?.name ?? null })
+      const d = await saveProposal('lineup', '', { moves: toList(mine) }, me.csrf)
+      setSaved({ moves: mine, by: d.author })
+      await proposals.reload()
     } catch {
-      setResult({ ok: false, n: 0, why: 'Draft not saved. Try again.' })
+      setResult({ ok: false, n: 0, why: 'Not proposed. Try again.' })
     } finally {
       setSaving(false)
     }
   }
-  const dirty = saved ? !sameMoves(moves, saved.moves) : Object.keys(moves).length > 0
+  const dirty = saved ? !sameMoves(mine, saved.moves) : Object.keys(mine).length > 0
   const canPublish = me.role === 'publisher'
   // Until sign-in is set up the board is open to anyone, but nothing is saved or published.
   // Saving and publishing wait for a Discord leader session.
@@ -113,8 +127,9 @@ function Plan({ roster, me }: { roster: Roster; me: Me }) {
 
   const at = (p: Player): Place => moves[p.tag] ?? { clan: p.clan, slot: p.slot }
   const place = (p: Player, v: Place) => {
+    if (viewing) return
     setResult(null)
-    setMoves((m) => {
+    setMine((m) => {
       const next = { ...m }
       if (v.clan === p.clan && v.slot === p.slot) delete next[p.tag]
       else next[p.tag] = v
@@ -183,8 +198,10 @@ function Plan({ roster, me }: { roster: Roster; me: Me }) {
     try {
       await publishPlan(list(), valveHit && override, me.csrf)
       setResult({ ok: true, n })
-      setMoves({})
+      setMine({})
       setSaved({ moves: {}, by: me.user?.name ?? null })
+      if (proposals.mine) await withdrawProposal(proposals.mine.id, me.csrf)
+      await proposals.reload()
     } catch (e) {
       const err = e instanceof HttpError ? e : null
       const why = err?.problems.length ? `Not published. ${err.problems.join('. ')}.`
@@ -204,17 +221,17 @@ function Plan({ roster, me }: { roster: Roster; me: Me }) {
         <div className="mx-auto flex max-w-[1360px] flex-wrap items-center gap-2 px-[clamp(16px,3vw,32px)] py-2.5 md:pt-5">
           <span className="rounded-full bg-[#EEF1F6] px-3 py-1.5 text-[13px] font-bold text-ink-2">{changeLabel}</span>
           <span className="flex-auto" />
-          {n > 0 && (
-            <button type="button" onClick={() => { setMoves({}); setResult(null) }}
+          {n > 0 && !viewing && (
+            <button type="button" onClick={() => { setMine({}); setResult(null) }}
               className="min-h-10 cursor-pointer rounded-[10px] border border-[#D5DBE5] bg-white px-3 text-sm font-semibold text-ink-2 hover:bg-page">
               Reset
             </button>
           )}
-          <button type="button" onClick={save} disabled={readOnly || !dirty || saving} title={readOnly ? lockedTip : undefined}
+          {!viewing && <button type="button" onClick={save} disabled={readOnly || !dirty || saving} title={readOnly ? lockedTip : undefined}
             className="min-h-10 cursor-pointer rounded-[10px] border border-[#D5DBE5] bg-white px-3 text-sm font-semibold text-ink-2 hover:bg-page disabled:cursor-default disabled:opacity-60">
-            {dirty || !saved ? 'Save' : 'Saved'}
-          </button>
-          {readOnly ? (
+            {dirty || !Object.keys(mine).length ? 'Propose' : 'Proposed'}
+          </button>}
+          {viewing ? null : readOnly ? (
             <button type="button" disabled title={lockedTip}
               className="min-h-10 cursor-not-allowed rounded-[10px] border-0 bg-[#E2E8F0] px-4 text-sm font-bold text-faint">
               Publish
@@ -236,6 +253,15 @@ function Plan({ roster, me }: { roster: Roster; me: Me }) {
             {result.ok && <a href="#/" className="flex min-h-9 items-center rounded-[9px] bg-white px-3.5 text-[#166534] no-underline">Open Lineups</a>}
           </div>
         )}
+
+        <ProposalBar proposals={proposals} me={me} viewing={viewing} setViewing={setViewId} dirty={dirty} yours={Object.keys(mine).length}
+          count={(p: Proposal<LineupBody>) => Object.keys(toMoves(p.body.moves)).length}
+          lines={(p: Proposal<LineupBody>) => Object.entries(toMoves(p.body.moves)).map(([tag, to]) => {
+            const f = roster.players.find((x) => x.tag === tag)!
+            return `${f.name}: ${placeLabel({ clan: f.clan, slot: f.slot })} → ${placeLabel(to)}`
+          })}
+          onBuild={(p: Proposal<LineupBody>) => setMine(toMoves(p.body.moves))}
+          onAccepted={() => window.location.reload()} />
 
         <StatusKey extra={<span className="flex items-center gap-1.5"><span className="h-2.5 w-3.5 rounded-[3px] bg-moved" />Moved</span>} />
 
@@ -276,7 +302,7 @@ function Plan({ roster, me }: { roster: Roster; me: Me }) {
                       <span>{g.label}</span><span>{g.rows.length}</span>
                     </div>
                     <ul className="m-0 list-none px-1.5 pb-1.5">
-                      {g.rows.map((p) => <PlanRow key={p.tag} p={p} at={at(p)} onPlace={(v) => place(p, v)} />)}
+                      {g.rows.map((p) => <PlanRow key={p.tag} p={p} at={at(p)} onPlace={(v) => place(p, v)} locked={!!viewing} />)}
                     </ul>
                   </div>
                 ))}
@@ -367,10 +393,10 @@ function Gate({ me, onSignOut }: { me: Me; onSignOut: () => void }) {
 type PlanProps = { roster: Roster; me: Me; ready: boolean; wide: boolean; onSignOut: () => void }
 
 const SUBS = [
-  { id: 'builder', label: 'Lineup builder', href: '#/leaders/builder' },
-  { id: 'days', label: 'Day planner', href: '#/leaders/days' },
-  { id: 'attacks', label: 'Attacks', href: '#/leaders/attacks' },
-  { id: 'members', label: 'Members', href: '#/leaders/members' },
+  { id: 'builder', label: 'Lineup builder', href: '#/plan/builder' },
+  { id: 'days', label: 'Day planner', href: '#/plan/days' },
+  { id: 'attacks', label: 'Attacks', href: '#/plan/attacks' },
+  { id: 'members', label: 'Members', href: '#/plan/members' },
 ]
 
 export default function PlanTab({ sub, roster, me, ready, wide, onSignOut }: PlanProps & { sub: string }) {
