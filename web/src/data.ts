@@ -120,7 +120,7 @@ export type PlayerCard = {
   family_since?: string | null
   streaks?: { three_stars: number; three_stars_best: number; clean_wars: number }
   attacks: { stars: number; destruction: number; kind: string; day: number | null; opponent: string | null; target: string | null; target_th: number | null; target_position: number | null }[]
-  upgrades: { unit: string; from: number; to: number; at: string }[]
+  upgrades: { unit: string; category?: string; from: number; to: number; at: string }[]
   war_stars: number | null; donations: number | null; donations_received: number | null; capital: number | null
 }
 

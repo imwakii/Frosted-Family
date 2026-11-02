@@ -2,11 +2,11 @@ import { type ReactNode, useEffect, useRef, useState } from 'react'
 import { loadPlayer, loadPlayerCard, type PlayerCard } from '../data'
 import { BADGES, TIER_LOOK, TIERS } from '../badges'
 import { ago } from '../leaders'
-import { playerHref } from '../route'
+import { go, playerHref } from '../route'
 import { useYou } from './You'
 import { CLAN, cycleLong, cycleShort, fmtScore, fmtWindow } from '../theme'
 import type { Player, Roster } from '../types'
-import { Arrow, PlayDays, Stars, StatusPill, Th, UnitIcon } from './ui'
+import { Arrow, PlayDays, RowChevron, Stars, StatusPill, Th, UnitIcon } from './ui'
 
 // Explained on hover with a mouse, and on tap on a phone. Tapping elsewhere closes it.
 function Badges({ badges }: { badges: NonNullable<PlayerCard['badges']> }) {
@@ -68,16 +68,28 @@ function Section({ title, note, children }: { title: string; note?: string | nul
   )
 }
 
-// The card's one tile.
-function Stat({ label, value, sub }: { label: string; value: ReactNode; sub?: string }) {
-  return (
-    <div className="flex min-w-0 flex-col gap-0.5 rounded-xl border border-line px-2.5 py-2">
+// The card's one tile. One with somewhere to go opens that ranking.
+function Stat({ label, value, sub, onOpen }: { label: string; value: ReactNode; sub?: string; onOpen?: () => void }) {
+  const body = (
+    <>
       <span className="truncate text-[11px] text-faint">{label}</span>
       <span className="truncate text-[17px] font-bold leading-tight tabular-nums">{value}</span>
       {sub && <span className="truncate text-[11px] font-semibold text-faint">{sub}</span>}
-    </div>
+    </>
+  )
+  const box = 'flex min-w-0 flex-col gap-0.5 rounded-xl border border-line px-2.5 py-2'
+  if (!onOpen) return <div className={box}>{body}</div>
+  return (
+    <button type="button" onClick={onOpen} className={`${box} relative cursor-pointer bg-transparent pr-5 text-left text-ink hover:bg-hover`}>
+      {body}
+      <span className="absolute right-1 top-1/2 -translate-y-1/2"><RowChevron /></span>
+    </button>
   )
 }
+
+// Where a unit's ranking lives; a new town hall has none, so it opens the Log.
+const UPGRADE_HOME: Record<string, string> = { hero: 'heroes', equipment: 'equipment', troop: 'troops', spell: 'spells', pet: 'pets', siege: 'sieges' }
+const unitHash = (cat: string) => `#/stats/players/${cat}`
 
 const dayMonth = (d: string) => new Date(`${d}T00:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' })
 const LIST = 'm-0 flex list-none flex-col rounded-xl border border-line p-0'
@@ -163,6 +175,8 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
   const rec = card?.record
   const threeStar = rec ? (rec.three_star_rate === null ? null : rec.three_star_rate * 100) : p?.threeStar ?? null
   const missed = rec ? (rec.attacks + rec.missed ? (100 * rec.missed) / (rec.attacks + rec.missed) : null) : p?.missPct ?? null
+  const toUnit = (cat: string, unit: string) => go.drill(unitHash(cat), { tag, unit })
+  const toCol = (sub: string, col: string) => () => go.drill(`#/stats/${sub}`, { tag, col })
 
   return (
     <div className="fixed inset-0 z-40">
@@ -249,9 +263,9 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
             {/* The monthly figures stand in only if the live ones fail, so the numbers do not change under the reader. */}
             <Section title="War record" note={cardLoading ? null : rec?.from ? `Since ${dayMonth(rec.from)}` : fmtWindow(roster.window)}>
               <div className="grid grid-cols-3 gap-2">
-                <Stat label="Three stars" value={cardLoading ? '—' : pct(threeStar)} />
-                <Stat label="Missed" value={cardLoading ? '—' : pct(missed)} />
-                <Stat label="Attacks" value={cardLoading ? '—' : rec?.attacks ?? p.attacks ?? '—'} />
+                <Stat label="Three stars" value={cardLoading ? '—' : pct(threeStar)} onOpen={toCol('war', 'triple')} />
+                <Stat label="Missed" value={cardLoading ? '—' : pct(missed)} onOpen={toCol('war', 'missed')} />
+                <Stat label="Attacks" value={cardLoading ? '—' : rec?.attacks ?? p.attacks ?? '—'} onOpen={toCol('war', 'attacks')} />
               </div>
             </Section>
             {card?.streaks && (
@@ -269,16 +283,16 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
                 <ul className={LIST}>
                   {card.heroes.map((h, i) => (
                     <li key={h.name} className={`flex items-center gap-2 px-3 py-1.5 ${i ? 'border-t border-hair' : ''}`}>
-                      <span title={h.name} className="flex flex-none items-center gap-1.5">
+                      <button type="button" title={h.name} aria-label={`${h.name}, level ${h.level}: see the ranking`} onClick={() => toUnit('heroes', h.name)} className="-ml-1 flex flex-none cursor-pointer items-center gap-1.5 rounded-lg border-0 bg-transparent p-1 hover:bg-hover">
                         <UnitIcon name={h.name} size={32} />
-                        <span className={`w-[52px] text-xs font-bold tabular-nums ${h.max && h.level >= h.max ? 'text-gold' : 'text-ink-2'}`}>{h.level}{h.max ? <span className="font-semibold text-faint">/{h.max}</span> : null}</span>
-                      </span>
+                        <span className={`w-[52px] text-left text-xs font-bold tabular-nums ${h.max && h.level >= h.max ? 'text-gold' : 'text-ink-2'}`}>{h.level}{h.max ? <span className="font-semibold text-faint">/{h.max}</span> : null}</span>
+                      </button>
                       <span className="ml-auto flex items-center gap-2.5">
                         {h.gear?.map((g) => (
-                          <span key={g.name} title={g.name} className="flex w-[52px] items-center gap-1">
+                          <button type="button" key={g.name} title={g.name} aria-label={`${g.name}, level ${g.level}: see the ranking`} onClick={() => toUnit('equipment', g.name)} className="flex w-[52px] cursor-pointer items-center gap-1 rounded-lg border-0 bg-transparent p-0.5 hover:bg-hover">
                             <UnitIcon name={g.name} size={28} />
                             <span className={`text-[11px] font-bold tabular-nums ${g.max && g.level >= g.max ? 'text-gold' : 'text-muted'}`}>{g.level}</span>
-                          </span>
+                          </button>
                         ))}
                       </span>
                     </li>
@@ -307,11 +321,15 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
               <Section title="Latest upgrades">
                 <ul className={LIST}>
                   {card.upgrades.slice(0, 4).map((u, i) => (
-                    <li key={`${u.unit}-${u.to}`} className={`flex items-center gap-2 px-3 py-1.5 text-[13px] ${i ? 'border-t border-hair' : ''}`}>
-                      <UnitIcon name={u.unit} size={26} />
-                      <span className="min-w-0 flex-auto truncate font-semibold text-ink">{u.unit}</span>
-                      <span className="flex-none text-xs font-bold tabular-nums text-ink-2">{u.from} → {u.to}</span>
-                      <span className="w-14 flex-none text-right text-[11px] text-faint">{ago(u.at)}</span>
+                    <li key={`${u.unit}-${u.to}`} className={i ? 'border-t border-hair' : ''}>
+                      <button type="button" onClick={() => (u.category && UPGRADE_HOME[u.category] ? toUnit(UPGRADE_HOME[u.category], u.unit) : go.drill('#/log', { tag, unit: 'Town Hall' }))}
+                        className="flex min-h-10 w-full cursor-pointer items-center gap-2 border-0 bg-transparent px-3 py-1.5 text-left text-[13px] hover:bg-hover">
+                        <UnitIcon name={u.unit} size={26} />
+                        <span className="min-w-0 flex-auto truncate font-semibold text-ink">{u.unit}</span>
+                        <span className="flex-none text-xs font-bold tabular-nums text-ink-2">{u.from} → {u.to}</span>
+                        <span className="w-14 flex-none text-right text-[11px] text-faint">{ago(u.at)}</span>
+                        <RowChevron />
+                      </button>
                     </li>
                   ))}
                 </ul>
@@ -320,10 +338,10 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
             {card && (
               <Section title="Totals">
                 <div className="grid grid-cols-2 gap-2">
-                  <Stat label="Donated" value={num(card.donations)} sub="this season" />
-                  <Stat label="Received" value={num(card.donations_received)} sub="this season" />
-                  <Stat label="War stars" value={num(card.war_stars)} sub="all time" />
-                  <Stat label="Capital" value={num(card.capital)} sub="all time" />
+                  <Stat label="Donated" value={num(card.donations)} sub="this season" onOpen={toCol('donations', 'donated')} />
+                  <Stat label="Received" value={num(card.donations_received)} sub="this season" onOpen={toCol('donations', 'received')} />
+                  <Stat label="War stars" value={num(card.war_stars)} sub="all time" onOpen={toCol('war', 'stars')} />
+                  <Stat label="Capital" value={num(card.capital)} sub="all time" onOpen={toCol('capital', 'contributed')} />
                 </div>
               </Section>
             )}

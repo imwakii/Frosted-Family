@@ -1,7 +1,7 @@
 import { YouTag } from './You'
 import { useEffect, useMemo, useState } from 'react'
 import { competitionRanks } from '../explore'
-import { go, playerHref } from '../route'
+import { go, playerHref, useDrill } from '../route'
 import { CLAN } from '../theme'
 import type { ClanName } from '../types'
 import { norm, SearchBox } from './CwlTab'
@@ -42,6 +42,7 @@ export default function RankBoard({ kind, cols, note, q, setQ, wide }: {
   const [clan, setClan] = useClanPick()
   const [sortKey, setSortKey] = useState(cols[0].key)
   const col = cols.find((c) => c.key === sortKey) ?? cols[0]
+  useDrill((d) => !!data && cols.some((c) => c.key === d.col), (d) => setSortKey(d.col!))
   const nq = norm(q.trim())
   const all = useMemo(() => data?.players ?? [], [data])
   const ranked = all.filter((r) => clan === 'All' || r.clan === clan)
@@ -79,7 +80,7 @@ export default function RankBoard({ kind, cols, note, q, setQ, wide }: {
         </thead>
         <tbody>
           {shown.map((x) => { const r = x.r; return (
-            <tr key={r.tag} onClick={() => go.to(playerHref(r.tag))} className="group cursor-pointer">
+            <tr key={r.tag} data-tag={r.tag} onClick={() => go.to(playerHref(r.tag))} className="group cursor-pointer">
               <td className="sticky left-0 z-[1] border-b border-hair bg-white py-1.5 pl-4 pr-1 font-bold tabular-nums text-faint group-hover:bg-hover">{place.get(x) ?? '—'}</td>
               <td className="sticky left-12 z-[1] whitespace-nowrap border-b border-hair bg-white px-2 py-1.5 group-hover:bg-hover">
                 <span className="flex items-center gap-2.5">
@@ -99,7 +100,7 @@ export default function RankBoard({ kind, cols, note, q, setQ, wide }: {
   ) : (
     <ol className="m-0 list-none rounded-2xl border border-line bg-white py-1">
       {shown.map((x, i) => (
-        <li key={x.r.tag}>
+        <li key={x.r.tag} data-tag={x.r.tag}>
           <a href={playerHref(x.r.tag)} className={`flex min-h-[52px] items-center gap-3 px-3.5 py-1.5 text-ink no-underline hover:bg-hover ${i ? 'border-t border-hair' : ''}`}>
             <span className="w-6 flex-none text-right text-xs font-bold tabular-nums text-faint">{place.get(x) ?? '—'}</span>
             <Th th={x.r.th} />

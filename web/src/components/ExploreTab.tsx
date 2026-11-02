@@ -1,10 +1,10 @@
 import { YouTag } from './You'
-import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { groupUnits } from '../equipment'
 import OverallBoard from './OverallBoard'
 import RankBoard, { type RankCol } from './RankBoard'
 import { CATS, type Cat, competitionRanks, HIGH_MISS, isMaxed, type MatrixPlayer, missRate, progress, useMatrix, useWarBoard, type WarRow, type WarScope } from '../explore'
-import { go, playerHref } from '../route'
+import { go, onDrill, playerHref, useDrill } from '../route'
 import { CLAN, CLANS } from '../theme'
 import type { ClanName } from '../types'
 import { norm, SearchBox } from './CwlTab'
@@ -44,6 +44,7 @@ const CAPITAL_COLS: RankCol[] = [
 
 export function useClanPick() {
   const [clan, setClanState] = useState<ClanPick>(() => (read('ff-x-clan') as ClanPick) || 'All')
+  onDrill(useCallback(() => setClanState('All'), []))
   return [clan, (c: ClanPick) => { setClanState(c); write('ff-x-clan', c) }] as const
 }
 
@@ -129,6 +130,12 @@ function MatrixBoard({ cat, q, setQ, wide }: BoardProps & { cat: Cat }) {
   const matchQ = (p: MatrixPlayer) => !nq || norm(p.name).includes(nq) || p.tag.toLowerCase().includes(nq)
   const stamp = data?.as_of ? `${new Date(data.as_of).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'UTC' })} UTC` : null
 
+  useDrill((d) => units.some((x) => x.name === d.unit), (d) => {
+    const i = units.findIndex((x) => x.name === d.unit)
+    setSort({ col: i, asc: false })
+    setUnit(i)
+  })
+
   const unitNav = useRef<HTMLDivElement>(null)
   useEffect(() => { unitNav.current?.querySelector('[aria-selected="true"]')?.scrollIntoView({ inline: 'nearest', block: 'nearest' }) }, [unit, cat])
 
@@ -195,7 +202,7 @@ function MatrixBoard({ cat, q, setQ, wide }: BoardProps & { cat: Cat }) {
                 </thead>
                 <tbody>
                   {shown.map((r) => { const { p, pct } = r; return (
-                    <tr key={p.tag} onClick={() => go.to(playerHref(p.tag))} className="group cursor-pointer">
+                    <tr key={p.tag} data-tag={p.tag} onClick={() => go.to(playerHref(p.tag))} className="group cursor-pointer">
                       <td className="sticky left-0 z-[1] w-12 min-w-12 border-b border-hair bg-white py-1.5 pl-4 pr-1 font-bold tabular-nums text-faint group-hover:bg-hover">{place.get(r) ?? '—'}</td>
                       <td className="sticky left-12 z-[1] whitespace-nowrap border-b border-hair bg-white px-3 py-1.5 group-hover:bg-hover">
                         <span className="flex items-center gap-2.5">
@@ -214,7 +221,7 @@ function MatrixBoard({ cat, q, setQ, wide }: BoardProps & { cat: Cat }) {
                         const u = units[i]
                         const l = p.levels[i]
                         return (
-                          <td key={u.name} className={`h-11 border-b border-hair px-1 text-center tabular-nums group-hover:bg-hover ${divider(i)} ${sort.col === i ? 'bg-[#F6EEDC]' : ''} ${cellTone(l, u.max)}`}>
+                          <td key={u.name} data-sorted={sort.col === i || undefined} className={`h-11 border-b border-hair px-1 text-center tabular-nums group-hover:bg-hover ${divider(i)} ${sort.col === i ? 'bg-[#F6EEDC]' : ''} ${cellTone(l, u.max)}`}>
                             {l ? l : '—'}{isMaxed(l, u) && <span className="ml-px align-[4px] text-[11px] text-gold">★</span>}
                           </td>
                         )
@@ -274,7 +281,7 @@ function MatrixBoard({ cat, q, setQ, wide }: BoardProps & { cat: Cat }) {
             {shown.map(({ p, l, rank }, i) => {
               const maxed = l >= u.max
               return (
-                <li key={p.tag}>
+                <li key={p.tag} data-tag={p.tag}>
                   <a href={playerHref(p.tag)} className={`flex min-h-[54px] items-center gap-2.5 px-3.5 py-1.5 text-ink no-underline hover:bg-hover ${i ? 'border-t border-hair' : ''}`}>
                     <span className="w-6 flex-none text-right text-xs tabular-nums text-faint">{rank ?? '—'}</span>
                     <Th th={p.th} />
@@ -338,6 +345,7 @@ function WarBoardView({ q, setQ, wide }: BoardProps) {
   const sort = sortKey && cols.some((c) => c.key === sortKey.key) ? sortKey : { key: cols[0]?.key ?? 'attacks', asc: !!cols[0]?.low }
   const col = cols.find((c) => c.key === sort.key) ?? cols[0]
   const pick = (c: WarCol) => setSortKey(sort.key === c.key ? { key: c.key, asc: !sort.asc } : { key: c.key, asc: !!c.low })
+  useDrill((d) => cols.some((c) => c.key === d.col), (d) => setSortKey({ key: d.col!, asc: !!cols.find((c) => c.key === d.col)!.low }))
 
   const nq = norm(q.trim())
   const ranked = useMemo(() => {
@@ -433,7 +441,7 @@ function WarBoardView({ q, setQ, wide }: BoardProps) {
               </thead>
               <tbody>
                 {shown.map(({ r }) => (
-                  <tr key={r.tag} onClick={() => go.to(playerHref(r.tag))} className="group cursor-pointer">
+                  <tr key={r.tag} data-tag={r.tag} onClick={() => go.to(playerHref(r.tag))} className="group cursor-pointer">
                     <td className="sticky left-0 z-[1] w-12 min-w-12 border-b border-hair bg-white py-1.5 pl-4 pr-1 font-bold tabular-nums text-faint group-hover:bg-hover">{place.get(r) ?? '—'}</td>
                     <td className="sticky left-12 z-[1] whitespace-nowrap border-b border-hair bg-white px-2 py-1.5 group-hover:bg-hover">
                       <span className="flex items-center gap-2.5">
@@ -506,7 +514,7 @@ function WarBoardView({ q, setQ, wide }: BoardProps) {
           </div>
           <ol className="m-0 mx-4 list-none rounded-2xl border border-line bg-white py-1">
             {shown.map(({ r, v }, i) => (
-              <li key={r.tag}>
+              <li key={r.tag} data-tag={r.tag}>
                 <a href={playerHref(r.tag)} className={`flex min-h-[56px] items-center gap-2.5 px-3.5 py-1.5 text-ink no-underline hover:bg-hover ${i ? 'border-t border-hair' : ''}`}>
                   <span className="w-6 flex-none text-right text-xs tabular-nums text-faint">{place.get(r) ?? '—'}</span>
                   <Th th={r.th} />

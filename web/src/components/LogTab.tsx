@@ -1,7 +1,7 @@
 import { type PointerEvent, useMemo, useState } from 'react'
 import { thIcon } from '../clash'
 import { ago, type LogEvent, type Upgrade, type UpgradeCategory, type UpgradeCount, useClanLog } from '../leaders'
-import { go, playerHref } from '../route'
+import { go, playerHref, useDrill } from '../route'
 import { CLAN, CLANS } from '../theme'
 import type { ClanName, Roster } from '../types'
 import { Card, COLOR, Dot, ticks, useWidth } from './ClansBoard'
@@ -256,6 +256,7 @@ export default function LogTab({ roster, q, setQ, wide }: { roster: Roster; q: s
   const [view, setView] = useState<View>('all')
   const [kind, setKind] = useState<UpgradeCategory | 'all'>('all')
   const [open, setOpen] = useState<string | null>(null)
+  useDrill((d) => !!data && d.unit === 'Town Hall', () => setView('all'))
   const nq = norm(q.trim())
   const here = useMemo(() => new Set(roster.players.map((p) => p.tag)), [roster])
   const named = (x: { name: string | null; tag: string }) => !nq || norm(x.name ?? '').includes(nq) || x.tag.toLowerCase().includes(nq)
@@ -312,7 +313,7 @@ export default function LogTab({ roster, q, setQ, wide }: { roster: Roster; q: s
               <span className="px-1 text-xs font-bold uppercase tracking-[0.06em] text-faint">{dayLabel(d)}</span>
               {!!(day.halls.length || day.events.length) && (
                 <ol className="m-0 grid list-none grid-cols-1 gap-1 p-0 md:grid-cols-2">
-                  {day.halls.map((u) => <li key={`${u.tag}-th-${u.to}`} className="min-w-0"><MilestoneRow u={u} /></li>)}
+                  {day.halls.map((u) => <li key={`${u.tag}-th-${u.to}`} data-tag={u.tag} className="min-w-0"><MilestoneRow u={u} /></li>)}
                   {day.events.map((e) => <li key={`${e.kind}-${e.tag}-${e.at}`} className="min-w-0"><EventRow e={e} onRoster={here.has(e.tag)} /></li>)}
                 </ol>
               )}

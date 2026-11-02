@@ -55,7 +55,49 @@ export const playerHref = (tag: string) => {
   return `${base}/p/${encodeURIComponent(tag.replace(/^#/, ''))}`
 }
 
+// A tap on a player card's figure opens the ranking behind it: that unit or column, across the family, with the player's
+// row shown. Boards read it once they hold the data it names.
+export type Drill = { tag: string; unit?: string; col?: string }
+let drill: Drill | null = null
+
 export const go = {
   to: (hash: string) => { window.location.hash = hash },
   closePlayer: () => { window.location.hash = parse().base },
+  drill: (hash: string, d: Drill) => {
+    drill = d
+    try { sessionStorage.setItem('ff-x-clan', 'All') } catch { /* private mode */ }
+    window.location.hash = hash
+    window.dispatchEvent(new Event('ff-drill'))
+  },
+}
+
+export function onDrill(run: () => void) {
+  useEffect(() => {
+    window.addEventListener('ff-drill', run)
+    return () => window.removeEventListener('ff-drill', run)
+  }, [run])
+}
+
+function showRow(tag: string) {
+  const row = document.querySelector(`[data-tag="${tag}"]`)
+  if (!row) return
+  ;(row.querySelector('[data-sorted]') ?? row).scrollIntoView({ block: 'center', inline: 'center' })
+  row.classList.add('ff-drilled')
+  window.setTimeout(() => row.classList.remove('ff-drilled'), 2400)
+}
+
+export function useDrill(ready: (d: Drill) => boolean, apply: (d: Drill) => void) {
+  const [, bump] = useState(0)
+  useEffect(() => {
+    const on = () => bump((n) => n + 1)
+    window.addEventListener('ff-drill', on)
+    return () => window.removeEventListener('ff-drill', on)
+  }, [])
+  useEffect(() => {
+    if (!drill || !ready(drill)) return
+    const d = drill
+    drill = null
+    apply(d)
+    window.setTimeout(() => showRow(d.tag), 150)  // once the new order has drawn and the card has gone
+  })
 }

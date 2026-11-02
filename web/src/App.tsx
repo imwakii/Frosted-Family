@@ -9,7 +9,7 @@ import WarTab from './components/WarTab'
 import { InstallHint, useInstallHint } from './components/InstallHint'
 import { JumpToYou, YouChip } from './components/You'
 import { useRoster, useWar, useWide } from './data'
-import { go, useRoute } from './route'
+import { go, onDrill, useRoute } from './route'
 import { UtcClock } from './components/ui'
 
 const TABS = [
@@ -54,6 +54,7 @@ export default function App() {
   const auth = useAuth()
   const install = useInstallHint(wide)
   const [q, setQ] = useState('')
+  onDrill(useCallback(() => setQ(''), []))
   const closeSheet = useCallback(() => go.closePlayer(), [])
   // The live UTC clock; on Plan a signed-in account sits beside it, and narrower screens shrink the other two to fit.
   const account = route.tab === 'plan' && auth.me.user ? <Account me={auth.me} onSignOut={auth.signOut} /> : null
