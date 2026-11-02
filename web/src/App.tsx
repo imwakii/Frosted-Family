@@ -4,6 +4,7 @@ import CwlTab from './components/CwlTab'
 import ExploreTab from './components/ExploreTab'
 import PlanTab from './components/PlanTab'
 import PlayerSheet from './components/PlayerSheet'
+import WarTab from './components/WarTab'
 import { useRoster, useWar, useWide } from './data'
 import { go, useRoute } from './route'
 import { UtcClock } from './components/ui'
@@ -11,6 +12,7 @@ import { UtcClock } from './components/ui'
 const TABS = [
   { id: 'cwl', label: 'Lineups', href: '#/', icon: <path d="M4 6h16M4 12h16M4 18h10" /> },
   { id: 'explore', label: 'Stats', href: '#/stats/players', icon: <path d="M5 20V10M12 20V4M19 20v-7" /> },
+  { id: 'war', label: 'War', href: '#/war', icon: <path d="M5 5l14 14M19 5L5 19M4 16l4 4M20 16l-4 4" /> },
   { id: 'plan', label: 'Plan', href: '#/plan/builder', icon: <path d="M7 4v16M17 4v16M3 8h8M13 16h8" /> },
 ] as const
 
@@ -82,6 +84,8 @@ export default function App() {
         <div aria-busy="true" aria-label="Loading" className="mx-auto flex max-w-[1320px] flex-col gap-3 px-4 pt-4">
           {[48, 120, 46, 320].map((h, i) => <div key={i} className="animate-pulse rounded-2xl bg-well" style={{ height: h }} />)}
         </div>
+      ) : route.tab === 'war' ? (
+        <WarTab wide={wide} />
       ) : route.tab === 'plan' ? (
         <PlanTab sub={route.sub} roster={roster} me={auth.me} ready={auth.status === 'ready'} wide={wide} onSignOut={auth.signOut} />
       ) : route.tab === 'explore' ? (
@@ -98,7 +102,7 @@ export default function App() {
       {roster && route.player &&<PlayerSheet tag={route.player} roster={roster} wide={wide} onClose={closeSheet} />}
 
       {!wide && (
-        <nav aria-label="Sections" className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-3 border-t border-line bg-white pb-[env(safe-area-inset-bottom)]">
+        <nav aria-label="Sections" className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t border-line bg-white pb-[env(safe-area-inset-bottom)]">
           {TABS.map((t) => (
             <a key={t.id} href={t.href} aria-current={route.tab === t.id ? 'page' : undefined}
               className={`flex min-h-[58px] flex-col items-center justify-center gap-[3px] text-xs font-bold no-underline ${route.tab === t.id ? 'text-action' : 'text-faint'}`}>

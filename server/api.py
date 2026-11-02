@@ -13,6 +13,7 @@ site through a Vercel rewrite.
     GET /explore/war     every member's all-time war stars and their record over the recorded wars, plus this CWL season
     GET /explore/{board} ranked boards from player profiles: heroes, equipment, army, donations, capital
     GET /explore/matrix?cat=heroes|equipment|troops|spells|pets|sieges   every member's level in every unit
+    GET /war/board       each clan's war, side by side, with its attack log (server/war.py)
     /auth/*, /plan/*     Discord sign-in for leaders (server/auth.py) and the Plan tab (server/plan.py)
 
 The CSV is canonical for allocation. The one thing laid over it is the publisher's latest publish, and only while the
@@ -29,7 +30,7 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException, Request
 
 from frosted.config import CLAN_TAGS, TAG_TO_CLAN
-from server import auth, days, db, leaders, members, plan, profiles, proposals, stats
+from server import auth, days, db, leaders, members, plan, profiles, proposals, stats, war
 
 DEFAULT_DB = "/opt/bots/frosted/data/frosted.db"
 ROSTER_FIELDS = ("tag", "name", "clan", "cwl_slot", "transferred_from", "tier", "final_score", "current_th", "flags")
@@ -160,6 +161,11 @@ def war_live():
         w = current_war(conn, tag) if conn else None
         clans.append({"clan": name, "tag": tag, "war": oriented(w, tag) if w else None})
     return {"clans": clans, "last_poll": last_poll(conn)}
+
+
+@app.get("/war/board")
+def war_board():
+    return war.board(open_db())
 
 
 @app.get("/player/{tag}")

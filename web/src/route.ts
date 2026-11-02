@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react'
 
-// Hash routes: #/ (Lineups), #/stats/<sub>[/<category>], #/plan/<sub>. A player sheet opens over
+// Hash routes: #/ (Lineups), #/stats/<sub>[/<category>], #/war, #/plan/<sub>. A player sheet opens over
 // Lineups or Stats by appending /p/<tag without #>, and closes by dropping it.
 // Old links (#/explore/<kind>, #/leaders/<sub>) are rewritten to their new place.
-export type Tab = 'cwl' | 'explore' | 'plan'
+export type Tab = 'cwl' | 'explore' | 'war' | 'plan'
 export type Route = { tab: Tab; sub: string; kind: string | null; player: string | null; base: string }
 
 export const STATS_SUBS = ['players', 'war', 'upgrades', 'donations', 'capital', 'trends'] as const
-export const LEADERS_SUBS = ['builder', 'days', 'attacks', 'members'] as const
+export const LEADERS_SUBS = ['builder', 'days', 'members'] as const
 
 function parse(): Route {
   const h = window.location.hash.replace(/^#\/?/, '')
@@ -15,6 +15,8 @@ function parse(): Route {
   const player = tag ? '#' + decodeURIComponent(tag) : null
   let parts = path.split('/').filter(Boolean)
   if (parts[0] === 'explore') parts = parts[1] === 'war' || parts[1] === 'upgrades' ? ['stats', parts[1]] : ['stats', 'players', ...parts.slice(1, 2)]
+  if ((parts[0] === 'plan' || parts[0] === 'leaders') && parts[1] === 'attacks') parts = ['war']  // moved 2 Nov 2026
+  if (parts[0] === 'war') return { tab: 'war', sub: '', kind: null, player, base: '#/war' }
   if (parts[0] === 'plan' || parts[0] === 'leaders') {
     const sub = (LEADERS_SUBS as readonly string[]).includes(parts[1]) ? parts[1] : 'builder'
     return { tab: 'plan', sub, kind: null, player: null, base: `#/plan/${sub}` }

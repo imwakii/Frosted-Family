@@ -99,12 +99,15 @@ export function ago(iso: string | null, now = Date.now()) {
   return `${Math.round(m / 1440)}d ago`
 }
 
-// GET /api/leaders/attacks: each clan's war on its battle day, with every member's attacks used.
-export type WarAttacker = { tag: string; name: string; th: number | null; position: number | null; used: number; allowed: number; stars: number; best_destruction: number | null }
-export type ClanAttacks = {
-  clan: ClanName
-  war: { kind: string; state: 'inWar' | 'preparation'; day: number | null; start_time: string | null; end_time: string | null; team_size: number; attacks_allowed: number; opponent: string; stars: number; opponent_stars: number } | null
-  members: WarAttacker[]
+// GET /api/war/board: each clan's war, its bases paired by map position.
+type WarSide = { tag: string; name: string; th: number | null; position: number | null }
+export type WarAttack = { order: number; ours: boolean; attacker: WarSide; defender: WarSide; stars: number; destruction: number; seen_at: string | null }
+export type WarBase = WarSide & { used: number; allowed: number; best: number | null }
+export type ClanWar = {
+  kind: string; state: 'inWar' | 'preparation' | 'warEnded'; day: number | null; team_size: number
+  start_time: string | null; end_time: string | null; attacks_allowed: number; opponent: string
+  stars: number; opponent_stars: number; destruction: number; opponent_destruction: number
+  attacks_used: number; opponent_attacks_used: number; badge: string | null; opponent_badge: string | null; log: WarAttack[]
+  pairs: { position: number; us: WarBase | null; them: WarBase | null }[]
 }
-
-export const loadAttacks = () => getJson<{ clans: ClanAttacks[]; last_poll: string | null }>('/api/leaders/attacks')
+export const loadWarBoard = () => getJson<{ clans: { clan: ClanName; war: ClanWar | null }[]; last_poll: string | null }>('/api/war/board')

@@ -111,6 +111,20 @@ CREATE TABLE IF NOT EXISTS cwl_group_clans (
     PRIMARY KEY (season, our_clan_tag, clan_tag)
 );
 
+-- When the collector first saw each attack; the API gives no attack times. NULL for attacks stored before this table.
+CREATE TABLE IF NOT EXISTS attack_seen (
+    war_key TEXT NOT NULL,
+    attack_order INTEGER NOT NULL,
+    seen_at TEXT,
+    PRIMARY KEY (war_key, attack_order)
+);
+
+-- The badge of any clan we have been at war with, for the enemy's side of the War tab.
+CREATE TABLE IF NOT EXISTS war_clan_badges (
+    clan_tag TEXT PRIMARY KEY,
+    badge TEXT
+);
+
 -- CWL war tags seen in a league group, so ended wars and other clans' wars are not fetched again.
 CREATE TABLE IF NOT EXISTS cwl_war_tags (
     war_tag TEXT PRIMARY KEY,
@@ -318,9 +332,19 @@ def upsert_war(conn: sqlite3.Connection, war: dict, *, kind: str, war_tag: str |
          opp["tag"], opp.get("name"), opp.get("stars"), opp.get("destructionPercentage"), opp.get("attacks"),
          utcnow()),
     )
+    now = utcnow()
     for side in (clan, opp):
+        urls = side.get("badgeUrls") or {}
+        badge = urls.get("medium") or urls.get("large") or urls.get("small")
+        if badge:
+            conn.execute("INSERT INTO war_clan_badges VALUES (?,?) ON CONFLICT (clan_tag) DO UPDATE SET badge=excluded.badge",
+                         (side["tag"], badge))
         for m in side.get("members", []):
             attacks = m.get("attacks", [])
+            for a in attacks:
+                # A new attack is stamped now; one already stored before stamping began has no known time.
+                stored = conn.execute("SELECT 1 FROM attacks WHERE war_key=? AND attack_order=?", (key, a["order"])).fetchone()
+                conn.execute("INSERT OR IGNORE INTO attack_seen VALUES (?,?,?)", (key, a["order"], None if stored else now))
             conn.execute(
                 """INSERT INTO war_members VALUES (?,?,?,?,?,?,?,?)
                    ON CONFLICT (war_key, player_tag) DO UPDATE SET

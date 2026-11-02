@@ -222,19 +222,26 @@ def test_leader_endpoints_refuse_until_auth_exists(client):
     assert client.post("/plan/publish", headers={"Authorization": "Bearer x"}).status_code == 401
 
 
-def test_attacks_left_lists_who_still_has_attacks(conn):
+def test_war_board_pairs_bases_and_shows_who_hit_whom(conn):
     from datetime import datetime, timezone
-    from server import leaders
+    from server import war
     poll(conn, Recorder())
-    clans = {c["clan"]: c for c in leaders.attacks_left(conn, now=datetime(2026, 11, 4, 12, tzinfo=timezone.utc))["clans"]}
-    fire = clans["Fire"]
-    assert (fire["war"]["kind"], fire["war"]["day"], fire["war"]["attacks_allowed"]) == ("cwl", 2, 1)
-    # newbie has not attacked, so they lead; Waki used their one attack.
-    assert [(m["name"], m["used"], m["allowed"]) for m in fire["members"]] == [("newbie", 0, 1), ("Waki renamed", 1, 1)]
-    assert clans["Flakes"]["war"] is None and clans["Flakes"]["members"] == []
-    # Once day 2's end has passed, it is over, whatever state was last stored.
-    later = leaders.attacks_left(conn, now=datetime(2026, 11, 6, tzinfo=timezone.utc))["clans"]
-    assert next(c for c in later if c["clan"] == "Fire")["war"] is None
+    clans = {c["clan"]: c for c in war.board(conn, now=datetime(2026, 11, 4, 12, tzinfo=timezone.utc))["clans"]}
+    fire = clans["Fire"]["war"]
+    assert (fire["kind"], fire["state"], fire["day"], fire["attacks_allowed"]) == ("cwl", "inWar", 2, 1)
+    assert clans["Flakes"]["war"] is None
+    ours = [p["us"] for p in fire["pairs"] if p["us"]]
+    assert {(m["name"], m["used"], m["allowed"]) for m in ours} == {("newbie", 0, 1), ("Waki renamed", 1, 1)}
+    # The log says who hit whom, with stars and damage; the base they hit shows the best stars taken.
+    hit = next(a for a in fire["log"] if a["attacker"]["name"] == "Waki renamed")
+    assert hit["ours"] and {"stars", "destruction", "seen_at"} <= set(hit) and hit["seen_at"]
+    base = next(p["them"] for p in fire["pairs"] if p["them"] and p["them"]["tag"] == hit["defender"]["tag"])
+    assert base["best"] == hit["stars"]
+    # Once its end has passed the war is over, and shown for three days.
+    later = {c["clan"]: c for c in war.board(conn, now=datetime(2026, 11, 6, tzinfo=timezone.utc))["clans"]}
+    assert later["Fire"]["war"]["state"] == "warEnded"
+    gone = {c["clan"]: c for c in war.board(conn, now=datetime(2026, 12, 1, tzinfo=timezone.utc))["clans"]}
+    assert gone["Fire"]["war"] is None
 
 
 def test_a_member_who_joins_between_profile_runs_is_fetched_on_the_next_pass(conn):
@@ -278,3 +285,14 @@ def test_expected_enemy_is_the_mean_top_15_of_group_clans_not_yet_faced(conn):
     assert days.upcoming(conn, "2031-01", "Fire", {"#C"}) == [16.0] * 15
     assert days.upcoming(conn, "2031-01", "Fire", {"#A", "#B", "#C"}) == []
     assert days.upcoming(conn, "2031-01", "Cake", set()) == []
+
+
+def test_an_attack_stored_before_stamping_has_no_time(conn):
+    from datetime import datetime, timezone
+    from server import war
+    poll(conn, Recorder())
+    with conn:
+        conn.execute("DELETE FROM attack_seen")
+    poll(conn, Recorder())
+    fire = next(c for c in war.board(conn, now=datetime(2026, 11, 4, 12, tzinfo=timezone.utc))["clans"] if c["clan"] == "Fire")["war"]
+    assert fire["log"] and all(a["seen_at"] is None for a in fire["log"])
