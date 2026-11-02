@@ -82,8 +82,8 @@ function WarBoard({ clan, war, now }: { clan: ClanName; war: ClanWar; now: numbe
   const log = picked ? war.log.filter((a) => a.attacker.tag === picked || a.defender.tag === picked) : war.log
   const pickedName = picked ? war.pairs.flatMap((p) => [p.us, p.them]).find((b) => b?.tag === picked)?.name : null
   const toggle = (tag?: string) => tag && setPicked((p) => (p === tag ? null : tag))
-  const score = (stars: number, pct: number, used: number, deep: string, right?: boolean) => !prep && (
-    <span className={`flex flex-col gap-0.5 ${right ? 'items-end' : 'items-start'}`}>
+  const score = (stars: number, pct: number, used: number, deep: string, right?: boolean) => (
+    <span className={`flex flex-col gap-0.5 ${right ? 'items-end' : 'items-start'} ${prep ? 'invisible' : ''}`}>
       <span className="font-display flex items-baseline gap-1 text-[26px] leading-none tabular-nums" style={{ color: deep }}>{stars}<span className="text-base text-gold">★</span></span>
       <span className="text-[11px] font-semibold tabular-nums text-muted">{Math.round(pct)}% · {used}/{total}</span>
     </span>
@@ -99,34 +99,33 @@ function WarBoard({ clan, war, now }: { clan: ClanName; war: ClanWar; now: numbe
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="flex min-w-0 flex-col items-start gap-1.5">
-              <ClanBadge src={war.badge ?? clans[clan]?.badge} size={44} />
+              <span className="h-11"><ClanBadge src={war.badge ?? clans[clan]?.badge} size={44} /></span>
               <span className="font-display max-w-full truncate text-[17px] leading-tight" style={{ color: t.deep }}>{clan}</span>
               {score(war.stars, war.destruction, war.attacks_used, t.deep)}
             </div>
             <div className="flex min-w-0 flex-col items-end gap-1.5 text-right">
-              <ClanBadge src={war.opponent_badge} size={44} />
+              <span className="h-11"><ClanBadge src={war.opponent_badge} size={44} /></span>
               <span className="font-display max-w-full truncate text-[17px] leading-tight text-ink-2">{war.opponent}</span>
               {score(war.opponent_stars, war.opponent_destruction, war.opponent_attacks_used, '#475569', true)}
             </div>
           </div>
-          {live && <span className="text-center text-xs font-bold" style={{ color: toAttack ? '#B45309' : '#15803D' }}>{toAttack ? `${toAttack} of ours still to attack` : 'All of ours attacked'}</span>}
-          {!over && <span className="text-center text-[11px] font-semibold text-faint">Updated {ago(war.updated_at, now)}</span>}
+          {/* The same lines in every state, so each clan's list starts at the same height. */}
+          <span className="text-center text-xs font-bold" style={{ color: !live ? '#64748B' : toAttack ? '#B45309' : '#15803D' }}>
+            {live ? (toAttack ? `${toAttack} of ours still to attack` : 'All of ours attacked') : over ? `Ended ${end ? ago(new Date(end).toISOString(), now) : ''}` : `${war.team_size} v ${war.team_size}`}
+          </span>
+          <span className="text-center text-[11px] font-semibold text-faint">Updated {ago(war.updated_at, now)}</span>
         </div>
-        {(live && mine) || (live && open.length > 0) ? (
-          <div className="flex flex-wrap items-center gap-2 border-b border-hair px-3 py-2">
-            {mine && (
+        <div className="flex min-h-[53px] items-center gap-2 border-b border-hair px-3 py-2">
+            {live && mine && (
               <button type="button" onClick={() => toggle(mine.tag)} className={`min-h-9 cursor-pointer rounded-full border-0 px-3 text-[13px] font-bold ${mineLeft ? 'bg-[#FEF3C7] text-[#92400E]' : 'bg-[#DCFCE7] text-[#166534]'}`}>
                 You: {mineLeft ? `${mineLeft} ${mineLeft === 1 ? 'attack' : 'attacks'} left` : 'all attacked'}
               </button>
             )}
-            {open.length > 0 && (
-              <button type="button" aria-pressed={openOnly} onClick={() => setOpenOnly((v) => !v)}
-                className={`ml-auto min-h-9 cursor-pointer rounded-full border px-3 text-[13px] font-bold ${openOnly ? 'border-ink bg-ink text-white' : 'border-line bg-white text-ink-2 hover:bg-page'}`}>
-                Open bases {open.length}
-              </button>
-            )}
-          </div>
-        ) : null}
+            <button type="button" aria-pressed={openOnly} disabled={!open.length} onClick={() => setOpenOnly((v) => !v)}
+              className={`ml-auto min-h-9 cursor-pointer rounded-full border px-3 text-[13px] font-bold disabled:cursor-default disabled:opacity-50 ${openOnly ? 'border-ink bg-ink text-white' : 'border-line bg-white text-ink-2 hover:bg-page'}`}>
+              Open bases {open.length}
+            </button>
+        </div>
         <ol className="m-0 list-none px-1.5 py-1">
           {rows.map((p, i) => (
             <li key={p.position} className={`grid grid-cols-[minmax(0,1fr)_18px_minmax(0,1fr)] items-center gap-0.5 ${i ? 'border-t border-hair' : ''}`}>
@@ -136,6 +135,13 @@ function WarBoard({ clan, war, now }: { clan: ClanName; war: ClanWar; now: numbe
             </li>
           ))}
         </ol>
+        <div aria-label="Key" className="flex flex-wrap justify-center gap-x-[18px] gap-y-1 border-t border-hair px-3 py-2.5 text-xs font-semibold text-muted">
+          {live && <>
+            <span className="flex items-center gap-1.5"><span className="size-2 rounded-full bg-[#F59E0B]" />Attack left</span>
+            <span className="flex items-center gap-1.5"><span className="size-2 rounded-full bg-[#16A34A]" />Used</span>
+          </>}
+          <span className="flex items-center gap-1.5"><span className="text-gold">★</span>Best on this base</span>
+        </div>
       </section>
 
       {!prep && (
@@ -185,13 +191,6 @@ export default function WarTab({ wide }: { wide: boolean }) {
             </button>
           ))}
         </nav>
-      )}
-      {clan?.war?.state === 'inWar' && (
-        <div aria-label="Key" className="flex flex-wrap gap-x-[18px] gap-y-1.5 text-[13px] font-semibold text-muted">
-          <span className="flex items-center gap-1.5"><span className="size-2 rounded-full bg-[#F59E0B]" />Attack left</span>
-          <span className="flex items-center gap-1.5"><span className="size-2 rounded-full bg-[#16A34A]" />Used</span>
-          <span className="flex items-center gap-1.5"><span className="text-gold">★</span>Best on this base</span>
-        </div>
       )}
       {!data ? (
         loading ? <div aria-busy="true" className="h-64 animate-pulse rounded-2xl bg-well" /> : <div className="rounded-2xl border border-line bg-white p-5 text-sm text-faint">Unavailable right now</div>
