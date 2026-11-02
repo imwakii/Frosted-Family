@@ -119,9 +119,13 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
         <div className="flex items-center gap-3">
           {p && <Th th={p.th} size="lg" />}
           <div className="flex min-w-0 flex-auto flex-col">
-            <span className="font-display truncate text-[26px] leading-tight">{p?.name ?? 'Not on the roster'}</span>
+            {/* A name too long to share the line pushes the tag below it, rather than either being cut. */}
+            <span className="flex flex-wrap items-baseline gap-x-2">
+              <span className="font-display min-w-0 max-w-full truncate text-[26px] leading-tight">{p?.name ?? 'Not on the roster'}</span>
+              <span className="flex-none text-xs tabular-nums text-faint">{tag}</span>
+            </span>
             <span className="flex min-w-0 items-center gap-2 text-[13px] text-faint">
-              <span className="min-w-0 truncate">{p ? where : tag}</span>
+              <span className="min-w-0 truncate">{where}</span>
               {p && (
                 <button type="button" onClick={() => (isMine ? removeYou(tag) : addYou(tag))}
                   className={`flex-none cursor-pointer whitespace-nowrap rounded-md border-0 px-1.5 py-px text-[11px] font-bold ${isMine ? 'bg-ink text-white' : 'bg-[#EEF1F6] text-ink-2 hover:bg-well'}`}>
@@ -251,7 +255,6 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
                 </div>
               </Section>
             )}
-            <span className="text-center text-xs text-faint">{tag}</span>
           </>
         )}
       </section>
