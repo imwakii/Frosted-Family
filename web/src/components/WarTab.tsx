@@ -135,7 +135,7 @@ function WarBoard({ clan, war, now }: { clan: ClanName; war: ClanWar; now: numbe
           <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-2">
             <div className="flex min-w-0 flex-col items-start gap-1.5">
               <span className={`h-11 ${live ? 'ff-recoil-l' : ''}`}><ClanBadge src={war.badge ?? clans[clan]?.badge} size={44} /></span>
-              <span className="font-display max-w-full truncate text-[17px] leading-tight" style={{ color: t.deep }}>{clan}</span>
+              <span className="font-display max-w-full truncate text-[17px] leading-tight" style={{ color: t.deep }}>{clans[clan]?.name ?? `Frosted ${clan}`}</span>
               {score(war.stars, war.destruction, war.attacks_used, t.deep)}
             </div>
             <Swords live={live} color={t.deep} />
