@@ -105,10 +105,10 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
               className={`-mt-2 self-start cursor-pointer rounded-full border px-2.5 py-1 text-xs font-bold ${you === tag ? 'border-ink bg-ink text-white' : 'border-line bg-white text-ink-2 hover:bg-page'}`}>
               {you === tag ? 'You · not me?' : 'This is me'}
             </button>
-            {p.from && (
+            {p.inClan && p.inClan !== p.clan && (
               <div className="flex min-h-12 items-center gap-2 rounded-[14px] bg-[#EFF4FF] px-4 text-sm font-semibold text-action-deep">
                 <span className="flex-auto">Move before sign-up</span>
-                <span className="font-bold" style={{ color: CLAN[p.from].deep }}>{p.from}</span>
+                <span className="font-bold" style={{ color: CLAN[p.inClan].deep }}>{p.inClan}</span>
                 <Arrow size={14} />
                 <span className="font-bold" style={{ color: c.deep }}>{p.clan}</span>
               </div>
