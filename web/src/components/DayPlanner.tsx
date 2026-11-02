@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { Me } from '../auth'
 import { type DayPlans, getDays, HttpError, publishDays, saveDays } from '../data'
-import { type ClanDays, DAYS, earned, enemy, locked, missedThisSeason, onTrack, slotsBelow, suggest, TARGET, TEAM, tier, type Wars } from '../dayplan'
+import { type ClanDays, DAYS, earned, enemy, locked, missedThisSeason, onTrack, onTrial, slotsBelow, suggest, TARGET, TEAM, tier, type Wars } from '../dayplan'
 import { CLAN } from '../theme'
-import type { Player, Roster } from '../types'
+import type { Player, Roster, Slot } from '../types'
 import { StatusDot, Th } from './ui'
 
 // Who plays each of the seven CWL days. Opens on the saved draft, else the published plan, else a suggestion
@@ -12,6 +12,7 @@ import { StatusDot, Th } from './ui'
 type CwlClan = 'Fire' | 'Cake'
 const CWL: CwlClan[] = ['Fire', 'Cake']
 type Plans = Record<CwlClan, ClanDays>
+const ORDER: Record<Slot, number> = { CORE: 0, SUB: 1, NEW: 2, OUT: 3 }
 
 const same = (a: Plans, b: Plans) => JSON.stringify(a) === JSON.stringify(b)
 const sorted = (p: ClanDays): ClanDays => Object.fromEntries(DAYS.map((d) => [d, [...(p[d] ?? [])].sort()]))
@@ -54,7 +55,7 @@ export default function DayPlanner({ roster, me }: { roster: Roster; me: Me }) {
   const [note, setNote] = useState<{ ok: boolean; text: string } | null>(null)
 
   const pools = useMemo(() => Object.fromEntries(CWL.map((c) => [c,
-    roster.players.filter((p) => p.clan === c && (p.slot === 'CORE' || p.slot === 'SUB'))])) as Record<CwlClan, Player[]>, [roster])
+    roster.players.filter((p) => p.clan === c && p.slot !== 'OUT')])) as Record<CwlClan, Player[]>, [roster])
   const wars = (c: CwlClan): Wars => server?.wars?.[c] ?? {}
   const fresh = (c: CwlClan, s: DayPlans | null) => sorted(suggest(pools[c], s?.wars?.[c] ?? {}, s?.upcoming?.[c] ?? []))
   const start = (s: DayPlans | null): Plans => {
@@ -83,7 +84,7 @@ export default function DayPlanner({ roster, me }: { roster: Roster; me: Me }) {
   const missed = missedThisSeason(w)
   const inGame = new Set(Object.values(w).flatMap((x) => x.lineup))
   const rows = [...pools[clan], ...roster.players.filter((p) => p.clan === clan && inGame.has(p.tag) && !pools[clan].includes(p))]
-    .sort((a, b) => (a.slot === 'CORE' ? 0 : 1) - (b.slot === 'CORE' ? 0 : 1) || (b.th ?? 0) - (a.th ?? 0) || (b.score ?? 0) - (a.score ?? 0))
+    .sort((a, b) => ORDER[a.slot] - ORDER[b.slot] || (b.th ?? 0) - (a.th ?? 0) || (b.score ?? 0) - (a.score ?? 0))
   const core = rows.filter((p) => p.slot === 'CORE')
 
   const toggle = (tag: string, d: number) => {
@@ -192,8 +193,8 @@ export default function DayPlanner({ roster, me }: { roster: Roster; me: Me }) {
           <tbody>
             {rows.map((p, i) => {
               const got = earned(w, p.tag)
-              const unreliable = tier(p, missed) === null
-              const short = !unreliable && !onTrack(p.tag, plan, w)
+              const unreliable = tier(p, missed, w) === null
+              const short = !unreliable && !onTrial(p, w) && !onTrack(p.tag, plan, w)
               return (
                 <tr key={p.tag} className={unreliable ? 'opacity-60' : ''}>
                   <td className={`sticky left-0 z-[1] max-w-[104px] border-b border-hair bg-white py-1 pl-2.5 pr-1 md:max-w-[170px] md:pl-3 md:pr-1.5 ${i === core.length && core.length ? 'border-t-2 border-t-line' : ''}`}>

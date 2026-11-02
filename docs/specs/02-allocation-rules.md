@@ -165,6 +165,9 @@ Keeping the league and promoting is the priority. In that order:
 3. 8 stars, the CWL bonus threshold, decides only between players who fit a slot equally well: the one who needs more
    days plays. Days still needed are ceil((8 − stars so far) / 3). It never puts a weaker player ahead of a better
    fit, so some players may not reach 8; the planner flags them.
+4. New members are tried out, up to two a day, highest town hall first, on the weakest enemy slots and only if they are
+   within a town hall of them. One who attacks counts as proven and competes for days until they reach 8 stars,
+   especially a TH18. One who misses gets no more days.
 
 Days whose war is on or over are fixed to the game's lineup. Fire and Cake leaders may edit and save the shared draft;
 only Ka Wai publishes, and members see their days on Lineups only once he has.

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { loadPlayer } from '../data'
 import { CLAN, cycleLong, cycleShort, fmtScore, fmtWindow } from '../theme'
 import type { Player, Roster } from '../types'
-import { Arrow, StatusPill, Th } from './ui'
+import { Arrow, PlayDays, StatusPill, Th } from './ui'
 
 function Trend({ p, cycles }: { p: Player; cycles: string[] }) {
   const pts = cycles.map((c) => ({ c, s: p.history.find((h) => h.cycle === c)?.score ?? null }))
@@ -101,6 +101,12 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
                 <span className="font-bold" style={{ color: CLAN[p.from].deep }}>{p.from}</span>
                 <Arrow size={14} />
                 <span className="font-bold" style={{ color: c.deep }}>{p.clan}</span>
+              </div>
+            )}
+            {p.days && (
+              <div className="flex min-h-12 items-center justify-between gap-2 rounded-[14px] border border-line px-4">
+                <span className="text-sm font-semibold text-muted">CWL days</span>
+                <PlayDays days={p.days} clan={p.clan} size={24} />
               </div>
             )}
             <div className="flex items-end justify-between rounded-2xl p-4" style={{ background: c.tint }}>

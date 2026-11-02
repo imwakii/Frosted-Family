@@ -7,11 +7,15 @@ import type { Player } from './types'
 //      over it. The enemy is the drawn opponent, else the expected one (`upcoming`); with neither, the highest play.
 //   3. Between players who fit a slot equally well, the one who needs more days for 8 stars plays. Days needed =
 //      ceil((8 − stars expected so far) / 3). 8 stars never puts a weaker player ahead of a better fit.
+//   4. New members are tried out: up to two a day who have not played yet, highest town hall first, on the weakest
+//      enemy slots and only if they are within a town hall of them. One who attacks counts as proven from then on and
+//      competes for days like anyone else, so a TH18 keeps playing until 8 stars. One who misses gets no more days.
 // Days whose war is on or over are fixed to the game's lineup; only the days still to come are suggested.
 
 export const DAYS = [1, 2, 3, 4, 5, 6, 7] as const
 export const TEAM = 15
 export const TARGET = 8
+export const TRIALS_A_DAY = 2
 export type DayWar = {
   state: 'preparation' | 'inWar' | 'warEnded'
   opponent: string | null
@@ -40,10 +44,14 @@ export const earned = (wars: Wars, tag: string) =>
 
 export const missedThisSeason = (wars: Wars) => new Set(Object.values(wars).flatMap((w) => w.missed))
 
+/** A new member who has yet to attack in a war this season. */
+export const onTrial = (p: Player, wars: Wars) =>
+  p.slot === 'NEW' && !Object.values(wars).some((w) => locked(w) && w.stars[p.tag] !== undefined)
+
 /** 0 proven, 1 unproven or new, null not suggested. */
-export function tier(p: Player, missed: Set<string>): number | null {
+export function tier(p: Player, missed: Set<string>, wars: Wars): number | null {
   if (missed.has(p.tag) || p.status === 'highMiss' || p.status === 'inactive') return null
-  return p.status === 'active' ? 0 : 1
+  return p.status === 'active' || (p.slot === 'NEW' && !onTrial(p, wars)) ? 0 : 1
 }
 
 const daysFor = (stars: number) => Math.max(0, Math.ceil((TARGET - stars) / 3))
@@ -67,10 +75,15 @@ export function slotsBelow(ths: number[], foe: number[]) {
 export function suggest(pool: Player[], wars: Wars, upcoming: number[] = []): ClanDays {
   const missed = missedThisSeason(wars)
   const stars = expected(wars)
-  const ok = pool.filter((p) => tier(p, missed) !== null)
+  const ok = pool.filter((p) => tier(p, missed, wars) !== null && !onTrial(p, wars))
   const need = Object.fromEntries(ok.map((p) => [p.tag, daysFor(stars[p.tag] ?? 0)]))
   const byStrength = (a: Player, b: Player) =>
-    tier(a, missed)! - tier(b, missed)! || (b.th ?? 0) - (a.th ?? 0) || (b.score ?? 0) - (a.score ?? 0)
+    tier(a, missed, wars)! - tier(b, missed, wars)! || (b.th ?? 0) - (a.th ?? 0) || (b.score ?? 0) - (a.score ?? 0)
+  // Not yet tried: one in a war still being fought is waiting on its result.
+  const inGame = new Set(Object.values(wars).filter(locked).flatMap((w) => w.lineup))
+  const untried = pool.filter((p) => onTrial(p, wars) && tier(p, missed, wars) !== null && !inGame.has(p.tag))
+    .sort((a, b) => (b.th ?? 0) - (a.th ?? 0) || (b.score ?? 0) - (a.score ?? 0))
+  const strongest = [...ok].sort(byStrength)
   const out: ClanDays = {}
   const open = DAYS.filter((d) => !locked(wars[d]))
   for (const d of DAYS) {
@@ -79,17 +92,21 @@ export function suggest(pool: Player[], wars: Wars, upcoming: number[] = []): Cl
     // Strongest enemy first, each slot to the best fit. With no enemy known, an out-of-reach slot picks the highest.
     const known = enemy(wars[d], upcoming)
     const foe = known.length ? known.slice(0, TEAM) : Array<number>(TEAM).fill(99)
+    // Try new members on the weakest slots, as long as they are within a town hall of them.
+    const floor = (known.length ? Math.round(Math.min(...foe)) : strongest[TEAM - 1]?.th ?? 0) - 1
+    const trial = untried.filter((p) => (p.th ?? 0) >= floor).slice(0, TRIALS_A_DAY)
+    for (const p of trial) untried.splice(untried.indexOf(p), 1)
     const fit = (p: Player, slot: number) => {
       const diff = (p.th ?? 0) - slot
-      return (diff >= 0 ? diff * 0.5 : -diff) + tier(p, missed)!
+      return (diff >= 0 ? diff * 0.5 : -diff) + tier(p, missed, wars)!
     }
     const team: Player[] = []
-    for (const slot of foe) {
+    for (const slot of foe.slice(0, TEAM - trial.length)) {
       const best = ok.filter((p) => !team.includes(p))
         .sort((a, b) => fit(a, slot) - fit(b, slot) || need[b.tag] / left - need[a.tag] / left || byStrength(a, b))[0]
       if (best) team.push(best)
     }
-    out[d] = team.map((p) => p.tag).sort()
+    out[d] = [...team, ...trial].map((p) => p.tag).sort()
     for (const t of out[d]) if (need[t] > 0) need[t] -= 1
   }
   return out

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { leagueIcon, thIcon, unitIcon } from '../clash'
-import { STATUS } from '../theme'
-import type { LiveWar, Status } from '../types'
+import { CLAN, STATUS } from '../theme'
+import type { ClanName, LiveWar, Status } from '../types'
 
 export function Th({ th, size = 'sm' }: { th: number | null; size?: 'sm' | 'lg' }) {
   const img = thIcon(th)
@@ -190,6 +190,18 @@ export function UtcClock({ wide }: { wide: boolean }) {
   return (
     <span className="whitespace-nowrap rounded-full border border-line bg-white px-2.5 py-[5px] text-xs font-bold text-muted tabular-nums md:px-3 md:py-1.5 md:text-[13px]">
       {wide && <span className="font-semibold text-faint">{day} · </span>}{time} UTC
+    </span>
+  )
+}
+
+// The seven CWL days, filled where the published day plan has the player in.
+export function PlayDays({ days, clan, size = 15 }: { days: number[]; clan: ClanName; size?: number }) {
+  return (
+    <span aria-label={days.length ? `Plays day ${days.join(', ')}` : 'No days planned'} className="flex gap-[3px]">
+      {[1, 2, 3, 4, 5, 6, 7].map((d) => (
+        <span key={d} className="flex items-center justify-center rounded-full font-extrabold"
+          style={{ width: size, height: size, fontSize: Math.round(size * 0.6), ...(days.includes(d) ? { background: CLAN[clan].accent, color: '#fff' } : { boxShadow: 'inset 0 0 0 1.5px #E2E8F0', color: '#94A3B8' }) }}>{d}</span>
+      ))}
     </span>
   )
 }
