@@ -58,7 +58,7 @@ function Base({ b, right, live, picked, onPick }: { b: WarBase | null; right?: b
               {Array.from({ length: b.allowed }, (_, k) => <span key={k} className={`size-[7px] rounded-full ${k < b.used ? 'bg-[#16A34A]' : 'border-[1.5px] border-[#94A3B8]'}`} />)}
             </span>
           )}
-          {b.best !== null && <Stars n={b.best} />}
+          <Stars n={b.best ?? 0} />
         </span>
       </span>
     </button>
