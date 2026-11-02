@@ -13,7 +13,7 @@ export function Th({ th, size = 'sm' }: { th: number | null; size?: 'sm' | 'lg' 
   const box = size === 'lg' ? 'size-[46px] rounded-[14px] text-[17px] font-extrabold' : 'size-[26px] rounded-lg text-xs font-bold'
   return (
     <span className={`flex flex-none items-center justify-center ${size === 'lg' ? 'size-[52px]' : 'size-[34px]'}`}>
-      <span aria-label={label} className={`${box} flex items-center justify-center bg-[#F1F5F9] text-ink-2 tabular-nums`}>{th ?? '?'}</span>
+      <span aria-label={label} className={`${box} flex items-center justify-center bg-[#F1E8D3] text-ink-2 tabular-nums`}>{th ?? '?'}</span>
     </span>
   )
 }
@@ -82,13 +82,13 @@ export function StatusKey({ only, extra, className = '' }: { only?: Status[]; ex
 }
 
 export const Arrow = ({ size = 16 }: { size?: number }) => (
-  <svg aria-hidden="true" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="flex-none">
+  <svg aria-hidden="true" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="#A3957C" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="flex-none">
     <path d="M5 12h14M13 6l6 6-6 6" />
   </svg>
 )
 
 export const SearchIcon = () => (
-  <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth="2.2" strokeLinecap="round" className="pointer-events-none absolute left-[15px] top-1/2 -translate-y-1/2">
+  <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7A6C55" strokeWidth="2.2" strokeLinecap="round" className="pointer-events-none absolute left-[15px] top-1/2 -translate-y-1/2">
     <circle cx="11" cy="11" r="6" />
     <path d="M20 20l-4.5-4.5" />
   </svg>
@@ -117,11 +117,11 @@ export function WarPill({ war, now = Date.now() }: { war: LiveWar | null | undef
   const box = 'inline-flex h-8 max-w-full items-center gap-1.5 self-start whitespace-nowrap rounded-full px-2.5 text-xs font-bold'
   const ended = war?.state === 'warEnded' && (war.endTime === null || now - war.endTime < ENDED_SHOWN)
   if (!war || (war.state === 'warEnded' && !ended)) {
-    return <span className={`${box} bg-white/60 font-semibold text-[#94A3B8]`}>No war</span>
+    return <span className={`${box} bg-white/60 font-semibold text-[#A3957C]`}>No war</span>
   }
   if (war.state === 'preparation') {
     return (
-      <span title={`vs ${war.opponent}`} className={`${box} bg-[#FFEDD5] text-[#C2410C]`}>
+      <span title={`vs ${war.opponent}`} className={`${box} bg-[#FFEDD5] text-[#B4451A]`}>
         Prep{war.startTime ? ` · starts ${until(war.startTime - now)}` : ''}
       </span>
     )
@@ -139,14 +139,14 @@ export function WarPill({ war, now = Date.now() }: { war: LiveWar | null | undef
   return (
     <span className="relative inline-flex max-w-full self-start">
       <button type="button" aria-expanded={open} title={`vs ${war.opponent}`} onClick={() => setOpen((o) => !o)}
-        className={`${box} cursor-pointer border-0 bg-white text-[#15803D] shadow-[0_1px_2px_rgba(15,23,42,.08)]`}>
+        className={`${box} cursor-pointer border-0 bg-white text-[#15803D] shadow-[0_1px_2px_rgba(43,33,20,.08)]`}>
         <span className="ff-live size-2 flex-none rounded bg-[#16A34A]" />
         {war.day ? `Day ${war.day}` : 'War'}
         <span className="font-display text-[13px] font-normal text-ink tabular-nums"><Star /> {war.stars}–{war.opponentStars}</span>
       </button>
       {open && <span aria-hidden="true" className="fixed inset-0 z-30" onClick={() => setOpen(false)} />}
       {open && (
-        <span role="dialog" aria-label="War" className="ff-fade absolute left-0 top-[calc(100%+6px)] z-40 flex w-60 flex-col gap-1.5 rounded-xl border border-line bg-white p-3 text-left text-[13px] font-semibold text-ink-2 shadow-[0_10px_30px_rgba(15,23,42,.14)]">
+        <span role="dialog" aria-label="War" className="ff-fade absolute left-0 top-[calc(100%+6px)] z-40 flex w-60 flex-col gap-1.5 rounded-xl border border-line bg-white p-3 text-left text-[13px] font-semibold text-ink-2 shadow-[0_10px_30px_rgba(43,33,20,.14)]">
           <span className="truncate font-bold text-ink">vs <bdi>{war.opponent}</bdi></span>
           <span className="flex justify-between"><span className="text-faint">Stars</span><span className="tabular-nums">{war.stars} – {war.opponentStars}</span></span>
           <span className="flex justify-between"><span className="text-faint">Destruction</span><span className="tabular-nums">{pct(war.destruction)} – {pct(war.opponentDestruction)}</span></span>
@@ -203,7 +203,7 @@ export function PlayDays({ days, clan, size = 15 }: { days: number[]; clan: Clan
     <span aria-label={days.length ? `Plays day ${days.join(', ')}` : 'No days planned'} className="flex gap-[3px]">
       {[1, 2, 3, 4, 5, 6, 7].map((d) => (
         <span key={d} className="flex items-center justify-center rounded-full font-extrabold"
-          style={{ width: size, height: size, fontSize: Math.round(size * 0.6), ...(days.includes(d) ? { background: CLAN[clan].accent, color: '#fff' } : { boxShadow: 'inset 0 0 0 1.5px #E2E8F0', color: '#94A3B8' }) }}>{d}</span>
+          style={{ width: size, height: size, fontSize: Math.round(size * 0.6), ...(days.includes(d) ? { background: CLAN[clan].accent, color: '#FFFBF1' } : { boxShadow: 'inset 0 0 0 1.5px #E3D8BF', color: '#A3957C' }) }}>{d}</span>
       ))}
     </span>
   )
@@ -213,7 +213,7 @@ export function PlayDays({ days, clan, size = 15 }: { days: number[]; clan: Clan
 export function Stars({ n }: { n: number }) {
   return (
     <span aria-label={`${n} stars`} className="flex-none tracking-[-1px]">
-      {[0, 1, 2].map((i) => <span key={i} className={i < n ? 'text-gold' : 'text-[#AEB7C4]'}>{i < n ? '★' : '☆'}</span>)}
+      {[0, 1, 2].map((i) => <span key={i} className={i < n ? 'text-gold' : 'text-[#C9BCA0]'}>{i < n ? '★' : '☆'}</span>)}
     </span>
   )
 }
@@ -232,7 +232,7 @@ export function ClanSwitch<T extends ClanName | 'All'>({ value, onPick, options,
         const clan = k === 'All' ? null : (k as ClanName)
         return (
           <button key={k} type="button" aria-pressed={on} disabled={!!clan && off.includes(clan)} onClick={() => onPick(k)}
-            className={`flex min-h-[42px] min-w-0 cursor-pointer items-center justify-center gap-1 rounded-[9px] border-0 px-1 text-[15px] font-bold disabled:cursor-default disabled:opacity-40 ${on ? 'bg-white shadow-[0_1px_3px_rgba(15,23,42,.12)]' : 'bg-transparent text-muted'}`}
+            className={`flex min-h-[42px] min-w-0 cursor-pointer items-center justify-center gap-1 rounded-[9px] border-0 px-1 text-[15px] font-bold disabled:cursor-default disabled:opacity-40 ${on ? 'bg-white shadow-[0_1px_3px_rgba(43,33,20,.12)]' : 'bg-transparent text-muted'}`}
             style={on && clan ? { color: CLAN[clan].deep } : undefined}>
             {clan && <ClanBadge src={clans[clan]?.badge} size={20} />}
             {k}
@@ -253,7 +253,7 @@ export const POINT = {
 }
 
 export const RowChevron = () => (
-  <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#B6BFCC" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" className="-ml-1 flex-none md:hidden">
+  <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#C4B69A" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" className="-ml-1 flex-none md:hidden">
     <path d="M9 6l6 6-6 6" />
   </svg>
 )

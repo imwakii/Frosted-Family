@@ -4,17 +4,17 @@ export const CLANS: ClanName[] = ['Fire', 'Cake', 'Flakes']
 
 // Clan colour marks clan identity only.
 export const CLAN: Record<ClanName, { tint: string; deep: string; accent: string; label: string }> = {
-  Fire: { tint: '#FFF4EE', deep: '#C2410C', accent: '#FF6B35', label: '#9A3412' },
+  Fire: { tint: '#FFF0E8', deep: '#D2360A', accent: '#FF5A1F', label: '#A82C0A' },
   Cake: { tint: '#EEF5FD', deep: '#1D5FB0', accent: '#3B8BE6', label: '#1E4E8C' },
-  Flakes: { tint: '#F2F0FE', deep: '#5B47D6', accent: '#7C6CF0', label: '#4C3BB8' },
+  Flakes: { tint: '#F8EEFC', deep: '#8E24AA', accent: '#B44FD6', label: '#74208C' },
 }
 
 export const STATUS: Record<Status, { text: string; bg: string; fg: string; dot: string }> = {
   active: { text: 'Active', bg: '#DCFCE7', fg: '#166534', dot: '#16A34A' },
   highMiss: { text: 'High miss', bg: '#FEF3C7', fg: '#92400E', dot: '#D97706' },
-  inactive: { text: 'Inactive', bg: '#E2E8F0', fg: '#334155', dot: '#94A3B8' },
-  thin: { text: 'Few attacks', bg: '#E2E8F0', fg: '#334155', dot: '#94A3B8' },
-  new: { text: 'New', bg: '#DBEAFE', fg: '#1D4ED8', dot: '#3B82F6' },
+  inactive: { text: 'Inactive', bg: '#E3D8BF', fg: '#463A29', dot: '#A3957C' },
+  thin: { text: 'Few attacks', bg: '#E3D8BF', fg: '#463A29', dot: '#A3957C' },
+  new: { text: 'New', bg: '#D6E6E4', fg: '#1F5A5F', dot: '#2F7F86' },
 }
 
 export const GROUPS: { slot: Slot; label: string; dim: boolean }[] = [

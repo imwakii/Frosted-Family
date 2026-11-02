@@ -37,7 +37,7 @@ function PlanRow({ p, at, onPlace, locked }: { p: Player; at: Place; onPlace: (v
   const moved = at.clan !== p.clan || at.slot !== p.slot
   const id = 'plan-' + p.tag.slice(1)
   return (
-    <li className={`ff-plan-row flex min-h-11 items-center gap-2 rounded-[10px] py-[3px] pl-2.5 pr-1 ${moved ? 'bg-moved' : 'hover:bg-[#F8FAFF]'}`}>
+    <li className={`ff-plan-row flex min-h-11 items-center gap-2 rounded-[10px] py-[3px] pl-2.5 pr-1 ${moved ? 'bg-moved' : 'hover:bg-[#F6EEDC]'}`}>
       <Th th={p.th} />
       <span className="flex min-w-0 flex-auto items-center gap-1.5">
         <span className="truncate text-sm font-semibold">{p.name}</span>
@@ -219,27 +219,27 @@ function Plan({ roster, me }: { roster: Roster; me: Me }) {
       <div className="px-4 pt-1 md:hidden"><ClanSwitch value={phoneClan} onPick={setPhoneClan} /></div>
       <div className="sticky top-0 z-20 border-b border-line bg-white/95 backdrop-blur md:static md:border-0 md:bg-transparent md:backdrop-blur-none">
         <div className="mx-auto flex max-w-[1360px] flex-wrap items-center gap-2 px-[clamp(16px,3vw,32px)] py-2.5 md:pt-5">
-          <span className="rounded-full bg-[#EEF1F6] px-3 py-1.5 text-[13px] font-bold text-ink-2">{changeLabel}</span>
+          <span className="rounded-full bg-[#EFE6D2] px-3 py-1.5 text-[13px] font-bold text-ink-2">{changeLabel}</span>
           <span className="flex-auto" />
           {n > 0 && !viewing && (
             <button type="button" onClick={() => { setMine({}); setResult(null) }}
-              className="min-h-10 cursor-pointer rounded-[10px] border border-[#D5DBE5] bg-white px-3 text-sm font-semibold text-ink-2 hover:bg-page">
+              className="min-h-10 cursor-pointer rounded-[10px] border border-[#D5C8AC] bg-white px-3 text-sm font-semibold text-ink-2 hover:bg-page">
               Reset
             </button>
           )}
           {!viewing && <button type="button" onClick={save} disabled={readOnly || !dirty || saving} title={readOnly ? lockedTip : undefined}
-            className="min-h-10 cursor-pointer rounded-[10px] border border-[#D5DBE5] bg-white px-3 text-sm font-semibold text-ink-2 hover:bg-page disabled:cursor-default disabled:opacity-60">
+            className="min-h-10 cursor-pointer rounded-[10px] border border-[#D5C8AC] bg-white px-3 text-sm font-semibold text-ink-2 hover:bg-page disabled:cursor-default disabled:opacity-60">
             {dirty || !Object.keys(mine).length ? 'Propose' : 'Proposed'}
           </button>}
           {viewing ? null : readOnly ? (
             <button type="button" disabled title={lockedTip}
-              className="min-h-10 cursor-not-allowed rounded-[10px] border-0 bg-[#E2E8F0] px-4 text-sm font-bold text-faint">
+              className="min-h-10 cursor-not-allowed rounded-[10px] border-0 bg-[#E3D8BF] px-4 text-sm font-bold text-faint">
               Publish
             </button>
           ) : canPublish ? (
             <button type="button" onClick={openConfirm} disabled={cant}
               title={blocked ? checks.filter((k) => (k.tone === 'bad' || k.tone === 'warn') && !valveOnly(k)).map((k) => k.label).join(' · ') : undefined}
-              className="min-h-10 cursor-pointer rounded-[10px] border-0 bg-action px-4 text-sm font-bold text-white hover:bg-action-deep disabled:cursor-not-allowed disabled:bg-[#E2E8F0] disabled:text-faint">
+              className="min-h-10 cursor-pointer rounded-[10px] border-0 bg-action px-4 text-sm font-bold text-white hover:bg-action-deep disabled:cursor-not-allowed disabled:bg-[#E3D8BF] disabled:text-faint">
               Publish
             </button>
           ) : null}
@@ -280,7 +280,7 @@ function Plan({ roster, me }: { roster: Roster; me: Me }) {
                     <span className="text-[11px] font-bold uppercase tracking-[0.06em] text-muted">Core avg</span>
                     <div className="flex items-baseline gap-2">
                       {Math.abs(c.delta) >= 0.05 && (
-                        <span className="text-[13px] font-bold tabular-nums" style={{ color: c.delta > 0 ? '#15803D' : '#C2410C' }}>
+                        <span className="text-[13px] font-bold tabular-nums" style={{ color: c.delta > 0 ? '#15803D' : '#B4451A' }}>
                           {c.delta > 0 ? '+' : '−'}{Math.abs(c.delta).toFixed(1)}
                         </span>
                       )}
@@ -291,7 +291,7 @@ function Plan({ roster, me }: { roster: Roster; me: Me }) {
                 </div>
                 {c.groups.map((g) => (
                   <div key={g.label}>
-                    <div className={`flex justify-between px-4 pb-1 pt-3 text-[11px] font-bold uppercase tracking-[0.06em] ${g.dim ? 'text-[#94A3B8]' : 'text-muted'}`}>
+                    <div className={`flex justify-between px-4 pb-1 pt-3 text-[11px] font-bold uppercase tracking-[0.06em] ${g.dim ? 'text-[#A3957C]' : 'text-muted'}`}>
                       <span>{g.label}</span><span>{g.rows.length}</span>
                     </div>
                     <ul className="m-0 list-none px-1.5 pb-1.5">
@@ -306,9 +306,9 @@ function Plan({ roster, me }: { roster: Roster; me: Me }) {
       </main>
 
       {confirming && (
-        <div className="ff-fade fixed inset-0 z-50 flex items-center justify-center bg-[rgba(15,23,42,.4)] p-4" onClick={(e) => { if (e.target === e.currentTarget) setConfirming(false) }}>
+        <div className="ff-fade fixed inset-0 z-50 flex items-center justify-center bg-[rgba(43,33,20,.4)] p-4" onClick={(e) => { if (e.target === e.currentTarget) setConfirming(false) }}>
           <section role="dialog" aria-modal="true" aria-label="Publish to CWL"
-            className="ff-sheet flex max-h-[80vh] w-full max-w-[440px] flex-col gap-3.5 overflow-auto rounded-[20px] bg-white p-[22px] shadow-[0_20px_50px_rgba(15,23,42,.25)]">
+            className="ff-sheet flex max-h-[80vh] w-full max-w-[440px] flex-col gap-3.5 overflow-auto rounded-[20px] bg-white p-[22px] shadow-[0_20px_50px_rgba(43,33,20,.25)]">
             <h2 className="font-display m-0 text-[22px]">Publish {changeLabel}?</h2>
             <ul className="m-0 flex list-none flex-col gap-0.5 p-0">
               {changes.map((p) => (
@@ -333,7 +333,7 @@ function Plan({ roster, me }: { roster: Roster; me: Me }) {
             )}
             <div className="flex justify-end gap-2">
               <button type="button" autoFocus onClick={() => setConfirming(false)}
-                className="min-h-11 cursor-pointer rounded-[10px] border border-[#D5DBE5] bg-white px-4 text-sm font-semibold text-ink-2 hover:bg-page">Cancel</button>
+                className="min-h-11 cursor-pointer rounded-[10px] border border-[#D5C8AC] bg-white px-4 text-sm font-semibold text-ink-2 hover:bg-page">Cancel</button>
               <button type="button" onClick={publish} disabled={busy || server === 'checking' || serverProblems.length > 0 || (valveHit && !override)}
                 className="min-h-11 cursor-pointer rounded-[10px] border-0 bg-action px-[18px] text-sm font-bold text-white hover:bg-action-deep disabled:opacity-60">Publish</button>
             </div>
@@ -353,7 +353,7 @@ function Gate({ me, onSignOut }: { me: Me; onSignOut: () => void }) {
   return (
     <main className="mx-auto flex max-w-[1360px] justify-center px-4 pt-16">
       <section className="flex w-full max-w-[380px] flex-col items-center gap-3 rounded-[20px] border border-line bg-white px-6 py-8 text-center">
-        <span className="flex size-12 items-center justify-center rounded-2xl bg-[#EEF1F6] text-ink-2">
+        <span className="flex size-12 items-center justify-center rounded-2xl bg-[#EFE6D2] text-ink-2">
           <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="11" width="14" height="9" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></svg>
         </span>
         <h2 className="font-display m-0 text-[24px] text-brand">Leaders only</h2>
@@ -366,10 +366,10 @@ function Gate({ me, onSignOut }: { me: Me; onSignOut: () => void }) {
           <>
             <span className="text-sm text-faint">Signed in as {me.user.name}</span>
             <button type="button" onClick={onSignOut}
-              className="min-h-11 w-full cursor-pointer rounded-[10px] border border-[#D5DBE5] bg-white text-sm font-semibold text-ink-2 hover:bg-page">Sign out</button>
+              className="min-h-11 w-full cursor-pointer rounded-[10px] border border-[#D5C8AC] bg-white text-sm font-semibold text-ink-2 hover:bg-page">Sign out</button>
           </>
         ) : !me.configured ? (
-          <button type="button" disabled className="mt-1 flex min-h-12 w-full items-center justify-center gap-2.5 rounded-[12px] border-0 bg-[#E2E8F0] text-[15px] font-bold text-faint">
+          <button type="button" disabled className="mt-1 flex min-h-12 w-full items-center justify-center gap-2.5 rounded-[12px] border-0 bg-[#E3D8BF] text-[15px] font-bold text-faint">
             <Discord />Sign-in coming soon
           </button>
         ) : (

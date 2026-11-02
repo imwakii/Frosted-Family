@@ -68,9 +68,9 @@ export default function RankBoard({ kind, cols, note, q, setQ, wide }: {
             <th className="sticky left-0 top-0 z-[4] w-12 min-w-12 border-b border-line bg-white py-2.5 pl-4 pr-1">#</th>
             <th className="sticky left-12 top-0 z-[4] min-w-[220px] border-b border-line bg-white px-2">PLAYER</th>
             {cols.map((c) => (
-              <th key={c.key} className={`sticky top-0 z-[2] border-b border-line p-0 text-right ${c.key === col.key ? 'bg-[#EEF2FF]' : 'bg-white'}`} aria-sort={c.key === col.key ? 'descending' : undefined}>
+              <th key={c.key} className={`sticky top-0 z-[2] border-b border-line p-0 text-right ${c.key === col.key ? 'bg-[#F1E8D3]' : 'bg-white'}`} aria-sort={c.key === col.key ? 'descending' : undefined}>
                 <button type="button" onClick={() => setSortKey(c.key)}
-                  className={`min-h-12 w-full cursor-pointer whitespace-nowrap border-0 bg-transparent px-4 text-right text-xs font-bold hover:bg-[#EEF2FF] ${c.key === col.key ? 'text-ink' : 'text-faint'}`}>
+                  className={`min-h-12 w-full cursor-pointer whitespace-nowrap border-0 bg-transparent px-4 text-right text-xs font-bold hover:bg-[#F1E8D3] ${c.key === col.key ? 'text-ink' : 'text-faint'}`}>
                   {c.label}{c.key === col.key ? ' ↓' : ''}
                 </button>
               </th>

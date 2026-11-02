@@ -27,7 +27,7 @@ function Cell({ plays, war, tag, ring, onToggle, label, changed }: {
     const inGame = war!.lineup.includes(tag)
     const missed = war!.missed.includes(tag)
     const stars = war!.stars[tag]
-    dot = !inGame ? <span className="size-2 rounded-full bg-[#E2E8F0]" />
+    dot = !inGame ? <span className="size-2 rounded-full bg-[#E3D8BF]" />
       : missed ? <span title="Missed" className="flex size-[22px] items-center justify-center rounded-full bg-[#DC2626] text-[11px] font-extrabold text-white">✕</span>
       : <span className="flex size-[22px] items-center justify-center rounded-full text-[11px] font-extrabold text-white" style={{ background: ring }}>{stars ?? ''}</span>
   } else {
@@ -35,7 +35,7 @@ function Cell({ plays, war, tag, ring, onToggle, label, changed }: {
     const differs = !!war && war.lineup.includes(tag) !== plays
     dot = plays
       ? <span className="size-[18px] rounded-full" style={{ background: ring, boxShadow: differs ? '0 0 0 2.5px #F59E0B' : undefined }} />
-      : <span className={`size-[14px] rounded-full border-2 ${differs ? 'border-[#F59E0B] bg-[#FEF3C7]' : 'border-[#E2E8F0]'}`} />
+      : <span className={`size-[14px] rounded-full border-2 ${differs ? 'border-[#F59E0B] bg-[#FEF3C7]' : 'border-[#E3D8BF]'}`} />
   }
   return (
     <td className={`border-b border-hair p-0 text-center ${changed ? 'bg-moved' : ''}`}>
@@ -153,7 +153,7 @@ export default function DayPlanner({ roster, me }: { roster: Roster; me: Me }) {
     setServer(await publishDays(season, plans, me.csrf))
     if (proposals.mine) await withdrawProposal(proposals.mine.id, me.csrf)
   }, 'Published · members see their days')
-  const btn = 'min-h-10 cursor-pointer rounded-[10px] border border-[#D5DBE5] bg-white px-3 text-sm font-semibold text-ink-2 hover:bg-page disabled:cursor-default disabled:opacity-60'
+  const btn = 'min-h-10 cursor-pointer rounded-[10px] border border-[#D5C8AC] bg-white px-3 text-sm font-semibold text-ink-2 hover:bg-page disabled:cursor-default disabled:opacity-60'
   return (
     <>
     <Outer className={`mx-auto flex flex-col gap-3.5 px-[clamp(16px,3vw,32px)] pt-1 md:pt-5 max-w-[1360px] ${preview ? '' : 'pb-12'}`}>
@@ -168,7 +168,7 @@ export default function DayPlanner({ roster, me }: { roster: Roster; me: Me }) {
         {canPublish && !confirming && !viewing && (
           <button type="button" onClick={() => setConfirming(true)} disabled={busy || bad.length > 0 || !!published}
             title={bad.length ? `Not 15: ${bad.join(', ')}` : undefined}
-            className="min-h-10 cursor-pointer rounded-[10px] border-0 bg-action px-3 text-sm font-bold text-white hover:bg-action-deep disabled:cursor-not-allowed disabled:bg-[#E2E8F0] disabled:text-faint">
+            className="min-h-10 cursor-pointer rounded-[10px] border-0 bg-action px-3 text-sm font-bold text-white hover:bg-action-deep disabled:cursor-not-allowed disabled:bg-[#E3D8BF] disabled:text-faint">
             {published ? 'Published' : 'Publish'}
           </button>
         )}

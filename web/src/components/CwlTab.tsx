@@ -66,7 +66,7 @@ function ClanCard({ roster, clan, meta, war, compact, below }: { roster: Roster;
   return (
     <div className={`flex flex-col gap-2.5 ${compact ? 'px-4 py-3.5' : 'rounded-[18px] p-3.5'}`} style={{ background: c.tint }}>
       <div className="flex items-center gap-3">
-      <ClanBadge src={f.badge} size={compact ? 52 : 64} className="drop-shadow-[0_2px_4px_rgba(15,23,42,.18)]" />
+      <ClanBadge src={f.badge} size={compact ? 52 : 64} className="drop-shadow-[0_2px_4px_rgba(43,33,20,.18)]" />
       <div className="flex min-w-0 flex-auto flex-col gap-1">
         <h2 className={`font-display m-0 truncate leading-none ${compact ? 'text-[22px]' : 'text-2xl'}`} style={{ color: c.deep }}>{f.name}</h2>
         <LeaguePill league={f.league} text={f.format.replace('League ', '')} />
@@ -249,7 +249,7 @@ function Countdown({ roster, war, slim }: { roster: Roster; war: Props['war']; s
   }
   if (day) {
     return (
-      <div className="flex min-h-12 items-center gap-2.5 rounded-2xl border border-[#BBF7D0] bg-[#F0FDF4] px-4 text-[#15803D]">
+      <div className="flex min-h-12 items-center gap-2.5 rounded-2xl border border-[#BBF7D0] bg-[#E9F0D8] px-4 text-[#15803D]">
         <span className="ff-live size-2 flex-none rounded bg-[#16A34A]" />
         <span className="text-[15px] font-bold">CWL · Day {day} of 7</span>
       </div>
@@ -275,7 +275,7 @@ function useDay(roster: Roster, war: Props['war']) {
 }
 
 function DayPicker({ day, setDay, live }: { day: DayPick; setDay: (d: DayPick) => void; live: number }) {
-  const on = 'bg-white text-ink shadow-[0_1px_3px_rgba(15,23,42,.12)]'
+  const on = 'bg-white text-ink shadow-[0_1px_3px_rgba(43,33,20,.12)]'
   return (
     <nav aria-label="CWL day" className="grid w-full max-w-[480px] grid-cols-[1.8fr_auto_repeat(7,1fr)] gap-1 rounded-xl bg-well p-1">
       {(['all', 1, 2, 3, 4, 5, 6, 7] as DayPick[]).map((d) => (

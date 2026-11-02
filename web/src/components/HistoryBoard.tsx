@@ -20,7 +20,7 @@ type History = {
 }
 
 // Checked with the colourblind validator on white: Cake's deep blue beside these lighter Fire and Flakes.
-const BAR: Record<ClanName, string> = { Fire: '#E8703A', Cake: '#1D5FB0', Flakes: '#8B7BEB' }
+const BAR: Record<ClanName, string> = { Fire: '#E8703A', Cake: '#1D5FB0', Flakes: '#9440BE' }
 const fullDate = (d: string) => new Date(`${d}T00:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' })
 const LONGEST_SHOWN = 10
 // How long since a date, to the month; under a month, in days.

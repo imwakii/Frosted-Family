@@ -13,6 +13,7 @@ import { YouTag } from './You'
 // GET /api/log: what has happened in the family, newest day first. Each day opens with who came, went or changed role,
 // so a busy day of upgrades does not bury them; a player's upgrades that day share one row, a new town hall has its own.
 // A member's row points the way they went: towards the clan on the way in, away from it on the way out.
+// A new town hall is a milestone: a gold row at the top of its day, or an ordinary row in the Upgrades view.
 
 type View = 'all' | 'members' | 'upgrades'
 const VIEWS: { id: View; label: string }[] = [{ id: 'all', label: 'All' }, { id: 'members', label: 'Members' }, { id: 'upgrades', label: 'Upgrades' }]
@@ -22,13 +23,13 @@ const KINDS: { id: UpgradeCategory | 'all'; label: string }[] = [
 ]
 const ROLE: Record<string, string> = { member: 'Member', admin: 'Elder', coLeader: 'Co-leader', leader: 'Leader' }
 const MARK: Record<LogEvent['kind'], { point: typeof POINT.right | null; bg: string; fg: string }> = {
-  joined: { point: POINT.right, bg: '#F0FDF4', fg: '#166534' },
-  rejoined: { point: POINT.right, bg: '#F0FDF4', fg: '#166534' },
-  visited: { point: null, bg: '#F1F5F9', fg: '#64748B' },
-  left: { point: POINT.left, bg: '#FEF2F2', fg: '#B91C1C' },
-  moved: { point: POINT.right, bg: '#EFF6FF', fg: '#1D4ED8' },
-  promoted: { point: null, bg: '#FFFBEB', fg: '#92400E' },
-  demoted: { point: null, bg: '#F1F5F9', fg: '#64748B' },
+  joined: { point: POINT.right, bg: '#E7EFD6', fg: '#2F6B2A' },
+  rejoined: { point: POINT.right, bg: '#E7EFD6', fg: '#2F6B2A' },
+  visited: { point: null, bg: '#FAF4E5', fg: '#7A6C55' },
+  left: { point: POINT.left, bg: '#F8D5CF', fg: '#A3261A' },
+  moved: { point: POINT.right, bg: '#DFEAE7', fg: '#1F5A5F' },
+  promoted: { point: null, bg: '#F6EACB', fg: '#92400E' },
+  demoted: { point: null, bg: '#FAF4E5', fg: '#7A6C55' },
 }
 
 function says(e: LogEvent) {
@@ -84,6 +85,16 @@ function EventRow({ e, onRoster }: { e: LogEvent; onRoster: boolean }) {
     : <div className={cls} style={style}>{body}</div>
 }
 
+function MilestoneRow({ u }: { u: Upgrade }) {
+  return (
+    <a href={playerHref(u.tag)} className="flex min-h-10 w-full items-center gap-2 bg-[#F7E8BC] px-3 text-[13px] text-ink no-underline hover:brightness-95">
+      <span className="min-w-0 flex-auto truncate font-semibold"><YouTag tag={u.tag} />{u.name}</span>
+      <span className="flex-none whitespace-nowrap text-xs font-semibold text-[#92400E]">★ Reached TH{u.to}, {u.clan}</span>
+      <span className="flex-none whitespace-nowrap text-[11px] font-semibold text-faint">{ago(u.at)}</span>
+    </a>
+  )
+}
+
 const DAY = 86_400_000
 const WEEKLY_AFTER = 30    // days of history before the chart can show all of it, in weeks
 const dayMs = (d: string) => Date.parse(`${d}T00:00:00Z`)
@@ -136,7 +147,7 @@ function UpgradeChart({ counts, clan, kind }: { counts: UpgradeCount[]; clan: Cl
       {long && (
         <div role="group" aria-label="Range" className="flex self-start rounded-lg bg-well p-0.5">
           {([[false, '30 days'], [true, 'All']] as const).map(([id, text]) => (
-            <button key={text} type="button" aria-pressed={all === id} onClick={() => setAll(id)} className={`min-h-8 cursor-pointer rounded-md border-0 px-3 text-[13px] font-bold ${all === id ? 'bg-white text-ink shadow-[0_1px_2px_rgba(15,23,42,.1)]' : 'bg-transparent text-faint'}`}>{text}</button>
+            <button key={text} type="button" aria-pressed={all === id} onClick={() => setAll(id)} className={`min-h-8 cursor-pointer rounded-md border-0 px-3 text-[13px] font-bold ${all === id ? 'bg-white text-ink shadow-[0_1px_2px_rgba(43,33,20,.1)]' : 'bg-transparent text-faint'}`}>{text}</button>
           ))}
         </div>
       )}
@@ -145,8 +156,8 @@ function UpgradeChart({ counts, clan, kind }: { counts: UpgradeCount[]; clan: Cl
           <svg role="img" aria-label={xs.map((x) => `${label(x)}: ${total(x)}`).join(', ')} width={w} height={H} className="block touch-pan-y" onPointerMove={pick} onPointerDown={pick} onPointerLeave={() => setHover(null)}>
             {yt.map((t) => (
               <g key={t}>
-                <line x1={L} x2={w} y1={sy(t)} y2={sy(t)} stroke="#EEF1F6" />
-                <text x={L - 6} y={sy(t)} dy="0.32em" textAnchor="end" fontSize="10.5" fill="#64748B">{t}</text>
+                <line x1={L} x2={w} y1={sy(t)} y2={sy(t)} stroke="#EFE6D2" />
+                <text x={L - 6} y={sy(t)} dy="0.32em" textAnchor="end" fontSize="10.5" fill="#7A6C55">{t}</text>
               </g>
             ))}
             {xs.map((x, i) => {
@@ -155,7 +166,7 @@ function UpgradeChart({ counts, clan, kind }: { counts: UpgradeCount[]; clan: Cl
               const parts = shown.filter((k) => at.get(x)![k])
               return (
                 <g key={x} opacity={open(x) ? 0.55 : 1}>
-                  {hover === i && <rect x={L + i * band} y={T} width={band} height={ih} fill="#F1F5F9" />}
+                  {hover === i && <rect x={L + i * band} y={T} width={band} height={ih} fill="#F1E8D3" />}
                   {parts.map((k, j) => {
                     const h = (at.get(x)![k] / y1) * ih
                     const y = top - h
@@ -167,11 +178,11 @@ function UpgradeChart({ counts, clan, kind }: { counts: UpgradeCount[]; clan: Cl
                 </g>
               )
             })}
-            {named.map((x) => <text key={x} x={L + xs.indexOf(x) * band + band / 2} y={H - 6} fontSize="10.5" fill="#64748B" textAnchor="middle">{shortDay(x)}</text>)}
+            {named.map((x) => <text key={x} x={L + xs.indexOf(x) * band + band / 2} y={H - 6} fontSize="10.5" fill="#7A6C55" textAnchor="middle">{shortDay(x)}</text>)}
           </svg>
         ) : <div style={{ height: H }} />}
         {hx !== null && (
-          <div role="tooltip" className="pointer-events-none absolute top-0 z-10 flex min-w-[120px] flex-col gap-1 rounded-lg border border-line bg-white px-2.5 py-2 text-xs shadow-[0_6px_20px_rgba(15,23,42,.12)]"
+          <div role="tooltip" className="pointer-events-none absolute top-0 z-10 flex min-w-[120px] flex-col gap-1 rounded-lg border border-line bg-white px-2.5 py-2 text-xs shadow-[0_6px_20px_rgba(43,33,20,.12)]"
             style={hover! > xs.length / 2 ? { right: w - (L + hover! * band) + 6 } : { left: L + (hover! + 1) * band + 6 }}>
             <span className="font-bold text-ink">{label(hx)}{open(hx) ? ' so far' : ''}</span>
             {clan === 'All'
@@ -219,7 +230,7 @@ function UpgradeRow({ ups, showClan, open, onToggle }: { ups: Upgrade[]; showCla
           <span className="truncate text-[13px] text-muted">{ups.length} upgrades</span>
         </span>
         {when}
-        <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" className={`flex-none transition-transform ${open ? 'rotate-180' : ''}`}><path d="M6 9l6 6 6-6" /></svg>
+        <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#A3957C" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" className={`flex-none transition-transform ${open ? 'rotate-180' : ''}`}><path d="M6 9l6 6 6-6" /></svg>
       </button>
       {open && (
         <div className="flex flex-col gap-1 px-3.5 pb-3">
@@ -251,16 +262,18 @@ export default function LogTab({ roster, q, setQ, wide }: { roster: Roster; q: s
 
   const events = (view === 'upgrades' ? [] : data?.events ?? [])
     .filter((e) => (clan === 'All' || e.clan === clan || e.from_clan === clan) && named(e))
-  const ups = (view === 'members' ? [] : data?.upgrades ?? [])
-    .filter((u) => (clan === 'All' || u.clan === clan) && (view !== 'upgrades' || kind === 'all' || u.category === kind) && named(u))
+  const allUps = (data?.upgrades ?? []).filter((u) => (clan === 'All' || u.clan === clan) && named(u))
+  const halls = view === 'upgrades' ? [] : allUps.filter((u) => u.category === 'town_hall')
+  const ups = view === 'members' ? [] : allUps.filter((u) => (view === 'upgrades' ? kind === 'all' || u.category === kind : u.category !== 'town_hall'))
 
   // One day: its member events, then a row for each player's upgrades, most recent first.
-  const days = new Map<string, { events: LogEvent[]; groups: Map<string, Upgrade[]> }>()
+  const days = new Map<string, { halls: Upgrade[]; events: LogEvent[]; groups: Map<string, Upgrade[]> }>()
   const dayOf = (at: string) => {
     const d = at.slice(0, 10)
-    if (!days.has(d)) days.set(d, { events: [], groups: new Map() })
+    if (!days.has(d)) days.set(d, { halls: [], events: [], groups: new Map() })
     return days.get(d)!
   }
+  halls.forEach((u) => dayOf(u.at).halls.push(u))
   events.forEach((e) => dayOf(e.at).events.push(e))
   ups.forEach((u) => {
     const g = dayOf(u.at).groups
@@ -282,7 +295,7 @@ export default function LogTab({ roster, q, setQ, wide }: { roster: Roster; q: s
       )}
     </div>
   )
-  const first = events.find((e) => here.has(e.tag))?.tag ?? ups[0]?.tag
+  const first = events.find((e) => here.has(e.tag))?.tag ?? halls[0]?.tag ?? ups[0]?.tag
   const enter = () => { if (first) go.to(playerHref(first)) }
   const started = data?.since && new Date(`${data.since}T00:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' })
 
@@ -297,8 +310,9 @@ export default function LogTab({ roster, q, setQ, wide }: { roster: Roster; q: s
           return (
             <section key={d} aria-label={dayLabel(d)} className="flex flex-col gap-1.5">
               <span className="px-1 text-xs font-bold uppercase tracking-[0.06em] text-faint">{dayLabel(d)}</span>
-              {!!day.events.length && (
+              {!!(day.halls.length || day.events.length) && (
                 <ol className="m-0 grid list-none grid-cols-1 gap-1 p-0 md:grid-cols-2">
+                  {day.halls.map((u) => <li key={`${u.tag}-th-${u.to}`} className="min-w-0"><MilestoneRow u={u} /></li>)}
                   {day.events.map((e) => <li key={`${e.kind}-${e.tag}-${e.at}`} className="min-w-0"><EventRow e={e} onRoster={here.has(e.tag)} /></li>)}
                 </ol>
               )}

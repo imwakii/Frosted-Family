@@ -96,7 +96,7 @@ export default function BadgesBoard({ q, setQ, wide }: { q: string; setQ: (v: st
                     {[...TIERS].reverse().map((t) => (
                       <span key={t} aria-label={`${medals(x.r, t)} ${t}`} className="flex w-[26px] items-center justify-end gap-0.5 text-[13px] font-extrabold tabular-nums">
                         <span className="size-2 flex-none rounded-full" style={{ background: TIER_LOOK[t].dot, opacity: medals(x.r, t) ? 1 : 0.25 }} />
-                        <span className={medals(x.r, t) ? 'text-ink' : 'text-[#CBD5E1]'}>{medals(x.r, t)}</span>
+                        <span className={medals(x.r, t) ? 'text-ink' : 'text-[#D5C8AC]'}>{medals(x.r, t)}</span>
                       </span>
                     ))}
                   </span>

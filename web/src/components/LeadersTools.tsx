@@ -12,13 +12,13 @@ import { ClanSwitch, Th, RowChevron } from './ui'
 
 function inactiveTone(d: number | null) {
   if (d === null) return null
-  if (d >= 14) return { bg: '#E2E8F0', fg: '#334155' }
+  if (d >= 14) return { bg: '#E3D8BF', fg: '#463A29' }
   if (d >= 7) return { bg: '#FEF3C7', fg: '#92400E' }
   return null
 }
 
 function DaysChip({ p }: { p: Inactive }) {
-  if (p.days_inactive === null) return <span className="text-[#CBD5E1]">—</span>
+  if (p.days_inactive === null) return <span className="text-[#D5C8AC]">—</span>
   const t = inactiveTone(p.days_inactive)
   const text = `${p.days_inactive}d${p.inactive_at_least ? '+' : ''}`
   return t
@@ -57,7 +57,7 @@ function Inactivity({ wide }: { wide: boolean }) {
                     </span>
                   </td>
                   <td className="border-b border-hair px-4 text-right"><DaysChip p={p} /></td>
-                  <td className="border-b border-hair px-4 text-right font-semibold tabular-nums text-ink-2">{ago(p.last_war_attack) ?? <span className="text-[#CBD5E1]">—</span>}</td>
+                  <td className="border-b border-hair px-4 text-right font-semibold tabular-nums text-ink-2">{ago(p.last_war_attack) ?? <span className="text-[#D5C8AC]">—</span>}</td>
                   <td className="border-b border-hair px-4 text-right font-semibold tabular-nums text-ink-2">{p.donations ?? '—'}</td>
                 </tr>
               ))}
@@ -90,8 +90,8 @@ function Inactivity({ wide }: { wide: boolean }) {
 
 const TONE = {
   amber: { background: '#FEF3C7', color: '#92400E' },
-  grey: { background: '#E2E8F0', color: '#334155' },
-  plain: { background: '#F1F5F9', color: '#0F172A' },
+  grey: { background: '#E3D8BF', color: '#463A29' },
+  plain: { background: '#F1E8D3', color: '#2B2114' },
 }
 
 function groupByActivity(players: Candidate[]) {
@@ -115,7 +115,7 @@ function MakeRoom() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <ClanSwitch value={clan} onPick={setClan} />
         {data && (
-          <span className={`rounded-full px-3 py-1.5 text-[13px] font-bold tabular-nums ${full ? 'bg-[#FEF3C7] text-[#92400E]' : 'bg-[#EEF1F6] text-ink-2'}`}>
+          <span className={`rounded-full px-3 py-1.5 text-[13px] font-bold tabular-nums ${full ? 'bg-[#FEF3C7] text-[#92400E]' : 'bg-[#EFE6D2] text-ink-2'}`}>
             {data.members}/{data.cap} members
           </span>
         )}
@@ -193,7 +193,7 @@ export default function LeadersTools({ wide }: { wide: boolean }) {
       <div role="group" aria-label="Members" className="inline-grid w-max auto-cols-max grid-flow-col gap-1 rounded-xl bg-well p-1">
         {([['inactivity', 'Inactivity'], ['room', 'Make room']] as const).map(([k, label]) => (
           <button key={k} type="button" aria-pressed={k === view} onClick={() => setView(k)}
-            className={`min-h-10 cursor-pointer rounded-[9px] border-0 px-4 text-sm font-bold ${k === view ? 'bg-white text-ink shadow-[0_1px_3px_rgba(15,23,42,.12)]' : 'bg-transparent text-muted'}`}>
+            className={`min-h-10 cursor-pointer rounded-[9px] border-0 px-4 text-sm font-bold ${k === view ? 'bg-white text-ink shadow-[0_1px_3px_rgba(43,33,20,.12)]' : 'bg-transparent text-muted'}`}>
             {label}
           </button>
         ))}

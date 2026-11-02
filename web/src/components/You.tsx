@@ -67,7 +67,7 @@ export function JumpToYou({ wide }: { wide: boolean }) {
   }
   return (
     <button type="button" onClick={jump}
-      className={`fixed right-4 z-20 min-h-10 cursor-pointer rounded-full border-0 bg-ink px-4 text-sm font-bold text-white shadow-[0_4px_14px_rgba(15,23,42,.3)] ${wide ? 'bottom-6' : 'bottom-[72px]'}`}>
+      className={`fixed right-4 z-20 min-h-10 cursor-pointer rounded-full border-0 bg-ink px-4 text-sm font-bold text-white shadow-[0_4px_14px_rgba(43,33,20,.3)] ${wide ? 'bottom-6' : 'bottom-[72px]'}`}>
       Find me
     </button>
   )
@@ -126,8 +126,8 @@ export function YouChip({ roster, compact }: { roster: Roster; compact?: boolean
           {!compact && <><span className="lg:hidden">Add me</span><span className="max-lg:hidden">Add yourself</span></>}
         </button>
         {picking && (
-          <div className="ff-fade fixed inset-0 z-50 flex items-start justify-center bg-[rgba(15,23,42,.4)] px-4 pt-20" onClick={(e) => { if (e.target === e.currentTarget) setPicking(false) }}>
-            <div className="w-full max-w-[420px] shadow-[0_20px_50px_rgba(15,23,42,.25)]"><YouPrompt roster={roster} onDone={() => setPicking(false)} autoFocus /></div>
+          <div className="ff-fade fixed inset-0 z-50 flex items-start justify-center bg-[rgba(43,33,20,.4)] px-4 pt-20" onClick={(e) => { if (e.target === e.currentTarget) setPicking(false) }}>
+            <div className="w-full max-w-[420px] shadow-[0_20px_50px_rgba(43,33,20,.25)]"><YouPrompt roster={roster} onDone={() => setPicking(false)} autoFocus /></div>
           </div>
         )}
       </>

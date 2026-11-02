@@ -3,7 +3,7 @@
 The war being fought, else the one in preparation, else the last one for three days after it ended. Bases are paired by
 map position, with a log of every attack, newest first: who hit whom, stars, damage, and when the collector first saw it,
 since the API gives no attack times. A war the collector last saw in progress whose end has passed is over,
-whatever state was stored.
+whatever state was stored. A war that is over has a recap: its MVP and any three-star on a town hall well above the attacker's.
 """
 from __future__ import annotations
 
@@ -13,6 +13,8 @@ from datetime import datetime, timedelta, timezone
 from frosted.config import CLAN_TAGS
 
 ENDED_SHOWN = timedelta(days=3)
+UPSET_TH_GAP = 2           # one town hall up is routine now
+UPSETS_SHOWN = 3
 
 
 def stamp(t: datetime) -> str:
@@ -55,6 +57,28 @@ def brief(b: dict) -> dict:
     return {k: b[k] for k in ("tag", "name", "th", "position")}
 
 
+def recap(log: list[dict]) -> dict | None:
+    """The MVP has the most stars, then the most damage, then the shortest total attack time."""
+    hits: dict[str, list[dict]] = {}
+    for a in log:
+        if a["ours"]:
+            hits.setdefault(a["attacker"]["tag"], []).append(a)
+    if not hits:
+        return None
+    stars = lambda rows: sum(a["stars"] for a in rows)
+    damage = lambda rows: sum(a["destruction"] for a in rows)
+    took = lambda rows: sum(a["duration"] or 0 for a in rows) or float("inf")
+    best = min(hits.values(), key=lambda rows: (-stars(rows), -damage(rows), took(rows)))
+    upsets = [a for a in log if a["ours"] and a["stars"] == 3 and a["attacker"]["th"] and a["defender"]["th"]
+              and a["defender"]["th"] - a["attacker"]["th"] >= UPSET_TH_GAP]
+    upsets.sort(key=lambda a: a["attacker"]["th"] - a["defender"]["th"])
+    return {
+        "mvp": {**best[0]["attacker"], "stars": [a["stars"] for a in reversed(best)], "destruction": damage(best) / len(best),
+                "tied": sum(stars(r) == stars(best) and damage(r) == damage(best) for r in hits.values())},
+        "upsets": [{"attacker": a["attacker"], "defender": a["defender"]} for a in upsets[:UPSETS_SHOWN]],
+    }
+
+
 def war_view(conn, w, clan_tag: str, over: bool) -> dict:
     us, them = ("clan", "opponent") if w["clan_tag"] == clan_tag else ("opponent", "clan")
     allowed = w["attacks_per_member"] or (1 if w["kind"] == "cwl" else 2)
@@ -71,7 +95,7 @@ def war_view(conn, w, clan_tag: str, over: bool) -> dict:
             continue
         on["best"] = max(on["best"] or 0, a["stars"])
         log.append({"order": a["attack_order"], "ours": a["attacker_tag"] in ours, "attacker": brief(by), "defender": brief(on),
-                    "stars": a["stars"], "destruction": a["destruction"], "seen_at": seen.get(a["attack_order"])})
+                    "stars": a["stars"], "destruction": a["destruction"], "duration": a["duration"], "seen_at": seen.get(a["attack_order"])})
     left = {b["position"]: b for t, b in bases.items() if t in ours}
     right = {b["position"]: b for t, b in bases.items() if t not in ours}
     return {
@@ -85,6 +109,7 @@ def war_view(conn, w, clan_tag: str, over: bool) -> dict:
         "pairs": [{"position": p, "us": left.get(p), "them": right.get(p)}
                   for p in sorted(x for x in set(left) | set(right) if x is not None)],
         "log": log,
+        "recap": recap(log) if over else None,
     }
 
 

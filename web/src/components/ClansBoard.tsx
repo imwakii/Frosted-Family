@@ -7,10 +7,10 @@ type Range = '30d' | 'all'
 const SERIES: StatClan[] = [...CLANS, 'Family']
 // Cake uses its accent: the deep blue sits too close to Flakes' violet for colour-blind readers.
 // Mid-tone clan hues, softer than the badge colours, so lines and bars read calmly on white.
-export const COLOR: Record<StatClan, string> = { Fire: '#F0905F', Cake: '#5A9BE3', Flakes: '#9686EE', Family: '#94A3B8' }
+export const COLOR: Record<StatClan, string> = { Fire: '#EC7440', Cake: '#5A9BE3', Flakes: '#9440BE', Family: '#A3957C' }
 const DASH: Partial<Record<StatClan, string>> = { Family: '4 3' }
-const OUTCOME = { won: '#BBEACB', draw: '#E2E8F0', lost: '#F9C9C9' } as const
-const OUTCOME_INK = { won: '#166534', draw: '#475569', lost: '#991B1B' } as const
+const OUTCOME = { won: '#BBEACB', draw: '#E3D8BF', lost: '#F9C9C9' } as const
+const OUTCOME_INK = { won: '#166534', draw: '#5E5240', lost: '#991B1B' } as const
 const DAY = 86_400_000
 
 const ms = (d: string) => Date.parse(`${d.slice(0, 10)}T00:00:00Z`)
@@ -131,33 +131,33 @@ function LineChart({ lines, xs, xLabel, fmt, dots = false }: { lines: Line[]; xs
         <svg role="img" aria-label={label} width={w} height={H} className="block touch-pan-y" onPointerMove={move} onPointerDown={move} onPointerLeave={() => setHover(null)}>
           {yt.map((t) => (
             <g key={t}>
-              <line x1={L} x2={L + iw} y1={sy(t)} y2={sy(t)} stroke="#EEF1F6" />
-              <text x={L - 6} y={sy(t)} dy="0.32em" textAnchor="end" fontSize="10.5" fill="#64748B" className="tabular-nums">{fmt(t)}</text>
+              <line x1={L} x2={L + iw} y1={sy(t)} y2={sy(t)} stroke="#EFE6D2" />
+              <text x={L - 6} y={sy(t)} dy="0.32em" textAnchor="end" fontSize="10.5" fill="#7A6C55" className="tabular-nums">{fmt(t)}</text>
             </g>
           ))}
           {xt.map((x, i) => (
-            <text key={x} x={sx(x)} y={H - 6} fontSize="10.5" fill="#64748B" textAnchor={xt.length > 1 && i === 0 ? 'start' : xt.length > 1 && i === xt.length - 1 ? 'end' : 'middle'}>{xLabel(x)}</text>
+            <text key={x} x={sx(x)} y={H - 6} fontSize="10.5" fill="#7A6C55" textAnchor={xt.length > 1 && i === 0 ? 'start' : xt.length > 1 && i === xt.length - 1 ? 'end' : 'middle'}>{xLabel(x)}</text>
           ))}
-          {hx !== null && <line x1={sx(hx)} x2={sx(hx)} y1={T} y2={T + ih} stroke="#CBD5E1" />}
+          {hx !== null && <line x1={sx(hx)} x2={sx(hx)} y1={T} y2={T + ih} stroke="#D5C8AC" />}
           {lines.map((l) => (
             <g key={l.k}>
               <path d={l.pts.map((p, i) => `${i ? 'L' : 'M'}${sx(p.x)},${sy(p.y)}`).join('')} fill="none" stroke={COLOR[l.k]} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" strokeDasharray={DASH[l.k]} />
-              {l.pts.filter((p) => p.m).map((p) => <circle key={'m' + p.x} cx={sx(p.x)} cy={sy(p.y)} r="3.5" fill="#fff" stroke={COLOR[l.k]} strokeWidth="2" />)}
-              {(dots ? l.pts : l.pts.slice(-1)).filter((p) => !p.m).map((p) => <circle key={p.x} cx={sx(p.x)} cy={sy(p.y)} r="4" fill={COLOR[l.k]} stroke="#fff" strokeWidth="2" />)}
-              {hx !== null && l.pts.filter((p) => p.x === hx).map((p) => <circle key="h" cx={sx(p.x)} cy={sy(p.y)} r="5" fill={COLOR[l.k]} stroke="#fff" strokeWidth="2" />)}
+              {l.pts.filter((p) => p.m).map((p) => <circle key={'m' + p.x} cx={sx(p.x)} cy={sy(p.y)} r="3.5" fill="#FFFBF1" stroke={COLOR[l.k]} strokeWidth="2" />)}
+              {(dots ? l.pts : l.pts.slice(-1)).filter((p) => !p.m).map((p) => <circle key={p.x} cx={sx(p.x)} cy={sy(p.y)} r="4" fill={COLOR[l.k]} stroke="#FFFBF1" strokeWidth="2" />)}
+              {hx !== null && l.pts.filter((p) => p.x === hx).map((p) => <circle key="h" cx={sx(p.x)} cy={sy(p.y)} r="5" fill={COLOR[l.k]} stroke="#FFFBF1" strokeWidth="2" />)}
             </g>
           ))}
           {ends.map((e) => (
             <text key={e.k} x={L + iw + 10} y={e.y} dy="0.32em" fontSize="11" className="tabular-nums">
-              <tspan fontWeight="700" fill="#0F172A">{fmt(e.v)}</tspan>
-              <tspan dx="4" fill="#64748B">{e.k}</tspan>
+              <tspan fontWeight="700" fill="#2B2114">{fmt(e.v)}</tspan>
+              <tspan dx="4" fill="#7A6C55">{e.k}</tspan>
             </text>
           ))}
         </svg>
       )}
       {w === 0 && <div style={{ height: H }} />}
       {hx !== null && (
-        <div role="tooltip" className="pointer-events-none absolute top-0 z-10 flex min-w-[120px] flex-col gap-1 rounded-lg border border-line bg-white px-2.5 py-2 text-xs shadow-[0_6px_20px_rgba(15,23,42,.12)]"
+        <div role="tooltip" className="pointer-events-none absolute top-0 z-10 flex min-w-[120px] flex-col gap-1 rounded-lg border border-line bg-white px-2.5 py-2 text-xs shadow-[0_6px_20px_rgba(43,33,20,.12)]"
           style={sx(hx) > w / 2 ? { right: w - sx(hx) + 10 } : { left: sx(hx) + 10 }}>
           <span className="font-bold text-ink">{xLabel(hx)}</span>
           {lines.flatMap((l) => l.pts.filter((p) => p.x === hx).map((p) => (
@@ -288,13 +288,13 @@ function StarsCard({ wars }: { wars: ReturnType<typeof warsIn> }) {
                   <span className="flex items-center gap-1.5 text-xs font-semibold text-ink-2"><Dot k={r.k} />{r.k}</span>
                   <span className="pl-3.5 text-[11px] text-faint">{r.n} {r.n === 1 ? 'war' : 'wars'}</span>
                 </span>
-                <div className="flex flex-col gap-[3px]">{bar(r.us, COLOR[r.k], r.k)}{bar(r.them, '#E2E8F0', 'Opponents')}</div>
+                <div className="flex flex-col gap-[3px]">{bar(r.us, COLOR[r.k], r.k)}{bar(r.them, '#E3D8BF', 'Opponents')}</div>
               </div>
             ))}
           </div>
           <div className="flex gap-3 text-xs font-semibold text-ink-2">
             <span className="flex items-center gap-1.5"><span className="flex gap-px">{CLANS.map((k) => <span key={k} className="h-2.5 w-1.5 first:rounded-l-sm last:rounded-r-sm" style={{ background: COLOR[k] }} />)}</span>Ours</span>
-            <span className="flex items-center gap-1.5"><span className="size-2.5 rounded-sm bg-[#E2E8F0]" />Opponents</span>
+            <span className="flex items-center gap-1.5"><span className="size-2.5 rounded-sm bg-[#E3D8BF]" />Opponents</span>
           </div>
         </>
       )}
@@ -329,8 +329,8 @@ function Columns({ cats, series, fmt }: { cats: string[]; series: { k: StatClan;
         <svg role="img" aria-label={cats.map((c, i) => `${c}: ${series.map((s) => `${s.k} ${s.v[i] ?? 'none'}`).join(', ')}`).join('; ')} width={w} height={H} className="block">
           {yt.map((t) => (
             <g key={t}>
-              <line x1={L} x2={w} y1={sy(t)} y2={sy(t)} stroke="#EEF1F6" />
-              <text x={L - 6} y={sy(t)} dy="0.32em" textAnchor="end" fontSize="10.5" fill="#64748B">{fmt(t)}</text>
+              <line x1={L} x2={w} y1={sy(t)} y2={sy(t)} stroke="#EFE6D2" />
+              <text x={L - 6} y={sy(t)} dy="0.32em" textAnchor="end" fontSize="10.5" fill="#7A6C55">{fmt(t)}</text>
             </g>
           ))}
           {cats.map((c, i) => {
@@ -338,7 +338,7 @@ function Columns({ cats, series, fmt }: { cats: string[]; series: { k: StatClan;
             return (
               <g key={c}>
                 {series.map((s, j) => s.v[i] ? <path key={s.k} d={col(gx + j * (bw + 2), s.v[i] as number)} fill={COLOR[s.k]}><title>{`${s.k}, ${c}: ${s.v[i]!.toLocaleString('en-GB')}`}</title></path> : null)}
-                <text x={L + i * band + band / 2} y={H - 6} fontSize="10.5" fill="#64748B" textAnchor="middle">{c}</text>
+                <text x={L + i * band + band / 2} y={H - 6} fontSize="10.5" fill="#7A6C55" textAnchor="middle">{c}</text>
               </g>
             )
           })}
@@ -418,7 +418,7 @@ export default function ClansBoard({ wide }: { wide: boolean }) {
     ) : (
       <div className={pad}>
         <div className="flex flex-col items-center gap-2 rounded-2xl border border-line bg-white px-6 py-14 text-center">
-          <svg aria-hidden="true" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="2" strokeLinecap="round"><path d="M4 20h16M7 16V9M12 16V5M17 16v-4" /></svg>
+          <svg aria-hidden="true" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#A3957C" strokeWidth="2" strokeLinecap="round"><path d="M4 20h16M7 16V9M12 16V5M17 16v-4" /></svg>
           <span className="text-sm font-semibold text-faint">Clan stats are unavailable right now</span>
         </div>
       </div>
@@ -437,7 +437,7 @@ export default function ClansBoard({ wide }: { wide: boolean }) {
         <div role="group" aria-label="Range" className="flex rounded-lg bg-well p-0.5">
           {([['30d', '30 days'], ['all', 'All']] as const).map(([id, text]) => (
             <button key={id} type="button" aria-pressed={range === id} onClick={() => setRange(id)}
-              className={`min-h-8 cursor-pointer rounded-md border-0 px-3 text-[13px] font-bold ${range === id ? 'bg-white text-ink shadow-[0_1px_2px_rgba(15,23,42,.1)]' : 'bg-transparent text-faint'}`}>
+              className={`min-h-8 cursor-pointer rounded-md border-0 px-3 text-[13px] font-bold ${range === id ? 'bg-white text-ink shadow-[0_1px_2px_rgba(43,33,20,.1)]' : 'bg-transparent text-faint'}`}>
               {text}
             </button>
           ))}
@@ -446,7 +446,7 @@ export default function ClansBoard({ wide }: { wide: boolean }) {
           {SERIES.map((k) => <Key key={k} k={k} />)}
           {trended && (
             <span className="flex items-center gap-1.5 text-xs font-semibold text-ink-2">
-              <svg aria-hidden="true" width="10" height="10"><circle cx="5" cy="5" r="3.5" fill="#fff" stroke="#94A3B8" strokeWidth="2" /></svg>Monthly export
+              <svg aria-hidden="true" width="10" height="10"><circle cx="5" cy="5" r="3.5" fill="#FFFBF1" stroke="#A3957C" strokeWidth="2" /></svg>Monthly export
             </span>
           )}
         </div>

@@ -16,6 +16,6 @@ export const TIERS = ['bronze', 'silver', 'gold'] as const
 export type Tier = (typeof TIERS)[number]
 export const TIER_LOOK = {
   bronze: { chip: 'border-[#D9A77A] bg-[#FBEFE4] text-[#8A4B1F]', on: 'border-[#8A4B1F] bg-[#F5DFCB] text-[#8A4B1F]', ink: '#E8B48A', dot: '#CD7F32', name: 'Bronze' },
-  silver: { chip: 'border-[#B8C2D0] bg-[#F1F4F8] text-[#475569]', on: 'border-[#475569] bg-[#E2E8F0] text-[#475569]', ink: '#CBD5E1', dot: '#94A3B8', name: 'Silver' },
+  silver: { chip: 'border-[#B8C2D0] bg-[#F6EEDC] text-[#5E5240]', on: 'border-[#5E5240] bg-[#E3D8BF] text-[#5E5240]', ink: '#D5C8AC', dot: '#A3957C', name: 'Silver' },
   gold: { chip: 'border-[#E9B949] bg-[#FEF3C7] text-[#92400E]', on: 'border-[#92400E] bg-[#FDE68A] text-[#92400E]', ink: '#FDE68A', dot: '#E9B949', name: 'Gold' },
 }

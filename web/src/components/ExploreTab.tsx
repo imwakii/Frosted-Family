@@ -55,7 +55,7 @@ export function CategoryNav({ current, wide }: { current: string; wide: boolean 
       <nav aria-label="Category" className="flex max-w-full flex-none gap-1 overflow-x-auto rounded-[14px] bg-well p-1 [scrollbar-width:none]">
         {NAV.map((c) => (
           <button key={c.id} type="button" aria-pressed={c.id === current} onClick={() => go.to(`#/stats/players/${c.id}`)}
-            className={`flex min-h-[42px] flex-none cursor-pointer whitespace-nowrap items-center gap-1.5 rounded-[10px] border-0 text-sm font-bold ${c.icon ? 'pl-2.5 pr-3.5' : 'px-3.5'} ${c.id === current ? 'bg-white text-ink shadow-[0_1px_3px_rgba(15,23,42,.12)]' : 'bg-transparent text-muted hover:text-ink'}`}>
+            className={`flex min-h-[42px] flex-none cursor-pointer whitespace-nowrap items-center gap-1.5 rounded-[10px] border-0 text-sm font-bold ${c.icon ? 'pl-2.5 pr-3.5' : 'px-3.5'} ${c.id === current ? 'bg-white text-ink shadow-[0_1px_3px_rgba(43,33,20,.12)]' : 'bg-transparent text-muted hover:text-ink'}`}>
             {c.icon && <UnitIcon name={c.icon} size={24} />}{c.label}
           </button>
         ))}
@@ -87,14 +87,14 @@ export function Empty({ loading }: { loading: boolean }) {
   }
   return (
     <div className="flex flex-col items-center gap-2 rounded-2xl border border-line bg-white px-6 py-14 text-center">
-      <svg aria-hidden="true" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="2" strokeLinecap="round"><path d="M4 20h16M7 16V9M12 16V5M17 16v-4" /></svg>
+      <svg aria-hidden="true" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#A3957C" strokeWidth="2" strokeLinecap="round"><path d="M4 20h16M7 16V9M12 16V5M17 16v-4" /></svg>
       <span className="text-sm font-semibold text-faint">No data yet</span>
     </div>
   )
 }
 
 const cellTone = (l: number | null, max: number) =>
-  l === null || l === 0 ? 'text-[#CBD5E1]' : l >= max ? 'font-extrabold text-ink' : l < max * 0.6 ? 'font-semibold text-[#94A3B8]' : 'font-semibold text-ink-2'
+  l === null || l === 0 ? 'text-[#D5C8AC]' : l >= max ? 'font-extrabold text-ink' : l < max * 0.6 ? 'font-semibold text-[#A3957C]' : 'font-semibold text-ink-2'
 
 export default function ExploreTab({ sub, kind, ...rest }: BoardProps & { sub: string; kind: string | null }) {
   const id = NAV.find((c) => c.id === kind)?.id ?? 'overall'
@@ -171,7 +171,7 @@ function MatrixBoard({ cat, q, setQ, wide }: BoardProps & { cat: Cat }) {
                       <th colSpan={3} className="sticky left-0 z-[4] bg-white" />
                       {groups.map((g) => (
                         <th key={g.hero ?? 'other'} colSpan={g.idx.length} title={g.hero ?? undefined}
-                          className={`bg-[#F8FAFC] pb-0.5 pt-1.5 ${divider(g.idx[0])}`}>
+                          className={`bg-[#FBF5E6] pb-0.5 pt-1.5 ${divider(g.idx[0])}`}>
                           {g.hero && <span className="flex justify-center"><UnitIcon name={g.hero} size={28} /></span>}
                         </th>
                       ))}
@@ -180,13 +180,13 @@ function MatrixBoard({ cat, q, setQ, wide }: BoardProps & { cat: Cat }) {
                   <tr>
                     <th className="sticky left-0 z-[4] w-12 min-w-12 border-b border-line bg-white py-2.5 pl-4 pr-1 text-left text-xs font-bold text-faint">#</th>
                     <th className="sticky left-12 z-[4] min-w-[210px] border-b border-line bg-white px-3 py-2.5 text-left text-xs font-bold text-faint">PLAYER</th>
-                    <th className={`border-b border-line p-0 ${sort.col < 0 ? 'bg-[#EEF2FF]' : 'bg-white'}`} aria-sort={sort.col < 0 ? (sort.asc ? 'ascending' : 'descending') : undefined}>
-                      <button type="button" onClick={() => pick(-1)} className="min-h-16 w-24 cursor-pointer border-0 bg-transparent text-xs font-bold text-ink-2 hover:bg-[#EEF2FF]">Progress</button>
+                    <th className={`border-b border-line p-0 ${sort.col < 0 ? 'bg-[#F1E8D3]' : 'bg-white'}`} aria-sort={sort.col < 0 ? (sort.asc ? 'ascending' : 'descending') : undefined}>
+                      <button type="button" onClick={() => pick(-1)} className="min-h-16 w-24 cursor-pointer border-0 bg-transparent text-xs font-bold text-ink-2 hover:bg-[#F1E8D3]">Progress</button>
                     </th>
                     {order.map((i) => { const u = units[i]; return (
-                      <th key={u.name} className={`border-b border-line p-0 ${divider(i)} ${sort.col === i ? 'bg-[#EEF2FF]' : 'bg-white'}`} aria-sort={sort.col === i ? (sort.asc ? 'ascending' : 'descending') : undefined}>
+                      <th key={u.name} className={`border-b border-line p-0 ${divider(i)} ${sort.col === i ? 'bg-[#F1E8D3]' : 'bg-white'}`} aria-sort={sort.col === i ? (sort.asc ? 'ascending' : 'descending') : undefined}>
                         <button type="button" onClick={() => pick(i)} title={`${u.name} · max ${u.max}`} aria-label={`Sort by ${u.name}`}
-                          className="flex min-h-16 w-14 cursor-pointer flex-col items-center justify-center gap-0.5 border-0 bg-transparent px-0.5 py-1 hover:bg-[#EEF2FF]">
+                          className="flex min-h-16 w-14 cursor-pointer flex-col items-center justify-center gap-0.5 border-0 bg-transparent px-0.5 py-1 hover:bg-[#F1E8D3]">
                           <UnitIcon name={u.name} size={36} />
                         </button>
                       </th>
@@ -204,17 +204,17 @@ function MatrixBoard({ cat, q, setQ, wide }: BoardProps & { cat: Cat }) {
                           {clan === 'All' && <span className="text-xs font-bold" style={{ color: CLAN[p.clan].deep }}>{p.clan}</span>}
                         </span>
                       </td>
-                      <td className={`border-b border-hair px-2.5 py-1.5 group-hover:bg-hover ${sort.col < 0 ? 'bg-[#F5F7FF]' : ''}`}>
+                      <td className={`border-b border-hair px-2.5 py-1.5 group-hover:bg-hover ${sort.col < 0 ? 'bg-[#F6EEDC]' : ''}`}>
                         <span className="flex w-[76px] flex-col gap-[3px]">
                           <span className="font-bold tabular-nums">{Math.round(pct)}%</span>
-                          <span className="block h-[5px] overflow-hidden rounded-[3px] bg-[#E2E8F0]"><span className="block h-[5px] bg-ink" style={{ width: `${pct}%` }} /></span>
+                          <span className="block h-[5px] overflow-hidden rounded-[3px] bg-[#E3D8BF]"><span className="block h-[5px] bg-ink" style={{ width: `${pct}%` }} /></span>
                         </span>
                       </td>
                       {order.map((i) => {
                         const u = units[i]
                         const l = p.levels[i]
                         return (
-                          <td key={u.name} className={`h-11 border-b border-hair px-1 text-center tabular-nums group-hover:bg-hover ${divider(i)} ${sort.col === i ? 'bg-[#F5F7FF]' : ''} ${cellTone(l, u.max)}`}>
+                          <td key={u.name} className={`h-11 border-b border-hair px-1 text-center tabular-nums group-hover:bg-hover ${divider(i)} ${sort.col === i ? 'bg-[#F6EEDC]' : ''} ${cellTone(l, u.max)}`}>
                             {l ? l : '—'}{isMaxed(l, u) && <span className="ml-px align-[4px] text-[11px] text-gold">★</span>}
                           </td>
                         )
@@ -259,7 +259,7 @@ function MatrixBoard({ cat, q, setQ, wide }: BoardProps & { cat: Cat }) {
                   : <span aria-hidden="true" className="w-px flex-none self-stretch bg-line" />)}
                 {g.idx.map((i) => { const x = units[i]; return (
                   <button key={x.name} type="button" role="option" aria-selected={i === ui} aria-label={x.name} onClick={() => setUnit(i)}
-                    className={`flex size-[60px] flex-none cursor-pointer items-center justify-center rounded-2xl p-0 ${i === ui ? 'border-2 border-action bg-[#EFF5FF] shadow-[0_2px_8px_rgba(37,99,235,.2)]' : 'border border-line bg-white'}`}>
+                    className={`flex size-[60px] flex-none cursor-pointer items-center justify-center rounded-2xl p-0 ${i === ui ? 'border-2 border-action bg-[#F6EEDC] shadow-[0_2px_8px_rgba(51,39,26,.2)]' : 'border border-line bg-white'}`}>
                     <UnitIcon name={x.name} size={44} />
                   </button>
                 ) })}
@@ -283,11 +283,11 @@ function MatrixBoard({ cat, q, setQ, wide }: BoardProps & { cat: Cat }) {
                         <span className="truncate text-[15px] font-semibold"><YouTag tag={p.tag} />{p.name}</span>
                         {clan === 'All' && <span className="flex-none text-[11px] font-bold" style={{ color: CLAN[p.clan].deep }}>{p.clan}</span>}
                       </span>
-                      <span className="block h-[5px] overflow-hidden rounded-[3px] bg-[#E2E8F0]">
-                        <span className="block h-[5px]" style={{ width: `${(100 * Math.min(l, u.max)) / u.max}%`, background: maxed ? '#E0A100' : '#0F172A' }} />
+                      <span className="block h-[5px] overflow-hidden rounded-[3px] bg-[#E3D8BF]">
+                        <span className="block h-[5px]" style={{ width: `${(100 * Math.min(l, u.max)) / u.max}%`, background: maxed ? '#E0A100' : '#2B2114' }} />
                       </span>
                     </span>
-                    <span className={`w-[78px] flex-none whitespace-nowrap text-right text-sm tabular-nums ${maxed ? 'font-extrabold text-ink' : l ? 'font-semibold text-muted' : 'text-[#CBD5E1]'}`}>
+                    <span className={`w-[78px] flex-none whitespace-nowrap text-right text-sm tabular-nums ${maxed ? 'font-extrabold text-ink' : l ? 'font-semibold text-muted' : 'text-[#D5C8AC]'}`}>
                       {l ? `${l} / ${u.max}` : '—'}{maxed && <span className="ml-0.5 text-gold">★</span>}
                     </span>
                     <RowChevron />
@@ -395,7 +395,7 @@ function WarBoardView({ q, setQ, wide }: BoardProps) {
     <div role="group" aria-label="Wars" className="inline-grid flex-none auto-cols-max grid-flow-col gap-1 rounded-xl bg-well p-1">
       {([['all', 'All wars'], ['cwl', 'CWL season']] as const).map(([k, label]) => (
         <button key={k} type="button" aria-pressed={k === scope} onClick={() => pickScope(k)}
-          className={`min-h-10 cursor-pointer rounded-[9px] border-0 px-3 text-sm font-bold ${k === scope ? 'bg-white text-ink shadow-[0_1px_3px_rgba(15,23,42,.12)]' : 'bg-transparent text-muted'}`}>
+          className={`min-h-10 cursor-pointer rounded-[9px] border-0 px-3 text-sm font-bold ${k === scope ? 'bg-white text-ink shadow-[0_1px_3px_rgba(43,33,20,.12)]' : 'bg-transparent text-muted'}`}>
           {label}
         </button>
       ))}
@@ -421,9 +421,9 @@ function WarBoardView({ q, setQ, wide }: BoardProps) {
                   <th className="sticky left-0 top-0 z-[4] w-12 min-w-12 border-b border-line bg-white py-2.5 pl-4 pr-1 font-bold">#</th>
                   <th className="sticky left-12 top-0 z-[4] min-w-[220px] border-b border-line bg-white px-2 font-bold">PLAYER</th>
                   {cols.map((c) => (
-                    <th key={c.key} className={`sticky top-0 z-[2] border-b border-line p-0 text-right ${c.key === sort.key ? 'bg-[#EEF2FF]' : 'bg-white'}`} aria-sort={c.key === sort.key ? (sort.asc ? 'ascending' : 'descending') : undefined}>
+                    <th key={c.key} className={`sticky top-0 z-[2] border-b border-line p-0 text-right ${c.key === sort.key ? 'bg-[#F1E8D3]' : 'bg-white'}`} aria-sort={c.key === sort.key ? (sort.asc ? 'ascending' : 'descending') : undefined}>
                       <button type="button" onClick={() => pick(c)} title={c.recordedOnly ? recordedTip : undefined}
-                        className={`min-h-12 w-full cursor-pointer whitespace-nowrap border-0 bg-transparent px-4 text-right text-xs font-bold hover:bg-[#EEF2FF] ${c.key === sort.key ? 'text-ink' : 'text-faint'}`}>
+                        className={`min-h-12 w-full cursor-pointer whitespace-nowrap border-0 bg-transparent px-4 text-right text-xs font-bold hover:bg-[#F1E8D3] ${c.key === sort.key ? 'text-ink' : 'text-faint'}`}>
                         {c.label}{c.key === sort.key ? (sort.asc ? ' ↑' : ' ↓') : ''}
                         {c.recordedOnly && recordedStart && <span className="block text-[10px] font-semibold text-faint">{sinceLabel(recordedStart)}</span>}
                       </button>
@@ -447,7 +447,7 @@ function WarBoardView({ q, setQ, wide }: BoardProps) {
                       const v = c.value(r)
                       const high = c.key === 'missed' && (missRate(r.war) ?? 0) > HIGH_MISS
                       return (
-                        <td key={c.key} className={`border-b border-hair px-4 text-right tabular-nums group-hover:bg-hover ${c.key === sort.key ? 'bg-[#F5F7FF] font-extrabold text-ink' : 'font-semibold text-ink-2'} ${v === null ? '!font-normal !text-[#CBD5E1]' : ''}`}>
+                        <td key={c.key} className={`border-b border-hair px-4 text-right tabular-nums group-hover:bg-hover ${c.key === sort.key ? 'bg-[#F6EEDC] font-extrabold text-ink' : 'font-semibold text-ink-2'} ${v === null ? '!font-normal !text-[#D5C8AC]' : ''}`}>
                           {v === null ? '—' : high ? <span className="rounded-full bg-[#FEF3C7] px-2 py-0.5 text-[#92400E]">{c.fmt(v)}</span> : <>{c.fmt(v)}{c.key === 'stars' && <span className="ml-0.5 text-gold">★</span>}</>}
                         </td>
                       )
@@ -461,11 +461,11 @@ function WarBoardView({ q, setQ, wide }: BoardProps) {
                   const pin = fi === 0 ? 'bottom-11 border-t-2 border-t-line' : 'bottom-0'
                   return (
                     <tr key={f.label} className="h-11">
-                      <td className={`sticky left-0 z-[3] bg-[#F8FAFC] ${pin}`} />
-                      <td className={`sticky left-12 z-[3] whitespace-nowrap bg-[#F8FAFC] px-2 text-[13px] font-extrabold text-ink ${pin}`}>{f.label}</td>
+                      <td className={`sticky left-0 z-[3] bg-[#FBF5E6] ${pin}`} />
+                      <td className={`sticky left-12 z-[3] whitespace-nowrap bg-[#FBF5E6] px-2 text-[13px] font-extrabold text-ink ${pin}`}>{f.label}</td>
                       {cols.map((c) => (
                         <td key={c.key} title={c.recordedOnly ? recordedTip : undefined}
-                          className={`sticky z-[2] whitespace-nowrap bg-[#F8FAFC] px-4 text-right font-extrabold tabular-nums text-ink ${pin}`}>
+                          className={`sticky z-[2] whitespace-nowrap bg-[#FBF5E6] px-4 text-right font-extrabold tabular-nums text-ink ${pin}`}>
                           {f.cell[c.key] ?? ''}
                         </td>
                       ))}
@@ -520,7 +520,7 @@ function WarBoardView({ q, setQ, wide }: BoardProps) {
                       {rest.map((c, j) => { const x = c.value(r); return <span key={c.key}>{j ? ' · ' : ''}{c.label} {x === null ? '—' : c.fmt(x)}</span> })}
                     </span>
                   </span>
-                  <span className={`flex-none whitespace-nowrap text-right text-base tabular-nums ${v === null ? 'text-[#CBD5E1]' : 'font-extrabold'}`}>
+                  <span className={`flex-none whitespace-nowrap text-right text-base tabular-nums ${v === null ? 'text-[#D5C8AC]' : 'font-extrabold'}`}>
                     {v === null ? '—' : col.fmt(v)}{v !== null && col.key === 'stars' && <span className="ml-0.5 text-gold">★</span>}
                   </span>
                   <RowChevron />

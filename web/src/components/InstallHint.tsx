@@ -33,7 +33,7 @@ export function useInstallHint(wide: boolean) {
 
 export function InstallHint({ onDismiss }: { onDismiss: () => void }) {
   return (
-    <aside aria-label="Add to home screen" className="fixed inset-x-3 bottom-[calc(66px+env(safe-area-inset-bottom))] z-20 flex items-center gap-2.5 rounded-2xl bg-ink py-2 pl-2.5 pr-1.5 text-white shadow-[0_8px_24px_rgba(15,23,42,.3)]">
+    <aside aria-label="Add to home screen" className="fixed inset-x-3 bottom-[calc(66px+env(safe-area-inset-bottom))] z-20 flex items-center gap-2.5 rounded-2xl bg-ink py-2 pl-2.5 pr-1.5 text-white shadow-[0_8px_24px_rgba(43,33,20,.3)]">
       <img src="/app-icon-192.png" alt="" width={36} height={36} className="flex-none rounded-[9px]" />
       <span className="flex min-w-0 flex-auto flex-col">
         <span className="text-[13px] font-bold">Add to your home screen</span>

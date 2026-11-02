@@ -36,7 +36,7 @@ function Badges({ badges }: { badges: NonNullable<PlayerCard['badges']> }) {
         ))}
       </ul>
       {open && (
-        <div role="tooltip" className="absolute inset-x-0 top-full z-10 mt-1.5 flex flex-col gap-0.5 rounded-xl bg-ink px-3 py-2.5 text-white shadow-[0_8px_24px_rgba(15,23,42,.3)]">
+        <div role="tooltip" className="absolute inset-x-0 top-full z-10 mt-1.5 flex flex-col gap-0.5 rounded-xl bg-ink px-3 py-2.5 text-white shadow-[0_8px_24px_rgba(43,33,20,.3)]">
           <span className="text-[13px] font-bold">{BADGES[open.id]?.label ?? open.label}{open.tier && <span style={{ color: TIER_LOOK[open.tier].ink }}> · {TIER_LOOK[open.tier].name}</span>}</span>
           {BADGES[open.id] && <span className="text-xs">{BADGES[open.id].means}</span>}
           {open.tier && BADGES[open.id] && (
@@ -105,18 +105,18 @@ function Trend({ p, cycles }: { p: Player; cycles: string[] }) {
   return (
     <Section title="Score by cycle" note="Monthly">
       <svg role="img" aria-label={`Score by cycle: ${label}`} viewBox="-8 -12 366 130" className="h-auto w-full overflow-visible">
-        <line x1="0" y1={H} x2={W} y2={H} stroke="#EEF1F6" />
+        <line x1="0" y1={H} x2={W} y2={H} stroke="#EFE6D2" />
         {runs.map((r) => <polyline key={r} points={r} fill="none" stroke={accent} strokeWidth="3" strokeLinejoin="round" strokeLinecap="round" />)}
         {pts.map((pt, i) => pt.s === null ? null : (
           <g key={pt.c}>
-            <circle cx={x(i)} cy={y(pt.s)} r={i === lastI ? 5.5 : 3.5} fill={i === lastI ? accent : '#FFFFFF'} stroke={i === lastI ? '#FFFFFF' : accent} strokeWidth={i === lastI ? 2.5 : 2} />
+            <circle cx={x(i)} cy={y(pt.s)} r={i === lastI ? 5.5 : 3.5} fill={i === lastI ? accent : '#FFFBF1'} stroke={i === lastI ? '#FFFBF1' : accent} strokeWidth={i === lastI ? 2.5 : 2} />
             <text x={x(i)} y={y(pt.s) - 11} textAnchor={i === 0 ? 'start' : i === pts.length - 1 ? 'end' : 'middle'}
-              fontSize="12" fontWeight={i === lastI ? 800 : 600} fill={i === lastI ? CLAN[p.clan].deep : '#64748B'}>{fmtScore(pt.s)}</text>
+              fontSize="12" fontWeight={i === lastI ? 800 : 600} fill={i === lastI ? CLAN[p.clan].deep : '#7A6C55'}>{fmtScore(pt.s)}</text>
             <title>{`${cycleLong(pt.c)}: ${fmtScore(pt.s)}`}</title>
           </g>
         ))}
         {pts.map((pt, i) => (
-          <text key={pt.c} x={x(i)} y={H + 22} fontSize="12" fill="#64748B"
+          <text key={pt.c} x={x(i)} y={H + 22} fontSize="12" fill="#7A6C55"
             textAnchor={i === 0 ? 'start' : i === pts.length - 1 ? 'end' : 'middle'}>{cycleShort(pt.c)}</text>
         ))}
       </svg>
@@ -166,12 +166,12 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
 
   return (
     <div className="fixed inset-0 z-40">
-      <div className="ff-fade absolute inset-0 bg-[rgba(15,23,42,.35)]" onClick={onClose} aria-hidden="true" />
+      <div className="ff-fade absolute inset-0 bg-[rgba(43,33,20,.35)]" onClick={onClose} aria-hidden="true" />
       <section role="dialog" aria-modal="true" aria-label={p?.name ?? 'Player'}
         className={wide
-          ? 'ff-sheet absolute left-1/2 top-1/2 flex max-h-[min(720px,90vh)] w-[min(440px,calc(100%-32px))] -translate-x-1/2 -translate-y-1/2 flex-col gap-4 overflow-auto rounded-[22px] bg-white p-6 shadow-[0_20px_50px_rgba(15,23,42,.25)]'
-          : 'ff-sheet absolute inset-x-0 bottom-0 flex max-h-[calc(100dvh-64px)] flex-col gap-4 overflow-auto rounded-t-[22px] bg-white px-5 pb-[max(24px,env(safe-area-inset-bottom))] pt-2.5 shadow-[0_-8px_30px_rgba(15,23,42,.18)]'}>
-        {!wide && <span aria-hidden="true" className="h-[5px] w-10 flex-none self-center rounded-[3px] bg-[#D5DBE5]" />}
+          ? 'ff-sheet absolute left-1/2 top-1/2 flex max-h-[min(720px,90vh)] w-[min(440px,calc(100%-32px))] -translate-x-1/2 -translate-y-1/2 flex-col gap-4 overflow-auto rounded-[22px] bg-white p-6 shadow-[0_20px_50px_rgba(43,33,20,.25)]'
+          : 'ff-sheet absolute inset-x-0 bottom-0 flex max-h-[calc(100dvh-64px)] flex-col gap-4 overflow-auto rounded-t-[22px] bg-white px-5 pb-[max(24px,env(safe-area-inset-bottom))] pt-2.5 shadow-[0_-8px_30px_rgba(43,33,20,.18)]'}>
+        {!wide && <span aria-hidden="true" className="h-[5px] w-10 flex-none self-center rounded-[3px] bg-[#D5C8AC]" />}
         <div className="flex items-center gap-3">
           {p && <Th th={p.th} size="lg" />}
           <div className="flex min-w-0 flex-auto flex-col">
@@ -184,14 +184,14 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
               <span className="min-w-0 truncate">{where}</span>
               {p && (
                 <button type="button" onClick={() => (isMine ? removeYou(tag) : addYou(tag))}
-                  className={`min-h-8 flex-none cursor-pointer whitespace-nowrap rounded-lg border-0 px-2.5 text-xs font-bold ${isMine ? 'bg-ink text-white' : 'bg-[#EEF1F6] text-ink-2 hover:bg-well'}`}>
+                  className={`min-h-8 flex-none cursor-pointer whitespace-nowrap rounded-lg border-0 px-2.5 text-xs font-bold ${isMine ? 'bg-ink text-white' : 'bg-[#EFE6D2] text-ink-2 hover:bg-well'}`}>
                   {isMine ? 'You · undo' : yous.length ? 'Also me' : 'This is me'}
                 </button>
               )}
             </span>
           </div>
           <button ref={close} type="button" aria-label="Close" onClick={onClose}
-            className="flex size-11 flex-none cursor-pointer items-center justify-center rounded-full border-0 bg-[#F1F4F9] text-muted hover:bg-well">
+            className="flex size-11 flex-none cursor-pointer items-center justify-center rounded-full border-0 bg-[#F6EEDC] text-muted hover:bg-well">
             <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
           </button>
         </div>
@@ -207,7 +207,7 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
               </nav>
             )}
             {p.inClan && p.inClan !== p.clan && (
-              <div className="flex min-h-12 items-center gap-2 rounded-[14px] bg-[#EFF4FF] px-4 text-sm font-semibold text-action-deep">
+              <div className="flex min-h-12 items-center gap-2 rounded-[14px] bg-[#F6EEDC] px-4 text-sm font-semibold text-action-deep">
                 <span className="flex-auto">Move before sign-up</span>
                 <span className="font-bold" style={{ color: CLAN[p.inClan].deep }}>{p.inClan}</span>
                 <Arrow size={14} />
@@ -229,7 +229,7 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
                 </div>
               </div>
               {(p.days || card?.family_since) && (
-                <div className="flex flex-col gap-2 border-t pt-2.5" style={{ borderColor: 'rgba(15,23,42,.08)' }}>
+                <div className="flex flex-col gap-2 border-t pt-2.5" style={{ borderColor: 'rgba(43,33,20,.08)' }}>
                   {p.days && (
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-[13px] font-semibold text-muted">CWL days</span>

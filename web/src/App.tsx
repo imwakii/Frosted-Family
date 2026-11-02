@@ -35,7 +35,7 @@ function Account({ me, onSignOut }: { me: Me; onSignOut: () => void }) {
       </button>
       {open && <span aria-hidden="true" className="fixed inset-0 z-30" onClick={() => setOpen(false)} />}
       {open && (
-        <span className="ff-fade absolute right-0 top-[calc(100%+6px)] z-40 flex min-w-[160px] flex-col rounded-xl border border-line bg-white p-1 shadow-[0_10px_30px_rgba(15,23,42,.12)]">
+        <span className="ff-fade absolute right-0 top-[calc(100%+6px)] z-40 flex min-w-[160px] flex-col rounded-xl border border-line bg-white p-1 shadow-[0_10px_30px_rgba(43,33,20,.12)]">
           <span className="px-3 py-2 text-[13px] font-bold text-ink lg:hidden">{me.user.name}</span>
           <button type="button" onClick={() => { setOpen(false); onSignOut() }}
             className="min-h-10 cursor-pointer rounded-lg border-0 bg-transparent px-3 text-left text-sm font-semibold text-ink-2 hover:bg-page">Sign out</button>
@@ -65,13 +65,13 @@ export default function App() {
   return (
     <div className={`min-h-dvh ${wide ? '' : 'pb-[calc(58px+env(safe-area-inset-bottom))]'}`}>
       {wide ? (
-        <header className="border-b border-line bg-white">
+        <header className="border-b border-gold-line bg-white">
           <div className="mx-auto flex max-w-[1360px] flex-wrap items-center gap-x-4 gap-y-3 lg:gap-x-6 px-[clamp(16px,3vw,32px)] py-3">
             <span className="font-display text-2xl text-brand">Frosted Family</span>
-            <nav aria-label="Sections" className="flex gap-1 rounded-xl bg-[#EEF1F6] p-1">
+            <nav aria-label="Sections" className="flex gap-1 rounded-xl bg-[#EFE6D2] p-1">
               {TABS.map((t) => (
                 <a key={t.id} href={t.href} aria-current={route.tab === t.id ? 'page' : undefined}
-                  className={`flex min-h-[38px] items-center rounded-[9px] px-3 font-bold lg:px-[18px] no-underline ${route.tab === t.id ? 'bg-white text-ink shadow-[0_1px_3px_rgba(15,23,42,.12)]' : 'text-muted hover:text-ink'}`}>
+                  className={`flex min-h-[38px] items-center rounded-[9px] px-3 font-bold lg:px-[18px] no-underline ${route.tab === t.id ? 'bg-white text-ink shadow-[0_1px_3px_rgba(43,33,20,.12),inset_0_-2px_0_var(--color-gold)]' : 'text-muted hover:text-ink'}`}>
                   {t.label}
                 </a>
               ))}
@@ -114,10 +114,10 @@ export default function App() {
       {roster && route.player &&<PlayerSheet tag={route.player} roster={roster} wide={wide} onClose={closeSheet} />}
 
       {!wide && (
-        <nav aria-label="Sections" className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-line bg-white pb-[env(safe-area-inset-bottom)]">
+        <nav aria-label="Sections" className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-gold-line bg-white pb-[env(safe-area-inset-bottom)]">
           {TABS.map((t) => (
             <a key={t.id} href={t.href} aria-current={route.tab === t.id ? 'page' : undefined}
-              className={`flex min-h-[58px] flex-col items-center justify-center gap-[3px] text-xs font-bold no-underline ${route.tab === t.id ? 'text-action' : 'text-faint'}`}>
+              className={`flex min-h-[58px] flex-col items-center justify-center gap-[3px] text-xs font-bold no-underline ${route.tab === t.id ? 'text-ink shadow-[inset_0_2px_0_var(--color-gold)]' : 'text-faint'}`}>
               <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">{t.icon}</svg>
               {t.label}
             </a>

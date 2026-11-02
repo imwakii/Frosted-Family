@@ -59,7 +59,7 @@ export function ProposalBar<B>({ proposals, me, viewing, setViewing, dirty, line
   const accept = (override: boolean) => viewing && act(() => acceptProposal(viewing.id, override, me.csrf), () => { setViewing(null); onAccepted(viewing) })
   const valve = problems.some((x) => x.startsWith('one-way valve'))
   const canDecide = me.role === 'publisher'
-  const btn = 'min-h-9 cursor-pointer rounded-[10px] border border-[#D5DBE5] bg-white px-3 text-[13px] font-semibold text-ink-2 hover:bg-page disabled:opacity-60'
+  const btn = 'min-h-9 cursor-pointer rounded-[10px] border border-[#D5C8AC] bg-white px-3 text-[13px] font-semibold text-ink-2 hover:bg-page disabled:opacity-60'
   const go = 'min-h-9 cursor-pointer rounded-[10px] border-0 bg-action px-3 text-[13px] font-bold text-white hover:bg-action-deep disabled:opacity-60'
   const changes = viewing ? lines(viewing) : []
 

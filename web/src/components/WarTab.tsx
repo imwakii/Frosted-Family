@@ -1,4 +1,5 @@
 import { type CSSProperties, Fragment, useEffect, useRef, useState } from 'react'
+import WarRecap from './WarRecap'
 import { useYou, YouTag } from './You'
 import { useClans } from '../clash'
 import { useWide } from '../data'
@@ -23,8 +24,8 @@ const left = (ms: number) => {
   const m = Math.max(0, Math.round(ms / 60000))
   return m < 60 ? `${m}m` : `${Math.floor(m / 60)}h ${m % 60}m`
 }
-const ENEMY = '#D5DBE5'
-const ENEMY_ROW = '#F1F5F9'
+const ENEMY = '#D5C8AC'
+const ENEMY_ROW = '#F1E8D3'
 
 // Where each spark flies from the point of impact, in px, and its colour.
 const SPARKS = [[0, -34, '#F59E0B'], [25, -25, '#EF4444'], [36, -4, '#FBBF24'], [27, 20, '#F97316'], [-27, 20, '#FBBF24'], [-36, -4, '#EF4444'], [-25, -25, '#F97316'], [12, -32, '#F59E0B'], [-12, -32, '#EF4444']] as const
@@ -33,7 +34,7 @@ const SPARKS = [[0, -34, '#F59E0B'], [25, -25, '#EF4444'], [36, -4, '#FBBF24'], 
 // a shockwave and flying sparks; the two badges recoil from the blow.
 function Swords({ live, color }: { live: boolean; color: string }) {
   return (
-    <span className={`relative z-[1] flex size-11 items-center justify-center rounded-full bg-white shadow-[0_2px_8px_rgba(15,23,42,.12)] ${live ? 'ff-shake' : ''}`}>
+    <span className={`relative z-[1] flex size-11 items-center justify-center rounded-full bg-white shadow-[0_2px_8px_rgba(43,33,20,.12)] ${live ? 'ff-shake' : ''}`}>
       <svg aria-hidden="true" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.4" strokeLinecap="round" className="overflow-visible">
         <g className={live ? 'ff-sword-a' : ''}><path d="M5 5l14 14M16 20l4-4" /></g>
         <g className={live ? 'ff-sword-b' : ''}><path d="M19 5L5 19M4 16l4 4" /></g>
@@ -70,7 +71,7 @@ function Base({ b, right, live, picked, onPick }: { b: WarBase | null; right?: b
         <span className={`flex items-center gap-1.5 text-[11px] leading-none ${right ? 'flex-row-reverse' : ''}`}>
           {live && (
             <span aria-label={`${b.used} of ${b.allowed} attacks used`} className="flex gap-[3px]">
-              {Array.from({ length: b.allowed }, (_, k) => <span key={k} className={`size-[7px] rounded-full ${k < b.used ? 'bg-[#16A34A]' : 'border-[1.5px] border-[#94A3B8]'}`} />)}
+              {Array.from({ length: b.allowed }, (_, k) => <span key={k} className={`size-[7px] rounded-full ${k < b.used ? 'bg-[#16A34A]' : 'border-[1.5px] border-[#A3957C]'}`} />)}
             </span>
           )}
           <Stars n={b.best ?? 0} />
@@ -142,8 +143,8 @@ function WarBoard({ clan, war, now }: { clan: ClanName; war: ClanWar; now: numbe
       <button type="button" onClick={() => setPicked(null)} className="min-h-8 cursor-pointer rounded-full border border-line bg-white px-2.5 text-xs font-bold text-ink-2 hover:bg-page">{sideBySide ? 'Show all' : 'Close'}</button>
     </span>
   )
-  const score = (stars: number, pct: number, used: number, deep: string, right?: boolean) => (
-    <span className={`flex flex-col gap-0.5 ${right ? 'items-end' : 'items-start'} ${prep ? 'invisible' : ''}`}>
+  const score = (stars: number, pct: number, used: number, deep: string) => (
+    <span className={`flex flex-col items-center gap-0.5 ${prep ? 'invisible' : ''}`}>
       <span className="font-display flex items-baseline gap-1 text-[26px] leading-none tabular-nums" style={{ color: deep }}>{stars}<span className="text-base text-gold">★</span></span>
       <span className="text-[11px] font-semibold tabular-nums text-muted">{Math.round(pct)}% · {used}/{total}</span>
     </span>
@@ -153,30 +154,35 @@ function WarBoard({ clan, war, now }: { clan: ClanName; war: ClanWar; now: numbe
       <section aria-label={`${clan} against ${war.opponent}`} className="overflow-hidden rounded-[18px] border border-line bg-white">
         <div className="flex flex-col gap-2 p-3.5" style={{ background: t.tint }}>
           <div className="flex justify-center">
-            <span className={`whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-bold ${live ? 'bg-white text-[#15803D]' : over ? 'bg-white/60 text-muted' : 'bg-[#FFEDD5] text-[#C2410C]'}`}>
+            <span className={`whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-bold ${live ? 'bg-white text-[#15803D]' : over ? 'bg-white/60 text-muted' : 'bg-[#FFEDD5] text-[#B4451A]'}`}>
               {war.kind === 'cwl' ? `Day ${war.day ?? '?'} · ` : ''}{live ? (end ? `${left(end - now)} left` : 'Live') : over ? (draw ? 'Draw' : won ? 'Won' : 'Lost') : start ? `Starts in ${left(start - now)}` : 'Prep'}
             </span>
           </div>
           <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-2">
-            <div className="flex min-w-0 flex-col items-start gap-1.5">
-              <span className={`h-11 ${live ? 'ff-recoil-l' : ''}`}><ClanBadge src={war.badge ?? clans[clan]?.badge} size={44} /></span>
-              <span className="font-display max-w-full truncate text-[17px] leading-tight" style={{ color: t.deep }}>{clans[clan]?.name ?? `Frosted ${clan}`}</span>
+            <div className="flex min-w-0 flex-col items-center gap-1.5">
+              <span className="flex max-w-full flex-col items-center gap-1.5">
+                <span className={`h-11 ${live ? 'ff-recoil-l' : ''}`}><ClanBadge src={war.badge ?? clans[clan]?.badge} size={44} /></span>
+                <span className="font-display max-w-full truncate text-[17px] leading-tight" style={{ color: t.deep }}>{clans[clan]?.name ?? `Frosted ${clan}`}</span>
+              </span>
               {score(war.stars, war.destruction, war.attacks_used, t.deep)}
             </div>
             <Swords live={live} color={t.deep} />
-            <div className="flex min-w-0 flex-col items-end gap-1.5 text-right">
-              <span className={`h-11 ${live ? 'ff-recoil-r' : ''}`}><ClanBadge src={war.opponent_badge} size={44} /></span>
-              <span className="font-display max-w-full truncate text-[17px] leading-tight text-ink-2">{war.opponent}</span>
-              {score(war.opponent_stars, war.opponent_destruction, war.opponent_attacks_used, '#475569', true)}
+            <div className="flex min-w-0 flex-col items-center gap-1.5">
+              <span className="flex max-w-full flex-col items-center gap-1.5">
+                <span className={`h-11 ${live ? 'ff-recoil-r' : ''}`}><ClanBadge src={war.opponent_badge} size={44} /></span>
+                <span className="font-display max-w-full truncate text-[17px] leading-tight text-ink-2">{war.opponent}</span>
+              </span>
+              {score(war.opponent_stars, war.opponent_destruction, war.opponent_attacks_used, '#5E5240')}
             </div>
           </div>
           <TugBar us={war.stars} them={war.opponent_stars} color={t.deep} />
           {/* The same lines in every state, so each clan's list starts at the same height. */}
-          <span className="text-center text-xs font-bold" style={{ color: !live ? '#64748B' : toAttack ? '#B45309' : '#15803D' }}>
+          <span className="text-center text-xs font-bold" style={{ color: !live ? '#7A6C55' : toAttack ? '#B45309' : '#15803D' }}>
             {live ? (toAttack ? `${toAttack} yet to attack` : 'All attacked') : over ? `Ended ${end ? ago(new Date(end).toISOString(), now) : ''}` : `${war.team_size} v ${war.team_size}`}
           </span>
           <span className="text-center text-[11px] font-semibold text-faint">Updated {ago(war.updated_at, now)}</span>
         </div>
+        {over && war.recap && <WarRecap clan={clan} war={war} result={draw ? 'Draw' : won ? 'Won' : 'Lost'} recap={war.recap} />}
         <div className="flex min-h-[53px] items-center gap-2 border-b border-hair px-3 py-2">
             {live ? (
               <>
@@ -196,7 +202,7 @@ function WarBoard({ clan, war, now }: { clan: ClanName; war: ClanWar; now: numbe
         </div>
         <div aria-label="Key" className={`${KEY_ROW} border-b border-hair px-3 py-2`}>
           {live && <>
-            <span className="flex items-center gap-1.5"><span className="size-2 rounded-full border-[1.5px] border-[#94A3B8]" />Attack left</span>
+            <span className="flex items-center gap-1.5"><span className="size-2 rounded-full border-[1.5px] border-[#A3957C]" />Attack left</span>
             <span className="flex items-center gap-1.5"><span className="size-2 rounded-full bg-[#16A34A]" />Used</span>
           </>}
           <span className="flex items-center gap-1.5"><span className="text-gold">★</span>Best on this base</span>
