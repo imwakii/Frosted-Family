@@ -400,3 +400,20 @@ def test_the_badges_board_lists_every_member_with_their_badges(conn, monkeypatch
     ace = next(r for r in board if r["tag"] == ms[0]["tag"])
     general = next(b for b in ace["badges"] if b["id"] == "sharpshooter")
     assert general["tier"] == "gold" and general["value"] == 0.95 and {"name", "clan", "th"} <= set(ace)
+
+
+def test_the_newer_badges_come_from_raids_upgrades_cleanups_and_stars(conn, monkeypatch):
+    from server import leaders, profiles
+    monkeypatch.setattr(profiles, "war_record", lambda c: {"players": []})
+    monkeypatch.setattr(profiles, "current_members", lambda c: [{"tag": "#VET", "donations": 0, "war_stars": 3500}, {"tag": "#B", "donations": 0, "war_stars": 100}])
+    monkeypatch.setattr(leaders, "upgrades", lambda c, d: {"upgrades": [{"tag": "#BOB"}] * 16})
+    with conn:
+        _war(conn, "w", "2026-01")
+        # A falls short on the base, B clears it, C hits it again already cleared.
+        _attack(conn, "w", 1, "#A", 2), _attack(conn, "w", 2, "#B", 3), _attack(conn, "w", 3, "#C", 3)
+        conn.execute("INSERT INTO raid_members (clan_tag, player_tag, start_time, looted, attacks) VALUES ('#C','#OLD','1',99999,6), ('#C','#R','2',26000,6)")
+    tiers = lambda tag: {b["id"]: b["tier"] for b in profiles.badges_for(conn, tag, [])}
+    assert tiers("#B") == {"cleanup": "bronze"} and tiers("#A") == {} and tiers("#C") == {}
+    assert tiers("#VET") == {"war_hero": "silver"}
+    assert tiers("#BOB") == {"builder": "silver"}
+    assert tiers("#R") == {"raider": "silver"} and tiers("#OLD") == {}  # the latest raid only

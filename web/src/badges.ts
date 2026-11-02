@@ -5,6 +5,10 @@ export const BADGES: Record<string, { icon: string; label: string; means: string
   never_misses: { icon: '⚔️', label: 'Battle Ready', means: 'War attacks made with none missed.', ladder: ['20', '50', '75'] },
   wall: { icon: '🛡️', label: 'Unbreakable', means: 'Fewest stars given up per attack, over 20 or more defences.', ladder: ['Top 20', 'Top 10', 'Top 5'] },
   giant_slayer: { icon: '🪓', label: 'Giant Slayer', means: 'Three-star war hits on a higher town hall.', ladder: ['1', '3', '5'] },
+  cleanup: { icon: '🧹', label: 'Cleanup Crew', means: 'Three-starred a base others in your war failed to clear.', ladder: ['1', '3', '5'] },
+  war_hero: { icon: '🎖️', label: 'War Hero', means: 'War stars earned, all time.', ladder: ['2,000', '3,000', '5,000'] },
+  raider: { icon: '🏛️', label: 'Capital Raider', means: 'Capital gold looted in the latest raid weekend.', ladder: ['20k', '25k', '30k'] },
+  builder: { icon: '🔨', label: 'Master Builder', means: 'Upgrades finished in the last 30 days.', ladder: ['5', '15', '30'] },
   top_donor: { icon: '🤝', label: 'Friend in Need', means: 'Biggest donors in the family this season.', ladder: ['Top 10', 'Top 3', '#1'] },
   maxed_heroes: { icon: '👑', label: 'Hero Hall Legend', means: 'Hero levels as a share of the maximum.', ladder: ['95%', '99%', 'All max'] },
 }

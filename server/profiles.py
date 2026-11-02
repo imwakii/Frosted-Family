@@ -33,6 +33,11 @@ BADGE_HELD = (20, 10, 5)               # rank among members by fewest stars conc
 BADGE_SLAIN = (1, 3, 5)                # three-star hits on a higher town hall
 BADGE_DONORS = (10, 3, 1)              # rank among donors this season
 BADGE_HEROES = (0.95, 0.99, 1.0)       # hero levels, as a share of the maximum
+BADGE_UPGRADES = (5, 15, 30)           # upgrades finished in the last BADGE_UPGRADE_DAYS
+BADGE_UPGRADE_DAYS = 30
+BADGE_LOOT = (20_000, 25_000, 30_000)  # capital gold looted in the latest raid weekend
+BADGE_CLEANUPS = (1, 3, 5)             # three-star hits on a base someone else failed to clear
+BADGE_WAR_STARS = (2_000, 3_000, 5_000)  # war stars, all time
 TIERS = ("bronze", "silver", "gold")
 
 def profiles_due(conn: sqlite3.Connection, now: str) -> bool:
@@ -300,12 +305,12 @@ def capital(conn, ms):
 
 def badges(conn, ms):
     """Every member's badges. The page ranks them, as it filters by clan and by badge."""
-    record = war_record(conn)
+    ctx = badge_context(conn)
     heroes = units_of(conn, ("hero",))
     rows = []
     for m in ms:
         mine = [{"level": u["level"], "max": u["max_level"]} for u in heroes.get(m["tag"], [])]
-        rows.append({**row(m), "badges": badges_for(conn, m["tag"], mine, record, ms)})
+        rows.append({**row(m), "badges": badges_for(conn, m["tag"], mine, ctx)})
     return rows
 
 
@@ -350,9 +355,46 @@ def tier_by_rank(rank: int | None, lines) -> str | None:
     return reached[-1] if reached else None
 
 
-def badges_for(conn, tag: str, heroes: list[dict], record: dict | None = None, members: list | None = None) -> list[dict]:
-    """Earned from the player's war record (the export plus recorded wars) and profile, each at a tier, gold first,
-    with what earned it."""
+def badge_context(conn, record: dict | None = None) -> dict:
+    """What the badges compare against, worked out once so a whole family's badges can share it."""
+    from server import leaders  # leaders imports this module
+    rows = (record or war_record(conn))["players"]
+    members = current_members(conn)
+    held = sorted((r["war"]["defense"]["avg_stars_conceded"], r["tag"]) for r in rows
+                  if r["war"] and r["war"]["defense"]["defenses"] >= BADGE_MIN_RECORD)
+    givers = sorted((m for m in members if m["donations"]), key=lambda m: -m["donations"])
+    upgrades: dict[str, int] = {}
+    for u in leaders.upgrades(conn, BADGE_UPGRADE_DAYS)["upgrades"]:
+        upgrades[u["tag"]] = upgrades.get(u["tag"], 0) + 1
+    # In attack order within each war: a cleanup is a three-star hit after a base's earlier attackers fell short.
+    cleanups: dict[str, int] = {}
+    best: dict[tuple, int] = {}
+    for a in conn.execute("SELECT war_key, attacker_tag, defender_tag, stars FROM attacks ORDER BY war_key, attack_order"):
+        base = (a["war_key"], a["defender_tag"])
+        if base in best and best[base] < 3 and a["stars"] == 3:
+            cleanups[a["attacker_tag"]] = cleanups.get(a["attacker_tag"], 0) + 1
+        best[base] = max(best.get(base, 0), a["stars"])
+    return {
+        "war": {r["tag"]: r["war"] for r in rows},
+        "held": {t: (i + 1, v) for i, (v, t) in enumerate(held)},
+        "givers": {m["tag"]: i + 1 for i, m in enumerate(givers)},
+        "war_stars": {m["tag"]: m.get("war_stars") for m in members},
+        "upgrades": upgrades,
+        "cleanups": cleanups,
+        "slain": {r[0]: r[1] for r in conn.execute("""SELECT a.attacker_tag, COUNT(*) FROM attacks a
+            JOIN war_members m ON m.war_key = a.war_key AND m.player_tag = a.attacker_tag
+            JOIN war_members d ON d.war_key = a.war_key AND d.player_tag = a.defender_tag
+            WHERE a.stars = 3 AND d.town_hall > m.town_hall GROUP BY a.attacker_tag""")},
+        "loot": {r["player_tag"]: r["looted"] for r in conn.execute("""SELECT r.player_tag, r.looted FROM raid_members r
+            JOIN (SELECT clan_tag, MAX(start_time) AS start_time FROM raid_members GROUP BY clan_tag) l
+            USING (clan_tag, start_time)""")},
+    }
+
+
+def badges_for(conn, tag: str, heroes: list[dict], ctx: dict | None = None) -> list[dict]:
+    """Earned from the player's war record (the export plus recorded wars), profile, raids and upgrades, each at a tier,
+    gold first, with what earned it."""
+    ctx = ctx or badge_context(conn)
     out = []
 
     # value orders the holders of a badge within a tier, higher first.
@@ -360,28 +402,29 @@ def badges_for(conn, tag: str, heroes: list[dict], record: dict | None = None, m
         if tier:
             out.append({"id": id_, "label": label, "tier": tier, "detail": detail, "value": value})
 
-    rows = (record or war_record(conn))["players"]
-    mine = next((r for r in rows if r["tag"] == tag), None)
-    w = mine["war"] if mine else None
+    w = ctx["war"].get(tag)
     if w and w["attacks"] >= BADGE_MIN_RECORD:
         rate = w["three_star_rate"] or 0
         earn("sharpshooter", "Three-Star General", tier_of(rate, BADGE_THREE_STARS), f"{rate * 100:.1f}% three stars", rate)
         if w["missed"] == 0:
             earn("never_misses", "Battle Ready", tier_of(w["attacks"], BADGE_NO_MISS), f"{w['attacks']} attacks, none missed", w["attacks"])
-    held = sorted((r["war"]["defense"]["avg_stars_conceded"], r["tag"]) for r in rows
-                  if r["war"] and r["war"]["defense"]["defenses"] >= BADGE_MIN_RECORD)
-    place = next((i + 1 for i, (_, t) in enumerate(held) if t == tag), None)
-    if place:
-        earn("wall", "Unbreakable", tier_by_rank(place, BADGE_HELD), f"#{place} in the family, {held[place - 1][0]} stars conceded per attack", -place)
-    upsets = conn.execute("""SELECT COUNT(*) FROM attacks a
-        JOIN war_members m ON m.war_key = a.war_key AND m.player_tag = a.attacker_tag
-        JOIN war_members d ON d.war_key = a.war_key AND d.player_tag = a.defender_tag
-        WHERE a.attacker_tag=? AND a.stars = 3 AND d.town_hall > m.town_hall""", (tag,)).fetchone()[0]
-    earn("giant_slayer", "Giant Slayer", tier_of(upsets, BADGE_SLAIN), f"{upsets} three-star {'hit' if upsets == 1 else 'hits'} on a higher town hall", upsets)
-    givers = [r["tag"] for r in sorted((r for r in (current_members(conn) if members is None else members) if r["donations"]), key=lambda r: -r["donations"])]
-    if tag in givers:
-        rank = givers.index(tag) + 1
+    if tag in ctx["held"]:
+        place, conceded = ctx["held"][tag]
+        earn("wall", "Unbreakable", tier_by_rank(place, BADGE_HELD), f"#{place} in the family, {conceded} stars conceded per attack", -place)
+    slain = ctx["slain"].get(tag, 0)
+    earn("giant_slayer", "Giant Slayer", tier_of(slain, BADGE_SLAIN), f"{slain} three-star {'hit' if slain == 1 else 'hits'} on a higher town hall", slain)
+    cleanups = ctx["cleanups"].get(tag, 0)
+    earn("cleanup", "Cleanup Crew", tier_of(cleanups, BADGE_CLEANUPS), f"Cleared {cleanups} {'base' if cleanups == 1 else 'bases'} others couldn't", cleanups)
+    stars = ctx["war_stars"].get(tag)
+    if stars:
+        earn("war_hero", "War Hero", tier_of(stars, BADGE_WAR_STARS), f"{stars:,} war stars, all time", stars)
+    if tag in ctx["givers"]:
+        rank = ctx["givers"][tag]
         earn("top_donor", "Friend in Need", tier_by_rank(rank, BADGE_DONORS), f"#{rank} donor in the family this season", -rank)
+    loot = ctx["loot"].get(tag, 0)
+    earn("raider", "Capital Raider", tier_of(loot, BADGE_LOOT), f"{loot:,} capital gold in the latest raid weekend", loot)
+    done = ctx["upgrades"].get(tag, 0)
+    earn("builder", "Master Builder", tier_of(done, BADGE_UPGRADES), f"{done} upgrades in the last {BADGE_UPGRADE_DAYS} days", done)
     top = sum(h["max"] or 0 for h in heroes)
     if heroes and top:
         share = sum(h["level"] for h in heroes) / top
@@ -416,7 +459,7 @@ def player_card(conn, tag: str) -> dict:
                         "target": a["target"], "target_th": a["target_th"], "target_position": a["target_position"]})
     mine = [u for u in leaders.upgrades(conn, CARD_UPGRADE_DAYS)["upgrades"] if u["tag"] == tag][:CARD_UPGRADES]
     return {
-        "heroes": heroes, "attacks": attacks, "upgrades": mine, "badges": badges_for(conn, tag, heroes, record),
+        "heroes": heroes, "attacks": attacks, "upgrades": mine, "badges": badges_for(conn, tag, heroes, badge_context(conn, record)),
         "record": own and {"from": record["window_from"], "attacks": own["attacks"], "missed": own["missed"],
                            "three_star_rate": own["three_star_rate"]},
         "tracked_from": api_day(first),
