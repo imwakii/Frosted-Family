@@ -1,5 +1,5 @@
 import { type ReactNode, useEffect, useRef, useState } from 'react'
-import { loadPlayer, loadPlayerCard, type PlayerCard } from '../data'
+import { loadPlayerAll, type PlayerCard, playerNow } from '../data'
 import { BADGES, TIER_LOOK, TIERS } from '../badges'
 import { ago } from '../leaders'
 import { go, playerHref } from '../route'
@@ -67,6 +67,9 @@ function Section({ title, note, children }: { title: string; note?: string | nul
     </section>
   )
 }
+
+// Holds a section's place until the card arrives, so nothing moves when it does.
+const Holding = ({ height }: { height: number }) => <div aria-hidden="true" className="animate-pulse rounded-xl bg-[#F1E8D3]" style={{ height }} />
 
 // The card's one tile. One with somewhere to go opens that ranking.
 function Stat({ label, value, sub, onOpen }: { label: string; value: ReactNode; sub?: string; onOpen?: () => void }) {
@@ -138,9 +141,9 @@ function Trend({ p, cycles }: { p: Player; cycles: string[] }) {
 
 export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: string; roster: Roster; wide: boolean; onClose: () => void }) {
   const base = roster.players.find((p) => p.tag === tag)
-  const [extra, setExtra] = useState<Partial<Player> | null>(null)
-  const [card, setCard] = useState<PlayerCard | null>(null)
-  const [cardLoading, setCardLoading] = useState(true)
+  const [extra, setExtra] = useState<Partial<Player> | null>(() => playerNow(tag)?.extra ?? null)
+  const [card, setCard] = useState<PlayerCard | null>(() => playerNow(tag)?.card ?? null)
+  const [cardLoading, setCardLoading] = useState(() => !playerNow(tag))
   const { yous, addYou, removeYou } = useYou()
   const isMine = yous.includes(tag)
   const accounts = roster.players.filter((x) => yous.includes(x.tag))
@@ -148,11 +151,11 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
 
   useEffect(() => {
     let live = true
-    setExtra(null)
-    setCard(null)
-    setCardLoading(true)
-    loadPlayer(tag).then((x) => { if (live && x && x.tag === tag) setExtra(x) })
-    loadPlayerCard(tag).then((x) => { if (live) { setCard(x); setCardLoading(false) } })
+    const now = playerNow(tag)
+    setExtra(now?.extra ?? null)
+    setCard(now?.card ?? null)
+    setCardLoading(!now)
+    if (!now) loadPlayerAll(tag).then((x) => { if (live) { setExtra(x.extra); setCard(x.card); setCardLoading(false) } })
     return () => { live = false }
   }, [tag])
 
@@ -183,8 +186,8 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
       <div className="ff-fade absolute inset-0 bg-[rgba(43,33,20,.35)]" onClick={onClose} aria-hidden="true" />
       <section role="dialog" aria-modal="true" aria-label={p?.name ?? 'Player'}
         className={wide
-          ? 'ff-sheet absolute left-1/2 top-1/2 flex max-h-[min(720px,90vh)] w-[min(440px,calc(100%-32px))] -translate-x-1/2 -translate-y-1/2 flex-col gap-4 overflow-auto rounded-[22px] bg-white p-6 shadow-[0_20px_50px_rgba(43,33,20,.25)]'
-          : 'ff-sheet absolute inset-x-0 bottom-0 flex max-h-[calc(100dvh-64px)] flex-col gap-4 overflow-auto rounded-t-[22px] bg-white px-5 pb-[max(24px,env(safe-area-inset-bottom))] pt-2.5 shadow-[0_-8px_30px_rgba(43,33,20,.18)]'}>
+          ? 'ff-sheet absolute left-1/2 top-1/2 flex h-[min(720px,90vh)] w-[min(440px,calc(100%-32px))] -translate-x-1/2 -translate-y-1/2 flex-col gap-4 overflow-auto rounded-[22px] bg-white p-6 shadow-[0_20px_50px_rgba(43,33,20,.25)]'
+          : 'ff-sheet absolute inset-x-0 bottom-0 flex h-[calc(100dvh-64px)] flex-col gap-4 overflow-auto rounded-t-[22px] bg-white px-5 pb-[max(24px,env(safe-area-inset-bottom))] pt-2.5 shadow-[0_-8px_30px_rgba(43,33,20,.18)]'}>
         {!wide && <span aria-hidden="true" className="h-[5px] w-10 flex-none self-center rounded-[3px] bg-[#D5C8AC]" />}
         <div className="flex items-center gap-3">
           {p && <Th th={p.th} size="lg" />}
@@ -198,7 +201,7 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
               <span className="min-w-0 truncate">{where}</span>
               {p && (
                 <button type="button" onClick={() => (isMine ? removeYou(tag) : addYou(tag))}
-                  className={`min-h-8 flex-none cursor-pointer whitespace-nowrap rounded-lg border-0 px-2.5 text-xs font-bold ${isMine ? 'bg-ink text-white' : 'bg-[#EFE6D2] text-ink-2 hover:bg-well'}`}>
+                  className={`min-h-8 flex-none cursor-pointer whitespace-nowrap rounded-full border-0 px-2.5 text-xs font-bold ${isMine ? 'bg-ink text-white' : 'bg-[#EFE6D2] text-ink-2 hover:bg-well'}`}>
                   {isMine ? 'You · undo' : yous.length ? 'Also me' : 'This is me'}
                 </button>
               )}
@@ -242,7 +245,7 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
                   )}
                 </div>
               </div>
-              {(p.days || card?.family_since) && (
+              {(p.days || card?.family_since || cardLoading) && (
                 <div className="flex flex-col gap-2 border-t pt-2.5" style={{ borderColor: 'rgba(43,33,20,.08)' }}>
                   {p.days && (
                     <div className="flex items-center justify-between gap-2">
@@ -250,6 +253,7 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
                       <PlayDays days={p.days} clan={p.clan} size={22} />
                     </div>
                   )}
+                  {cardLoading && <div aria-hidden="true" className="h-5 animate-pulse rounded bg-black/5" />}
                   {card?.family_since && (
                     <div className="flex items-center justify-between gap-2" title="When Clash of Stats first saw them, so approximate">
                       <span className="text-[13px] font-semibold text-muted">In the family since</span>
@@ -259,13 +263,20 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
                 </div>
               )}
             </div>
+            {/* Everything below the score waits for the card and arrives together, so nothing already drawn moves. */}
+            {cardLoading ? (
+              <div aria-busy="true" aria-label="Loading" className="flex flex-none flex-col gap-4">
+                {[32, 78, 78, 130, 288].map((h, i) => <Holding key={i} height={h} />)}
+              </div>
+            ) : (
+            <div className="ff-fade flex flex-none flex-col gap-4">
             {card?.badges?.length ? <Badges badges={card.badges} /> : null}
             {/* The monthly figures stand in only if the live ones fail, so the numbers do not change under the reader. */}
-            <Section title="War record" note={cardLoading ? null : rec?.from ? `Since ${dayMonth(rec.from)}` : fmtWindow(roster.window)}>
+            <Section title="War record" note={rec?.from ? `Since ${dayMonth(rec.from)}` : fmtWindow(roster.window)}>
               <div className="grid grid-cols-3 gap-2">
-                <Stat label="Three stars" value={cardLoading ? '—' : pct(threeStar)} onOpen={toCol('war', 'triple')} />
-                <Stat label="Missed" value={cardLoading ? '—' : pct(missed)} onOpen={toCol('war', 'missed')} />
-                <Stat label="Attacks" value={cardLoading ? '—' : rec?.attacks ?? p.attacks ?? '—'} onOpen={toCol('war', 'attacks')} />
+                <Stat label="Three stars" value={pct(threeStar)} onOpen={toCol('war', 'triple')} />
+                <Stat label="Missed" value={pct(missed)} onOpen={toCol('war', 'missed')} />
+                <Stat label="Attacks" value={rec?.attacks ?? p.attacks ?? '—'} onOpen={toCol('war', 'attacks')} />
               </div>
             </Section>
             {card?.streaks && (
@@ -344,6 +355,8 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
                   <Stat label="Capital" value={num(card.capital)} sub="all time" onOpen={toCol('capital', 'contributed')} />
                 </div>
               </Section>
+            )}
+            </div>
             )}
           </>
         )}

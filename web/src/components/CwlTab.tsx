@@ -64,7 +64,7 @@ function ClanCard({ roster, clan, meta, war, compact, below }: { roster: Roster;
   const f = clanFacts(roster, clan, meta)
   const c = CLAN[clan]
   return (
-    <div className={`flex flex-col gap-2.5 ${compact ? 'px-4 py-3.5' : 'rounded-[18px] p-3.5'}`} style={{ background: c.tint }}>
+    <div className={`flex flex-col gap-2.5 ${compact ? 'px-4 py-3.5' : 'rounded-2xl p-3.5'}`} style={{ background: c.tint }}>
       <div className="flex items-center gap-3">
       <ClanBadge src={f.badge} size={compact ? 52 : 64} className="drop-shadow-[0_2px_4px_rgba(43,33,20,.18)]" />
       <div className="flex min-w-0 flex-auto flex-col gap-1">
@@ -381,7 +381,7 @@ function Desktop({ roster, war, q, setQ, lock }: Omit<Props, 'wide'>) {
       <div ref={grid} className="grid items-start gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr))]">
         {(lock?.options ?? CLANS).map((clan) => {
           return (
-            <section key={clan} aria-label={clan} className="overflow-hidden rounded-[18px] border border-line bg-white pb-2.5">
+            <section key={clan} aria-label={clan} className="overflow-hidden rounded-2xl border border-line bg-white pb-2.5">
               <ClanCard roster={roster} clan={clan} meta={clans[clan]} war={war[clan]} compact />
               <Groups roster={roster} clan={clan} q={nq} dense day={day} />
             </section>

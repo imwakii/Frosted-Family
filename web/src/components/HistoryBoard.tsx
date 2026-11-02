@@ -144,7 +144,7 @@ export default function HistoryBoard({ q, setQ, wide }: { q: string; setQ: (v: s
         </ol>
         {!nq && members.length > LONGEST_SHOWN && (
           <button type="button" aria-expanded={showAll} onClick={() => setShowAll((v) => !v)}
-            className="min-h-11 cursor-pointer rounded-xl border border-line bg-white text-sm font-bold text-ink-2 hover:bg-page">
+            className="min-h-11 cursor-pointer rounded-full border border-line bg-white text-sm font-bold text-ink-2 hover:bg-page">
             {showAll ? 'Show fewer' : `Show all ${members.length}`}
           </button>
         )}

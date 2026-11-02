@@ -1,15 +1,15 @@
 [Unit]
-Description=Frosted Family roster pull (fast-forwards the repo checkout to origin)
+Description=Frosted Family data pull (the roster and exports from origin, never code)
 After=network-online.target
 Wants=network-online.target
 
 [Service]
 Type=oneshot
-# Runs as the bot user and only moves the checkout, so a push to GitHub never runs anything as root here. The API
-# reads frosted_cwl_members.csv on every request, so a new roster is live without a restart. Server code changes
-# still need `sudo bash setup.sh install`.
+# Takes only these data files from origin, so a push to GitHub never changes the code that runs here, with or without
+# root: the API and the collector hold secrets. The API reads frosted_cwl_members.csv on every request, so a new roster
+# is live without a restart. All code, the collector's included, changes only through `sudo bash setup.sh install`.
 User=frosted
 Group=bots
 WorkingDirectory=/opt/bots/frosted/repo
 ExecStart=/usr/bin/git fetch -q origin main
-ExecStart=/usr/bin/git merge -q --ff-only origin/main
+ExecStart=/usr/bin/git checkout -q origin/main -- frosted_cwl_members.csv data/raw data/history data/score_history.csv

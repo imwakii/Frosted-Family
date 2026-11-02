@@ -2,6 +2,7 @@ import type { ClanWar, WarRecap as Recap } from '../leaders'
 import { playerHref } from '../route'
 import { CLAN } from '../theme'
 import type { ClanName } from '../types'
+import ReactionBar from './ReactionBar'
 import { RowChevron } from './ui'
 
 // When a war ends: who was best, any big upset, and an image of it to post in Discord. The score is on the board above.
@@ -65,7 +66,8 @@ async function saveImage(clan: ClanName, war: ClanWar, result: string, r: Recap)
 }
 
 export default function WarRecap({ clan, war, result, recap }: { clan: ClanName; war: ClanWar; result: string; recap: Recap }) {
-  const row = 'flex min-h-[52px] items-center gap-3 border-b border-hair px-3.5 py-1.5 text-ink no-underline'
+  const row = 'flex min-h-[52px] items-center gap-3 px-3.5 py-1.5 text-ink no-underline'
+  const bar = (id: string) => war.war_key && <ReactionBar target={`war:${war.war_key}:${id}`} className="px-3.5 pb-2" />
   const stars = (s: string) => <span aria-hidden="true" className="whitespace-nowrap text-[13px] leading-none text-gold">{s}</span>
   return (
     <div aria-label="War recap">
@@ -80,8 +82,10 @@ export default function WarRecap({ clan, war, result, recap }: { clan: ClanName;
         </span>
         <RowChevron />
       </a>
+      {bar('mvp')}
       {recap.upsets.map((u) => (
-        <a key={`${u.attacker.tag}-${u.defender.tag}`} href={playerHref(u.attacker.tag)} className={`${row} hover:bg-hover`}>
+        <div key={`${u.attacker.tag}-${u.defender.tag}`} className="border-t border-hair">
+        <a href={playerHref(u.attacker.tag)} className={`${row} hover:bg-hover`}>
           <span className="flex min-w-0 flex-auto flex-col">
             <span className="text-[11px] font-bold uppercase tracking-[0.06em] text-faint">Upset</span>
             <span className="truncate text-[15px] font-bold">{u.attacker.name}</span>
@@ -92,8 +96,10 @@ export default function WarRecap({ clan, war, result, recap }: { clan: ClanName;
           </span>
           <RowChevron />
         </a>
+        {bar(`upset:${u.attacker.tag}:${u.defender.tag}`)}
+        </div>
       ))}
-      <div className="flex justify-end border-b border-hair px-3 py-2">
+      <div className="flex justify-end border-y border-hair px-3 py-2">
         <button type="button" onClick={() => { void saveImage(clan, war, result, recap) }} className="min-h-9 cursor-pointer rounded-full border border-line bg-white px-3 text-[13px] font-bold text-ink-2 hover:bg-page">Save image</button>
       </div>
     </div>

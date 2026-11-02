@@ -1,5 +1,5 @@
 # The wars of clans with one on (server/collect.py --wars). Started every minute by frosted-collect-wars.timer.
-# /opt/bots/frosted/api.env (root 600, never in git) holds COC_API_TOKEN; systemd reads it as root.
+# /opt/bots/frosted/collect.env (root 600, never in git) holds only COC_API_TOKEN, copied from api.env by setup.sh install.
 [Unit]
 Description=Frosted Family war check
 After=network-online.target
@@ -9,7 +9,7 @@ Wants=network-online.target
 Type=oneshot
 User=frosted
 Group=bots
-EnvironmentFile=/opt/bots/frosted/api.env
+EnvironmentFile=/opt/bots/frosted/collect.env
 Environment=FROSTED_DB=/opt/bots/frosted/data/frosted.db
 WorkingDirectory=/opt/bots/frosted/repo
 ExecStart=/opt/bots/frosted/venv/bin/python -B -m server.collect --wars

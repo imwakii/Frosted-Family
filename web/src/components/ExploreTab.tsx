@@ -1,7 +1,7 @@
 import { YouTag } from './You'
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { groupUnits } from '../equipment'
-import OverallBoard from './OverallBoard'
+import OverallBoard, { Bar } from './OverallBoard'
 import RankBoard, { type RankCol } from './RankBoard'
 import { CATS, type Cat, competitionRanks, HIGH_MISS, isMaxed, type MatrixPlayer, missRate, progress, useMatrix, useWarBoard, type WarRow, type WarScope } from '../explore'
 import { go, onDrill, playerHref, useDrill } from '../route'
@@ -9,9 +9,9 @@ import { CLAN, CLANS } from '../theme'
 import type { ClanName } from '../types'
 import { norm, SearchBox } from './CwlTab'
 import BadgesBoard from './BadgesBoard'
-import ClansBoard from './ClansBoard'
+import ClansBoard, { COLOR } from './ClansBoard'
 import HistoryBoard from './HistoryBoard'
-import { ClanSwitch, Star, StatusKey, SubNav, Th, UnitIcon, RowChevron } from './ui'
+import { ClanSwitch, Star, StatusKey, SubNav, Th, UnitIcon, RowChevron, chip } from './ui'
 
 export type ClanPick = ClanName | 'All'
 type BoardProps = { q: string; setQ: (v: string) => void; wide: boolean }
@@ -51,24 +51,11 @@ export function useClanPick() {
 export function CategoryNav({ current, wide }: { current: string; wide: boolean }) {
   const navRef = useRef<HTMLElement>(null)
   useEffect(() => { navRef.current?.querySelector('[aria-pressed="true"]')?.scrollIntoView({ inline: 'center', block: 'nearest' }) }, [current])
-  if (wide) {
-    return (
-      <nav aria-label="Category" className="flex max-w-full flex-none gap-1 overflow-x-auto rounded-[14px] bg-well p-1 [scrollbar-width:none]">
-        {NAV.map((c) => (
-          <button key={c.id} type="button" aria-pressed={c.id === current} onClick={() => go.to(`#/stats/players/${c.id}`)}
-            className={`flex min-h-[42px] flex-none cursor-pointer whitespace-nowrap items-center gap-1.5 rounded-[10px] border-0 text-sm font-bold ${c.icon ? 'pl-2.5 pr-3.5' : 'px-3.5'} ${c.id === current ? 'bg-white text-ink shadow-[0_1px_3px_rgba(43,33,20,.12)]' : 'bg-transparent text-muted hover:text-ink'}`}>
-            {c.icon && <UnitIcon name={c.icon} size={24} />}{c.label}
-          </button>
-        ))}
-      </nav>
-    )
-  }
   return (
-    <nav ref={navRef} aria-label="Category" className="flex flex-none gap-1.5 overflow-x-auto px-4 [scrollbar-width:none]">
+    <nav ref={navRef} aria-label="Category" className={`flex flex-none gap-1.5 overflow-x-auto [scrollbar-width:none] ${wide ? 'max-w-full flex-wrap' : 'px-4'}`}>
       {NAV.map((c) => (
-        <button key={c.id} type="button" aria-pressed={c.id === current} onClick={() => go.to(`#/stats/players/${c.id}`)}
-          className={`min-h-10 flex-none cursor-pointer rounded-full border px-3.5 text-sm font-bold ${c.id === current ? 'border-ink bg-ink text-white' : 'border-line bg-white text-muted'}`}>
-          {c.label}
+        <button key={c.id} type="button" aria-pressed={c.id === current} onClick={() => go.to(`#/stats/players/${c.id}`)} className={chip(c.id === current)}>
+          {wide && c.icon && <UnitIcon name={c.icon} size={22} />}{c.label}
         </button>
       ))}
     </nav>
@@ -160,8 +147,8 @@ function MatrixBoard({ cat, q, setQ, wide }: BoardProps & { cat: Cat }) {
         <div className="flex flex-wrap items-center gap-2 text-sm text-muted">
           {data && (
             <>
-              <span className="rounded-full border border-line bg-white px-3 py-1.5 font-bold text-ink"><Star /> {maxedN} of {rows.length} fully maxed</span>
-              <span className="rounded-full border border-line bg-white px-3 py-1.5 font-semibold">Ranked by {sort.col < 0 ? `${catLabel} progress` : units[sort.col]?.name}</span>
+              <span className="font-bold text-ink"><Star /> {maxedN} of {rows.length} fully maxed</span>
+              <span className="font-semibold">Ranked by {sort.col < 0 ? `${catLabel} progress` : units[sort.col]?.name}</span>
               {stamp && <span className="text-xs font-semibold text-faint">Updated {stamp}</span>}
             </>
           )}
@@ -170,7 +157,7 @@ function MatrixBoard({ cat, q, setQ, wide }: BoardProps & { cat: Cat }) {
         {!data ? <Empty loading={loading} /> : (
           <>
             {/* Scrolls inside its own box, so the hero and unit icons stay pinned above the numbers. */}
-            <section className="max-h-[calc(100dvh-210px)] overflow-auto rounded-[18px] border border-line bg-white">
+            <section className="max-h-[calc(100dvh-210px)] overflow-auto rounded-2xl border border-line bg-white">
               <table className="min-w-full border-separate border-spacing-0 text-sm">
                 <thead className="sticky top-0 z-[3]">
                   {byHero && (
@@ -208,13 +195,13 @@ function MatrixBoard({ cat, q, setQ, wide }: BoardProps & { cat: Cat }) {
                         <span className="flex items-center gap-2.5">
                           <Th th={p.th} />
                           <a href={playerHref(p.tag)} onClick={(e) => e.stopPropagation()} className="font-semibold text-ink no-underline"><YouTag tag={p.tag} />{p.name}</a>
-                          {clan === 'All' && <span className="text-xs font-bold" style={{ color: CLAN[p.clan].deep }}>{p.clan}</span>}
+                          {clan === 'All' && <span className="text-[11px] font-bold" style={{ color: CLAN[p.clan].deep }}>{p.clan}</span>}
                         </span>
                       </td>
                       <td className={`border-b border-hair px-2.5 py-1.5 group-hover:bg-hover ${sort.col < 0 ? 'bg-[#F6EEDC]' : ''}`}>
                         <span className="flex w-[76px] flex-col gap-[3px]">
                           <span className="font-bold tabular-nums">{Math.round(pct)}%</span>
-                          <span className="block h-[5px] overflow-hidden rounded-[3px] bg-[#E3D8BF]"><span className="block h-[5px] bg-ink" style={{ width: `${pct}%` }} /></span>
+                          <Bar v={pct} color={COLOR[p.clan]} />
                         </span>
                       </td>
                       {order.map((i) => {
@@ -290,9 +277,7 @@ function MatrixBoard({ cat, q, setQ, wide }: BoardProps & { cat: Cat }) {
                         <span className="truncate text-[15px] font-semibold"><YouTag tag={p.tag} />{p.name}</span>
                         {clan === 'All' && <span className="flex-none text-[11px] font-bold" style={{ color: CLAN[p.clan].deep }}>{p.clan}</span>}
                       </span>
-                      <span className="block h-[5px] overflow-hidden rounded-[3px] bg-[#E3D8BF]">
-                        <span className="block h-[5px]" style={{ width: `${(100 * Math.min(l, u.max)) / u.max}%`, background: maxed ? '#E0A100' : '#2B2114' }} />
-                      </span>
+                      <Bar v={(100 * Math.min(l, u.max)) / u.max} color={COLOR[p.clan]} />
                     </span>
                     <span className={`w-[78px] flex-none whitespace-nowrap text-right text-sm tabular-nums ${maxed ? 'font-extrabold text-ink' : l ? 'font-semibold text-muted' : 'text-[#D5C8AC]'}`}>
                       {l ? `${l} / ${u.max}` : '—'}{maxed && <span className="ml-0.5 text-gold">★</span>}
@@ -330,7 +315,7 @@ function MissDot({ r }: { r: WarRow }) {
   return <span title={high ? 'High miss' : 'Active'} aria-label={high ? 'High miss' : 'Active'} className="size-2 flex-none rounded" style={{ background: high ? '#D97706' : '#16A34A' }} />
 }
 
-const sinceLabel = (d: string | null) => (d ? `since ${new Date(d + 'T00:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' })}` : null)
+const sinceLabel = (d: string | null) => (d ? `Since ${new Date(d + 'T00:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' })}` : null)
 
 function WarBoardView({ q, setQ, wide }: BoardProps) {
   const [scope, setScope] = useState<WarScope>(() => (read('ff-war-scope') as WarScope) || 'all')
@@ -400,10 +385,10 @@ function WarBoardView({ q, setQ, wide }: BoardProps) {
   const recordedTip = recordedStart && recordedStart !== data?.windowFrom ? `Recorded ${sinceLabel(recordedStart)}` : undefined
 
   const scopeToggle = scoped && (
-    <div role="group" aria-label="Wars" className="inline-grid flex-none auto-cols-max grid-flow-col gap-1 rounded-xl bg-well p-1">
+    <div role="group" aria-label="Wars" className="flex flex-none gap-1.5">
       {([['all', 'All wars'], ['cwl', 'CWL season']] as const).map(([k, label]) => (
         <button key={k} type="button" aria-pressed={k === scope} onClick={() => pickScope(k)}
-          className={`min-h-10 cursor-pointer rounded-[9px] border-0 px-3 text-sm font-bold ${k === scope ? 'bg-white text-ink shadow-[0_1px_3px_rgba(43,33,20,.12)]' : 'bg-transparent text-muted'}`}>
+          className={chip(k === scope)}>
           {label}
         </button>
       ))}
@@ -422,7 +407,7 @@ function WarBoardView({ q, setQ, wide }: BoardProps) {
           {scopeToggle}{sinceChip}{key}
         </div>
         {!data || !col ? <Empty loading={loading} /> : (
-          <section className="max-h-[calc(100dvh-210px)] overflow-auto rounded-[18px] border border-line bg-white">
+          <section className="max-h-[calc(100dvh-210px)] overflow-auto rounded-2xl border border-line bg-white">
             <table className="min-w-full border-separate border-spacing-0 text-sm">
               <thead>
                 <tr className="text-left text-xs font-bold text-faint">
@@ -448,7 +433,7 @@ function WarBoardView({ q, setQ, wide }: BoardProps) {
                         <Th th={r.th} />
                         <a href={playerHref(r.tag)} onClick={(e) => e.stopPropagation()} className="font-semibold text-ink no-underline"><YouTag tag={r.tag} />{r.name}</a>
                         <MissDot r={r} />
-                        {clan === 'All' && <span className="text-xs font-bold" style={{ color: CLAN[r.clan].deep }}>{r.clan}</span>}
+                        {clan === 'All' && <span className="text-[11px] font-bold" style={{ color: CLAN[r.clan].deep }}>{r.clan}</span>}
                       </span>
                     </td>
                     {cols.map((c) => {
@@ -499,7 +484,7 @@ function WarBoardView({ q, setQ, wide }: BoardProps) {
           <div role="group" aria-label="Sort by" className="-mb-1 flex gap-1 overflow-x-auto px-4 [scrollbar-width:none]">
             {cols.map((c) => (
               <button key={c.key} type="button" aria-pressed={c.key === sort.key} onClick={() => pick(c)} title={c.recordedOnly ? recordedTip : undefined}
-                className={`flex min-h-8 flex-none cursor-pointer items-center whitespace-nowrap rounded-lg border px-2.5 text-[13px] font-bold ${c.key === sort.key ? 'border-ink-2 bg-white text-ink' : 'border-transparent bg-transparent text-faint'}`}>
+                className={chip(c.key === sort.key)}>
                 {c.label}{c.key === sort.key ? (sort.asc ? ' ↑' : ' ↓') : ''}
               </button>
             ))}
@@ -507,7 +492,7 @@ function WarBoardView({ q, setQ, wide }: BoardProps) {
           <div aria-label={`${who} summary`} className="mx-4 grid grid-cols-3 gap-2">
             {[['3★ rate', summary.triple === null ? '—' : pct(summary.triple)], ['Avg ★', summary.avgStars === null ? '—' : summary.avgStars.toFixed(2)], ['Attacks', String(summary.attacks)]].map(([k, v]) => (
               <div key={k} className="flex flex-col gap-0.5 rounded-xl border border-line bg-white px-3 py-2">
-                <span className="text-[11px] font-bold uppercase tracking-[0.06em] text-faint">{k}</span>
+                <span className="truncate text-[11px] text-faint">{k}</span>
                 <span className="font-display text-xl leading-none tabular-nums">{v}</span>
               </div>
             ))}

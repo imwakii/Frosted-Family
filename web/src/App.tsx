@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useAuth, type Me } from './auth'
 import CwlTab from './components/CwlTab'
 import ExploreTab from './components/ExploreTab'
@@ -8,14 +8,14 @@ import PlayerSheet from './components/PlayerSheet'
 import WarTab from './components/WarTab'
 import { InstallHint, useInstallHint } from './components/InstallHint'
 import { JumpToYou, YouChip } from './components/You'
-import { useRoster, useWar, useWide } from './data'
+import { fetchPlayer, useRoster, useWar, useWide } from './data'
 import { go, onDrill, useRoute } from './route'
 import { UtcClock } from './components/ui'
 
 const TABS = [
   { id: 'war', label: 'War', href: '#/war', icon: <path d="M5 5l14 14M19 5L5 19M4 16l4 4M20 16l-4 4" /> },
-  { id: 'cwl', label: 'CWL', href: '#/cwl', icon: <path d="M4 6h16M4 12h16M4 18h10" /> },
-  { id: 'log', label: 'Log', href: '#/log', icon: <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></> },
+  { id: 'cwl', label: 'CWL', href: '#/cwl', icon: <path d="M8.5 20.5h7M12 15.5v5M7.5 4h9v6.5a4.5 4.5 0 0 1-9 0V4zM7.5 6.5H4.5c0 2 1 3.2 3 3.6M16.5 6.5h3c0 2-1 3.2-3 3.6" /> },
+  { id: 'log', label: 'Log', href: '#/log', icon: <path d="M4 6h16M4 12h16M4 18h10" /> },
   { id: 'explore', label: 'Stats', href: '#/stats/players', icon: <path d="M5 20V10M12 20V4M19 20v-7" /> },
   { id: 'plan', label: 'Plan', href: '#/plan/builder', icon: <path d="M7 4v16M17 4v16M3 8h8M13 16h8" /> },
 ] as const
@@ -54,6 +54,17 @@ export default function App() {
   const auth = useAuth()
   const install = useInstallHint(wide)
   const [q, setQ] = useState('')
+  // A finger on a player's row starts their card loading, ahead of the tap landing.
+  useEffect(() => {
+    const down = (e: PointerEvent) => {
+      const el = (e.target as Element).closest?.('[data-tag], a[href*="/p/"]')
+      const href = el?.getAttribute('href')?.split('/p/')[1]
+      const tag = el?.getAttribute('data-tag') ?? (href ? `#${decodeURIComponent(href)}` : null)
+      if (tag) void fetchPlayer(tag)
+    }
+    document.addEventListener('pointerdown', down)
+    return () => document.removeEventListener('pointerdown', down)
+  }, [])
   onDrill(useCallback(() => setQ(''), []))
   const closeSheet = useCallback(() => go.closePlayer(), [])
   // The live UTC clock; on Plan a signed-in account sits beside it, and narrower screens shrink the other two to fit.

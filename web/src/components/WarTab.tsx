@@ -151,7 +151,7 @@ function WarBoard({ clan, war, now }: { clan: ClanName; war: ClanWar; now: numbe
   )
   return (
     <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_400px]">
-      <section aria-label={`${clan} against ${war.opponent}`} className="overflow-hidden rounded-[18px] border border-line bg-white">
+      <section aria-label={`${clan} against ${war.opponent}`} className="overflow-hidden rounded-2xl border border-line bg-white">
         <div className="flex flex-col gap-2 p-3.5" style={{ background: t.tint }}>
           <div className="flex justify-center">
             <span className={`whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-bold ${live ? 'bg-white text-[#15803D]' : over ? 'bg-white/60 text-muted' : 'bg-[#FFEDD5] text-[#B4451A]'}`}>
@@ -232,7 +232,7 @@ function WarBoard({ clan, war, now }: { clan: ClanName; war: ClanWar; now: numbe
       </section>
 
       {!prep && (
-        <section aria-label="Attacks" className="overflow-hidden rounded-[18px] border border-line bg-white">
+        <section aria-label="Attacks" className="overflow-hidden rounded-2xl border border-line bg-white">
           <div className="flex items-center justify-between gap-2 px-3.5 py-2.5">
             <span className="min-w-0 truncate text-sm font-bold text-ink">{(sideBySide && pickedName) || 'Attacks'}</span>
             {picked && sideBySide ? pickedActions : (

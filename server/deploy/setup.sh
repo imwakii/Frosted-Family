@@ -4,7 +4,8 @@
 # Clash of Clans token goes in /opt/bots/frosted/api.env by hand and is never printed.
 #
 #   bash setup.sh install   user, repo checkout (public, over HTTPS), venv, systemd units; starts the API, the
-#                           30-minute roster pull (main only), and the collector timer once api.env has COC_API_TOKEN
+#                           30-minute data pull (main only), and the collector timer once api.env has COC_API_TOKEN.
+#                           The one way new code reaches this server.
 #   bash setup.sh caddy     the API's site block for FROSTED_API_HOST, imported into /etc/caddy/Caddyfile
 #   bash setup.sh status    units, last collector run, row counts
 #
@@ -38,10 +39,13 @@ install_app() {
   [ -f "$BOT_HOME/api.env" ] || install -m 600 -o root -g root /dev/null "$BOT_HOME/api.env"
   # A file made by hand may be world-readable; the token is for root (systemd) only.
   chown root:root "$BOT_HOME/api.env"; chmod 600 "$BOT_HOME/api.env"
+  # The collector needs only the Clash token, so it gets only that.
+  install -m 600 -o root -g root /dev/null "$BOT_HOME/collect.env"
+  grep '^COC_API_TOKEN=' "$BOT_HOME/api.env" > "$BOT_HOME/collect.env" || true
 
   if [ -d "$BOT_HOME/repo/.git" ]; then
     as_bot git -C "$BOT_HOME/repo" fetch -q origin "$BRANCH"
-    as_bot git -C "$BOT_HOME/repo" checkout -q -B "$BRANCH" "origin/$BRANCH"
+    as_bot git -C "$BOT_HOME/repo" checkout -q -f -B "$BRANCH" "origin/$BRANCH"  # -f: the data pull leaves files staged
   else
     as_bot git clone -q --branch "$BRANCH" "$REPO_URL" "$BOT_HOME/repo"
   fi
@@ -55,8 +59,8 @@ install_app() {
   systemctl daemon-reload
   systemctl enable -q frosted-api
   systemctl restart frosted-api
-  # Keeps the checkout on main so a pushed roster reaches /roster within 30 minutes. Main only: a branch install
-  # (FROSTED_BRANCH=...) leaves the timer off so it cannot move the checkout back.
+  # Brings a pushed roster to /roster within 30 minutes, without touching code. Main only: a branch install
+  # (FROSTED_BRANCH=...) leaves the timer off so main's data cannot overwrite the branch's.
   if [ "$BRANCH" = main ]; then systemctl enable -q --now frosted-pull.timer; else systemctl disable -q --now frosted-pull.timer 2>/dev/null || true; fi
   if grep -q '^COC_API_TOKEN=.\+' "$BOT_HOME/api.env"; then
     systemctl enable -q --now frosted-collect.timer frosted-collect-wars.timer

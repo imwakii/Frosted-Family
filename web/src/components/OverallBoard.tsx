@@ -30,7 +30,8 @@ function combine(boards: (Matrix | null)[]): Row[] {
 const pct = (v: number | undefined) => (v === undefined ? '—' : `${Math.round(v)}%`)
 const pct1 = (v: number) => `${(Math.floor(v * 10) / 10).toFixed(1)}%`
 
-function Bar({ v, color }: { v: number; color: string }) {
+// The one progress bar on the Stats boards, in the clan's soft colour.
+export function Bar({ v, color }: { v: number; color: string }) {
   return <span className="block h-[3px] w-full overflow-hidden rounded-full bg-hair"><span className="block h-full rounded-full" style={{ width: `${Math.min(v, 100)}%`, background: color }} /></span>
 }
 
@@ -55,7 +56,7 @@ export default function OverallBoard({ q, setQ, wide }: { q: string; setQ: (v: s
   const cols: { id: Cat | 'overall'; label: string }[] = [{ id: 'overall', label: 'Overall' }, ...CATS.map((c) => ({ id: c.id, label: c.label }))]
 
   const board = !all.length ? <Empty loading={loading} /> : wide ? (
-    <section className="max-h-[calc(100dvh-210px)] overflow-auto rounded-[18px] border border-line bg-white">
+    <section className="max-h-[calc(100dvh-210px)] overflow-auto rounded-2xl border border-line bg-white">
       <table className="min-w-full border-separate border-spacing-0 text-sm">
         <thead>
           <tr className="text-left text-xs font-bold text-faint">
@@ -82,10 +83,10 @@ export default function OverallBoard({ q, setQ, wide }: { q: string; setQ: (v: s
                   {clan === 'All' && <span className="text-[11px] font-bold" style={{ color: CLAN[r.clan].deep }}>{r.clan}</span>}
                 </span>
               </td>
-              <td className="min-w-[150px] border-b border-hair px-4 py-1.5 group-hover:bg-hover">
+              <td className={`min-w-[150px] border-b border-hair px-4 py-1.5 group-hover:bg-hover ${sort === 'overall' ? 'bg-[#F6EEDC]' : ''}`}>
                 <span className="flex items-center gap-2.5"><Bar v={r.overall} color={COLOR[r.clan]} /><span className="w-14 flex-none text-right font-extrabold tabular-nums text-ink">{pct1(r.overall)}</span></span>
               </td>
-              {CATS.map((c) => <td key={c.id} className="border-b border-hair px-4 py-1.5 text-right font-semibold tabular-nums text-ink-2 group-hover:bg-hover">{pct(r.cats[c.id])}</td>)}
+              {CATS.map((c) => <td key={c.id} className={`border-b border-hair px-4 py-1.5 text-right font-semibold tabular-nums text-ink-2 group-hover:bg-hover ${sort === c.id ? 'bg-[#F6EEDC]' : ''}`}>{pct(r.cats[c.id])}</td>)}
             </tr>
           ))}
         </tbody>
@@ -128,8 +129,8 @@ export default function OverallBoard({ q, setQ, wide }: { q: string; setQ: (v: s
         <div className="flex flex-wrap items-center gap-2 text-sm text-muted">
           {all.length > 0 && (
             <>
-              <span className="rounded-full border border-line bg-white px-3 py-1.5 font-bold text-ink"><Star /> {maxedN} of {ranked.length} fully maxed</span>
-              <span className="rounded-full border border-line bg-white px-3 py-1.5 font-semibold">Ranked by {sort === 'overall' ? 'overall' : `${cols.find((c) => c.id === sort)!.label.toLowerCase()}`} progress</span>
+              <span className="font-bold text-ink"><Star /> {maxedN} of {ranked.length} fully maxed</span>
+              <span className="font-semibold">Ranked by {sort === 'overall' ? 'overall' : `${cols.find((c) => c.id === sort)!.label.toLowerCase()}`} progress</span>
               {stamp && <span className="text-xs font-semibold text-faint">Updated {stamp}</span>}
             </>
           )}

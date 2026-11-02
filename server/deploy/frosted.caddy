@@ -2,6 +2,10 @@
 # /etc/caddy/sites/frosted.caddy and adds the import line to the Caddyfile. Caddy gets the certificate by HTTP challenge.
 # The site reaches this through a Vercel rewrite, so players only ever see the Vercel URL.
 __FROSTED_API_HOST__ {
+	# The API's largest honest body is a plan, well under this. A huge one would run it past its memory limit.
+	request_body {
+		max_size 1MB
+	}
 	encode gzip
 	header {
 		-Server

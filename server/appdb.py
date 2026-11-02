@@ -35,6 +35,14 @@ CREATE TABLE IF NOT EXISTS proposals (
     decided_by TEXT,
     decided_at TEXT
 );
+CREATE TABLE IF NOT EXISTS reactions (
+    target TEXT NOT NULL,             -- what was reacted to: see server/reactions.py
+    emoji TEXT NOT NULL,
+    user_id TEXT NOT NULL,            -- Discord id
+    name TEXT,                        -- their name in the family's server when they reacted
+    at TEXT NOT NULL,
+    PRIMARY KEY (target, emoji, user_id)
+);
 CREATE TABLE IF NOT EXISTS leaders (
     user_id TEXT PRIMARY KEY,
     name TEXT,

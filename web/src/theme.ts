@@ -4,7 +4,7 @@ export const CLANS: ClanName[] = ['Fire', 'Cake', 'Flakes']
 
 // Clan colour marks clan identity only.
 export const CLAN: Record<ClanName, { tint: string; deep: string; accent: string; label: string }> = {
-  Fire: { tint: '#FFF0E8', deep: '#D2360A', accent: '#FF5A1F', label: '#A82C0A' },
+  Fire: { tint: '#FFF0E8', deep: '#D2360A', accent: '#EC6A35', label: '#A82C0A' },
   Cake: { tint: '#EEF5FD', deep: '#1D5FB0', accent: '#3B8BE6', label: '#1E4E8C' },
   Flakes: { tint: '#F8EEFC', deep: '#8E24AA', accent: '#B44FD6', label: '#74208C' },
 }

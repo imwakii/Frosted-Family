@@ -7,7 +7,8 @@ import type { ClanName, Roster } from '../types'
 import { Card, COLOR, Dot, ticks, useWidth } from './ClansBoard'
 import { norm, SearchBox } from './CwlTab'
 import { ClanFilter, Empty, useClanPick } from './ExploreTab'
-import { POINT, Th, UnitIcon, RowChevron } from './ui'
+import ReactionBar from './ReactionBar'
+import { chip, POINT, Th, UnitIcon, RowChevron } from './ui'
 import { YouTag } from './You'
 
 // GET /api/log: what has happened in the family, newest day first. Each day opens with who came, went or changed role,
@@ -87,7 +88,7 @@ function EventRow({ e, onRoster }: { e: LogEvent; onRoster: boolean }) {
 
 function MilestoneRow({ u }: { u: Upgrade }) {
   return (
-    <a href={playerHref(u.tag)} className="flex min-h-10 w-full items-center gap-2 bg-[#F7E8BC] px-3 text-[13px] text-ink no-underline hover:brightness-95">
+    <a href={playerHref(u.tag)} className="flex min-h-10 w-full items-center gap-2 px-3 text-[13px] text-ink no-underline hover:brightness-95">
       <span className="min-w-0 flex-auto truncate font-semibold"><YouTag tag={u.tag} />{u.name}</span>
       <span className="flex-none whitespace-nowrap text-xs font-semibold text-[#92400E]">★ Reached TH{u.to}, {u.clan}</span>
       <span className="flex-none whitespace-nowrap text-[11px] font-semibold text-faint">{ago(u.at)}</span>
@@ -145,9 +146,9 @@ function UpgradeChart({ counts, clan, kind }: { counts: UpgradeCount[]; clan: Cl
   return (
     <Card title={weekly ? 'Upgrades per week' : 'Upgrades per day'} aside={seriesKey || undefined}>
       {long && (
-        <div role="group" aria-label="Range" className="flex self-start rounded-lg bg-well p-0.5">
+        <div role="group" aria-label="Range" className="flex gap-1.5 self-start">
           {([[false, '30 days'], [true, 'All']] as const).map(([id, text]) => (
-            <button key={text} type="button" aria-pressed={all === id} onClick={() => setAll(id)} className={`min-h-8 cursor-pointer rounded-md border-0 px-3 text-[13px] font-bold ${all === id ? 'bg-white text-ink shadow-[0_1px_2px_rgba(43,33,20,.1)]' : 'bg-transparent text-faint'}`}>{text}</button>
+            <button key={text} type="button" aria-pressed={all === id} onClick={() => setAll(id)} className={chip(all === id)}>{text}</button>
           ))}
         </div>
       )}
@@ -283,14 +284,13 @@ export default function LogTab({ roster, q, setQ, wide }: { roster: Roster; q: s
   })
   const order = [...days.keys()].sort().reverse()
 
-  const chip = (on: boolean) => `flex min-h-8 flex-none cursor-pointer items-center whitespace-nowrap rounded-lg border px-2.5 text-[13px] font-bold ${on ? 'border-ink-2 bg-white text-ink' : 'border-transparent bg-transparent text-faint'}`
   const filters = (
-    <div className={`flex flex-col gap-1 ${wide ? '' : 'px-4'}`}>
-      <div role="group" aria-label="Show" className="flex gap-1">
+    <div className={`flex flex-col gap-1.5 ${wide ? '' : 'px-4'}`}>
+      <div role="group" aria-label="Show" className="flex gap-1.5">
         {VIEWS.map((v) => <button key={v.id} type="button" aria-pressed={v.id === view} onClick={() => setView(v.id)} className={chip(v.id === view)}>{v.label}</button>)}
       </div>
       {view === 'upgrades' && (
-        <div role="group" aria-label="Kind" className={`flex gap-1 overflow-x-auto [scrollbar-width:none] ${wide ? 'flex-wrap' : ''}`}>
+        <div role="group" aria-label="Kind" className={`flex gap-1.5 overflow-x-auto [scrollbar-width:none] ${wide ? 'flex-wrap' : ''}`}>
           {KINDS.map((k) => <button key={k.id} type="button" aria-pressed={k.id === kind} onClick={() => setKind(k.id)} className={chip(k.id === kind)}>{k.label}</button>)}
         </div>
       )}
@@ -313,7 +313,7 @@ export default function LogTab({ roster, q, setQ, wide }: { roster: Roster; q: s
               <span className="px-1 text-xs font-bold uppercase tracking-[0.06em] text-faint">{dayLabel(d)}</span>
               {!!(day.halls.length || day.events.length) && (
                 <ol className="m-0 grid list-none grid-cols-1 gap-1 p-0 md:grid-cols-2">
-                  {day.halls.map((u) => <li key={`${u.tag}-th-${u.to}`} data-tag={u.tag} className="min-w-0"><MilestoneRow u={u} /></li>)}
+                  {day.halls.map((u) => <li key={`${u.tag}-th-${u.to}`} data-tag={u.tag} className="min-w-0 bg-[#F7E8BC] md:col-span-2"><MilestoneRow u={u} /><ReactionBar target={`th:${u.tag}:${u.to}`} className="px-3 pb-2" /></li>)}
                   {day.events.map((e) => <li key={`${e.kind}-${e.tag}-${e.at}`} className="min-w-0"><EventRow e={e} onRoster={here.has(e.tag)} /></li>)}
                 </ol>
               )}

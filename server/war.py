@@ -109,6 +109,7 @@ def war_view(conn, w, clan_tag: str, over: bool) -> dict:
         "pairs": [{"position": p, "us": left.get(p), "them": right.get(p)}
                   for p in sorted(x for x in set(left) | set(right) if x is not None)],
         "log": log,
+        "war_key": w["war_key"],
         "recap": recap(log) if over else None,
     }
 

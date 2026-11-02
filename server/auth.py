@@ -9,6 +9,9 @@ The session is a signed cookie (HMAC-SHA256 over the payload, SESSION_SECRET), v
 Discord user id, display name, whether they may publish, and a CSRF token. Writes must echo that token in the
 X-CSRF-Token header; GET /auth/me hands it to the page.
 
+Anyone in the family's Discord server gets a member session too, for reacting. It is a separate cookie under a separate
+key, so a member token can never pass as a leader session, and nothing a leader does reads it.
+
 Config, all from /opt/bots/frosted/api.env, never the repo: DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET, DISCORD_GUILD_ID,
 DISCORD_LEADER_ROLE_IDS (comma list), DISCORD_PUBLISHER_ID, SESSION_SECRET. FROSTED_SITE_URL is the public site.
 """
@@ -37,7 +40,9 @@ SCOPES = "identify guilds.members.read"
 DEFAULT_SITE = "https://frosted-family.vercel.app"
 SESSION_COOKIE = "__Host-ff_session"   # __Host-: Secure, Path=/, no Domain, so no subdomain can set or read it
 STATE_COOKIE = "__Host-ff_oauth"
+MEMBER_COOKIE = "__Host-ff_member"
 SESSION_HOURS = 12
+MEMBER_DAYS = 30
 STATE_MINUTES = 10
 
 router = APIRouter(prefix="/auth")
@@ -158,6 +163,32 @@ def current_leader(ff_session: str | None = Cookie(default=None, alias=SESSION_C
                   via=via)
 
 
+@dataclass(frozen=True)
+class Member:
+    id: str
+    name: str
+    csrf: str
+
+
+def member_secret(secret: bytes) -> bytes:
+    return hmac.new(secret, b"frosted-family member session", hashlib.sha256).digest()
+
+
+def current_member(ff_member: str | None = Cookie(default=None, alias=MEMBER_COOKIE)) -> Member | None:
+    secret = session_secret()
+    p = unsign(ff_member, member_secret(secret)) if secret else None
+    return Member(id=p["uid"], name=p["name"], csrf=p["csrf"]) if p else None
+
+
+def require_member_write(member: Member | None = Depends(current_member),
+                         x_csrf_token: str | None = Header(default=None)) -> Member:
+    if not member:
+        raise HTTPException(401, "sign in with Discord")
+    if not x_csrf_token or not hmac.compare_digest(x_csrf_token, member.csrf):
+        raise HTTPException(403, "missing or wrong X-CSRF-Token")
+    return member
+
+
 def require_leader(leader: Leader | None = Depends(current_leader)) -> Leader:
     if not leader:
         raise HTTPException(401, "sign in as a leader")
@@ -242,10 +273,14 @@ def callback(request: Request, code: str | None = None, state: str | None = None
     if user.status_code != 200:
         return back_to_site(cfg, back, "failed")
     u = user.json()
-    m = member.json() if member.status_code == 200 else {}
-    if not (set(m.get("roles", [])) & cfg.leader_roles):
-        return back_to_site(cfg, back, "denied")  # not in the server, or no leader role
+    if member.status_code != 200:
+        return back_to_site(cfg, back, "denied")  # not in the server
+    m = member.json()
     name = m.get("nick") or u.get("global_name") or u.get("username") or u["id"]
+    if not (set(m.get("roles", [])) & cfg.leader_roles):
+        # A member, not a leader: the Plan tab says no, and everywhere else they are simply signed in.
+        resp = back_to_site(cfg, back, "denied" if back.startswith("/#/plan") else None)
+        return set_member(resp, cfg, u["id"], name)
     with appdb.connect() as conn:
         conn.execute("""INSERT INTO leaders VALUES (?,?,?,?) ON CONFLICT (user_id) DO UPDATE SET
                           name=excluded.name, avatar_url=excluded.avatar_url, last_sign_in=excluded.last_sign_in""",
@@ -254,6 +289,13 @@ def callback(request: Request, code: str | None = None, state: str | None = None
     session = {"uid": u["id"], "name": name, "avatar": avatar_url(u), "csrf": secrets.token_urlsafe(24),
                "exp": time.time() + SESSION_HOURS * 3600}
     set_cookie(resp, SESSION_COOKIE, sign(session, cfg.secret), SESSION_HOURS * 3600)
+    return set_member(resp, cfg, u["id"], name)
+
+
+def set_member(resp, cfg: Config, uid: str, name: str):
+    age = MEMBER_DAYS * 86400
+    token = {"uid": uid, "name": name, "csrf": secrets.token_urlsafe(24), "exp": time.time() + age}
+    set_cookie(resp, MEMBER_COOKIE, sign(token, member_secret(cfg.secret)), age)
     return resp
 
 
@@ -323,4 +365,5 @@ def logout():
     # No CSRF check: the worst a forged logout does is sign a leader out.
     resp = Response(status_code=204)
     resp.delete_cookie(SESSION_COOKIE, path="/", secure=True, httponly=True, samesite="lax")
+    resp.delete_cookie(MEMBER_COOKIE, path="/", secure=True, httponly=True, samesite="lax")
     return resp

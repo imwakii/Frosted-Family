@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import type { Me } from '../auth'
 import { acceptProposal, getProposals, HttpError, type Proposal, type ProposalKind, rejectProposal, withdrawProposal } from '../data'
 import { ago } from '../leaders'
+import { chip } from './ui'
 
 // Each leader's own proposal, shown above the lineup builder and the day planner. Anyone can open anyone's and
 // build on it; only the publisher accepts or rejects.
@@ -17,7 +18,6 @@ export function useProposals<B>(kind: ProposalKind) {
   return { ...data, mine: data.open.find((p) => p.mine) ?? null, reload }
 }
 
-const chip = (on: boolean) => `flex min-h-9 flex-none cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border px-3 text-[13px] font-bold ${on ? 'border-ink bg-ink text-white' : 'border-line bg-white text-ink-2 hover:bg-page'}`
 const STATUS_TEXT: Record<string, string> = { accepted: 'Accepted', rejected: 'Rejected' }
 
 type BarProps<B> = {
@@ -59,8 +59,8 @@ export function ProposalBar<B>({ proposals, me, viewing, setViewing, dirty, line
   const accept = (override: boolean) => viewing && act(() => acceptProposal(viewing.id, override, me.csrf), () => { setViewing(null); onAccepted(viewing) })
   const valve = problems.some((x) => x.startsWith('one-way valve'))
   const canDecide = me.role === 'publisher'
-  const btn = 'min-h-9 cursor-pointer rounded-[10px] border border-[#D5C8AC] bg-white px-3 text-[13px] font-semibold text-ink-2 hover:bg-page disabled:opacity-60'
-  const go = 'min-h-9 cursor-pointer rounded-[10px] border-0 bg-action px-3 text-[13px] font-bold text-white hover:bg-action-deep disabled:opacity-60'
+  const btn = 'min-h-9 cursor-pointer rounded-full border border-[#D5C8AC] bg-white px-3 text-[13px] font-semibold text-ink-2 hover:bg-page disabled:opacity-60'
+  const go = 'min-h-9 cursor-pointer rounded-full border-0 bg-action px-3 text-[13px] font-bold text-white hover:bg-action-deep disabled:opacity-60'
   const changes = viewing ? lines(viewing) : []
 
   return (

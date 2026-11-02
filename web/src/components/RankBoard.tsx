@@ -6,7 +6,7 @@ import { CLAN } from '../theme'
 import type { ClanName } from '../types'
 import { norm, SearchBox } from './CwlTab'
 import { ClanFilter, Empty, useClanPick } from './ExploreTab'
-import { Th, RowChevron } from './ui'
+import { chip, Th, RowChevron } from './ui'
 
 // GET /api/explore/{donations|capital}: one row per current member from their latest profile.
 type Row = { tag: string; name: string; clan: ClanName; th: number | null; [k: string]: unknown }
@@ -55,14 +55,14 @@ export default function RankBoard({ kind, cols, note, q, setQ, wide }: {
   const stamp = data?.updated_at ? `${new Date(data.updated_at).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'UTC' })} UTC` : null
   const chips = (
     <>
-      <span className="rounded-full border border-line bg-white px-3 py-1.5 font-semibold">Ranked by {col.label.toLowerCase()}</span>
+      <span className="font-semibold">Ranked by {col.label.toLowerCase()}</span>
       {note && <span className="text-xs font-semibold text-faint">{note}</span>}
       {stamp && <span className="text-xs font-semibold text-faint">Updated {stamp}</span>}
     </>
   )
 
   const board = !all.length ? <Empty loading={loading} /> : wide ? (
-    <section className="max-h-[calc(100dvh-210px)] overflow-auto rounded-[18px] border border-line bg-white">
+    <section className="max-h-[calc(100dvh-210px)] overflow-auto rounded-2xl border border-line bg-white">
       <table className="min-w-full border-separate border-spacing-0 text-sm">
         <thead>
           <tr className="text-left text-xs font-bold text-faint">
@@ -90,7 +90,7 @@ export default function RankBoard({ kind, cols, note, q, setQ, wide }: {
                 </span>
               </td>
               {cols.map((c) => (
-                <td key={c.key} className={`border-b border-hair px-4 py-1.5 text-right tabular-nums group-hover:bg-hover ${c.key === col.key ? 'font-extrabold text-ink' : 'font-semibold text-ink-2'}`}>{fmt(c, c.value(r))}</td>
+                <td key={c.key} className={`border-b border-hair px-4 py-1.5 text-right tabular-nums group-hover:bg-hover ${c.key === col.key ? 'bg-[#F6EEDC] font-extrabold text-ink' : 'font-semibold text-ink-2'}`}>{fmt(c, c.value(r))}</td>
               ))}
             </tr>
           ) })}
@@ -134,10 +134,10 @@ export default function RankBoard({ kind, cols, note, q, setQ, wide }: {
     <div className="flex flex-col gap-2.5 pb-6">
       <div className="px-4 pt-1"><ClanFilter clan={clan} setClan={setClan} /></div>
       <div className="sticky top-0 z-10 bg-page px-4 pb-2 pt-1"><SearchBox q={q} setQ={setQ} onEnter={enter} /></div>
-      <div role="group" aria-label="Rank by" className="flex gap-1 overflow-x-auto px-4 [scrollbar-width:none]">
+      <div role="group" aria-label="Rank by" className="flex gap-1.5 overflow-x-auto px-4 [scrollbar-width:none]">
         {cols.map((c) => (
           <button key={c.key} type="button" aria-pressed={c.key === col.key} onClick={() => setSortKey(c.key)}
-            className={`flex min-h-8 flex-none cursor-pointer items-center whitespace-nowrap rounded-lg border px-2.5 text-[13px] font-bold ${c.key === col.key ? 'border-ink-2 bg-white text-ink' : 'border-transparent bg-transparent text-faint'}`}>
+            className={chip(c.key === col.key)}>
             {c.chip ?? c.label}
           </button>
         ))}

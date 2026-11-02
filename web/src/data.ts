@@ -124,18 +124,34 @@ export type PlayerCard = {
   war_stars: number | null; donations: number | null; donations_received: number | null; capital: number | null
 }
 
-export const loadPlayerCard = (tag: string) =>
-  getJson<{ tag: string; card: PlayerCard | null }>(`/api/player/${encodeURIComponent(tag)}`).then((x) => (x.tag === tag ? x.card : null)).catch(() => null)
+// One request per player, kept a few minutes: a card opened twice opens at once, and a tap starts loading before the sheet does.
+type PlayerAnswer = { tag: string; snapshot: { name?: string; town_hall?: number } | null; card: PlayerCard | null }
+const PLAYER_KEEP_MS = 5 * 60_000
+const players = new Map<string, { at: number; answer?: PlayerAnswer | null; loading: Promise<PlayerAnswer | null> }>()
 
-export async function loadPlayer(tag: string): Promise<Partial<Player> | null> {
-  try {
-    const x = await getJson<{ tag: string; snapshot: { name?: string; town_hall?: number } | null }>(`/api/player/${encodeURIComponent(tag)}`)
-    if (x.tag !== tag || !x.snapshot) return null
-    return { tag, ...(x.snapshot.name ? { name: x.snapshot.name } : {}), ...(x.snapshot.town_hall ? { th: x.snapshot.town_hall } : {}) }
-  } catch {
-    return null
+export function fetchPlayer(tag: string) {
+  const had = players.get(tag)
+  if (had && Date.now() - had.at < PLAYER_KEEP_MS) return had.loading
+  const entry: { at: number; answer?: PlayerAnswer | null; loading: Promise<PlayerAnswer | null> } = {
+    at: Date.now(),
+    loading: getJson<PlayerAnswer>(`/api/player/${encodeURIComponent(tag)}`).then((x) => (x.tag === tag ? x : null)).catch(() => null)
+      .then((x) => { entry.answer = x; if (!x) players.delete(tag); return x }),
   }
+  players.set(tag, entry)
+  return entry.loading
 }
+
+const extraOf = (x: PlayerAnswer | null | undefined): Partial<Player> | null => (x?.snapshot
+  ? { tag: x.tag, ...(x.snapshot.name ? { name: x.snapshot.name } : {}), ...(x.snapshot.town_hall ? { th: x.snapshot.town_hall } : {}) }
+  : null)
+
+/** What is already here for a player, so a card seen recently draws whole on its first frame. */
+export function playerNow(tag: string) {
+  const had = players.get(tag)
+  return had && 'answer' in had && Date.now() - had.at < PLAYER_KEEP_MS ? { card: had.answer?.card ?? null, extra: extraOf(had.answer) } : null
+}
+
+export const loadPlayerAll = (tag: string) => fetchPlayer(tag).then((x) => ({ card: x?.card ?? null, extra: extraOf(x) }))
 
 type LiveMap = Partial<Record<ClanName, LiveWar | null>>
 

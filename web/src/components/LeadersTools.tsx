@@ -5,7 +5,7 @@ import { go, playerHref } from '../route'
 import { CLAN } from '../theme'
 import type { ClanName } from '../types'
 import { ClanFilter, type ClanPick, Empty } from './ExploreTab'
-import { ClanSwitch, Th, RowChevron } from './ui'
+import { chip, ClanSwitch, Th, RowChevron } from './ui'
 
 // Inactivity and Make room, below the Plan board. Open to everyone for now;
 // the decision to remove anyone stays with Ka Wai in game.
@@ -36,7 +36,7 @@ function Inactivity({ wide }: { wide: boolean }) {
     <div className="flex flex-col gap-3">
       <ClanFilter clan={clan} setClan={setClan} />
       {denied ? <SignIn /> : !data ? <Empty loading={loading} /> : wide ? (
-        <section className="overflow-auto rounded-[18px] border border-line bg-white">
+        <section className="overflow-auto rounded-2xl border border-line bg-white">
           <table className="min-w-full border-separate border-spacing-0 text-sm">
             <thead>
               <tr className="text-left text-xs font-bold text-faint">
@@ -181,7 +181,7 @@ function SignIn() {
   return (
     <div className="flex flex-col items-center gap-3 rounded-2xl border border-line bg-white px-6 py-12 text-center">
       <span className="text-sm font-semibold text-muted">Leaders only</span>
-      <a href={loginHref()} className="flex min-h-11 items-center rounded-xl bg-[#5865F2] px-5 text-sm font-bold text-white no-underline hover:bg-[#4752C4]">Sign in with Discord</a>
+      <a href={loginHref()} className="flex min-h-11 items-center rounded-full bg-[#5865F2] px-5 text-sm font-bold text-white no-underline hover:bg-[#4752C4]">Sign in with Discord</a>
     </div>
   )
 }
@@ -190,10 +190,10 @@ export default function LeadersTools({ wide }: { wide: boolean }) {
   const [view, setView] = useState<'inactivity' | 'room'>('inactivity')
   return (
     <section aria-label="Members" className="mx-auto flex max-w-[1360px] flex-col gap-4 px-[clamp(16px,3vw,32px)] pb-12 pt-5">
-      <div role="group" aria-label="Members" className="inline-grid w-max auto-cols-max grid-flow-col gap-1 rounded-xl bg-well p-1">
+      <div role="group" aria-label="Members" className="flex gap-1.5">
         {([['inactivity', 'Inactivity'], ['room', 'Make room']] as const).map(([k, label]) => (
           <button key={k} type="button" aria-pressed={k === view} onClick={() => setView(k)}
-            className={`min-h-10 cursor-pointer rounded-[9px] border-0 px-4 text-sm font-bold ${k === view ? 'bg-white text-ink shadow-[0_1px_3px_rgba(43,33,20,.12)]' : 'bg-transparent text-muted'}`}>
+            className={chip(k === view)}>
             {label}
           </button>
         ))}

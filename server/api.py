@@ -31,7 +31,7 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException, Request
 
 from frosted.config import CLAN_TAGS, TAG_TO_CLAN
-from server import auth, clanlog, days, db, history, leaders, members, plan, profiles, proposals, stats, war
+from server import auth, clanlog, days, db, history, leaders, members, plan, profiles, proposals, reactions, stats, war
 
 DEFAULT_DB = "/opt/bots/frosted/data/frosted.db"
 ROSTER_FIELDS = ("tag", "name", "clan", "cwl_slot", "transferred_from", "tier", "final_score", "offense_score",
@@ -248,6 +248,7 @@ app.include_router(plan.router)
 app.include_router(days.router)
 app.include_router(proposals.router)
 app.include_router(leaders.router)
+app.include_router(reactions.router)
 
 
 @app.middleware("http")
@@ -255,7 +256,7 @@ async def private_responses(request: Request, call_next):
     """Sign-in and plan answers are per leader. Caddy marks the public reads cacheable, so these say no-store, and
     Vary: Cookie keeps any cache from handing one leader's answer to another."""
     resp = await call_next(request)
-    if request.url.path.startswith(("/auth", "/plan", "/allocation", "/leaders")):
+    if request.url.path.startswith(("/auth", "/plan", "/allocation", "/leaders", "/reactions")):
         resp.headers["Cache-Control"] = "no-store, private"
     resp.headers["Vary"] = "Cookie"
     return resp

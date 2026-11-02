@@ -46,7 +46,7 @@ War collector and read API for the Frosted Family site, on the bots droplet unde
   Pets, siege machines and super troops are told apart by the name lists in `data/unit_kinds.json`.
 
 `frosted_cwl_members.csv` stays canonical for allocation. The API reads it from the server's checkout, so a new
-roster reaches the site when the checkout is updated (`setup.sh install` again).
+roster reaches the site through the 30-minute data pull, which takes data files only. All code changes need `setup.sh install`.
 
 Secrets live only in `/opt/bots/frosted/api.env`: `COC_API_TOKEN`, the Discord settings and `SESSION_SECRET`.
 Clash of Clans keys are locked to IP addresses, so the key must list the droplet's address.

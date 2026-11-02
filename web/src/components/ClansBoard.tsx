@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type PointerEvent, type ReactNode } from '
 import { leagueIcon } from '../clash'
 import { type ClansStats, type Point, type StatClan, type StatsWar, type TrendPoint, useClanStats } from '../clanStats'
 import { CLANS, cycleShort } from '../theme'
+import { chip } from './ui'
 
 type Range = '30d' | 'all'
 const SERIES: StatClan[] = [...CLANS, 'Family']
@@ -434,10 +435,10 @@ export default function ClansBoard({ wide }: { wide: boolean }) {
   return (
     <div className={`flex flex-col gap-3 ${pad}`}>
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-        <div role="group" aria-label="Range" className="flex rounded-lg bg-well p-0.5">
+        <div role="group" aria-label="Range" className="flex gap-1.5">
           {([['30d', '30 days'], ['all', 'All']] as const).map(([id, text]) => (
             <button key={id} type="button" aria-pressed={range === id} onClick={() => setRange(id)}
-              className={`min-h-8 cursor-pointer rounded-md border-0 px-3 text-[13px] font-bold ${range === id ? 'bg-white text-ink shadow-[0_1px_2px_rgba(43,33,20,.1)]' : 'bg-transparent text-faint'}`}>
+              className={chip(range === id)}>
               {text}
             </button>
           ))}

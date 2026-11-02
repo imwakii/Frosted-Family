@@ -7,7 +7,7 @@ import type { ClanName } from '../types'
 import { norm, SearchBox } from './CwlTab'
 import { ClanFilter, Empty, useClanPick } from './ExploreTab'
 import { useBoard } from './RankBoard'
-import { KEY_ROW, RowChevron, Th } from './ui'
+import { KEY_ROW, RowChevron, Th, chip } from './ui'
 import { YouTag } from './You'
 
 // GET /api/explore/badges. Everyone's badges as a medal table, gold first, then silver, then bronze; or who holds one
@@ -40,7 +40,6 @@ export default function BadgesBoard({ q, setQ, wide }: { q: string; setQ: (v: st
   const shown = rows.filter(({ r }) => !nq || norm(r.name).includes(nq) || r.tag.toLowerCase().includes(nq))
   const about = pick ? BADGES[pick] : null
 
-  const chip = (on: boolean) => `flex min-h-9 flex-none cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border px-3 text-[13px] font-bold ${on ? 'border-ink bg-ink text-white' : 'border-line bg-white text-ink-2 hover:bg-page'}`
   const body = !data ? <Empty loading={loading} /> : (
     <>
       <div role="group" aria-label="Badge" className="flex gap-1.5 overflow-x-auto [scrollbar-width:none] md:flex-wrap">

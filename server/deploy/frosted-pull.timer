@@ -1,5 +1,5 @@
 [Unit]
-Description=Frosted Family roster pull (every 30 minutes)
+Description=Frosted Family data pull (every 30 minutes)
 
 [Timer]
 OnCalendar=*:0/30

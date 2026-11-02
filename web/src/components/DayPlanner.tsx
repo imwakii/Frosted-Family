@@ -94,7 +94,7 @@ export default function DayPlanner({ roster, me }: { roster: Roster; me: Me }) {
       return { ...p, days: days ? DAYS.filter((d) => days[d]?.includes(p.tag)) : p.days }
     }),
   }), [roster, shown])
-  if (!plans || !shown) return <div aria-busy="true" aria-label="Loading" className="mx-auto mt-10 h-64 max-w-[760px] animate-pulse rounded-[18px] bg-well" />
+  if (!plans || !shown) return <div aria-busy="true" aria-label="Loading" className="mx-auto mt-10 h-64 max-w-[760px] animate-pulse rounded-2xl bg-well" />
 
   const readOnly = !me.role || me.via === 'passcode' || failed
   const canPublish = me.role === 'publisher' && !failed
@@ -153,7 +153,7 @@ export default function DayPlanner({ roster, me }: { roster: Roster; me: Me }) {
     setServer(await publishDays(season, plans, me.csrf))
     if (proposals.mine) await withdrawProposal(proposals.mine.id, me.csrf)
   }, 'Published · members see their days')
-  const btn = 'min-h-10 cursor-pointer rounded-[10px] border border-[#D5C8AC] bg-white px-3 text-sm font-semibold text-ink-2 hover:bg-page disabled:cursor-default disabled:opacity-60'
+  const btn = 'min-h-10 cursor-pointer rounded-full border border-[#D5C8AC] bg-white px-3 text-sm font-semibold text-ink-2 hover:bg-page disabled:cursor-default disabled:opacity-60'
   return (
     <>
     <Outer className={`mx-auto flex flex-col gap-3.5 px-[clamp(16px,3vw,32px)] pt-1 md:pt-5 max-w-[1360px] ${preview ? '' : 'pb-12'}`}>
@@ -168,7 +168,7 @@ export default function DayPlanner({ roster, me }: { roster: Roster; me: Me }) {
         {canPublish && !confirming && !viewing && (
           <button type="button" onClick={() => setConfirming(true)} disabled={busy || bad.length > 0 || !!published}
             title={bad.length ? `Not 15: ${bad.join(', ')}` : undefined}
-            className="min-h-10 cursor-pointer rounded-[10px] border-0 bg-action px-3 text-sm font-bold text-white hover:bg-action-deep disabled:cursor-not-allowed disabled:bg-[#E3D8BF] disabled:text-faint">
+            className="min-h-10 cursor-pointer rounded-full border-0 bg-action px-3 text-sm font-bold text-white hover:bg-action-deep disabled:cursor-not-allowed disabled:bg-[#E3D8BF] disabled:text-faint">
             {published ? 'Published' : 'Publish'}
           </button>
         )}
@@ -176,7 +176,7 @@ export default function DayPlanner({ roster, me }: { roster: Roster; me: Me }) {
           <span className="flex items-center gap-1.5">
             <button type="button" className={btn} onClick={() => setConfirming(false)}>Cancel</button>
             <button type="button" autoFocus disabled={busy} onClick={publish}
-              className="min-h-10 cursor-pointer rounded-[10px] border-0 bg-action px-4 text-sm font-bold text-white hover:bg-action-deep disabled:opacity-60">Publish to members</button>
+              className="min-h-10 cursor-pointer rounded-full border-0 bg-action px-4 text-sm font-bold text-white hover:bg-action-deep disabled:opacity-60">Publish to members</button>
           </span>
         )}
       </div>
@@ -199,7 +199,7 @@ export default function DayPlanner({ roster, me }: { roster: Roster; me: Me }) {
         {live && <span className="flex items-center gap-1"><span className="h-2.5 w-3.5 rounded-[3px] bg-moved" />Changed</span>}
       </div>
 
-      <section className="max-h-[calc(100dvh-230px)] w-full max-w-[900px] overflow-auto rounded-[18px] border border-line bg-white">
+      <section className="max-h-[calc(100dvh-230px)] w-full max-w-[900px] overflow-auto rounded-2xl border border-line bg-white">
         <table className="w-full border-separate border-spacing-0 text-sm">
           <thead className="sticky top-0 z-[3] bg-white">
             <tr>

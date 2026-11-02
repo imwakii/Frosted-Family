@@ -168,7 +168,7 @@ export function SubNav({ items, current, wide }: { items: { id: string; label: s
       <nav ref={ref} aria-label="Section" className={`flex overflow-x-auto [scrollbar-width:none] ${wide ? 'mx-auto max-w-[1360px] gap-5 px-[clamp(16px,3vw,32px)]' : 'gap-4 border-b border-line [mask-image:linear-gradient(to_right,black_88%,transparent)] pr-6'}`}>
         {items.map((s) => (
           <a key={s.id} href={s.href} aria-current={s.id === current ? 'page' : undefined}
-            className={`-mb-px flex min-h-11 flex-none items-center whitespace-nowrap border-b-2 text-[15px] font-bold no-underline ${s.id === current ? 'border-ink text-ink' : 'border-transparent text-faint hover:text-ink'}`}>
+            className={`-mb-px flex min-h-11 flex-none items-center whitespace-nowrap border-b-2 text-[15px] font-bold no-underline ${s.id === current ? 'border-gold text-ink' : 'border-transparent text-faint hover:text-ink'}`}>
             {s.label}
           </a>
         ))}
@@ -251,6 +251,9 @@ export const POINT = {
   right: { cls: 'pl-3 pr-5', style: { clipPath: 'polygon(0 0,calc(100% - 10px) 0,100% 50%,calc(100% - 10px) 100%,0 100%)' } },
   left: { cls: 'pl-5 pr-3', style: { clipPath: 'polygon(10px 0,100% 0,100% 100%,10px 100%,0 50%)' } },
 }
+
+/** The app's one filter or sort chip. */
+export const chip = (on: boolean) => `flex min-h-9 flex-none cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border px-3 text-[13px] font-bold ${on ? 'border-ink bg-ink text-white' : 'border-line bg-white text-ink-2 hover:bg-hover'}`
 
 export const RowChevron = () => (
   <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#C4B69A" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" className="-ml-1 flex-none md:hidden">

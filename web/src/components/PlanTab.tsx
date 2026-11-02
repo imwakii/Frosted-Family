@@ -223,12 +223,12 @@ function Plan({ roster, me }: { roster: Roster; me: Me }) {
           <span className="flex-auto" />
           {n > 0 && !viewing && (
             <button type="button" onClick={() => { setMine({}); setResult(null) }}
-              className="min-h-10 cursor-pointer rounded-[10px] border border-[#D5C8AC] bg-white px-3 text-sm font-semibold text-ink-2 hover:bg-page">
+              className="min-h-10 cursor-pointer rounded-full border border-[#D5C8AC] bg-white px-3 text-sm font-semibold text-ink-2 hover:bg-page">
               Reset
             </button>
           )}
           {!viewing && <button type="button" onClick={save} disabled={readOnly || !dirty || saving} title={readOnly ? lockedTip : undefined}
-            className="min-h-10 cursor-pointer rounded-[10px] border border-[#D5C8AC] bg-white px-3 text-sm font-semibold text-ink-2 hover:bg-page disabled:cursor-default disabled:opacity-60">
+            className="min-h-10 cursor-pointer rounded-full border border-[#D5C8AC] bg-white px-3 text-sm font-semibold text-ink-2 hover:bg-page disabled:cursor-default disabled:opacity-60">
             {dirty || !Object.keys(mine).length ? 'Propose' : 'Proposed'}
           </button>}
           {viewing ? null : readOnly ? (
@@ -239,7 +239,7 @@ function Plan({ roster, me }: { roster: Roster; me: Me }) {
           ) : canPublish ? (
             <button type="button" onClick={openConfirm} disabled={cant}
               title={blocked ? checks.filter((k) => (k.tone === 'bad' || k.tone === 'warn') && !valveOnly(k)).map((k) => k.label).join(' · ') : undefined}
-              className="min-h-10 cursor-pointer rounded-[10px] border-0 bg-action px-4 text-sm font-bold text-white hover:bg-action-deep disabled:cursor-not-allowed disabled:bg-[#E3D8BF] disabled:text-faint">
+              className="min-h-10 cursor-pointer rounded-full border-0 bg-action px-4 text-sm font-bold text-white hover:bg-action-deep disabled:cursor-not-allowed disabled:bg-[#E3D8BF] disabled:text-faint">
               Publish
             </button>
           ) : null}
@@ -269,7 +269,7 @@ function Plan({ roster, me }: { roster: Roster; me: Me }) {
           {cols.map((c) => {
             const t = CLAN[c.clan]
             return (
-              <section key={c.clan} aria-label={c.clan} className={`overflow-hidden rounded-[18px] border border-line bg-white ${c.clan === phoneClan ? '' : 'max-md:hidden'}`}>
+              <section key={c.clan} aria-label={c.clan} className={`overflow-hidden rounded-2xl border border-line bg-white ${c.clan === phoneClan ? '' : 'max-md:hidden'}`}>
                 <div className="flex items-end justify-between p-4" style={{ background: t.tint }}>
                   <div className="flex flex-col gap-0.5">
                     <h2 className="font-display m-0 flex items-center gap-2 text-[22px] leading-none" style={{ color: t.deep }}><ClanBadge src={clans[c.clan]?.badge} size={30} />{clans[c.clan]?.name ?? `Frosted ${c.clan}`}</h2>
@@ -333,9 +333,9 @@ function Plan({ roster, me }: { roster: Roster; me: Me }) {
             )}
             <div className="flex justify-end gap-2">
               <button type="button" autoFocus onClick={() => setConfirming(false)}
-                className="min-h-11 cursor-pointer rounded-[10px] border border-[#D5C8AC] bg-white px-4 text-sm font-semibold text-ink-2 hover:bg-page">Cancel</button>
+                className="min-h-11 cursor-pointer rounded-full border border-[#D5C8AC] bg-white px-4 text-sm font-semibold text-ink-2 hover:bg-page">Cancel</button>
               <button type="button" onClick={publish} disabled={busy || server === 'checking' || serverProblems.length > 0 || (valveHit && !override)}
-                className="min-h-11 cursor-pointer rounded-[10px] border-0 bg-action px-[18px] text-sm font-bold text-white hover:bg-action-deep disabled:opacity-60">Publish</button>
+                className="min-h-11 cursor-pointer rounded-full border-0 bg-action px-[18px] text-sm font-bold text-white hover:bg-action-deep disabled:opacity-60">Publish</button>
             </div>
           </section>
         </div>
@@ -366,7 +366,7 @@ function Gate({ me, onSignOut }: { me: Me; onSignOut: () => void }) {
           <>
             <span className="text-sm text-faint">Signed in as {me.user.name}</span>
             <button type="button" onClick={onSignOut}
-              className="min-h-11 w-full cursor-pointer rounded-[10px] border border-[#D5C8AC] bg-white text-sm font-semibold text-ink-2 hover:bg-page">Sign out</button>
+              className="min-h-11 w-full cursor-pointer rounded-full border border-[#D5C8AC] bg-white text-sm font-semibold text-ink-2 hover:bg-page">Sign out</button>
           </>
         ) : !me.configured ? (
           <button type="button" disabled className="mt-1 flex min-h-12 w-full items-center justify-center gap-2.5 rounded-[12px] border-0 bg-[#E3D8BF] text-[15px] font-bold text-faint">
