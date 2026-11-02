@@ -1,7 +1,8 @@
 """GET /war/board: each clan's war for the War tab, public.
 
-The war being fought, else the one in preparation, else the last one for three days after it ended. Bases are paired by
-map position, with a log of every attack, newest first: who hit whom, stars, damage, and when the collector first saw it,
+The war being fought, else the one in preparation, else the last one for three days after it ended. During CWL a day's
+war runs while the next day's prepares, so a clan can also have a next war. Bases are paired by rank on the map (a CWL
+war's map positions have gaps, so each side is numbered 1 to its size), with a log of every attack, newest first: who hit whom, stars, damage, and when the collector first saw it,
 since the API gives no attack times. A war the collector last saw in progress whose end has passed is over,
 whatever state was stored. A war that is over has a recap: its MVP and any three-star on a town hall well above the attacker's.
 """
@@ -36,6 +37,14 @@ def pick_war(conn, clan_tag: str, now: datetime):
     if ended and ended[0]["end_time"][:15] >= stamp(now - ENDED_SHOWN):
         return ended[0], True
     return None, False
+
+
+def next_war(conn, clan_tag: str, current, now: datetime):
+    """The war in preparation behind the one being fought."""
+    return conn.execute(
+        """SELECT * FROM wars WHERE ? IN (clan_tag, opponent_tag) AND state='preparation' AND war_key<>?
+           AND substr(end_time, 1, 15)>=? ORDER BY preparation_start LIMIT 1""",
+        (clan_tag, current["war_key"], stamp(now))).fetchone()
 
 
 def badge_of(conn, tag: str) -> str | None:
@@ -83,9 +92,13 @@ def war_view(conn, w, clan_tag: str, over: bool) -> dict:
     us, them = ("clan", "opponent") if w["clan_tag"] == clan_tag else ("opponent", "clan")
     allowed = w["attacks_per_member"] or (1 if w["kind"] == "cwl" else 2)
     members = conn.execute("SELECT * FROM war_members WHERE war_key=?", (w["war_key"],)).fetchall()
-    bases = {m["player_tag"]: {"tag": m["player_tag"], "name": m["name"], "th": m["town_hall"], "position": m["map_position"],
-                               "used": m["attacks_used"], "allowed": allowed, "best": None} for m in members}
     ours = {m["player_tag"] for m in members if m["clan_tag"] == clan_tag}
+    place = {}
+    for side in (True, False):
+        ranked = sorted((m for m in members if (m["player_tag"] in ours) == side), key=lambda m: m["map_position"] or 999)
+        place.update({m["player_tag"]: i for i, m in enumerate(ranked, start=1)})
+    bases = {m["player_tag"]: {"tag": m["player_tag"], "name": m["name"], "th": m["town_hall"], "position": place[m["player_tag"]],
+                               "used": m["attacks_used"], "allowed": allowed, "best": None} for m in members}
     seen = seen_times(conn, w["war_key"])
     log = []
     # Newest first; the API's order is the order the attacks were made in.
@@ -119,6 +132,8 @@ def board(conn, now: datetime | None = None) -> dict:
     clans = []
     for name, clan_tag in CLAN_TAGS.items():
         w, over = pick_war(conn, clan_tag, now) if conn else (None, False)
-        clans.append({"clan": name, "war": war_view(conn, w, clan_tag, over) if w else None})
+        following = next_war(conn, clan_tag, w, now) if w and not over and w["state"] == "inWar" else None
+        clans.append({"clan": name, "war": war_view(conn, w, clan_tag, over) if w else None,
+                      "next": war_view(conn, following, clan_tag, False) if following else None})
     last = conn.execute("SELECT MAX(finished_at) FROM polls").fetchone()[0] if conn else None
     return {"clans": clans, "last_poll": last}

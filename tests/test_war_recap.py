@@ -1,4 +1,10 @@
-from server import war
+from datetime import datetime, timezone
+
+from frosted.config import CLAN_TAGS
+from server import db, war
+
+FIRE = CLAN_TAGS["Fire"]
+NOW = datetime(2026, 11, 3, 12, tzinfo=timezone.utc)
 
 
 def hit(tag, stars, destruction=100.0, duration=100, th=18, on_th=18, ours=True):
@@ -33,3 +39,29 @@ def test_the_biggest_upsets_come_first_and_a_missing_time_never_wins():
     log = [hit(f"#{i}", 3, th=17 - i, on_th=18) for i in range(1, 6)]
     assert [u["attacker"]["tag"] for u in war.recap(log)["upsets"]] == ["#5", "#4", "#3"]
     assert war.recap([hit("#A", 3, duration=None), hit("#B", 3, duration=170)])["mvp"]["tag"] == "#B"
+
+
+def add_war(conn, key, state, day, start, end, gaps=False):
+    conn.execute("""INSERT INTO wars (war_key, kind, round, state, team_size, attacks_per_member, start_time, end_time, clan_tag,
+                    opponent_tag, opponent_name, updated_at) VALUES (?,'cwl',?,?,2,1,?,?,?,'#E','Enemy','now')""", (key, day, state, start, end, FIRE))
+    for i, (tag, side, pos) in enumerate((("#A", FIRE, 2), ("#B", FIRE, 8), ("#X", "#E", 1), ("#Y", "#E", 9))):
+        conn.execute("INSERT INTO war_members (war_key, player_tag, clan_tag, name, town_hall, map_position, attacks_used) VALUES (?,?,?,?,18,?,0)",
+                     (key, tag, side, tag, pos if gaps else i % 2 + 1))
+
+
+def test_a_cwl_war_pairs_by_rank_whatever_the_map_positions(tmp_path):
+    conn = db.connect(tmp_path / "f.db")
+    add_war(conn, "#W1", "preparation", 1, "20261104T000000.000Z", "20261105T000000.000Z", gaps=True)
+    fire = next(c for c in war.board(conn, now=NOW)["clans"] if c["clan"] == "Fire")
+    pairs = fire["war"]["pairs"]
+    assert [(p["position"], p["us"]["tag"], p["them"]["tag"]) for p in pairs] == [(1, "#A", "#X"), (2, "#B", "#Y")]
+    assert fire["next"] is None
+
+
+def test_the_next_days_preparation_shows_behind_the_live_war(tmp_path):
+    conn = db.connect(tmp_path / "f.db")
+    add_war(conn, "#W1", "inWar", 1, "20261103T000000.000Z", "20261104T000000.000Z")
+    add_war(conn, "#W2", "preparation", 2, "20261104T000000.000Z", "20261105T000000.000Z")
+    fire = next(c for c in war.board(conn, now=NOW)["clans"] if c["clan"] == "Fire")
+    assert (fire["war"]["day"], fire["war"]["state"], fire["next"]["day"], fire["next"]["state"]) == (1, "inWar", 2, "preparation")
+

@@ -133,7 +133,7 @@ export type ClanWar = {
   attacks_used: number; opponent_attacks_used: number; badge: string | null; opponent_badge: string | null; log: WarAttack[]; recap?: WarRecap | null; war_key?: string
   pairs: { position: number; us: WarBase | null; them: WarBase | null }[]
 }
-export const loadWarBoard = () => getJson<{ clans: { clan: ClanName; war: ClanWar | null }[]; last_poll: string | null }>('/api/war/board')
+export const loadWarBoard = () => getJson<{ clans: { clan: ClanName; war: ClanWar | null; next?: ClanWar | null }[]; last_poll: string | null }>('/api/war/board')
 
 /** Refetched every minute, keeping the last answer on screen meanwhile. */
 export function useWarBoard() {

@@ -7,7 +7,7 @@ import { ago, type ClanWar, useWarBoard, type WarAttack, type WarBase } from '..
 import { playerHref } from '../route'
 import { CLAN, CLANS } from '../theme'
 import type { ClanName } from '../types'
-import { ClanBadge, ClanSwitch, KEY_ROW, POINT, Stars, Th, useNow } from './ui'
+import { chip, ClanBadge, ClanSwitch, KEY_ROW, POINT, Stars, Th, useNow } from './ui'
 
 // Each clan's war, side by side: our bases and badge on the left, the enemy's on the right, facing by map position.
 // The attack log says who hit whom, how well and roughly when: we stay on the left and they on the right, and each row
@@ -262,7 +262,10 @@ export default function WarTab({ wide }: { wide: boolean }) {
   // Opens on your own war if you are in one.
   const clan = wars.find((c) => c.clan === pick)
     ?? wars.find((c) => c.war!.state !== 'warEnded' && c.war!.pairs.some((p) => p.us && yous.includes(p.us.tag)))
-    ?? wars.find((c) => c.war!.state === 'inWar') ?? wars[0]
+    ?? wars.find((c) => c.war!.state === 'inWar') ?? wars.find((c) => c.war!.state === 'preparation') ?? wars[0]
+  const [nextDay, setNextDay] = useState(false)
+  useEffect(() => { setNextDay(false) }, [clan?.clan])
+  const shown = clan && (nextDay && clan.next ? clan.next : clan.war!)
   return (
     <main className={wide ? 'mx-auto flex max-w-[1360px] flex-col gap-4 px-[clamp(16px,3vw,32px)] pb-12 pt-5' : 'flex flex-col gap-3 px-4 pb-6 pt-1'}>
       <ClanSwitch value={clan?.clan ?? 'Fire'} onPick={setPick}
@@ -272,7 +275,18 @@ export default function WarTab({ wide }: { wide: boolean }) {
         loading ? <div aria-busy="true" className="h-64 animate-pulse rounded-2xl bg-well" /> : <div className="rounded-2xl border border-line bg-white p-5 text-sm text-faint">Unavailable right now</div>
       ) : !clan ? (
         <div className="rounded-2xl border border-line bg-white px-6 py-14 text-center text-sm font-semibold text-faint">No war on</div>
-      ) : <WarBoard clan={clan.clan} war={clan.war!} now={now} />}
+      ) : (
+        <>
+          {/* During CWL a day's war runs while the next day's prepares. */}
+          {clan.next && (
+            <div role="group" aria-label="Day" className="flex gap-1.5">
+              <button type="button" aria-pressed={!nextDay} onClick={() => setNextDay(false)} className={chip(!nextDay)}>{clan.war!.day ? `Day ${clan.war!.day} · ` : ''}Live</button>
+              <button type="button" aria-pressed={nextDay} onClick={() => setNextDay(true)} className={chip(nextDay)}>{clan.next.day ? `Day ${clan.next.day} · ` : ''}Preparation</button>
+            </div>
+          )}
+          <WarBoard key={shown!.start_time} clan={clan.clan} war={shown!} now={now} />
+        </>
+      )}
     </main>
   )
 }
