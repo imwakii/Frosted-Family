@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { Me } from '../auth'
 import { type DayBody, type DayPlans, getDays, getProposals, HttpError, type Proposal, publishDays, saveProposal, useWar, useWide, withdrawProposal } from '../data'
-import { type ClanDays, DAYS, earned, enemy, lineupDraft, locked, missedThisSeason, onTrack, onTrial, slotsBelow, suggest, TARGET, TEAM, tier, type Wars } from '../dayplan'
+import { type ClanDays, DAYS, earned, enemy, lineupDraft, locked, missedThisSeason, onTrack, onTrial, slotsBelow, suggest, TARGET, TEAM, tier, type Wars, asPlanned } from '../dayplan'
 import { CLAN } from '../theme'
 import type { Player, Roster, Slot } from '../types'
 import CwlTab from './CwlTab'
@@ -50,7 +50,7 @@ function Cell({ plays, war, tag, ring, onToggle, label, changed }: {
 export default function DayPlanner({ roster: base, me, onPublished }: { roster: Roster; me: Me; onPublished: () => Promise<void> }) {
   const roster = useMemo<Roster>(() => {
     const moves = lineupDraft()
-    return { ...base, players: base.players.map((p) => (moves[p.tag] ? { ...p, ...moves[p.tag] } : p)) }
+    return { ...base, players: base.players.map((p) => asPlanned(moves[p.tag] ? { ...p, ...moves[p.tag] } : p)) }
   }, [base])
   const [server, setServer] = useState<DayPlans | null>(null)
   const [failed, setFailed] = useState(false)

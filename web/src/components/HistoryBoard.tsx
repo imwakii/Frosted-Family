@@ -37,9 +37,9 @@ const load = () => (cached ??= fetch('/api/stats/history', { headers: { Accept: 
   .then((r) => (r.ok && r.headers.get('content-type')?.includes('json') ? r.json() : null))
   .catch(() => null))
 
-function Section({ title, note, children }: { title: string; note?: string; children: React.ReactNode }) {
+function Section({ title, note, className = '', children }: { title: string; note?: string; className?: string; children: React.ReactNode }) {
   return (
-    <section aria-label={title} className="flex flex-col gap-2">
+    <section aria-label={title} className={`flex flex-col gap-2 ${className}`}>
       <div className="flex items-baseline justify-between gap-2 px-1">
         <span className="text-xs font-bold uppercase tracking-[0.06em] text-faint">{title}</span>
         {note && <span className="truncate text-xs text-faint">{note}</span>}
@@ -68,19 +68,8 @@ export default function HistoryBoard({ q, setQ, wide }: { q: string; setQ: (v: s
   const enter = () => { if (longest[0]) go.to(playerHref(longest[0].r.tag)) }
 
   const body = !data ? <Empty loading={loading} /> : (
-    <div className="grid w-full max-w-[1100px] items-start gap-5 lg:grid-cols-2">
+    <div className="grid w-full max-w-[1100px] items-start gap-5 lg:grid-cols-2 lg:items-stretch">
       {!nq && <div className="flex flex-col gap-5">
-        <div className="grid grid-cols-2 gap-2">
-          <div className="flex flex-col rounded-2xl border border-line bg-white p-3">
-            <span className="font-display text-[26px] leading-tight tabular-nums text-ink">{data.players.toLocaleString('en-GB')}</span>
-            <span className="text-xs text-muted">players through the family</span>
-          </div>
-          <div className="flex flex-col rounded-2xl border border-line bg-white p-3">
-            <span className="font-display text-[26px] leading-tight tabular-nums text-ink">{data.in_several.toLocaleString('en-GB')}</span>
-            <span className="text-xs text-muted">in more than one clan</span>
-          </div>
-        </div>
-
         <Section title="How it began">
           <ol className="m-0 flex list-none flex-col rounded-2xl border border-line bg-white p-3">
             {data.clans.map((c, i) => (
@@ -121,9 +110,11 @@ export default function HistoryBoard({ q, setQ, wide }: { q: string; setQ: (v: s
         </Section>
       </div>}
 
-      <Section title="Longest in the family" note="Current members">
+      {/* Beside the left column, taken out of the flow so that column alone sets the height and both end level. */}
+      <div className="relative min-w-0">
+      <Section title="Longest in the family" note="Current members" className={nq ? '' : 'lg:absolute lg:inset-0'}>
         {/* Everyone, scrolling in place. */}
-        <ol className="m-0 max-h-[530px] list-none overflow-y-auto overscroll-contain rounded-2xl border border-line bg-white py-1">
+        <ol className={`m-0 max-h-[530px] min-h-0 list-none overflow-y-auto overscroll-contain rounded-2xl border border-line bg-white py-1 ${nq ? '' : 'lg:max-h-none'}`}>
           {longest.map(({ r, place }, i) => (
             <li key={r.tag}>
               <a href={playerHref(r.tag)} className={`flex min-h-[52px] items-center gap-2.5 px-3.5 py-1.5 text-ink no-underline hover:bg-hover ${i ? 'border-t border-hair' : ''}`}>
@@ -141,6 +132,7 @@ export default function HistoryBoard({ q, setQ, wide }: { q: string; setQ: (v: s
           {!longest.length && <li className="p-4 text-sm text-faint">No one by that name</li>}
         </ol>
       </Section>
+      </div>
       <p className="m-0 px-1 text-xs text-faint lg:col-span-2">Dates are when Clash of Stats first saw a player, so some are approximate and some members may be missing.</p>
     </div>
   )

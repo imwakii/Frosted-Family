@@ -3,6 +3,7 @@ import type { ClanName, Player, Slot } from './types'
 // The day planner's rules, in priority order. Keeping the league and promoting comes first:
 //   1. Only players certain to attack: high-miss and inactive players, and anyone who missed an attack this season,
 //      get no suggested days, whatever their town hall. Unproven and new players count as one town hall weaker.
+//      A leader who puts an inactive player in core knows better than the record, so the planner takes them as active.
 //   2. Each day's lineup matches the enemy's town halls, slot by slot. Being under an enemy slot costs more than being
 //      over it. The enemy is the drawn opponent, else the expected one (`upcoming`); with neither, the highest play.
 //   3. Between players who fit a slot equally well, the one who needs more days for 8 stars plays. Days needed =
@@ -52,6 +53,9 @@ export const earned = (wars: Wars, tag: string) =>
   Object.values(wars).reduce((s, w) => s + (locked(w) && w.state === 'warEnded' ? w.stars[tag] ?? 0 : 0), 0)
 
 export const missedThisSeason = (wars: Wars) => new Set(Object.values(wars).flatMap((w) => w.missed))
+
+/** A player as the planner reads them, once the lineup is applied. */
+export const asPlanned = (p: Player): Player => (p.slot === 'CORE' && p.status === 'inactive' ? { ...p, status: 'active' } : p)
 
 /** New to us with no war record, even once a leader has placed them as a sub. */
 const isNew = (p: Player) => p.slot === 'NEW' || p.status === 'new'

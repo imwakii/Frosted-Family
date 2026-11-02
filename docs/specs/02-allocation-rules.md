@@ -159,6 +159,8 @@ Keeping the league and promoting is the priority. In that order:
 1. Only players certain to attack get days. High-miss and inactive players, and anyone who has missed an attack this
    season, get none from the suggestion, whatever their town hall. A reliable TH17 goes ahead of a TH18 who will not
    attack. Unproven and new players count as one town hall weaker.
+   A leader who puts an inactive player in core is vouching for them, so the planner takes them as active. One who then
+   misses an attack gets no more days, as anyone would.
 2. The lineup should match the enemy's town halls, slot by slot: 15 TH18s need 15 TH18s. An opponent is known only
    once its round is drawn. Until then the suggestion uses the expected enemy: rank by rank, the mean town hall of the
    top 15 of each group clan not yet faced.
