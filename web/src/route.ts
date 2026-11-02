@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react'
 
-// Hash routes: #/war (where the app opens), #/cwl, #/stats/<sub>[/<category>], #/plan/<sub>. A player sheet opens over
+// Hash routes: #/war (where the app opens), #/cwl, #/stats/<sub>[/<category>], #/log, #/plan/<sub>. A player sheet opens over
 // Lineups or Stats by appending /p/<tag without #>, and closes by dropping it.
 // Old links (#/explore/<kind>, #/leaders/<sub>) are rewritten to their new place.
-export type Tab = 'cwl' | 'explore' | 'war' | 'plan'
+export type Tab = 'cwl' | 'explore' | 'log' | 'war' | 'plan'
 export type Route = { tab: Tab; sub: string; kind: string | null; player: string | null; base: string }
 
-export const STATS_SUBS = ['players', 'badges', 'war', 'upgrades', 'donations', 'capital', 'trends', 'history'] as const
+export const STATS_SUBS = ['players', 'badges', 'war', 'donations', 'capital', 'trends', 'history'] as const
 export const LEADERS_SUBS = ['builder', 'days', 'members'] as const
 
 function parse(): Route {
@@ -21,11 +21,13 @@ function parse(): Route {
     return { tab: 'plan', sub, kind: null, player, base: `#/plan/${sub}` }
   }
   if (parts[0] === 'stats' && parts[1] === 'clans') parts = ['stats', 'trends']  // renamed 2 Nov 2026
+  if (parts[0] === 'stats' && parts[1] === 'upgrades') parts = ['log']  // moved 2 Nov 2026
   if (parts[0] === 'stats') {
     const sub = (STATS_SUBS as readonly string[]).includes(parts[1]) ? parts[1] : 'players'
     const kind = sub === 'players' ? parts[2] ?? null : null
     return { tab: 'explore', sub, kind, player, base: `#/stats/${sub}${kind ? '/' + kind : ''}` }
   }
+  if (parts[0] === 'log') return { tab: 'log', sub: '', kind: null, player, base: '#/log' }
   if (parts[0] === 'cwl') return { tab: 'cwl', sub: '', kind: null, player, base: '#/cwl' }
   return { tab: 'war', sub: '', kind: null, player, base: '#/war' }
 }

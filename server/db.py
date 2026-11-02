@@ -50,6 +50,15 @@ CREATE TABLE IF NOT EXISTS member_first_seen (
 );
 INSERT OR IGNORE INTO member_first_seen SELECT player_tag, MIN(seen_at) FROM member_snapshots GROUP BY player_tag;
 
+-- The first poll each day that saw a player in a clan, so the log can time a move or a return to within a poll.
+CREATE TABLE IF NOT EXISTS member_day_first (
+    clan_tag TEXT NOT NULL,
+    player_tag TEXT NOT NULL,
+    snapshot_date TEXT NOT NULL,
+    first_at TEXT NOT NULL,
+    PRIMARY KEY (clan_tag, player_tag, snapshot_date)
+);
+
 CREATE TABLE IF NOT EXISTS wars (
     war_key TEXT PRIMARY KEY,             -- CWL: the war tag. Regular: clan|opponent|preparationStartTime
     war_tag TEXT,
@@ -291,6 +300,7 @@ def upsert_members(conn: sqlite3.Connection, clan_tag: str, items: list[dict], s
         rows,
     )
     conn.executemany("INSERT OR IGNORE INTO member_first_seen VALUES (?, ?)", [(r[1], seen_at) for r in rows])
+    conn.executemany("INSERT OR IGNORE INTO member_day_first VALUES (?,?,?,?)", [(clan_tag, r[1], day, seen_at) for r in rows])
     return len(rows)
 
 

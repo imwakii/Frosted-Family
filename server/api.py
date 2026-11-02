@@ -8,6 +8,7 @@ site through a Vercel rewrite.
     GET /war/live        each clan's current war: CWL day, opponent, stars, attacks used
     GET /player/{tag}    one player's allocation, latest snapshot, wars, attacks and missed attacks
     GET /allocation.csv  the latest published allocation, for server/pull_allocation.py
+    GET /log     the family's log: joins, leaves, moves, role changes and recent upgrades
     GET /explore/upgrades?days=7&clan=   level-ups, unlocks and TH upgrades between profile snapshots
     GET /leaders/inactivity, /leaders/make-room?clan=   leaders only (passcode or Discord session), read-only
     GET /explore/war     every member's all-time war stars and their record over the recorded wars, plus this CWL season
@@ -30,7 +31,7 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException, Request
 
 from frosted.config import CLAN_TAGS, TAG_TO_CLAN
-from server import auth, days, db, history, leaders, members, plan, profiles, proposals, stats, war
+from server import auth, clanlog, days, db, history, leaders, members, plan, profiles, proposals, stats, war
 
 DEFAULT_DB = "/opt/bots/frosted/data/frosted.db"
 ROSTER_FIELDS = ("tag", "name", "clan", "cwl_slot", "transferred_from", "tier", "final_score", "offense_score",
@@ -215,6 +216,11 @@ def stats_history():
 @app.get("/stats/clans")
 def stats_clans():
     return stats.clans(open_db())
+
+
+@app.get("/log")
+def log():
+    return clanlog.clan_log(open_db())
 
 
 @app.get("/explore/upgrades")  # before /explore/{board}, like war and matrix

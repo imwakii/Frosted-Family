@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react'
 import { useAuth, type Me } from './auth'
 import CwlTab from './components/CwlTab'
 import ExploreTab from './components/ExploreTab'
+import LogTab from './components/LogTab'
 import PlanTab from './components/PlanTab'
 import PlayerSheet from './components/PlayerSheet'
 import WarTab from './components/WarTab'
@@ -15,6 +16,7 @@ const TABS = [
   { id: 'war', label: 'War', href: '#/war', icon: <path d="M5 5l14 14M19 5L5 19M4 16l4 4M20 16l-4 4" /> },
   { id: 'cwl', label: 'CWL', href: '#/cwl', icon: <path d="M4 6h16M4 12h16M4 18h10" /> },
   { id: 'explore', label: 'Stats', href: '#/stats/players', icon: <path d="M5 20V10M12 20V4M19 20v-7" /> },
+  { id: 'log', label: 'Log', href: '#/log', icon: <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></> },
   { id: 'plan', label: 'Plan', href: '#/plan/builder', icon: <path d="M7 4v16M17 4v16M3 8h8M13 16h8" /> },
 ] as const
 
@@ -47,14 +49,15 @@ export default function App() {
   const { roster, error } = useRoster()
   const war = useWar()
   const wide = useWide()
+  const roomy = useWide('(min-width: 1024px)')
   const route = useRoute()
   const auth = useAuth()
   const install = useInstallHint(wide)
   const [q, setQ] = useState('')
   const closeSheet = useCallback(() => go.closePlayer(), [])
-  // The live UTC clock; on Plan a signed-in account sits beside it, and on phones the other two shrink to icons to fit.
+  // The live UTC clock; on Plan a signed-in account sits beside it, and narrower screens shrink the other two to fit.
   const account = route.tab === 'plan' && auth.me.user ? <Account me={auth.me} onSignOut={auth.signOut} /> : null
-  const you = roster && <YouChip roster={roster} compact={!wide && !!account} />
+  const you = roster && <YouChip roster={roster} compact={!roomy && !!account} />
   const corner = wide
     ? <span className="flex items-center gap-2">{you}<UtcClock wide />{account}</span>
     : <span className="flex items-center gap-1.5">{you}{account}<UtcClock wide={false} /></span>
@@ -68,7 +71,7 @@ export default function App() {
             <nav aria-label="Sections" className="flex gap-1 rounded-xl bg-[#EEF1F6] p-1">
               {TABS.map((t) => (
                 <a key={t.id} href={t.href} aria-current={route.tab === t.id ? 'page' : undefined}
-                  className={`flex min-h-[38px] items-center rounded-[9px] px-3.5 font-bold lg:px-[18px] no-underline ${route.tab === t.id ? 'bg-white text-ink shadow-[0_1px_3px_rgba(15,23,42,.12)]' : 'text-muted hover:text-ink'}`}>
+                  className={`flex min-h-[38px] items-center rounded-[9px] px-3 font-bold lg:px-[18px] no-underline ${route.tab === t.id ? 'bg-white text-ink shadow-[0_1px_3px_rgba(15,23,42,.12)]' : 'text-muted hover:text-ink'}`}>
                   {t.label}
                 </a>
               ))}
@@ -93,6 +96,8 @@ export default function App() {
         <WarTab wide={wide} />
       ) : route.tab === 'plan' ? (
         <PlanTab sub={route.sub} roster={roster} me={auth.me} ready={auth.status === 'ready'} wide={wide} onSignOut={auth.signOut} />
+      ) : route.tab === 'log' ? (
+        <LogTab roster={roster} q={q} setQ={setQ} wide={wide} />
       ) : route.tab === 'explore' ? (
         <ExploreTab sub={route.sub} kind={route.kind} q={q} setQ={setQ} wide={wide} />
       ) : (
@@ -109,7 +114,7 @@ export default function App() {
       {roster && route.player &&<PlayerSheet tag={route.player} roster={roster} wide={wide} onClose={closeSheet} />}
 
       {!wide && (
-        <nav aria-label="Sections" className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t border-line bg-white pb-[env(safe-area-inset-bottom)]">
+        <nav aria-label="Sections" className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-line bg-white pb-[env(safe-area-inset-bottom)]">
           {TABS.map((t) => (
             <a key={t.id} href={t.href} aria-current={route.tab === t.id ? 'page' : undefined}
               className={`flex min-h-[58px] flex-col items-center justify-center gap-[3px] text-xs font-bold no-underline ${route.tab === t.id ? 'text-action' : 'text-faint'}`}>

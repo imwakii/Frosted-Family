@@ -3,7 +3,6 @@ import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { groupUnits } from '../equipment'
 import OverallBoard from './OverallBoard'
 import RankBoard, { type RankCol } from './RankBoard'
-import UpgradesBoard from './UpgradesBoard'
 import { CATS, type Cat, competitionRanks, HIGH_MISS, isMaxed, type MatrixPlayer, missRate, progress, useMatrix, useWarBoard, type WarRow, type WarScope } from '../explore'
 import { go, playerHref } from '../route'
 import { CLAN, CLANS } from '../theme'
@@ -24,7 +23,6 @@ const SUBS = [
   { id: 'players', label: 'Players', href: '#/stats/players' },
   { id: 'badges', label: 'Badges', href: '#/stats/badges' },
   { id: 'war', label: 'War record', href: '#/stats/war' },
-  { id: 'upgrades', label: 'Upgrades', href: '#/stats/upgrades' },
   { id: 'donations', label: 'Donations', href: '#/stats/donations' },
   { id: 'capital', label: 'Capital', href: '#/stats/capital' },
   { id: 'trends', label: 'Trends', href: '#/stats/trends' },
@@ -103,7 +101,6 @@ export default function ExploreTab({ sub, kind, ...rest }: BoardProps & { sub: s
   const board = sub === 'badges' ? <BadgesBoard {...rest} />
     : sub === 'history' ? <HistoryBoard {...rest} />
     : sub === 'war' ? <WarBoardView {...rest} />
-    : sub === 'upgrades' ? <UpgradesBoard {...rest} />
     : sub === 'donations' ? <RankBoard key="donations" kind="donations" cols={DONATION_COLS} note="This season" {...rest} />
     : sub === 'capital' ? <RankBoard key="capital" kind="capital" cols={CAPITAL_COLS} {...rest} />
     : sub === 'trends' ? (

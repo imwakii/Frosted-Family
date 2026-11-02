@@ -61,10 +61,17 @@ function useLoad<T>(key: string | null, load: () => Promise<T | null>) {
   return state.key === key ? state : { key, data: null, loading: key !== null, denied: false }
 }
 
-export const useUpgrades = (days: number) =>
-  useLoad<{ upgrades: Upgrade[]; as_of: string | null }>(`upgrades-${days}`, () => (mock()
-    ? import('./devMock').then((m) => m.mockUpgrades() as Promise<{ upgrades: Upgrade[]; as_of: string | null }>)
-    : getJson<{ upgrades: Upgrade[]; as_of: string | null }>(`/api/explore/upgrades?days=${days}`).then((d) => (d && Array.isArray(d.upgrades) ? d : null))))
+// GET /api/log: who came, went, moved or changed role, and recent upgrades. An approx time is only right to the day.
+export type LogEvent = {
+  kind: 'joined' | 'rejoined' | 'visited' | 'left' | 'moved' | 'promoted' | 'demoted'
+  tag: string; name: string | null; th: number | null; clan: ClanName; from_clan?: ClanName; role?: string; at: string; approx: boolean
+}
+export type ClanLog = { since: string | null; upgrade_days: number; events: LogEvent[]; upgrades: Upgrade[] }
+
+export const useClanLog = () =>
+  useLoad<ClanLog>('log', () => (mock()
+    ? import('./devMock').then((m) => m.mockUpgrades()).then((d) => ({ since: null, upgrade_days: 14, events: [], upgrades: (d as { upgrades: Upgrade[] }).upgrades }))
+    : getJson<ClanLog>('/api/log').then((d) => (d && Array.isArray(d.events) ? d : null))))
 
 export const useInactivity = (enabled: boolean) =>
   useLoad<{ players: Inactive[]; as_of: string | null }>(enabled ? 'inactivity' : null, () => (mock()
