@@ -5,6 +5,7 @@ import ExploreTab from './components/ExploreTab'
 import PlanTab from './components/PlanTab'
 import PlayerSheet from './components/PlayerSheet'
 import WarTab from './components/WarTab'
+import { InstallHint, useInstallHint } from './components/InstallHint'
 import { JumpToYou } from './components/You'
 import { useRoster, useWar, useWide } from './data'
 import { go, useRoute } from './route'
@@ -47,6 +48,7 @@ export default function App() {
   const wide = useWide()
   const route = useRoute()
   const auth = useAuth()
+  const install = useInstallHint(wide)
   const [q, setQ] = useState('')
   const closeSheet = useCallback(() => go.closePlayer(), [])
   // The live UTC clock; on Plan a signed-in account sits beside it (in its place on phones).
@@ -100,7 +102,7 @@ export default function App() {
         <a href="https://supercell.com/en/fan-content-policy/" target="_blank" rel="noopener noreferrer" className="text-faint underline hover:text-muted">Fan Content Policy</a>
       </footer>
 
-      {route.tab !== 'plan' && !route.player && <JumpToYou wide={wide} />}
+      {!route.player && (install.show ? <InstallHint onDismiss={install.dismiss} /> : route.tab !== 'plan' && <JumpToYou wide={wide} />)}
 
       {roster && route.player &&<PlayerSheet tag={route.player} roster={roster} wide={wide} onClose={closeSheet} />}
 
