@@ -6,7 +6,7 @@ import { CLAN } from '../theme'
 import type { ClanName } from '../types'
 import { norm, SearchBox } from './CwlTab'
 import { ClanFilter, Empty, useClanPick } from './ExploreTab'
-import { Th } from './ui'
+import { Th, RowChevron } from './ui'
 
 // GET /api/explore/{donations|capital}: one row per current member from their latest profile.
 type Row = { tag: string; name: string; clan: ClanName; th: number | null; [k: string]: unknown }
@@ -109,6 +109,7 @@ export default function RankBoard({ kind, cols, note, q, setQ, wide }: {
               </span>
             </span>
             <span className="flex-none text-right text-sm font-extrabold tabular-nums">{fmt(col, x.v)}</span>
+            <RowChevron />
           </a>
         </li>
       ))}

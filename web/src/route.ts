@@ -18,7 +18,7 @@ function parse(): Route {
   if ((parts[0] === 'plan' || parts[0] === 'leaders') && parts[1] === 'attacks') parts = ['war']  // moved 2 Nov 2026
   if (parts[0] === 'plan' || parts[0] === 'leaders') {
     const sub = (LEADERS_SUBS as readonly string[]).includes(parts[1]) ? parts[1] : 'builder'
-    return { tab: 'plan', sub, kind: null, player: null, base: `#/plan/${sub}` }
+    return { tab: 'plan', sub, kind: null, player, base: `#/plan/${sub}` }
   }
   if (parts[0] === 'stats' && parts[1] === 'clans') parts = ['stats', 'trends']  // renamed 2 Nov 2026
   if (parts[0] === 'stats') {

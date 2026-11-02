@@ -2,6 +2,7 @@ import { type CSSProperties, useEffect, useState } from 'react'
 import { useYou, YouTag } from './You'
 import { useClans } from '../clash'
 import { ago, type ClanWar, useWarBoard, type WarAttack, type WarBase } from '../leaders'
+import { playerHref } from '../route'
 import { CLAN, CLANS } from '../theme'
 import type { ClanName } from '../types'
 import { ClanBadge, ClanSwitch, KEY_ROW, Stars, Th, useNow } from './ui'
@@ -184,7 +185,12 @@ function WarBoard({ clan, war, now }: { clan: ClanName; war: ClanWar; now: numbe
           <div className="flex items-center justify-between gap-2 px-3.5 py-2.5">
             <span className="min-w-0 truncate text-sm font-bold text-ink">{pickedName ?? 'Attacks'}</span>
             {picked ? (
-              <button type="button" onClick={() => setPicked(null)} className="min-h-8 flex-none cursor-pointer rounded-full border border-line bg-white px-2.5 text-xs font-bold text-ink-2 hover:bg-page">Show all</button>
+              <span className="flex flex-none items-center gap-1.5">
+                {war.pairs.some((p) => p.us?.tag === picked) && (
+                  <a href={playerHref(picked)} className="flex min-h-8 items-center rounded-full bg-ink px-2.5 text-xs font-bold text-white no-underline">View card</a>
+                )}
+                <button type="button" onClick={() => setPicked(null)} className="min-h-8 cursor-pointer rounded-full border border-line bg-white px-2.5 text-xs font-bold text-ink-2 hover:bg-page">Show all</button>
+              </span>
             ) : (
               <span className="flex flex-none items-center gap-3 text-xs font-semibold text-muted">
                 <span className="flex items-center gap-1.5"><span className="h-3 w-[3px] rounded" style={{ background: t.deep }} />Ours</span>

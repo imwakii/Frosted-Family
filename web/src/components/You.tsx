@@ -1,6 +1,7 @@
 import { useEffect, useRef, useSyncExternalStore, useState } from 'react'
 import type { Roster } from '../types'
 import { CLAN, SLOT_TEXT } from '../theme'
+import { playerHref } from '../route'
 import { SearchIcon, Th } from './ui'
 
 // Which accounts are this person's: their main and any alts. Asked once on Lineups, changed from any player's sheet,
@@ -116,5 +117,19 @@ export function YouPrompt({ roster, onDone }: { roster: Roster; onDone?: () => v
       )}
       {n && !hits.length && <span className="px-1 text-sm text-faint">No one by that name</span>}
     </section>
+  )
+}
+
+/** Your own card from any tab: the first of your accounts; the card switches between them. */
+export function YouChip({ roster, wide }: { roster: Roster; wide: boolean }) {
+  const { yous } = useYou()
+  const p = roster.players.find((x) => yous.includes(x.tag))
+  if (!p) return null
+  return (
+    <a href={playerHref(p.tag)} aria-label={`Your card, ${p.name}`}
+      className="flex min-h-9 max-w-[170px] flex-none items-center gap-1.5 rounded-full border border-line bg-white py-0.5 pl-1 pr-2.5 text-ink no-underline hover:bg-page">
+      <Th th={p.th} />
+      <span className="truncate text-[13px] font-bold">{wide ? p.name : 'You'}</span>
+    </a>
   )
 }

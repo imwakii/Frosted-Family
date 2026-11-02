@@ -5,7 +5,7 @@ import type { ClanName, LiveWar, Player, Roster } from '../types'
 import { useClans, type ClanMeta } from '../clash'
 import { useWarBoard } from '../leaders'
 import { useAsksYou, useYou, YouPrompt, YouTag } from './You'
-import { ClanBadge, ClanSwitch, Eyebrow, LeaguePill, PlayDays, SearchIcon, StatusDot, StatusKey, Th, useNow, WarPill } from './ui'
+import { ClanBadge, ClanSwitch, Eyebrow, LeaguePill, PlayDays, SearchIcon, StatusDot, StatusKey, Th, useNow, WarPill, RowChevron } from './ui'
 
 type Props = { roster: Roster; war: Partial<Record<ClanName, LiveWar | null>>; wide: boolean; q: string; setQ: (v: string) => void }
 
@@ -142,6 +142,7 @@ function Row({ p, n, hit, dense }: { p: Player; n: number; hit?: boolean; dense?
         </span>
         <StatusDot status={p.status} />
         <span className="w-10 flex-none text-right text-sm font-bold tabular-nums text-muted">{fmtScore(p.score)}</span>
+        <RowChevron />
       </a>
     </li>
   )
@@ -203,14 +204,13 @@ function YouCard({ roster, tag, day, onClear }: { roster: Roster; tag: string; d
   const today = p.days && day ? (p.days.includes(day) ? 'Playing today' : 'Resting today') : null
   return (
     <div className="flex min-h-[60px] items-center gap-3 rounded-2xl border-2 bg-white py-1.5 pl-3.5 pr-1.5" style={{ borderColor: CLAN[p.clan].tint }}>
-      <a href={href(p)} className="flex min-w-0 flex-auto items-center gap-3 text-ink no-underline">
-        <span className="flex-none rounded-md bg-ink px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-[0.06em] text-white">You</span>
+      <a href={href(p)} className="flex min-w-0 flex-auto items-center gap-2.5 text-ink no-underline">
         <Th th={p.th} />
-        <span className="min-w-0 truncate text-[15px] font-semibold">{p.name}</span>
-        <span className="ml-auto flex flex-none flex-col items-end gap-0.5">
-          <span className="whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-bold" style={{ background: CLAN[p.clan].tint, color: CLAN[p.clan].deep }}>
-            {p.clan} · {roster.clans[p.clan]?.inCwl ? SLOT_TEXT[p.slot] : 'Not in'}
-          </span>
+        <span className="flex min-w-0 flex-auto flex-col">
+          <span className="truncate text-[15px] font-semibold">{p.name}</span>
+          <span className="truncate text-xs font-bold" style={{ color: CLAN[p.clan].deep }}>{p.clan} · {roster.clans[p.clan]?.inCwl ? SLOT_TEXT[p.slot] : 'Not in'}</span>
+        </span>
+        <span className="flex flex-none flex-col items-end gap-0.5">
           {p.days && <PlayDays days={p.days} clan={p.clan} />}
           {(today || left > 0) && (
             <span className="whitespace-nowrap text-[11px] font-bold">
@@ -273,13 +273,13 @@ function useDay(roster: Roster, war: Props['war']) {
 function DayPicker({ day, setDay, live }: { day: DayPick; setDay: (d: DayPick) => void; live: number }) {
   const on = 'bg-white text-ink shadow-[0_1px_3px_rgba(15,23,42,.12)]'
   return (
-    <nav aria-label="CWL day" className="grid w-full max-w-[480px] grid-cols-[1.4fr_auto_repeat(7,1fr)] gap-1 rounded-xl bg-well p-1">
+    <nav aria-label="CWL day" className="grid w-full max-w-[480px] grid-cols-[1.8fr_auto_repeat(7,1fr)] gap-1 rounded-xl bg-well p-1">
       {(['all', 1, 2, 3, 4, 5, 6, 7] as DayPick[]).map((d) => (
         <Fragment key={d}>
         {d === 1 && <span aria-hidden="true" className="self-center px-1 text-xs font-bold text-faint">Day</span>}
-        <button type="button" aria-pressed={d === day} aria-label={d === 'all' ? 'All days' : `Day ${d}`} onClick={() => setDay(d)}
+        <button type="button" aria-pressed={d === day} aria-label={d === 'all' ? 'Roster' : `Day ${d}`} onClick={() => setDay(d)}
           className={`relative min-h-[38px] cursor-pointer rounded-[9px] border-0 text-sm font-bold tabular-nums ${d === day ? on : 'bg-transparent text-muted'}`}>
-          {d === 'all' ? 'All' : d}
+          {d === 'all' ? 'Roster' : d}
           {d === live && <span className="ff-live absolute right-1 top-1 size-1.5 rounded bg-[#16A34A]" />}
         </button>
         </Fragment>
@@ -330,6 +330,7 @@ function Phone({ roster, war, q, setQ }: Omit<Props, 'wide'>) {
                     </span>
                     {p.days && <PlayDays days={p.days} clan={p.clan} />}
                   </span>
+                  <RowChevron />
                 </a>
               </li>
             ))}

@@ -6,7 +6,7 @@ import { CLAN, CLANS } from '../theme'
 import type { ClanName } from '../types'
 import { norm, SearchBox } from './CwlTab'
 import { CategoryNav, ClanFilter, Empty, useClanPick } from './ExploreTab'
-import { KEY_ROW, Star, Th } from './ui'
+import { KEY_ROW, Star, Th, RowChevron } from './ui'
 
 type Row = { tag: string; name: string; clan: ClanName; th: number | null; overall: number; cats: Partial<Record<Cat, number>> }
 
@@ -102,6 +102,7 @@ export default function OverallBoard({ q, setQ, wide }: { q: string; setQ: (v: s
               <Bar v={key(r)} color={CLAN[r.clan].deep} />
             </span>
             <span className="w-14 flex-none text-right text-sm font-extrabold tabular-nums">{sort === 'overall' ? pct1(key(r)) : pct(key(r))}</span>
+            <RowChevron />
           </a>
         </li>
       ))}

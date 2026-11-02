@@ -244,3 +244,10 @@ export function ClanSwitch<T extends ClanName | 'All'>({ value, onPick, options,
     </nav>
   )
 }
+
+/** Says a row opens a player's card; phones have no hover to say it for them. */
+export const RowChevron = () => (
+  <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#B6BFCC" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" className="-ml-1 flex-none md:hidden">
+    <path d="M9 6l6 6-6 6" />
+  </svg>
+)

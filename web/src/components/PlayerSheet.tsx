@@ -1,6 +1,7 @@
 import { type ReactNode, useEffect, useRef, useState } from 'react'
 import { loadPlayer, loadPlayerCard, type PlayerCard } from '../data'
 import { ago } from '../leaders'
+import { playerHref } from '../route'
 import { useYou } from './You'
 import { CLAN, cycleLong, cycleShort, fmtScore, fmtWindow } from '../theme'
 import type { Player, Roster } from '../types'
@@ -145,6 +146,7 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
   const [card, setCard] = useState<PlayerCard | null>(null)
   const { yous, addYou, removeYou } = useYou()
   const isMine = yous.includes(tag)
+  const accounts = roster.players.filter((x) => yous.includes(x.tag))
   const close = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
@@ -210,6 +212,14 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
 
         {p && c && (
           <>
+            {isMine && accounts.length > 1 && (
+              <nav aria-label="Your accounts" className="flex gap-1.5 overflow-x-auto [scrollbar-width:none]">
+                {accounts.map((a) => (
+                  <a key={a.tag} href={playerHref(a.tag)} aria-current={a.tag === tag ? 'page' : undefined}
+                    className={`flex-none rounded-full border px-2.5 py-1 text-xs font-bold no-underline ${a.tag === tag ? 'border-ink bg-ink text-white' : 'border-line bg-white text-ink-2 hover:bg-page'}`}>{a.name}</a>
+                ))}
+              </nav>
+            )}
             {p.inClan && p.inClan !== p.clan && (
               <div className="flex min-h-12 items-center gap-2 rounded-[14px] bg-[#EFF4FF] px-4 text-sm font-semibold text-action-deep">
                 <span className="flex-auto">Move before sign-up</span>

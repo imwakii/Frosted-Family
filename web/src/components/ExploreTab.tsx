@@ -10,7 +10,7 @@ import { CLAN, CLANS } from '../theme'
 import type { ClanName } from '../types'
 import { norm, SearchBox } from './CwlTab'
 import ClansBoard from './ClansBoard'
-import { ClanSwitch, Star, StatusKey, SubNav, Th, UnitIcon } from './ui'
+import { ClanSwitch, Star, StatusKey, SubNav, Th, UnitIcon, RowChevron } from './ui'
 
 export type ClanPick = ClanName | 'All'
 type BoardProps = { q: string; setQ: (v: string) => void; wide: boolean }
@@ -287,6 +287,7 @@ function MatrixBoard({ cat, q, setQ, wide }: BoardProps & { cat: Cat }) {
                     <span className={`w-[78px] flex-none whitespace-nowrap text-right text-sm tabular-nums ${maxed ? 'font-extrabold text-ink' : l ? 'font-semibold text-muted' : 'text-[#CBD5E1]'}`}>
                       {l ? `${l} / ${u.max}` : '—'}{maxed && <span className="ml-0.5 text-gold">★</span>}
                     </span>
+                    <RowChevron />
                   </a>
                 </li>
               )
@@ -519,6 +520,7 @@ function WarBoardView({ q, setQ, wide }: BoardProps) {
                   <span className={`flex-none whitespace-nowrap text-right text-base tabular-nums ${v === null ? 'text-[#CBD5E1]' : 'font-extrabold'}`}>
                     {v === null ? '—' : col.fmt(v)}{v !== null && col.key === 'stars' && <span className="ml-0.5 text-gold">★</span>}
                   </span>
+                  <RowChevron />
                 </a>
               </li>
             ))}

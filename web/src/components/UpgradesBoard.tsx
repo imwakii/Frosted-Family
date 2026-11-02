@@ -6,7 +6,7 @@ import { go, playerHref } from '../route'
 import { CLAN } from '../theme'
 import { ClanFilter, Empty, useClanPick } from './ExploreTab'
 import { norm, SearchBox } from './CwlTab'
-import { Th, UnitIcon } from './ui'
+import { Th, UnitIcon, RowChevron } from './ui'
 
 const KINDS: { id: UpgradeCategory | 'all'; label: string }[] = [
   { id: 'all', label: 'All' }, { id: 'hero', label: 'Heroes' }, { id: 'equipment', label: 'Equipment' }, { id: 'troop', label: 'Troops' },
@@ -87,6 +87,7 @@ export default function UpgradesBoard({ q, setQ, wide }: { q: string; setQ: (v: 
                       </span>
                     </span>
                     <span className="flex-none whitespace-nowrap text-xs font-semibold text-faint">{ago(u.at)}</span>
+                    <RowChevron />
                   </a>
                 </li>
               ))}

@@ -6,7 +6,7 @@ import PlanTab from './components/PlanTab'
 import PlayerSheet from './components/PlayerSheet'
 import WarTab from './components/WarTab'
 import { InstallHint, useInstallHint } from './components/InstallHint'
-import { JumpToYou } from './components/You'
+import { JumpToYou, YouChip } from './components/You'
 import { useRoster, useWar, useWide } from './data'
 import { go, useRoute } from './route'
 import { UtcClock } from './components/ui'
@@ -53,9 +53,10 @@ export default function App() {
   const closeSheet = useCallback(() => go.closePlayer(), [])
   // The live UTC clock; on Plan a signed-in account sits beside it (in its place on phones).
   const account = route.tab === 'plan' && auth.me.user ? <Account me={auth.me} onSignOut={auth.signOut} /> : null
+  const you = roster && <YouChip roster={roster} wide={wide} />
   const corner = wide
-    ? <span className="flex items-center gap-2"><UtcClock wide />{account}</span>
-    : account ?? <UtcClock wide={false} />
+    ? <span className="flex items-center gap-2">{you}<UtcClock wide />{account}</span>
+    : <span className="flex items-center gap-1.5">{you}{account ?? <UtcClock wide={false} />}</span>
 
   return (
     <div className={`min-h-dvh ${wide ? '' : 'pb-[calc(58px+env(safe-area-inset-bottom))]'}`}>
@@ -76,7 +77,7 @@ export default function App() {
         </header>
       ) : (
         <header className="flex items-center justify-between gap-3 px-4 pb-2.5 pt-[max(16px,env(safe-area-inset-top))]">
-          <span className="font-display text-2xl text-brand">Frosted Family</span>
+          <span className="font-display min-w-0 truncate text-[21px] text-brand">Frosted Family</span>
           <div className="flex min-h-11 flex-none items-center">{corner}</div>
         </header>
       )}

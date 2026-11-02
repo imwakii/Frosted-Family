@@ -5,7 +5,7 @@ import { go, playerHref } from '../route'
 import { CLAN } from '../theme'
 import type { ClanName } from '../types'
 import { ClanFilter, type ClanPick, Empty } from './ExploreTab'
-import { ClanSwitch, Th } from './ui'
+import { ClanSwitch, Th, RowChevron } from './ui'
 
 // Inactivity and Make room, below the Plan board. Open to everyone for now;
 // the decision to remove anyone stays with Ka Wai in game.
@@ -78,6 +78,7 @@ function Inactivity({ wide }: { wide: boolean }) {
                   </span>
                 </span>
                 <DaysChip p={p} />
+                <RowChevron />
               </a>
             </li>
           ))}
@@ -161,6 +162,7 @@ function MakeRoom() {
                             })}
                           </span>
                         </span>
+                        <RowChevron />
                       </a>
                     </li>
                   )
