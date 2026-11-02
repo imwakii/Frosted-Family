@@ -262,3 +262,19 @@ def test_day_planner_sees_each_cwl_day_with_lineup_and_stars(conn):
     assert fire and all(set(w) >= {"state", "opponent", "opponent_th", "lineup", "stars", "missed"} for w in fire.values())
     day = fire[max(fire, key=int)]
     assert set(day["stars"]) <= set(day["lineup"])
+
+
+def test_expected_enemy_is_the_mean_top_15_of_group_clans_not_yet_faced(conn):
+    from frosted.config import CLAN_TAGS
+    from server import collect, days
+    fire = CLAN_TAGS["Fire"]
+    roster = lambda th: [{"tag": f"#{i}", "townHallLevel": th} for i in range(20)]
+    group = {"season": "2031-01", "rounds": [], "clans": [
+        {"tag": fire, "name": "Fire", "members": roster(18)},
+        {"tag": "#A", "name": "Strong", "members": roster(18)},
+        {"tag": "#B", "name": "Weak", "members": roster(14)},
+        {"tag": "#C", "name": "Faced", "members": roster(10)}]}
+    collect.collect_league_group(conn, Recorder(), group, fire)
+    assert days.upcoming(conn, "2031-01", "Fire", {"#C"}) == [16.0] * 15
+    assert days.upcoming(conn, "2031-01", "Fire", {"#A", "#B", "#C"}) == []
+    assert days.upcoming(conn, "2031-01", "Cake", set()) == []

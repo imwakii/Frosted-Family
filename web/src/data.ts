@@ -202,7 +202,7 @@ export const publishPlan = (moves: PlanMove[], overrideValve: boolean, csrf: str
 // The day planner under /plan/days: one shared draft per CWL season, and the publish members see.
 type DayClans = Partial<Record<'Fire' | 'Cake', ClanDays>>
 type DaySaved = { clans: DayClans; updated_at: string; updated_by: string | null }
-export type DayPlans = { season: string; draft: DaySaved | null; published: DaySaved | null; wars: Record<'Fire' | 'Cake', Wars> }
+export type DayPlans = { season: string; draft: DaySaved | null; published: DaySaved | null; wars: Record<'Fire' | 'Cake', Wars>; upcoming?: Record<'Fire' | 'Cake', number[]> }
 export const getDays = () => getJson<DayPlans>('/api/plan/days', { credentials: 'same-origin' })
 export const saveDays = (season: string, clans: DayClans, csrf: string | null) => send<DayPlans>('/api/plan/days', 'PUT', csrf, { season, clans })
 export const publishDays = (season: string, clans: DayClans, csrf: string | null) => send<DayPlans>('/api/plan/days/publish', 'POST', csrf, { season, clans })

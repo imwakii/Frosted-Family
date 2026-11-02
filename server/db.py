@@ -101,6 +101,16 @@ CREATE TABLE IF NOT EXISTS attacks (
 CREATE INDEX IF NOT EXISTS ix_attacks_attacker ON attacks (attacker_tag);
 CREATE INDEX IF NOT EXISTS ix_attacks_defender ON attacks (defender_tag);
 
+-- Every clan in each of our clans' league groups, with the town halls of its signed-up roster, strongest first.
+CREATE TABLE IF NOT EXISTS cwl_group_clans (
+    season TEXT NOT NULL,
+    our_clan_tag TEXT NOT NULL,
+    clan_tag TEXT NOT NULL,
+    name TEXT,
+    town_halls TEXT NOT NULL,             -- JSON list
+    PRIMARY KEY (season, our_clan_tag, clan_tag)
+);
+
 -- CWL war tags seen in a league group, so ended wars and other clans' wars are not fetched again.
 CREATE TABLE IF NOT EXISTS cwl_war_tags (
     war_tag TEXT PRIMARY KEY,

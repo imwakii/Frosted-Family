@@ -159,7 +159,10 @@ Set by Ka Wai on 2 Nov 2026 for the day planner (Leaders → Day planner, `web/s
    ceil((8 − stars so far) / 3).
 2. Only players certain to attack get days. High-miss and inactive players, and anyone who has missed an attack this
    season, get none from the suggestion. Unproven and new players come after proven ones.
-3. Among reliable players, higher town halls fill the spare slots: they score better and defend better.
+3. The lineup should match the enemy's town halls, slot by slot: 15 TH18s need 15 TH18s. A reliable TH17 still goes
+   ahead of a TH18 who will not attack. Weaker enemies are where lower town halls take their days.
+4. An opponent is known only once its round is drawn. Until then the suggestion uses the expected enemy: rank by rank,
+   the mean town hall of the top 15 of each group clan not yet faced.
 
 Days whose war is on or over are fixed to the game's lineup. Fire and Cake leaders may edit and save the shared draft;
 only Ka Wai publishes, and members see their days on Lineups only once he has.

@@ -10,6 +10,7 @@ pass moves on. The token comes from COC_API_TOKEN and is never printed.
 """
 from __future__ import annotations
 
+import json
 import os
 import sys
 from urllib.parse import quote
@@ -78,12 +79,19 @@ def collect_clan(conn, api: Api, clan_tag: str, now: str) -> list[str]:
 
     group = api.get(f"/clans/{enc(clan_tag)}/currentwar/leaguegroup")
     if group:
-        collect_league_group(conn, api, group)
+        collect_league_group(conn, api, group, clan_tag)
     return [m["tag"] for m in items]
 
 
-def collect_league_group(conn, api: Api, group: dict) -> None:
+def collect_league_group(conn, api: Api, group: dict, our_clan_tag: str) -> None:
     season = group.get("season")
+    for c in group.get("clans", []):
+        ths = sorted((m["townHallLevel"] for m in c.get("members", []) if m.get("townHallLevel")), reverse=True)
+        if ths:
+            conn.execute(
+                """INSERT INTO cwl_group_clans VALUES (?,?,?,?,?) ON CONFLICT (season, our_clan_tag, clan_tag)
+                   DO UPDATE SET name=excluded.name, town_halls=excluded.town_halls""",
+                (season, our_clan_tag, c["tag"], c.get("name"), json.dumps(ths)))
     for i, rnd in enumerate(group.get("rounds", []), start=1):
         for tag in rnd.get("warTags", []):
             if tag == "#0":  # round not drawn yet

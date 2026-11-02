@@ -4,12 +4,14 @@ One shared draft per CWL season (YYYY-MM, the API's season), which any leader wi
 write wins. Only the publisher publishes, and only a published plan reaches members: /roster gives each player of a
 planned clan their days. A publish needs exactly 15 players on every day of each clan it covers, all of them in that
 clan's live allocation. The leaders' view lays each day's war over the plan once the collector has it: the lineup in
-game, the opponent's town halls, each attacker's stars, and who missed their attack. The page's Suggest uses the stars:
-the co-leaders aim to give every reliable player the days they need for 8 stars, then fill with the highest town halls.
+game, the opponent's town halls, each attacker's stars, and who missed their attack. For days not yet drawn it gives
+the expected enemy: rank by rank, the mean town hall of the top 15 of each group clan not yet faced. The page's Suggest
+(web/src/dayplan.ts) uses both to give every reliable player the days they need for 8 stars and to match the enemy.
 """
 from __future__ import annotations
 
 import json
+import sqlite3
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field, field_validator
@@ -118,6 +120,33 @@ def wars(conn, season: str) -> dict:
     return out
 
 
+def upcoming(conn, season: str, clan: str, faced: set[str]) -> list[float]:
+    """The expected enemy on a day not yet drawn. The top 15 of a signed-up roster stands in for the lineup we will see."""
+    tag = CLAN_TAGS[clan]
+    try:
+        rows = conn.execute("SELECT clan_tag, town_halls FROM cwl_group_clans WHERE season=? AND our_clan_tag=?",
+                            (season, tag)).fetchall()
+    except sqlite3.OperationalError:  # the collector has not yet created the table
+        return []
+    tops = [json.loads(r["town_halls"])[:plan.STARTERS] for r in rows if r["clan_tag"] != tag and r["clan_tag"] not in faced]
+    tops = [t for t in tops if len(t) == plan.STARTERS]
+    return [round(sum(t[i] for t in tops) / len(tops), 2) for i in range(plan.STARTERS)] if tops else []
+
+
+def expected_enemy(conn, season: str) -> dict:
+    out = {}
+    for clan in plan.CWL_CLANS:
+        if conn is None:
+            out[clan] = []
+            continue
+        tag = CLAN_TAGS[clan]
+        faced = {r["opponent_tag"] if r["clan_tag"] == tag else r["clan_tag"] for r in conn.execute(
+            "SELECT clan_tag, opponent_tag FROM wars WHERE kind='cwl' AND season=? AND ? IN (clan_tag, opponent_tag)",
+            (season, tag))}
+        out[clan] = upcoming(conn, season, clan, faced)
+    return out
+
+
 def member_days(season: str | None = None) -> dict[str, list[int]]:
     """For /roster: each player of a clan the published plan covers, with the days they play ([] for none)."""
     with connect() as conn:
@@ -141,7 +170,9 @@ def view(season: str) -> dict:
     from server.api import open_db  # api imports plan, which this module imports; resolve at call time
     with connect() as conn:
         draft, pub = read(conn, season, "draft"), read(conn, season, "published")
-    return {"season": season, "draft": draft, "published": pub, "wars": wars(open_db(), season)}
+    conn = open_db()
+    return {"season": season, "draft": draft, "published": pub, "wars": wars(conn, season),
+            "upcoming": expected_enemy(conn, season)}
 
 
 @router.get("")
