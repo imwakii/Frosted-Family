@@ -285,10 +285,10 @@ function Desktop({ roster, war, q, setQ }: Omit<Props, 'wide'>) {
   }, [hits])
 
   return (
-    <main className="mx-auto flex max-w-[1320px] flex-col gap-4 px-[clamp(16px,3vw,32px)] pb-12 pt-6">
+    <main className="mx-auto flex max-w-[1360px] flex-col gap-4 px-[clamp(16px,3vw,32px)] pb-12 pt-5">
       <div className="flex flex-wrap items-start gap-3">
-        <div className="flex w-full max-w-[480px] flex-col gap-1">
-          <SearchBox q={q} setQ={setQ} tall onEnter={() => { if (hits[0]) { setYou(hits[0].tag); window.location.hash = href(hits[0]) } }} />
+        <div className="flex w-full max-w-[400px] flex-col gap-1">
+          <SearchBox q={q} setQ={setQ} onEnter={() => { if (hits[0]) { setYou(hits[0].tag); window.location.hash = href(hits[0]) } }} />
           {nq && !hits.length && <span className="px-1 text-sm text-faint">No one by that name</span>}
         </div>
         {you && <div className="w-full max-w-[480px]"><YouCard roster={roster} tag={you} onClear={() => setYou(null)} /></div>}

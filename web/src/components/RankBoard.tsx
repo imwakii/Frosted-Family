@@ -118,10 +118,10 @@ export default function RankBoard({ kind, cols, note, q, setQ, wide }: {
   if (wide) {
     return (
       <main className="mx-auto flex max-w-[1360px] flex-col gap-3.5 px-[clamp(16px,3vw,32px)] pb-12 pt-5">
+        <div className="w-full max-w-[400px]"><SearchBox q={q} setQ={setQ} onEnter={enter} /></div>
         <div className="flex flex-wrap items-center gap-2.5"><ClanFilter clan={clan} setClan={setClan} counts={counts} wide /></div>
         <div className="flex flex-wrap items-center gap-2 text-sm text-muted">
           {all.length > 0 && chips}
-          <div className="ml-auto min-w-[200px] max-w-[320px] flex-auto"><SearchBox q={q} setQ={setQ} onEnter={enter} /></div>
         </div>
         {board}
       </main>

@@ -155,6 +155,7 @@ function MatrixBoard({ cat, q, setQ, wide }: BoardProps & { cat: Cat }) {
 
     return (
       <main className="mx-auto flex max-w-[1360px] flex-col gap-3.5 px-[clamp(16px,3vw,32px)] pb-12 pt-5">
+        <div className="w-full max-w-[400px]"><SearchBox q={q} setQ={setQ} onEnter={() => { if (shown[0]) go.to(playerHref(shown[0].p.tag)) }} /></div>
         <div className="flex flex-wrap items-center gap-2.5">
           <CategoryNav current={cat} wide />
           <ClanFilter clan={clan} setClan={setClan} counts={counts} wide />
@@ -167,9 +168,6 @@ function MatrixBoard({ cat, q, setQ, wide }: BoardProps & { cat: Cat }) {
               {stamp && <span className="text-xs font-semibold text-faint">Updated {stamp}</span>}
             </>
           )}
-          <div className="ml-auto min-w-[200px] max-w-[320px] flex-auto">
-            <SearchBox q={q} setQ={setQ} onEnter={() => { if (shown[0]) go.to(playerHref(shown[0].p.tag)) }} />
-          </div>
         </div>
 
         {!data ? <Empty loading={loading} /> : (
@@ -420,12 +418,12 @@ function WarBoardView({ q, setQ, wide }: BoardProps) {
   if (wide) {
     return (
       <main className="mx-auto flex max-w-[1360px] flex-col gap-3.5 px-[clamp(16px,3vw,32px)] pb-12 pt-5">
+        <div className="w-full max-w-[400px]"><SearchBox q={q} setQ={setQ} onEnter={enter} /></div>
         <div className="flex flex-wrap items-center gap-2.5">
           <ClanFilter clan={clan} setClan={setClan} counts={counts} wide />
         </div>
         <div className="flex flex-wrap items-center gap-3">
           {scopeToggle}{sinceChip}{key}
-          <div className="ml-auto min-w-[200px] max-w-[320px] flex-auto"><SearchBox q={q} setQ={setQ} onEnter={enter} /></div>
         </div>
         {!data || !col ? <Empty loading={loading} /> : (
           <section className="max-h-[calc(100dvh-210px)] overflow-auto rounded-[18px] border border-line bg-white">
