@@ -1,8 +1,9 @@
+import { YouTag } from './You'
 import { useMemo, useState } from 'react'
 import { thIcon } from '../clash'
 import { ago, type Upgrade, type UpgradeCategory, useUpgrades } from '../leaders'
 import { go, playerHref } from '../route'
-import { CLAN, CLANS } from '../theme'
+import { CLAN } from '../theme'
 import { ClanFilter, Empty, useClanPick } from './ExploreTab'
 import { norm, SearchBox } from './CwlTab'
 import { Th, UnitIcon } from './ui'
@@ -39,7 +40,7 @@ export default function UpgradesBoard({ q, setQ, wide }: { q: string; setQ: (v: 
   const nq = norm(q.trim())
 
   const all = useMemo(() => data?.upgrades ?? [], [data])
-  const counts = Object.fromEntries(CLANS.map((k) => [k, all.filter((u) => u.clan === k).length]))
+  const counts = {}
   const shown = all.filter((u) => (clan === 'All' || u.clan === clan) && (kind === 'all' || u.category === kind) && (!nq || norm(u.name).includes(nq) || u.tag.toLowerCase().includes(nq)))
   const days = useMemo(() => {
     const out: { label: string; rows: Upgrade[] }[] = []
@@ -77,7 +78,7 @@ export default function UpgradesBoard({ q, setQ, wide }: { q: string; setQ: (v: 
                     <UpgradeIcon u={u} />
                     <span className="flex min-w-0 flex-auto flex-col gap-0.5">
                       <span className="flex min-w-0 items-center gap-1.5">
-                        <span className="truncate text-[15px] font-semibold">{u.name}</span>
+                        <span className="truncate text-[15px] font-semibold"><YouTag tag={u.tag} />{u.name}</span>
                         {u.th && u.category !== 'town_hall' && <span className="flex-none text-[11px] font-bold text-faint">TH{u.th}</span>}
                         {clan === 'All' && <span className="flex-none text-[11px] font-bold" style={{ color: CLAN[u.clan].deep }}>{u.clan}</span>}
                       </span>

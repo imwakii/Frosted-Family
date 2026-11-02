@@ -1,3 +1,4 @@
+import { YouTag } from './You'
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { useClans } from '../clash'
 import { groupUnits } from '../equipment'
@@ -20,7 +21,7 @@ const NAV: { id: string; label: string; icon: string | null }[] = [{ id: 'overal
 
 const SUBS = [
   { id: 'players', label: 'Players', href: '#/stats/players' },
-  { id: 'war', label: 'War', href: '#/stats/war' },
+  { id: 'war', label: 'War record', href: '#/stats/war' },
   { id: 'upgrades', label: 'Upgrades', href: '#/stats/upgrades' },
   { id: 'donations', label: 'Donations', href: '#/stats/donations' },
   { id: 'capital', label: 'Capital', href: '#/stats/capital' },
@@ -210,7 +211,7 @@ function MatrixBoard({ cat, q, setQ, wide }: BoardProps & { cat: Cat }) {
                       <td className="sticky left-12 z-[1] whitespace-nowrap border-b border-hair bg-white px-3 py-1.5 group-hover:bg-hover">
                         <span className="flex items-center gap-2.5">
                           <Th th={p.th} />
-                          <a href={playerHref(p.tag)} onClick={(e) => e.stopPropagation()} className="font-semibold text-ink no-underline">{p.name}</a>
+                          <a href={playerHref(p.tag)} onClick={(e) => e.stopPropagation()} className="font-semibold text-ink no-underline"><YouTag tag={p.tag} />{p.name}</a>
                           {clan === 'All' && <span className="text-xs font-bold" style={{ color: CLAN[p.clan].deep }}>{p.clan}</span>}
                         </span>
                       </td>
@@ -290,7 +291,7 @@ function MatrixBoard({ cat, q, setQ, wide }: BoardProps & { cat: Cat }) {
                     <Th th={p.th} />
                     <span className="flex min-w-0 flex-auto flex-col gap-1">
                       <span className="flex min-w-0 items-baseline gap-1.5">
-                        <span className="truncate text-[15px] font-semibold">{p.name}</span>
+                        <span className="truncate text-[15px] font-semibold"><YouTag tag={p.tag} />{p.name}</span>
                         {clan === 'All' && <span className="flex-none text-[11px] font-bold" style={{ color: CLAN[p.clan].deep }}>{p.clan}</span>}
                       </span>
                       <span className="block h-[5px] overflow-hidden rounded-[3px] bg-[#E2E8F0]">
@@ -316,7 +317,7 @@ type WarCol = { key: string; label: string; value: (r: WarRow) => number | null;
 
 const pct = (v: number) => `${Math.round(v)}%`
 const WAR_COLS: WarCol[] = [
-  { key: 'stars', label: 'War stars', value: (r) => r.war_stars ?? null, fmt: (v) => v.toLocaleString('en-GB') },
+  { key: 'stars', label: 'War stars', value: (r) => r.war?.stars ?? null, fmt: (v) => v.toLocaleString('en-GB') },
   { key: 'attacks', label: 'Attacks', value: (r) => r.war?.attacks ?? null, fmt: String },
   { key: 'missed', label: 'Missed', value: (r) => (r.war ? r.war.missed : null), fmt: String, low: true },
   { key: 'triple', label: '3★ rate', value: (r) => (r.war?.attacks ? (100 * r.war.three_stars) / r.war.attacks : null), fmt: pct },
@@ -365,7 +366,7 @@ function WarBoardView({ q, setQ, wide }: BoardProps) {
   // Totals and weighted averages over the players the clan and scope filters keep.
   const summary = useMemo(() => {
     const rows = ranked.map((x) => x.r)
-    const ws = rows.map((r) => r.war_stars).filter((v): v is number => v !== null && v !== undefined)
+    const ws = rows.map((r) => r.war?.stars).filter((v): v is number => v !== null && v !== undefined)
     let attacks = 0, missed = 0, three = 0, stars = 0, destSum = 0, destN = 0
     for (const r of rows) {
       const w = r.war
@@ -450,7 +451,7 @@ function WarBoardView({ q, setQ, wide }: BoardProps) {
                     <td className="sticky left-12 z-[1] whitespace-nowrap border-b border-hair bg-white px-2 py-1.5 group-hover:bg-hover">
                       <span className="flex items-center gap-2.5">
                         <Th th={r.th} />
-                        <a href={playerHref(r.tag)} onClick={(e) => e.stopPropagation()} className="font-semibold text-ink no-underline">{r.name}</a>
+                        <a href={playerHref(r.tag)} onClick={(e) => e.stopPropagation()} className="font-semibold text-ink no-underline"><YouTag tag={r.tag} />{r.name}</a>
                         <MissDot r={r} />
                         {clan === 'All' && <span className="text-xs font-bold" style={{ color: CLAN[r.clan].deep }}>{r.clan}</span>}
                       </span>
@@ -524,7 +525,7 @@ function WarBoardView({ q, setQ, wide }: BoardProps) {
                   <Th th={r.th} />
                   <span className="flex min-w-0 flex-auto flex-col gap-0.5">
                     <span className="flex min-w-0 items-center gap-1.5">
-                      <span className="truncate text-[15px] font-semibold">{r.name}</span>
+                      <span className="truncate text-[15px] font-semibold"><YouTag tag={r.tag} />{r.name}</span>
                       <MissDot r={r} />
                     </span>
                     <span className="truncate text-xs text-faint">

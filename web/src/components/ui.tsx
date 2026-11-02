@@ -205,3 +205,12 @@ export function PlayDays({ days, clan, size = 15 }: { days: number[]; clan: Clan
     </span>
   )
 }
+
+/** Stars out of three, for one attack or the best on a base. */
+export function Stars({ n }: { n: number }) {
+  return (
+    <span aria-label={`${n} stars`} className="flex-none tracking-[-1px]">
+      {[0, 1, 2].map((i) => <span key={i} className={i < n ? 'text-gold' : 'text-[#D9DEE7]'}>★</span>)}
+    </span>
+  )
+}

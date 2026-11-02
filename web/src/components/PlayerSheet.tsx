@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
-import { loadPlayer } from '../data'
+import { loadPlayer, loadPlayerCard, type PlayerCard } from '../data'
+import { ago } from '../leaders'
+import { useYou } from './You'
 import { CLAN, cycleLong, cycleShort, fmtScore, fmtWindow } from '../theme'
 import type { Player, Roster } from '../types'
-import { Arrow, PlayDays, StatusPill, Th } from './ui'
+import { Arrow, PlayDays, Stars, StatusPill, Th, UnitIcon } from './ui'
 
 function Trend({ p, cycles }: { p: Player; cycles: string[] }) {
   const pts = cycles.map((c) => ({ c, s: p.history.find((h) => h.cycle === c)?.score ?? null }))
@@ -49,12 +51,16 @@ function Trend({ p, cycles }: { p: Player; cycles: string[] }) {
 export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: string; roster: Roster; wide: boolean; onClose: () => void }) {
   const base = roster.players.find((p) => p.tag === tag)
   const [extra, setExtra] = useState<Partial<Player> | null>(null)
+  const [card, setCard] = useState<PlayerCard | null>(null)
+  const [you, setYou] = useYou()
   const close = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
     let live = true
     setExtra(null)
+    setCard(null)
     loadPlayer(tag).then((x) => { if (live && x && x.tag === tag) setExtra(x) })
+    loadPlayerCard(tag).then((x) => { if (live) setCard(x) })
     return () => { live = false }
   }, [tag])
 
@@ -69,7 +75,7 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
 
   const p: Player | undefined = base && { ...base, ...extra, history: extra?.history ?? base.history }
   const inCwl = p ? !!roster.clans[p.clan]?.inCwl : false
-  const where = p ? `${p.clan} · ${p.slot === 'NEW' ? 'new' : inCwl ? { CORE: 'starting 15', SUB: 'bench', OUT: 'not playing' }[p.slot] : 'not in CWL'}` : ''
+  const where = p ? `${p.clan} · ${p.slot === 'NEW' ? 'new' : inCwl ? { CORE: 'core', SUB: 'sub', OUT: 'not in' }[p.slot] : 'not in CWL'}` : ''
   const c = p && CLAN[p.clan]
   const pct = (v: number | null) => (v === null ? '—' : `${v.toFixed(1)}%`)
 
@@ -95,6 +101,10 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
 
         {p && c && (
           <>
+            <button type="button" onClick={() => setYou(you === tag ? null : tag)}
+              className={`-mt-2 self-start cursor-pointer rounded-full border px-2.5 py-1 text-xs font-bold ${you === tag ? 'border-ink bg-ink text-white' : 'border-line bg-white text-ink-2 hover:bg-page'}`}>
+              {you === tag ? 'You · not me?' : 'This is me'}
+            </button>
             {p.from && (
               <div className="flex min-h-12 items-center gap-2 rounded-[14px] bg-[#EFF4FF] px-4 text-sm font-semibold text-action-deep">
                 <span className="flex-auto">Move before sign-up</span>
@@ -117,6 +127,9 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
               <div className="flex flex-col items-end gap-1.5">
                 <StatusPill status={p.status} className="!px-2.5 !py-[3px] !text-xs !font-bold" />
                 {p.rank && <span className="text-[13px] font-semibold text-muted">#{p.rank} in the family</span>}
+                {p.attackScore != null && p.defenceScore != null && (
+                  <span className="text-xs font-semibold tabular-nums text-muted">Attack {p.attackScore.toFixed(1)} + Defence {p.defenceScore.toFixed(1)}</span>
+                )}
               </div>
             </div>
             <div className="flex flex-col gap-1.5">
@@ -130,6 +143,61 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
               </div>
               {roster.window && <span className="text-xs text-faint">{fmtWindow(roster.window)}</span>}
             </div>
+            {card && card.heroes.length > 0 && (
+              <section aria-label="Heroes" className="flex flex-col gap-1.5">
+                <span className="text-xs font-bold uppercase tracking-[0.06em] text-faint">Heroes</span>
+                <div className="grid grid-cols-4 gap-2">
+                  {card.heroes.map((h) => (
+                    <div key={h.name} title={h.name} className="flex flex-col items-center gap-1 rounded-xl border border-line py-2">
+                      <UnitIcon name={h.name} size={34} />
+                      <span className={`text-xs font-bold tabular-nums ${h.max && h.level >= h.max ? 'text-gold' : 'text-ink-2'}`}>{h.level}{h.max ? <span className="font-semibold text-faint">/{h.max}</span> : null}</span>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+            {card && card.attacks.length > 0 && (
+              <section aria-label="Latest attacks" className="flex flex-col gap-1.5">
+                <span className="text-xs font-bold uppercase tracking-[0.06em] text-faint">Latest attacks</span>
+                <ul className="m-0 flex list-none flex-col rounded-xl border border-line p-0">
+                  {card.attacks.map((a, i) => (
+                    <li key={i} className={`flex items-center gap-2 px-3 py-2 ${i ? 'border-t border-hair' : ''}`}>
+                      <Th th={a.target_th} />
+                      <span className="flex min-w-0 flex-auto flex-col">
+                        <span className="truncate text-[13px] font-semibold text-ink">{a.target ?? 'Unknown'}</span>
+                        <span className="truncate text-[11px] text-faint">{a.kind === 'cwl' ? `CWL day ${a.day ?? '?'} · ` : ''}{a.opponent}</span>
+                      </span>
+                      <Stars n={a.stars} />
+                      <span className="w-9 flex-none text-right text-xs font-bold tabular-nums text-ink-2">{Math.round(a.destruction)}%</span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+            {card && card.upgrades.length > 0 && (
+              <section aria-label="Latest upgrades" className="flex flex-col gap-1.5">
+                <span className="text-xs font-bold uppercase tracking-[0.06em] text-faint">Latest upgrades</span>
+                <ul className="m-0 flex list-none flex-col gap-1 p-0">
+                  {card.upgrades.map((u) => (
+                    <li key={`${u.unit}-${u.to}`} className="flex items-center gap-2 text-[13px]">
+                      <UnitIcon name={u.unit} size={24} />
+                      <span className="min-w-0 flex-auto truncate font-semibold text-ink-2">{u.unit} <span className="font-bold tabular-nums text-faint">{u.from} → {u.to}</span></span>
+                      <span className="flex-none text-xs text-faint">{ago(u.at)}</span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+            {card && (
+              <div className="grid grid-cols-2 gap-2">
+                {([['Donated this season', card.donations], ['Received this season', card.donations_received], ['War stars, lifetime', card.war_stars], ['Capital, lifetime', card.capital]] as const).map(([k, v]) => (
+                  <div key={k} className="flex flex-col gap-0.5 rounded-xl border border-line p-3">
+                    <span className="text-xs text-faint">{k}</span>
+                    <span className="text-[17px] font-bold tabular-nums">{v === null ? '—' : v.toLocaleString('en-GB')}</span>
+                  </div>
+                ))}
+              </div>
+            )}
             <Trend p={p} cycles={roster.cycles} />
           </>
         )}

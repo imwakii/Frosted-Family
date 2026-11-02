@@ -23,6 +23,8 @@ KINDS = json.loads(resources.files("server").joinpath("data/unit_kinds.json").re
 PETS, SIEGE, SUPER = set(KINDS["pets"]), set(KINDS["siege_machines"]), set(KINDS["super_troops"])
 
 
+CARD_ATTACKS, CARD_UPGRADES, CARD_UPGRADE_DAYS = 8, 6, 30
+
 def profiles_due(conn: sqlite3.Connection, now: str) -> bool:
     last = conn.execute("SELECT MAX(started_at) FROM profile_runs").fetchone()[0]
     if not last:
@@ -288,6 +290,33 @@ def capital(conn, ms):
 
 BOARDS = {"heroes": heroes, "equipment": equipment, "army": army, "donations": donations,
           "capital": capital}
+
+
+# ─── The player card ──────────────────────────────────────────────────────────
+
+def player_card(conn, tag: str) -> dict:
+    """What the player sheet adds to the roster row: heroes, season totals, latest attacks and upgrades."""
+    from server import leaders  # leaders imports this module
+    prof = conn.execute("SELECT * FROM player_profiles WHERE player_tag=?", (tag,)).fetchone()
+    heroes = [{"name": u["name"], "level": u["level"], "max": u["max_level"]} for u in conn.execute(
+        "SELECT * FROM player_units WHERE player_tag=? AND kind='hero' ORDER BY position", (tag,))]
+    attacks = []
+    for a in conn.execute(
+        """SELECT a.stars, a.destruction, a.attacker_clan_tag, w.kind, w.round, w.clan_tag, w.clan_name, w.opponent_name,
+                  d.name AS target, d.town_hall AS target_th, d.map_position AS target_position
+           FROM attacks a JOIN wars w USING (war_key)
+           LEFT JOIN war_members d ON d.war_key = a.war_key AND d.player_tag = a.defender_tag
+           WHERE a.attacker_tag=? ORDER BY w.preparation_start DESC, a.attack_order DESC LIMIT ?""", (tag, CARD_ATTACKS)):
+        attacks.append({"stars": a["stars"], "destruction": a["destruction"], "kind": a["kind"], "day": a["round"],
+                        "opponent": a["opponent_name"] if a["attacker_clan_tag"] == a["clan_tag"] else a["clan_name"],
+                        "target": a["target"], "target_th": a["target_th"], "target_position": a["target_position"]})
+    mine = [u for u in leaders.upgrades(conn, CARD_UPGRADE_DAYS)["upgrades"] if u["tag"] == tag][:CARD_UPGRADES]
+    return {
+        "heroes": heroes, "attacks": attacks, "upgrades": mine,
+        "war_stars": prof["war_stars"] if prof else None, "donations": prof["donations"] if prof else None,
+        "donations_received": prof["donations_received"] if prof else None,
+        "capital": prof["capital_contributions"] if prof else None,
+    }
 
 
 # ─── Matrix: every member against every unit of one category ─────────────────

@@ -5,6 +5,7 @@ import ExploreTab from './components/ExploreTab'
 import PlanTab from './components/PlanTab'
 import PlayerSheet from './components/PlayerSheet'
 import WarTab from './components/WarTab'
+import { JumpToYou } from './components/You'
 import { useRoster, useWar, useWide } from './data'
 import { go, useRoute } from './route'
 import { UtcClock } from './components/ui'
@@ -98,6 +99,8 @@ export default function App() {
         Unofficial, not endorsed by Supercell.{' '}
         <a href="https://supercell.com/en/fan-content-policy/" target="_blank" rel="noopener noreferrer" className="text-faint underline hover:text-muted">Fan Content Policy</a>
       </footer>
+
+      {route.tab !== 'plan' && !route.player && <JumpToYou wide={wide} />}
 
       {roster && route.player &&<PlayerSheet tag={route.player} roster={roster} wide={wide} onClose={closeSheet} />}
 

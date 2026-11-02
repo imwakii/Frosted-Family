@@ -1,3 +1,4 @@
+import { YouTag } from './You'
 import { useEffect, useMemo, useState } from 'react'
 import { competitionRanks } from '../explore'
 import { go, playerHref } from '../route'
@@ -83,7 +84,7 @@ export default function RankBoard({ kind, cols, note, q, setQ, wide }: {
               <td className="sticky left-12 z-[1] whitespace-nowrap border-b border-hair bg-white px-2 py-1.5 group-hover:bg-hover">
                 <span className="flex items-center gap-2.5">
                   <Th th={r.th} />
-                  <a href={playerHref(r.tag)} onClick={(e) => e.stopPropagation()} className="font-semibold text-ink no-underline">{r.name}</a>
+                  <a href={playerHref(r.tag)} onClick={(e) => e.stopPropagation()} className="font-semibold text-ink no-underline"><YouTag tag={r.tag} />{r.name}</a>
                   {clan === 'All' && <span className="text-[11px] font-bold" style={{ color: CLAN[r.clan].deep }}>{r.clan}</span>}
                 </span>
               </td>
@@ -103,7 +104,7 @@ export default function RankBoard({ kind, cols, note, q, setQ, wide }: {
             <span className="w-6 flex-none text-right text-xs font-bold tabular-nums text-faint">{place.get(x) ?? '—'}</span>
             <Th th={x.r.th} />
             <span className="flex min-w-0 flex-auto flex-col">
-              <span className="truncate text-[15px] font-semibold">{x.r.name}</span>
+              <span className="truncate text-[15px] font-semibold"><YouTag tag={x.r.tag} />{x.r.name}</span>
               <span className="truncate text-xs text-muted">
                 {cols.filter((c) => c.key !== col.key).map((c) => `${c.label} ${fmt(c, c.value(x.r))}`).join(' · ')}
               </span>

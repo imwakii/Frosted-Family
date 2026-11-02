@@ -26,7 +26,7 @@ const getStatic = () => (staticRoster ??= getJson<Roster>('/roster.json'))
 // API shapes from the cwl-server branch (server/ in this repo).
 type ApiPlayer = {
   tag: string; name: string; clan: ClanName; cwl_slot: string; transferred_from: string | null
-  tier: string; final_score: number | string | null; current_th: number | string | null
+  tier: string; final_score: number | string | null; offense_score?: number | string | null; defense_score?: number | string | null; current_th: number | string | null
   snapshot: { name?: string; town_hall?: number; clan?: string | null } | null
   left?: boolean; joined_at?: string | null; suggested_slot?: string | null; suggested_reason?: string | null; rejoined?: boolean
   days?: number[] | null
@@ -72,6 +72,8 @@ function mergeRoster(api: { players: ApiPlayer[] }, base: Roster | null): Roster
       from: asClan(a.transferred_from),
       th: toNum(a.snapshot?.town_hall) ?? toNum(a.current_th) ?? b?.th ?? null,
       score: ((s) => (s === null ? null : Math.round(s * 10) / 10))(toNum(a.final_score)),
+      attackScore: toNum(a.offense_score),
+      defenceScore: toNum(a.defense_score),
       status: STATUS[a.tier] ?? b?.status ?? 'inactive',
       threeStar: b?.threeStar ?? null,
       missPct: b?.missPct ?? null,
@@ -108,6 +110,16 @@ export async function loadRoster(): Promise<{ roster: Roster; live: boolean }> {
     return { roster: await getStatic(), live: false }
   }
 }
+
+export type PlayerCard = {
+  heroes: { name: string; level: number; max: number | null }[]
+  attacks: { stars: number; destruction: number; kind: string; day: number | null; opponent: string | null; target: string | null; target_th: number | null; target_position: number | null }[]
+  upgrades: { unit: string; from: number; to: number; at: string }[]
+  war_stars: number | null; donations: number | null; donations_received: number | null; capital: number | null
+}
+
+export const loadPlayerCard = (tag: string) =>
+  getJson<{ tag: string; card: PlayerCard | null }>(`/api/player/${encodeURIComponent(tag)}`).then((x) => (x.tag === tag ? x.card : null)).catch(() => null)
 
 export async function loadPlayer(tag: string): Promise<Partial<Player> | null> {
   try {

@@ -104,10 +104,23 @@ type WarSide = { tag: string; name: string; th: number | null; position: number 
 export type WarAttack = { order: number; ours: boolean; attacker: WarSide; defender: WarSide; stars: number; destruction: number; seen_at: string | null }
 export type WarBase = WarSide & { used: number; allowed: number; best: number | null }
 export type ClanWar = {
-  kind: string; state: 'inWar' | 'preparation' | 'warEnded'; day: number | null; team_size: number
+  kind: string; state: 'inWar' | 'preparation' | 'warEnded'; day: number | null; team_size: number; updated_at: string
   start_time: string | null; end_time: string | null; attacks_allowed: number; opponent: string
   stars: number; opponent_stars: number; destruction: number; opponent_destruction: number
   attacks_used: number; opponent_attacks_used: number; badge: string | null; opponent_badge: string | null; log: WarAttack[]
   pairs: { position: number; us: WarBase | null; them: WarBase | null }[]
 }
 export const loadWarBoard = () => getJson<{ clans: { clan: ClanName; war: ClanWar | null }[]; last_poll: string | null }>('/api/war/board')
+
+/** Refetched every minute, keeping the last answer on screen meanwhile. */
+export function useWarBoard() {
+  const [state, setState] = useState<{ data: Awaited<ReturnType<typeof loadWarBoard>>; loading: boolean }>({ data: null, loading: true })
+  useEffect(() => {
+    let live = true
+    const tick = () => loadWarBoard().then((data) => { if (live) setState((s) => ({ data: data ?? s.data, loading: false })) }, () => { if (live) setState((s) => ({ ...s, loading: false })) })
+    tick()
+    const id = window.setInterval(tick, 60_000)
+    return () => { live = false; window.clearInterval(id) }
+  }, [])
+  return state
+}

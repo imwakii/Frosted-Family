@@ -1,3 +1,4 @@
+import { YouTag } from './You'
 import { useMemo, useState } from 'react'
 import { CATS, type Cat, competitionRanks, type Matrix, progress, useMatrix } from '../explore'
 import { go, playerHref } from '../route'
@@ -77,7 +78,7 @@ export default function OverallBoard({ q, setQ, wide }: { q: string; setQ: (v: s
               <td className="sticky left-12 z-[1] whitespace-nowrap border-b border-hair bg-white px-2 py-1.5 group-hover:bg-hover">
                 <span className="flex items-center gap-2.5">
                   <Th th={r.th} />
-                  <a href={playerHref(r.tag)} onClick={(e) => e.stopPropagation()} className="font-semibold text-ink no-underline">{r.name}</a>
+                  <a href={playerHref(r.tag)} onClick={(e) => e.stopPropagation()} className="font-semibold text-ink no-underline"><YouTag tag={r.tag} />{r.name}</a>
                   {clan === 'All' && <span className="text-[11px] font-bold" style={{ color: CLAN[r.clan].deep }}>{r.clan}</span>}
                 </span>
               </td>
@@ -98,7 +99,7 @@ export default function OverallBoard({ q, setQ, wide }: { q: string; setQ: (v: s
             <span className="w-6 flex-none text-right text-xs font-bold tabular-nums text-faint">{place.get(r) ?? '—'}</span>
             <Th th={r.th} />
             <span className="flex min-w-0 flex-auto flex-col gap-1">
-              <span className="truncate text-[15px] font-semibold">{r.name}</span>
+              <span className="truncate text-[15px] font-semibold"><YouTag tag={r.tag} />{r.name}</span>
               <Bar v={key(r)} color={CLAN[r.clan].deep} />
             </span>
             <span className="w-14 flex-none text-right text-sm font-extrabold tabular-nums">{sort === 'overall' ? pct1(key(r)) : pct(key(r))}</span>

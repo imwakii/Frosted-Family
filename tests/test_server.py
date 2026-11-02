@@ -313,3 +313,16 @@ def test_the_minute_pass_only_touches_clans_with_a_war_on(conn):
     with httpx.Client(base_url=collect.API, transport=httpx.MockTransport(quiet)) as client:
         collect.run_wars(conn, client, now=datetime(2027, 1, 1, tzinfo=timezone.utc))
     assert quiet.paths == []
+
+
+def test_the_player_card_has_heroes_totals_attacks_and_upgrades(conn):
+    from server import profiles
+    poll(conn, Recorder())
+    tag = conn.execute("SELECT attacker_tag FROM attacks WHERE attacker_tag IN (SELECT player_tag FROM player_profiles) LIMIT 1").fetchone()[0]
+    card = profiles.player_card(conn, tag)
+    assert card["heroes"] and {"name", "level", "max"} <= set(card["heroes"][0])
+    assert card["war_stars"] is not None and "upgrades" in card
+    hit = card["attacks"][0]
+    assert {"stars", "destruction", "opponent", "target"} <= set(hit) and hit["opponent"]
+    assert profiles.player_card(conn, "#NOBODY") == {"heroes": [], "attacks": [], "upgrades": [], "war_stars": None,
+                                                     "donations": None, "donations_received": None, "capital": None}

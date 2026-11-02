@@ -10,6 +10,9 @@ export interface Player {
   from: ClanName | null
   th: number | null
   score: number | null
+  /** The two parts of the score; none yet for a new member. */
+  attackScore?: number | null
+  defenceScore?: number | null
   status: Status
   threeStar: number | null
   missPct: number | null

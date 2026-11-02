@@ -76,6 +76,7 @@ def war_view(conn, w, clan_tag: str, over: bool) -> dict:
     right = {b["position"]: b for t, b in bases.items() if t not in ours}
     return {
         "kind": w["kind"], "state": "warEnded" if over else w["state"], "day": w["round"], "team_size": w["team_size"],
+        "updated_at": w["updated_at"],
         "start_time": w["start_time"], "end_time": w["end_time"], "attacks_allowed": allowed, "opponent": w[f"{them}_name"],
         "badge": badge_of(conn, clan_tag), "opponent_badge": badge_of(conn, w[f"{them}_tag"]),
         "stars": w[f"{us}_stars"], "opponent_stars": w[f"{them}_stars"],

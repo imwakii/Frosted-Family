@@ -33,7 +33,8 @@ from frosted.config import CLAN_TAGS, TAG_TO_CLAN
 from server import auth, days, db, leaders, members, plan, profiles, proposals, stats, war
 
 DEFAULT_DB = "/opt/bots/frosted/data/frosted.db"
-ROSTER_FIELDS = ("tag", "name", "clan", "cwl_slot", "transferred_from", "tier", "final_score", "current_th", "flags")
+ROSTER_FIELDS = ("tag", "name", "clan", "cwl_slot", "transferred_from", "tier", "final_score", "offense_score",
+                 "defense_score", "current_th", "flags")
 
 app = FastAPI(title="Frosted Family CWL", docs_url=None, redoc_url=None, openapi_url=None)
 
@@ -193,7 +194,7 @@ def player(tag: str):
                          "attacks_per_member": w["attacks_per_member"], "attacks": attacks})
         missed = [m for m in db.missed_attacks(conn) if m["player_tag"] == tag]
     return {"tag": tag, "allocation": alloc, "snapshot": snapshot_view(snap), "wars": wars,
-            "missed_attacks": sum(m["missed"] for m in missed)}
+            "missed_attacks": sum(m["missed"] for m in missed), "card": profiles.player_card(conn, tag) if conn else None}
 
 
 # ─── allocation, sign-in, plan, explore ───────────────────────────────────────
