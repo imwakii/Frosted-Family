@@ -9,6 +9,7 @@ import { go, playerHref } from '../route'
 import { CLAN, CLANS } from '../theme'
 import type { ClanName } from '../types'
 import { norm, SearchBox } from './CwlTab'
+import BadgesBoard from './BadgesBoard'
 import ClansBoard from './ClansBoard'
 import { ClanSwitch, Star, StatusKey, SubNav, Th, UnitIcon, RowChevron } from './ui'
 
@@ -20,6 +21,7 @@ const NAV: { id: string; label: string; icon: string | null }[] = [{ id: 'overal
 
 const SUBS = [
   { id: 'players', label: 'Players', href: '#/stats/players' },
+  { id: 'badges', label: 'Badges', href: '#/stats/badges' },
   { id: 'war', label: 'War record', href: '#/stats/war' },
   { id: 'upgrades', label: 'Upgrades', href: '#/stats/upgrades' },
   { id: 'donations', label: 'Donations', href: '#/stats/donations' },
@@ -96,7 +98,8 @@ const cellTone = (l: number | null, max: number) =>
 
 export default function ExploreTab({ sub, kind, ...rest }: BoardProps & { sub: string; kind: string | null }) {
   const id = NAV.find((c) => c.id === kind)?.id ?? 'overall'
-  const board = sub === 'war' ? <WarBoardView {...rest} />
+  const board = sub === 'badges' ? <BadgesBoard {...rest} />
+    : sub === 'war' ? <WarBoardView {...rest} />
     : sub === 'upgrades' ? <UpgradesBoard {...rest} />
     : sub === 'donations' ? <RankBoard key="donations" kind="donations" cols={DONATION_COLS} note="This season" {...rest} />
     : sub === 'capital' ? <RankBoard key="capital" kind="capital" cols={CAPITAL_COLS} {...rest} />

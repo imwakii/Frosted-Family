@@ -298,7 +298,18 @@ def capital(conn, ms):
     return ranked(rows, lambda r: r["capital"]["contributed"])
 
 
-BOARDS = {"heroes": heroes, "equipment": equipment, "army": army, "donations": donations,
+def badges(conn, ms):
+    """Every member's badges. The page ranks them, as it filters by clan and by badge."""
+    record = war_record(conn)
+    heroes = units_of(conn, ("hero",))
+    rows = []
+    for m in ms:
+        mine = [{"level": u["level"], "max": u["max_level"]} for u in heroes.get(m["tag"], [])]
+        rows.append({**row(m), "badges": badges_for(conn, m["tag"], mine, record, ms)})
+    return rows
+
+
+BOARDS = {"badges": badges, "heroes": heroes, "equipment": equipment, "army": army, "donations": donations,
           "capital": capital}
 
 
@@ -339,41 +350,42 @@ def tier_by_rank(rank: int | None, lines) -> str | None:
     return reached[-1] if reached else None
 
 
-def badges_for(conn, tag: str, heroes: list[dict], record: dict | None = None) -> list[dict]:
+def badges_for(conn, tag: str, heroes: list[dict], record: dict | None = None, members: list | None = None) -> list[dict]:
     """Earned from the player's war record (the export plus recorded wars) and profile, each at a tier, gold first,
     with what earned it."""
     out = []
 
-    def earn(id_, label, tier, detail):
+    # value orders the holders of a badge within a tier, higher first.
+    def earn(id_, label, tier, detail, value):
         if tier:
-            out.append({"id": id_, "label": label, "tier": tier, "detail": detail})
+            out.append({"id": id_, "label": label, "tier": tier, "detail": detail, "value": value})
 
     rows = (record or war_record(conn))["players"]
     mine = next((r for r in rows if r["tag"] == tag), None)
     w = mine["war"] if mine else None
     if w and w["attacks"] >= BADGE_MIN_RECORD:
         rate = w["three_star_rate"] or 0
-        earn("sharpshooter", "Three-Star General", tier_of(rate, BADGE_THREE_STARS), f"{rate * 100:.1f}% three stars")
+        earn("sharpshooter", "Three-Star General", tier_of(rate, BADGE_THREE_STARS), f"{rate * 100:.1f}% three stars", rate)
         if w["missed"] == 0:
-            earn("never_misses", "Battle Ready", tier_of(w["attacks"], BADGE_NO_MISS), f"{w['attacks']} attacks, none missed")
+            earn("never_misses", "Battle Ready", tier_of(w["attacks"], BADGE_NO_MISS), f"{w['attacks']} attacks, none missed", w["attacks"])
     held = sorted((r["war"]["defense"]["avg_stars_conceded"], r["tag"]) for r in rows
                   if r["war"] and r["war"]["defense"]["defenses"] >= BADGE_MIN_RECORD)
     place = next((i + 1 for i, (_, t) in enumerate(held) if t == tag), None)
     if place:
-        earn("wall", "Unbreakable", tier_by_rank(place, BADGE_HELD), f"#{place} in the family, {held[place - 1][0]} stars conceded per attack")
+        earn("wall", "Unbreakable", tier_by_rank(place, BADGE_HELD), f"#{place} in the family, {held[place - 1][0]} stars conceded per attack", -place)
     upsets = conn.execute("""SELECT COUNT(*) FROM attacks a
         JOIN war_members m ON m.war_key = a.war_key AND m.player_tag = a.attacker_tag
         JOIN war_members d ON d.war_key = a.war_key AND d.player_tag = a.defender_tag
         WHERE a.attacker_tag=? AND a.stars = 3 AND d.town_hall > m.town_hall""", (tag,)).fetchone()[0]
-    earn("giant_slayer", "Giant Slayer", tier_of(upsets, BADGE_SLAIN), f"{upsets} three-star {'hit' if upsets == 1 else 'hits'} on a higher town hall")
-    givers = [r["tag"] for r in sorted((r for r in current_members(conn) if r["donations"]), key=lambda r: -r["donations"])]
+    earn("giant_slayer", "Giant Slayer", tier_of(upsets, BADGE_SLAIN), f"{upsets} three-star {'hit' if upsets == 1 else 'hits'} on a higher town hall", upsets)
+    givers = [r["tag"] for r in sorted((r for r in (current_members(conn) if members is None else members) if r["donations"]), key=lambda r: -r["donations"])]
     if tag in givers:
         rank = givers.index(tag) + 1
-        earn("top_donor", "Friend in Need", tier_by_rank(rank, BADGE_DONORS), f"#{rank} donor in the family this season")
+        earn("top_donor", "Friend in Need", tier_by_rank(rank, BADGE_DONORS), f"#{rank} donor in the family this season", -rank)
     top = sum(h["max"] or 0 for h in heroes)
     if heroes and top:
         share = sum(h["level"] for h in heroes) / top
-        earn("maxed_heroes", "Hero Hall Legend", tier_of(share, BADGE_HEROES), f"Heroes at {int(share * 100)}% of max level")
+        earn("maxed_heroes", "Hero Hall Legend", tier_of(share, BADGE_HEROES), f"Heroes at {int(share * 100)}% of max level", share)
     return sorted(out, key=lambda b: -TIERS.index(b["tier"]))
 
 

@@ -386,3 +386,17 @@ def test_tier_lines():
     assert tier_of(0.9, (0.8, 0.85, 0.9)) == "gold"
     assert tier_by_rank(1, (10, 3, 1)) == "gold" and tier_by_rank(3, (10, 3, 1)) == "silver"
     assert tier_by_rank(11, (10, 3, 1)) is None and tier_by_rank(None, (10, 3, 1)) is None
+
+
+def test_the_badges_board_lists_every_member_with_their_badges(conn, monkeypatch):
+    from server import profiles
+    poll(conn, Recorder())
+    war = lambda rate: {"attacks": 40, "three_star_rate": rate, "missed": 1, "defense": {"defenses": 0, "avg_stars_conceded": None}}
+    ms = profiles.current_members(conn)
+    rows = [{"tag": m["tag"], "war": war(0.95 if i == 0 else 0.5)} for i, m in enumerate(ms)]
+    monkeypatch.setattr(profiles, "war_record", lambda c: {"players": rows})
+    board = profiles.board(conn, "badges")["players"]
+    assert {r["tag"] for r in board} == {m["tag"] for m in ms}
+    ace = next(r for r in board if r["tag"] == ms[0]["tag"])
+    general = next(b for b in ace["badges"] if b["id"] == "sharpshooter")
+    assert general["tier"] == "gold" and general["value"] == 0.95 and {"name", "clan", "th"} <= set(ace)

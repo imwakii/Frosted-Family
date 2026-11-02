@@ -15,7 +15,7 @@ export type RankCol = { key: string; label: string; value: (r: Row) => number | 
 
 const cache = new Map<string, Promise<Board | null>>()
 
-function useBoard(kind: string) {
+export function useBoard(kind: string) {
   const [state, setState] = useState<{ kind: string; data: Board | null; loading: boolean }>({ kind, data: null, loading: true })
   useEffect(() => {
     let live = true
