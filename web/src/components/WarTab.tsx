@@ -55,7 +55,7 @@ function Base({ b, right, live, picked, onPick }: { b: WarBase | null; right?: b
         <span className={`flex items-center gap-1.5 text-[11px] leading-none ${right ? 'flex-row-reverse' : ''}`}>
           {live && (
             <span aria-label={`${b.used} of ${b.allowed} attacks used`} className="flex gap-[3px]">
-              {Array.from({ length: b.allowed }, (_, k) => <span key={k} className={`size-[7px] rounded-full ${k < b.used ? 'bg-[#16A34A]' : 'bg-[#F59E0B]'}`} />)}
+              {Array.from({ length: b.allowed }, (_, k) => <span key={k} className={`size-[7px] rounded-full ${k < b.used ? 'bg-[#16A34A]' : 'border-[1.5px] border-[#94A3B8]'}`} />)}
             </span>
           )}
           {b.best !== null && <Stars n={b.best} />}
@@ -138,7 +138,7 @@ function WarBoard({ clan, war, now }: { clan: ClanName; war: ClanWar; now: numbe
           <TugBar us={war.stars} them={war.opponent_stars} color={t.accent} />
           {/* The same lines in every state, so each clan's list starts at the same height. */}
           <span className="text-center text-xs font-bold" style={{ color: !live ? '#64748B' : toAttack ? '#B45309' : '#15803D' }}>
-            {live ? (toAttack ? `${toAttack} of ours still to attack` : 'All of ours attacked') : over ? `Ended ${end ? ago(new Date(end).toISOString(), now) : ''}` : `${war.team_size} v ${war.team_size}`}
+            {live ? (toAttack ? `${toAttack} yet to attack` : 'All attacked') : over ? `Ended ${end ? ago(new Date(end).toISOString(), now) : ''}` : `${war.team_size} v ${war.team_size}`}
           </span>
           <span className="text-center text-[11px] font-semibold text-faint">Updated {ago(war.updated_at, now)}</span>
         </div>
@@ -164,7 +164,7 @@ function WarBoard({ clan, war, now }: { clan: ClanName; war: ClanWar; now: numbe
         </ol>
         <div aria-label="Key" className="flex flex-wrap justify-center gap-x-[18px] gap-y-1 border-t border-hair px-3 py-2.5 text-xs font-semibold text-muted">
           {live && <>
-            <span className="flex items-center gap-1.5"><span className="size-2 rounded-full bg-[#F59E0B]" />Attack left</span>
+            <span className="flex items-center gap-1.5"><span className="size-2 rounded-full border-[1.5px] border-[#94A3B8]" />Attack left</span>
             <span className="flex items-center gap-1.5"><span className="size-2 rounded-full bg-[#16A34A]" />Used</span>
           </>}
           <span className="flex items-center gap-1.5"><span className="text-gold">★</span>Best on this base</span>
