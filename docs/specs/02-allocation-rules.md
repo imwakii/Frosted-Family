@@ -168,6 +168,8 @@ Keeping the league and promoting is the priority. In that order:
 4. New members are tried out, up to two a day, highest town hall first, on the weakest enemy slots and only if they are
    within a town hall of them. One who attacks counts as proven and competes for days until they reach 8 stars,
    especially a TH18. One who misses gets no more days.
+5. Weakest of all, consecutive days are easier for members to remember. Between equal fits, once anyone who needs every
+   day left for 8 stars is in, a player who played the day before stays in.
 
 Days whose war is on or over are fixed to the game's lineup. Fire and Cake leaders may edit and save the shared draft;
 only Ka Wai publishes, and members see their days on Lineups only once he has.

@@ -10,6 +10,8 @@ import type { Player } from './types'
 //   4. New members are tried out: up to two a day who have not played yet, highest town hall first, on the weakest
 //      enemy slots and only if they are within a town hall of them. One who attacks counts as proven from then on and
 //      competes for days like anyone else, so a TH18 keeps playing until 8 stars. One who misses gets no more days.
+//   5. Weakest of all: consecutive days are easier to remember. Between equal fits, once anyone who needs every day
+//      left for 8 stars is in, a player who played the day before stays in.
 // Days whose war is on or over are fixed to the game's lineup; only the days still to come are suggested.
 
 export const DAYS = [1, 2, 3, 4, 5, 6, 7] as const
@@ -100,10 +102,16 @@ export function suggest(pool: Player[], wars: Wars, upcoming: number[] = []): Cl
       const diff = (p.th ?? 0) - slot
       return (diff >= 0 ? diff * 0.5 : -diff) + tier(p, missed, wars)!
     }
+    // Equal fits: must play for 8 stars, then still short and on a run, still short, on a run, the rest.
+    const yesterday = new Set(out[d - 1] ?? [])
+    const rank = (p: Player) => {
+      const n = need[p.tag], run = yesterday.has(p.tag)
+      return n > 0 && n >= left ? 0 : n > 0 ? (run ? 1 : 2) : run ? 3 : 4
+    }
     const team: Player[] = []
     for (const slot of foe.slice(0, TEAM - trial.length)) {
       const best = ok.filter((p) => !team.includes(p))
-        .sort((a, b) => fit(a, slot) - fit(b, slot) || need[b.tag] / left - need[a.tag] / left || byStrength(a, b))[0]
+        .sort((a, b) => fit(a, slot) - fit(b, slot) || rank(a) - rank(b) || need[b.tag] - need[a.tag] || byStrength(a, b))[0]
       if (best) team.push(best)
     }
     out[d] = [...team, ...trial].map((p) => p.tag).sort()
