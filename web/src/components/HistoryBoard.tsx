@@ -76,7 +76,7 @@ export default function HistoryBoard({ wide }: { wide: boolean }) {
                 </span>
                 <span className={`flex min-w-0 flex-col ${i < data.clans.length - 1 ? 'pb-4' : ''}`}>
                   <span className="text-[15px] font-bold" style={{ color: CLAN[c.clan].deep }}>{clans[c.clan]?.name ?? `Frosted ${c.clan}`}</span>
-                  <span className="text-[13px] text-muted">First on record {fullDate(c.first)}</span>
+                  <span className="text-[13px] text-muted">Founded on {fullDate(c.first)}</span>
                   <span className="text-xs text-faint">{c.players.toLocaleString('en-GB')} players since</span>
                 </span>
               </li>
