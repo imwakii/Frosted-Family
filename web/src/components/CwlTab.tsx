@@ -19,9 +19,9 @@ function groupsFor(roster: Roster, clan: ClanName, day: DayPick = 'all') {
   const mine = roster.players.filter((p) => p.clan === clan)
   // One day of the published plan, for a clan that has one: who plays, who rests, and the rest as usual.
   if (day !== 'all' && mine.some((p) => p.days)) {
-    const playing = mine.filter((p) => p.days?.includes(day))
-      .sort((a, b) => (b.th ?? 0) - (a.th ?? 0) || (b.score ?? 0) - (a.score ?? 0))
-    const others = mine.filter((p) => !p.days?.includes(day))
+    const byScore = (a: Player, b: Player) => (b.score ?? -1) - (a.score ?? -1)
+    const playing = mine.filter((p) => p.days?.includes(day)).sort(byScore)
+    const others = mine.filter((p) => !p.days?.includes(day)).sort(byScore)
     const groups = [
       { label: 'Playing', dim: false, rows: playing },
       { label: 'Resting', dim: false, rows: others.filter((p) => p.slot === 'CORE' || p.slot === 'SUB') },
