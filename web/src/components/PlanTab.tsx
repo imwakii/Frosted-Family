@@ -5,6 +5,7 @@ import { CLAN, CLANS, GROUPS, coreAvg, fmtScore } from '../theme'
 import type { ClanName, Player, Roster, Slot } from '../types'
 import { useClans } from '../clash'
 import LeadersTools from './LeadersTools'
+import { DRAFT_KEY, lineupDraft } from '../dayplan'
 import DayPlanner from './DayPlanner'
 import { ProposalBar, useProposals } from './Proposals'
 import { Arrow, ClanBadge, ClanSwitch, StatusDot, StatusKey, SubNav, Th } from './ui'
@@ -13,7 +14,6 @@ import { Arrow, ClanBadge, ClanSwitch, StatusDot, StatusKey, SubNav, Th } from '
 const MAKI = '#CGJ8YR8J'
 const CAP = 50
 const STARTERS = 15
-const DRAFT_KEY = 'ff-plan-draft'
 
 type Place = { clan: ClanName; slot: Slot }
 type Moves = Record<string, Place>
@@ -27,7 +27,7 @@ const placeLabel = (p: Place) => (p.clan === 'Flakes' && p.slot !== 'NEW' ? 'Fla
 type Check = { key: string; label: string; tip: string; tone: 'ok' | 'warn' | 'bad' | 'info' }
 function readDraft(roster: Roster): Moves {
   try {
-    const raw = JSON.parse(localStorage.getItem(DRAFT_KEY) || '{}') as Moves
+    const raw: Moves = lineupDraft()
     const tags = new Set(roster.players.map((p) => p.tag))
     return Object.fromEntries(Object.entries(raw).filter(([t]) => tags.has(t)))
   } catch { return {} }
@@ -69,7 +69,7 @@ function PlanRow({ p, at, onPlace, locked }: { p: Player; at: Place; onPlace: (v
 const toList = (m: Moves) => Object.entries(m).map(([tag, v]) => ({ tag, ...v })).sort((a, b) => a.tag.localeCompare(b.tag))
 const sameMoves = (a: Moves, b: Moves) => JSON.stringify(toList(a)) === JSON.stringify(toList(b))
 
-function Plan({ roster, me }: { roster: Roster; me: Me }) {
+function Plan({ roster, me, onPublished }: { roster: Roster; me: Me; onPublished: () => Promise<void> }) {
   const [mine, setMine] = useState<Moves>(() => readDraft(roster))
   const proposals = useProposals<LineupBody>('lineup')
   const [viewId, setViewId] = useState<number | null>(null)
@@ -196,6 +196,7 @@ function Plan({ roster, me }: { roster: Roster; me: Me }) {
     setBusy(true)
     try {
       await publishPlan(list(), valveHit && override, me.csrf)
+      await onPublished()  // the board and the Day planner read the roster, which now has this publish
       setResult({ ok: true, n })
       setMine({})
       setSaved({ moves: {}, by: me.user?.name ?? null })
@@ -391,7 +392,7 @@ const SUBS = [
   { id: 'members', label: 'Members', href: '#/plan/members' },
 ]
 
-export default function PlanTab({ sub, roster, me, ready, wide, onSignOut }: PlanProps & { sub: string }) {
+export default function PlanTab({ sub, roster, onPublished, me, ready, wide, onSignOut }: PlanProps & { sub: string; onPublished: () => Promise<void> }) {
   if (!ready) return <div aria-busy="true" aria-label="Loading" className="mx-auto mt-16 h-48 max-w-[380px] animate-pulse rounded-[20px] bg-well" />
   // Open to all only while Discord sign-in is not set up. Once it is, signed-out visitors and non-leaders
   // see the sign-in card alone, on both sections.
@@ -399,7 +400,7 @@ export default function PlanTab({ sub, roster, me, ready, wide, onSignOut }: Pla
   return (
     <>
       <SubNav items={SUBS} current={sub} wide={wide} />
-      {sub === 'members' ? <LeadersTools wide={wide} /> : sub === 'days' ? <DayPlanner roster={roster} me={me} /> : <Plan roster={roster} me={me} />}
+      {sub === 'members' ? <LeadersTools wide={wide} /> : sub === 'days' ? <DayPlanner roster={roster} me={me} onPublished={onPublished} /> : <Plan roster={roster} me={me} onPublished={onPublished} />}
     </>
   )
 }

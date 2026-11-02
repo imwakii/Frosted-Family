@@ -1,4 +1,4 @@
-import type { Player } from './types'
+import type { ClanName, Player, Slot } from './types'
 
 // The day planner's rules, in priority order. Keeping the league and promoting comes first:
 //   1. Only players certain to attack: high-miss and inactive players, and anyone who missed an attack this season,
@@ -13,6 +13,12 @@ import type { Player } from './types'
 //   5. Weakest of all: consecutive days are easier to remember. Between equal fits, once anyone who needs every day
 //      left for 8 stars is in, a player who played the day before stays in.
 // Days whose war is on or over are fixed to the game's lineup; only the days still to come are suggested.
+
+/** The lineup you are working on in the builder, kept in this browser: tag to clan and slot. */
+export const DRAFT_KEY = 'ff-plan-draft'
+export function lineupDraft(): Record<string, { clan: ClanName; slot: Slot }> {
+  try { return JSON.parse(localStorage.getItem(DRAFT_KEY) || '{}') } catch { return {} }
+}
 
 export const DAYS = [1, 2, 3, 4, 5, 6, 7] as const
 export const TEAM = 15

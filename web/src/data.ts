@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import type { ClanDays, Wars } from './dayplan'
 import type { ClanName, LiveWar, Player, Roster, Slot, Status } from './types'
 
@@ -98,11 +98,11 @@ function mergeRoster(api: { players: ApiPlayer[] }, base: Roster | null): Roster
   }
 }
 
-export async function loadRoster(): Promise<{ roster: Roster; live: boolean }> {
+export async function loadRoster(fresh = false): Promise<{ roster: Roster; live: boolean }> {
   try {
     const api = import.meta.env.DEV && new URLSearchParams(window.location.search).get('mock') === 'new'
       ? await import('./devMock').then((m) => m.mockRosterApi() as Promise<{ players: ApiPlayer[] }>)
-      : await getJson<{ players: ApiPlayer[] }>('/api/roster')
+      : await getJson<{ players: ApiPlayer[] }>('/api/roster', fresh ? { cache: 'reload' } : undefined)
     if (!Array.isArray(api.players) || !api.players.length) throw new Error('empty roster')
     const base = await getStatic().catch(() => null)
     return { roster: mergeRoster(api, base), live: true }
@@ -188,7 +188,9 @@ export function useRoster() {
       () => setState({ roster: null, live: false, error: true }),
     )
   }, [])
-  return state
+  // After a publish: past the browser's short cache, and keeping what is on screen if this fails.
+  const reload = useCallback(() => loadRoster(true).then(({ roster, live }) => setState({ roster, live, error: false }), () => {}), [])
+  return { ...state, reload }
 }
 
 export function useWar() {

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { Me } from '../auth'
 import { type DayBody, type DayPlans, getDays, getProposals, HttpError, type Proposal, publishDays, saveProposal, useWar, useWide, withdrawProposal } from '../data'
-import { type ClanDays, DAYS, earned, enemy, locked, missedThisSeason, onTrack, onTrial, slotsBelow, suggest, TARGET, TEAM, tier, type Wars } from '../dayplan'
+import { type ClanDays, DAYS, earned, enemy, lineupDraft, locked, missedThisSeason, onTrack, onTrial, slotsBelow, suggest, TARGET, TEAM, tier, type Wars } from '../dayplan'
 import { CLAN } from '../theme'
 import type { Player, Roster, Slot } from '../types'
 import CwlTab from './CwlTab'
@@ -9,7 +9,7 @@ import { ProposalBar, useProposals } from './Proposals'
 import { ClanSwitch, KEY_ROW, StatusDot, Th } from './ui'
 
 // Who plays each of the seven CWL days. Opens on your own proposal, else the published plan, else a suggestion
-// from the rules in dayplan.ts. Days whose war is on or over show the game's lineup and cannot be changed.
+// from the rules in dayplan.ts. It builds on the lineup in the builder, published or not. Days whose war is on or over show the game's lineup and cannot be changed.
 
 type CwlClan = 'Fire' | 'Cake'
 const CWL: CwlClan[] = ['Fire', 'Cake']
@@ -47,7 +47,11 @@ function Cell({ plays, war, tag, ring, onToggle, label, changed }: {
   )
 }
 
-export default function DayPlanner({ roster, me }: { roster: Roster; me: Me }) {
+export default function DayPlanner({ roster: base, me, onPublished }: { roster: Roster; me: Me; onPublished: () => Promise<void> }) {
+  const roster = useMemo<Roster>(() => {
+    const moves = lineupDraft()
+    return { ...base, players: base.players.map((p) => (moves[p.tag] ? { ...p, ...moves[p.tag] } : p)) }
+  }, [base])
   const [server, setServer] = useState<DayPlans | null>(null)
   const [failed, setFailed] = useState(false)
   const [clan, setClan] = useState<CwlClan>('Fire')
@@ -152,6 +156,7 @@ export default function DayPlanner({ roster, me }: { roster: Roster; me: Me }) {
   const publish = () => run(async () => {
     setServer(await publishDays(season, plans, me.csrf))
     if (proposals.mine) await withdrawProposal(proposals.mine.id, me.csrf)
+    await onPublished()
   }, 'Published · members see their days')
   const btn = 'min-h-10 cursor-pointer rounded-full border border-[#D5C8AC] bg-white px-3 text-sm font-semibold text-ink-2 hover:bg-page disabled:cursor-default disabled:opacity-60'
   return (

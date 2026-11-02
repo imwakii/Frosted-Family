@@ -46,7 +46,7 @@ function Account({ me, onSignOut }: { me: Me; onSignOut: () => void }) {
 }
 
 export default function App() {
-  const { roster, error } = useRoster()
+  const { roster, error, reload } = useRoster()
   const war = useWar()
   const wide = useWide()
   const roomy = useWide('(min-width: 1024px)')
@@ -108,7 +108,7 @@ export default function App() {
       ) : route.tab === 'war' ? (
         <WarTab wide={wide} />
       ) : route.tab === 'plan' ? (
-        <PlanTab sub={route.sub} roster={roster} me={auth.me} ready={auth.status === 'ready'} wide={wide} onSignOut={auth.signOut} />
+        <PlanTab sub={route.sub} roster={roster} onPublished={reload} me={auth.me} ready={auth.status === 'ready'} wide={wide} onSignOut={auth.signOut} />
       ) : route.tab === 'log' ? (
         <LogTab roster={roster} q={q} setQ={setQ} wide={wide} />
       ) : route.tab === 'explore' ? (
