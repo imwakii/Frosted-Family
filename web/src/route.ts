@@ -9,10 +9,16 @@ export type Route = { tab: Tab; sub: string; kind: string | null; player: string
 export const STATS_SUBS = ['players', 'badges', 'war', 'donations', 'capital', 'trends', 'history'] as const
 export const LEADERS_SUBS = ['builder', 'days', 'members'] as const
 
+/** A hand-edited or cut-off link can hold a broken % escape; it opens no player rather than failing the page. */
+export function decodeTag(raw: string) {
+  try { return decodeURIComponent(raw) } catch { return null }
+}
+
 function parse(): Route {
   const h = window.location.hash.replace(/^#\/?/, '')
   const [path, tag] = h.split(/\/?p\//)
-  const player = tag ? '#' + decodeURIComponent(tag) : null
+  const decoded = tag ? decodeTag(tag) : null
+  const player = decoded ? '#' + decoded : null
   let parts = path.split('/').filter(Boolean)
   if (parts[0] === 'explore') parts = parts[1] === 'war' || parts[1] === 'upgrades' ? ['stats', parts[1]] : ['stats', 'players', ...parts.slice(1, 2)]
   if ((parts[0] === 'plan' || parts[0] === 'leaders') && parts[1] === 'attacks') parts = ['war']  // moved 2 Nov 2026
@@ -79,7 +85,7 @@ export function onDrill(run: () => void) {
 }
 
 function showRow(tag: string) {
-  const row = document.querySelector(`[data-tag="${tag}"]`)
+  const row = document.querySelector(`[data-tag="${CSS.escape(tag)}"]`)
   if (!row) return
   ;(row.querySelector('[data-sorted]') ?? row).scrollIntoView({ block: 'center', inline: 'center' })
   row.classList.add('ff-drilled')

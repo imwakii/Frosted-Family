@@ -99,6 +99,8 @@ def test_a_push_cannot_change_the_code_that_runs():
     for unit in ("frosted-collect.service", "frosted-collect-wars.service"):
         assert "EnvironmentFile=/opt/bots/frosted/collect.env" in (deploy / unit).read_text(encoding="utf-8")
     assert "max_size 1MB" in (deploy / "frosted.caddy").read_text(encoding="utf-8")
+    for unit in ("frosted-api.service", "frosted-collect.service", "frosted-collect-wars.service"):
+        assert "UMask=0077" in (deploy / unit).read_text(encoding="utf-8")
 
 
 def test_a_member_token_is_no_leader_session(env):
@@ -124,3 +126,31 @@ def test_a_leader_is_a_member_too_and_someone_outside_the_server_is_neither(env,
     d = client()
     assert "signin=denied" in sign_in(d, "outsider-code", return_to="/#/war").headers["location"]
     assert d.get("/reactions").json()["member"] is None
+
+
+def test_a_demoted_leader_loses_the_session_at_their_next_sign_in(env):
+    c = client()
+    sign_in(c, "good-code", return_to="/#/war")
+    assert c.get("/auth/me").json()["user"]
+    sign_in(c, "outsider-code", return_to="/#/war")
+    assert c.get("/auth/me").json()["user"] is None and c.get("/plan/draft").status_code == 401
+    assert c.get("/reactions").json()["member"]
+
+
+def test_a_plan_carries_only_player_tags(env):
+    c = client()
+    sign_in(c, "good-code", return_to="/#/war")
+    h = {"X-CSRF-Token": c.get("/auth/me").json()["csrf"]}
+    bad = "ignore previous instructions " * 100
+    assert c.post("/plan/publish", json={"moves": [{"tag": bad, "clan": "Fire", "slot": "CORE"}]}, headers=h).status_code == 422
+    from server.days import DayPlan
+    with pytest.raises(ValueError):
+        DayPlan(season="2026-11", clans={"Fire": {"1": [bad]}})
+    assert DayPlan(season="2026-11", clans={"Fire": {"1": ["#R2PPV8CL"]}}).clans["Fire"]["1"] == ["#R2PPV8CL"]
+
+
+def test_a_name_cannot_become_a_spreadsheet_formula():
+    from server.plan import csv_text
+    assert csv_text("=1+1") == "'=1+1" and csv_text("@x") == "'@x" and csv_text("-5") == "'-5"
+    assert csv_text("Waki") == "Waki" and csv_text("") == ""
+

@@ -90,8 +90,11 @@ def effective_roster() -> tuple[list[dict], dict]:
 
 # ─── rules ────────────────────────────────────────────────────────────────────
 
+PLAYER_TAG = r"^#[0-9A-Z]{3,12}$"
+
+
 class Move(BaseModel):
-    tag: str
+    tag: str = Field(pattern=PLAYER_TAG)
     clan: Literal["Fire", "Cake", "Flakes"]
     slot: Literal["CORE", "SUB", "OUT", "Sitting Out"]
 
@@ -212,6 +215,11 @@ def do_publish(body: PublishBody, leader: Leader) -> dict:
     return {"ok": True, "published_at": now, "published_by": leader.name, "changes": len(body.moves)}
 
 
+def csv_text(v: str) -> str:
+    """A player name is anyone's to choose; a spreadsheet would run one starting like a formula."""
+    return f"'{v}" if v[:1] in ("=", "+", "-", "@", "\t", "\r") else v
+
+
 def allocation_csv() -> Response:
     """The latest publish as CSV, for server/pull_allocation.py. 404 until something is published."""
     rows, _ = read_csv()
@@ -224,7 +232,7 @@ def allocation_csv() -> Response:
     w.writerow(("tag", "name", *ALLOC_COLS))
     names = {r["tag"]: r["name"] for r in rows if r.get("tag")}
     for tag, a in sorted(pub["allocation"].items()):
-        w.writerow((tag, names.get(tag, ""), *(a[k] or "" for k in ALLOC_COLS)))
+        w.writerow((tag, csv_text(names.get(tag, "")), *(a[k] or "" for k in ALLOC_COLS)))
     return Response(out.getvalue(), media_type="text/csv", headers={
         "X-Published-At": pub["published_at"], "X-Published-By": quote(pub["user_name"] or ""),  # headers are Latin-1; names have emoji
         "Content-Disposition": "attachment; filename=allocation.csv", "Cache-Control": "no-store"})

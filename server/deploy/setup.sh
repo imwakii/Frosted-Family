@@ -34,7 +34,10 @@ install_app() {
   getent group bots >/dev/null || groupadd bots
   id "$BOT" >/dev/null 2>&1 || useradd --system --home-dir "$BOT_HOME" --no-create-home --shell /usr/sbin/nologin \
     --gid bots "$BOT"
-  install -d -m 755 -o "$BOT" -g bots "$BOT_HOME" "$BOT_HOME/data"
+  install -d -m 755 -o "$BOT" -g bots "$BOT_HOME"
+  # app.db holds Discord ids and names: only the bot user reads the data, not others on this shared droplet.
+  install -d -m 700 -o "$BOT" -g bots "$BOT_HOME/data"
+  chmod 700 "$BOT_HOME/data"; find "$BOT_HOME/data" -type f -exec chmod 600 {} +
   # The token file: root only, read by systemd. Created empty; the token is pasted in by hand.
   [ -f "$BOT_HOME/api.env" ] || install -m 600 -o root -g root /dev/null "$BOT_HOME/api.env"
   # A file made by hand may be world-readable; the token is for root (systemd) only.

@@ -9,7 +9,7 @@ import WarTab from './components/WarTab'
 import { InstallHint, useInstallHint } from './components/InstallHint'
 import { JumpToYou, YouChip } from './components/You'
 import { fetchPlayer, useRoster, useWar, useWide } from './data'
-import { go, onDrill, useRoute } from './route'
+import { decodeTag, go, onDrill, useRoute } from './route'
 import { UtcClock } from './components/ui'
 
 const TABS = [
@@ -59,7 +59,8 @@ export default function App() {
     const down = (e: PointerEvent) => {
       const el = (e.target as Element).closest?.('[data-tag], a[href*="/p/"]')
       const href = el?.getAttribute('href')?.split('/p/')[1]
-      const tag = el?.getAttribute('data-tag') ?? (href ? `#${decodeURIComponent(href)}` : null)
+      const decoded = href ? decodeTag(href) : null
+      const tag = el?.getAttribute('data-tag') ?? (decoded ? `#${decoded}` : null)
       if (tag) void fetchPlayer(tag)
     }
     document.addEventListener('pointerdown', down)

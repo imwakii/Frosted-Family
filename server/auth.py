@@ -274,12 +274,16 @@ def callback(request: Request, code: str | None = None, state: str | None = None
         return back_to_site(cfg, back, "failed")
     u = user.json()
     if member.status_code != 200:
-        return back_to_site(cfg, back, "denied")  # not in the server
+        resp = back_to_site(cfg, back, "denied")  # not in the server
+        resp.delete_cookie(MEMBER_COOKIE, path="/", secure=True, httponly=True, samesite="lax")
+        resp.delete_cookie(SESSION_COOKIE, path="/", secure=True, httponly=True, samesite="lax")
+        return resp
     m = member.json()
     name = m.get("nick") or u.get("global_name") or u.get("username") or u["id"]
     if not (set(m.get("roles", [])) & cfg.leader_roles):
         # A member, not a leader: the Plan tab says no, and everywhere else they are simply signed in.
         resp = back_to_site(cfg, back, "denied" if back.startswith("/#/plan") else None)
+        resp.delete_cookie(SESSION_COOKIE, path="/", secure=True, httponly=True, samesite="lax")  # a demoted leader
         return set_member(resp, cfg, u["id"], name)
     with appdb.connect() as conn:
         conn.execute("""INSERT INTO leaders VALUES (?,?,?,?) ON CONFLICT (user_id) DO UPDATE SET

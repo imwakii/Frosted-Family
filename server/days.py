@@ -11,6 +11,7 @@ the expected enemy: rank by rank, the mean town hall of the top 15 of each group
 from __future__ import annotations
 
 import json
+import re
 import sqlite3
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -61,6 +62,8 @@ class DayPlan(BaseModel):
             for d, tags in days.items():
                 if d not in {str(i) for i in DAYS} or len(tags) > plan.CAP:
                     raise ValueError("days are 1 to 7, each at most 50 players")
+                if not all(re.fullmatch(plan.PLAYER_TAG, t) for t in tags):
+                    raise ValueError("not a player tag")
                 days[d] = sorted(set(tags))
         return v
 

@@ -22,7 +22,6 @@ type History = {
 // Checked with the colourblind validator on white: Cake's deep blue beside these lighter Fire and Flakes.
 const BAR: Record<ClanName, string> = { Fire: '#E8703A', Cake: '#1D5FB0', Flakes: '#9440BE' }
 const fullDate = (d: string) => new Date(`${d}T00:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' })
-const LONGEST_SHOWN = 10
 // How long since a date, to the month; under a month, in days.
 function tenure(since: string, now = Date.now()) {
   const from = new Date(`${since}T00:00:00Z`), to = new Date(now)
@@ -54,7 +53,6 @@ export default function HistoryBoard({ q, setQ, wide }: { q: string; setQ: (v: s
   const [data, setData] = useState<History | null>(null)
   const [loading, setLoading] = useState(true)
   const [clan, setClan] = useClanPick()
-  const [showAll, setShowAll] = useState(false)
   const clans = useClans()
   useEffect(() => { let live = true; load().then((d) => { if (live) { setData(d); setLoading(false) } }); return () => { live = false } }, [])
 
@@ -66,7 +64,7 @@ export default function HistoryBoard({ q, setQ, wide }: { q: string; setQ: (v: s
   // Searching shows every match with their real place in the family, and nothing else on the page.
   const ranked = members.map((r, i) => ({ r, place: i + 1 }))
   const matches = nq ? ranked.filter(({ r }) => norm(r.name).includes(nq) || r.tag.toLowerCase().includes(nq)) : ranked
-  const longest = nq || showAll ? matches : matches.slice(0, LONGEST_SHOWN)
+  const longest = matches
   const enter = () => { if (longest[0]) go.to(playerHref(longest[0].r.tag)) }
 
   const body = !data ? <Empty loading={loading} /> : (
@@ -124,8 +122,8 @@ export default function HistoryBoard({ q, setQ, wide }: { q: string; setQ: (v: s
       </div>}
 
       <Section title="Longest in the family" note="Current members">
-        {/* The full list scrolls in place, so opening it leaves the page where it is. */}
-        <ol className={`m-0 list-none rounded-2xl border border-line bg-white py-1 ${showAll && !nq ? 'max-h-[530px] overflow-y-auto overscroll-contain' : ''}`}>
+        {/* Everyone, scrolling in place. */}
+        <ol className="m-0 max-h-[530px] list-none overflow-y-auto overscroll-contain rounded-2xl border border-line bg-white py-1">
           {longest.map(({ r, place }, i) => (
             <li key={r.tag}>
               <a href={playerHref(r.tag)} className={`flex min-h-[52px] items-center gap-2.5 px-3.5 py-1.5 text-ink no-underline hover:bg-hover ${i ? 'border-t border-hair' : ''}`}>
@@ -142,12 +140,6 @@ export default function HistoryBoard({ q, setQ, wide }: { q: string; setQ: (v: s
           ))}
           {!longest.length && <li className="p-4 text-sm text-faint">No one by that name</li>}
         </ol>
-        {!nq && members.length > LONGEST_SHOWN && (
-          <button type="button" aria-expanded={showAll} onClick={() => setShowAll((v) => !v)}
-            className="min-h-11 cursor-pointer rounded-full border border-line bg-white text-sm font-bold text-ink-2 hover:bg-page">
-            {showAll ? 'Show fewer' : `Show all ${members.length}`}
-          </button>
-        )}
       </Section>
       <p className="m-0 px-1 text-xs text-faint lg:col-span-2">Dates are when Clash of Stats first saw a player, so some are approximate and some members may be missing.</p>
     </div>
