@@ -9,6 +9,7 @@ import WarTab from './components/WarTab'
 import { InstallHint, useInstallHint } from './components/InstallHint'
 import { JumpToYou, YouChip } from './components/You'
 import { fetchPlayer, useRoster, useWar, useWide } from './data'
+import { useVisits } from './visits'
 import { decodeTag, go, onDrill, useRoute } from './route'
 import { UtcClock } from './components/ui'
 
@@ -54,6 +55,7 @@ export default function App() {
   const auth = useAuth()
   const install = useInstallHint(wide)
   const [q, setQ] = useState('')
+  const visits = useVisits()
   // A finger on a player's row starts their card loading, ahead of the tap landing.
   useEffect(() => {
     const down = (e: PointerEvent) => {
@@ -117,6 +119,11 @@ export default function App() {
         <CwlTab roster={roster} war={war} wide={wide} q={q} setQ={setQ} />
       )}
 
+      {!!visits?.total && (
+        <p className="m-0 px-4 pb-1 pt-3 text-center text-xs font-semibold text-muted">
+          {visits.total.toLocaleString('en-GB')} {visits.total === 1 ? 'visitor' : 'visitors'} so far · {visits.week.toLocaleString('en-GB')} this week
+        </p>
+      )}
       <footer className="mx-auto max-w-[1320px] px-4 pb-4 pt-1 text-center text-[10px] text-faint opacity-70">
         Unofficial, not endorsed by Supercell.{' '}
         <a href="https://supercell.com/en/fan-content-policy/" target="_blank" rel="noopener noreferrer" className="text-faint underline hover:text-muted">Fan Content Policy</a>

@@ -43,6 +43,11 @@ CREATE TABLE IF NOT EXISTS reactions (
     at TEXT NOT NULL,
     PRIMARY KEY (target, emoji, user_id)
 );
+CREATE TABLE IF NOT EXISTS visits (
+    day TEXT NOT NULL,                -- UTC
+    visitor TEXT NOT NULL,            -- a random id the browser made up, tied to nothing
+    PRIMARY KEY (day, visitor)
+);
 CREATE TABLE IF NOT EXISTS leaders (
     user_id TEXT PRIMARY KEY,
     name TEXT,
