@@ -174,12 +174,13 @@ function MatrixBoard({ cat, q, setQ, wide }: BoardProps & { cat: Cat }) {
 
         {!data ? <Empty loading={loading} /> : (
           <>
-            <section className="overflow-auto rounded-[18px] border border-line bg-white">
+            {/* Scrolls inside its own box, so the hero and unit icons stay pinned above the numbers. */}
+            <section className="max-h-[calc(100dvh-210px)] overflow-auto rounded-[18px] border border-line bg-white">
               <table className="min-w-full border-separate border-spacing-0 text-sm">
-                <thead>
+                <thead className="sticky top-0 z-[3]">
                   {byHero && (
                     <tr>
-                      <th colSpan={3} className="sticky left-0 z-[2] bg-white" />
+                      <th colSpan={3} className="sticky left-0 z-[4] bg-white" />
                       {groups.map((g) => (
                         <th key={g.hero ?? 'other'} colSpan={g.idx.length} title={g.hero ?? undefined}
                           className={`bg-[#F8FAFC] pb-0.5 pt-1.5 ${divider(g.idx[0])}`}>
@@ -189,8 +190,8 @@ function MatrixBoard({ cat, q, setQ, wide }: BoardProps & { cat: Cat }) {
                     </tr>
                   )}
                   <tr>
-                    <th className="sticky left-0 z-[2] w-12 min-w-12 border-b border-line bg-white py-2.5 pl-4 pr-1 text-left text-xs font-bold text-faint">#</th>
-                    <th className="sticky left-12 z-[2] min-w-[210px] border-b border-line bg-white px-3 py-2.5 text-left text-xs font-bold text-faint">PLAYER</th>
+                    <th className="sticky left-0 z-[4] w-12 min-w-12 border-b border-line bg-white py-2.5 pl-4 pr-1 text-left text-xs font-bold text-faint">#</th>
+                    <th className="sticky left-12 z-[4] min-w-[210px] border-b border-line bg-white px-3 py-2.5 text-left text-xs font-bold text-faint">PLAYER</th>
                     <th className={`border-b border-line p-0 ${sort.col < 0 ? 'bg-[#EEF2FF]' : 'bg-white'}`} aria-sort={sort.col < 0 ? (sort.asc ? 'ascending' : 'descending') : undefined}>
                       <button type="button" onClick={() => pick(-1)} className="min-h-16 w-24 cursor-pointer border-0 bg-transparent text-xs font-bold text-ink-2 hover:bg-[#EEF2FF]">Progress</button>
                     </th>
