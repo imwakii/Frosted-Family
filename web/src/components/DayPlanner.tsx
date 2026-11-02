@@ -6,7 +6,7 @@ import { CLAN } from '../theme'
 import type { Player, Roster, Slot } from '../types'
 import CwlTab from './CwlTab'
 import { ProposalBar, useProposals } from './Proposals'
-import { StatusDot, Th } from './ui'
+import { ClanSwitch, KEY_ROW, StatusDot, Th } from './ui'
 
 // Who plays each of the seven CWL days. Opens on your own proposal, else the published plan, else a suggestion
 // from the rules in dayplan.ts. Days whose war is on or over show the game's lineup and cannot be changed.
@@ -156,37 +156,19 @@ export default function DayPlanner({ roster, me }: { roster: Roster; me: Me }) {
   const btn = 'min-h-10 cursor-pointer rounded-[10px] border border-[#D5DBE5] bg-white px-3 text-sm font-semibold text-ink-2 hover:bg-page disabled:cursor-default disabled:opacity-60'
   return (
     <>
-    <Outer className={`mx-auto flex flex-col gap-3.5 px-[clamp(16px,3vw,32px)] pt-3 md:pt-5 max-w-[1360px] ${preview ? '' : 'pb-12'}`}>
-      <div className="flex flex-wrap items-center gap-2">
-        <nav aria-label="View" className="grid grid-cols-2 gap-1 rounded-xl bg-well p-1">
-          {([false, true] as const).map((v) => (
-            <button key={String(v)} type="button" aria-pressed={v === preview} onClick={() => setPreview(v)}
-              className={`min-h-[38px] cursor-pointer rounded-[9px] border-0 px-3 text-[15px] font-bold ${v === preview ? 'bg-white text-ink shadow-[0_1px_3px_rgba(15,23,42,.12)]' : 'bg-transparent text-muted'}`}>
-              {v ? 'Preview' : 'Grid'}
-            </button>
-          ))}
-        </nav>
-        {!preview && <nav aria-label="Clan" className="grid grid-cols-2 gap-1 rounded-xl bg-well p-1">
-          {CWL.map((c) => {
-            const short = DAYS.some((d) => (shown[c][d]?.length ?? 0) !== TEAM)
-            return (
-              <button key={c} type="button" aria-pressed={c === clan} onClick={() => setClan(c)}
-                className={`flex min-h-[38px] min-w-[84px] cursor-pointer items-center justify-center gap-1.5 rounded-[9px] border-0 px-3 text-[15px] font-bold ${c === clan ? 'bg-white shadow-[0_1px_3px_rgba(15,23,42,.12)]' : 'bg-transparent text-muted'}`}
-                style={c === clan ? { color: CLAN[c].deep } : undefined}>
-                {c}{short && <span title="A day is not 15" className="size-2 rounded-full bg-[#DC2626]" />}
-              </button>
-            )
-          })}
-        </nav>}
+    <Outer className={`mx-auto flex flex-col gap-3.5 px-[clamp(16px,3vw,32px)] pt-1 md:pt-5 max-w-[1360px] ${preview ? '' : 'pb-12'}`}>
+      {!preview && <ClanSwitch<CwlClan> value={clan} onPick={setClan} options={CWL} flag={CWL.filter((c) => DAYS.some((d) => (shown[c][d]?.length ?? 0) !== TEAM))} />}
+      <div className="flex items-center gap-1.5">
+        <button type="button" aria-pressed={preview} className={btn} onClick={() => setPreview((v) => !v)}>{preview ? 'Grid' : 'Preview'}</button>
         <span className="flex-auto" />
-        {!preview && !viewing && <button type="button" className={btn} onClick={() => { setNote(null); setPlans((ps) => ({ ...ps!, [clan]: fresh(clan, server) })) }}>Suggest</button>}
-        {!viewing && <button type="button" className={btn} disabled={readOnly || busy || !dirty} onClick={propose}>
+        {!preview && !viewing && !confirming && <button type="button" className={btn} onClick={() => { setNote(null); setPlans((ps) => ({ ...ps!, [clan]: fresh(clan, server) })) }}>Suggest</button>}
+        {!viewing && !confirming && <button type="button" className={btn} disabled={readOnly || busy || !dirty} onClick={propose}>
           {dirty || !saved ? 'Propose' : 'Proposed'}
         </button>}
         {canPublish && !confirming && !viewing && (
           <button type="button" onClick={() => setConfirming(true)} disabled={busy || bad.length > 0 || !!published}
             title={bad.length ? `Not 15: ${bad.join(', ')}` : undefined}
-            className="min-h-10 cursor-pointer rounded-[10px] border-0 bg-action px-4 text-sm font-bold text-white hover:bg-action-deep disabled:cursor-not-allowed disabled:bg-[#E2E8F0] disabled:text-faint">
+            className="min-h-10 cursor-pointer rounded-[10px] border-0 bg-action px-3 text-sm font-bold text-white hover:bg-action-deep disabled:cursor-not-allowed disabled:bg-[#E2E8F0] disabled:text-faint">
             {published ? 'Published' : 'Publish'}
           </button>
         )}
@@ -209,14 +191,12 @@ export default function DayPlanner({ roster, me }: { roster: Roster; me: Me }) {
         onAccepted={(p) => { getDays().then(setServer); if (!dirty) setPlans(asPlans(p)); setNote({ ok: true, text: `Accepted ${p.author}'s proposal · members see it` }) }} />
 
       {!preview && <>
-      <div aria-label="Key" className="flex flex-wrap gap-x-[18px] gap-y-1.5 text-[13px] font-semibold text-muted">
-        <span className="flex items-center gap-1.5"><span className="size-3 rounded-full" style={{ background: t.accent }} />Plays</span>
-        <span className="flex items-center gap-1.5"><span className="flex size-4 items-center justify-center rounded-full text-[9px] font-extrabold text-white" style={{ background: t.accent }}>3</span>Stars</span>
-        <span className="flex items-center gap-1.5"><span className="size-3 rounded-full bg-[#DC2626]" />Missed</span>
-        <span className="flex items-center gap-1.5"><span className="size-3 rounded-full border-2 border-[#F59E0B] bg-[#FEF3C7]" />Not as in game</span>
-        <span className="flex items-center gap-1.5"><span className="rounded-full bg-[#FEF3C7] px-1 text-[11px] font-extrabold tabular-nums text-[#92400E]">−3</span>Slots under enemy TH</span>
-        <span className="flex items-center gap-1.5"><span className="font-bold tabular-nums text-[#B45309]">5!</span>Can’t reach {TARGET}★</span>
-        {live && <span className="flex items-center gap-1.5"><span className="h-2.5 w-3.5 rounded-[3px] bg-moved" />Changed</span>}
+      <div aria-label="Key" className={KEY_ROW}>
+        <span className="flex items-center gap-1"><span className="size-2.5 rounded-full bg-[#DC2626]" />Missed</span>
+        <span className="flex items-center gap-1"><span className="size-2.5 rounded-full border-2 border-[#F59E0B] bg-[#FEF3C7]" />Differs</span>
+        <span className="flex items-center gap-1"><span className="rounded-full bg-[#FEF3C7] px-1 text-[11px] font-extrabold tabular-nums text-[#92400E]">−3</span>Under TH</span>
+        <span className="flex items-center gap-1"><span className="font-bold tabular-nums text-[#B45309]">5!</span>Under {TARGET}★</span>
+        {live && <span className="flex items-center gap-1"><span className="h-2.5 w-3.5 rounded-[3px] bg-moved" />Changed</span>}
       </div>
 
       <section className="max-h-[calc(100dvh-230px)] w-full max-w-[900px] overflow-auto rounded-[18px] border border-line bg-white">

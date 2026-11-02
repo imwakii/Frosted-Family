@@ -7,7 +7,7 @@ import { useClans } from '../clash'
 import LeadersTools from './LeadersTools'
 import DayPlanner from './DayPlanner'
 import { ProposalBar, useProposals } from './Proposals'
-import { Arrow, ClanBadge, StatusDot, StatusKey, SubNav, Th } from './ui'
+import { Arrow, ClanBadge, ClanSwitch, StatusDot, StatusKey, SubNav, Th } from './ui'
 
 // Allocation rules: docs/specs/02-allocation-rules.md.
 const MAKI = '#CGJ8YR8J'
@@ -216,6 +216,7 @@ function Plan({ roster, me }: { roster: Roster; me: Me }) {
   // The wrapper ends the toolbar's stickiness at the bottom of the board.
   return (
     <div>
+      <div className="px-4 pt-1 md:hidden"><ClanSwitch value={phoneClan} onPick={setPhoneClan} /></div>
       <div className="sticky top-0 z-20 border-b border-line bg-white/95 backdrop-blur md:static md:border-0 md:bg-transparent md:backdrop-blur-none">
         <div className="mx-auto flex max-w-[1360px] flex-wrap items-center gap-2 px-[clamp(16px,3vw,32px)] py-2.5 md:pt-5">
           <span className="rounded-full bg-[#EEF1F6] px-3 py-1.5 text-[13px] font-bold text-ink-2">{changeLabel}</span>
@@ -249,7 +250,7 @@ function Plan({ roster, me }: { roster: Roster; me: Me }) {
         {result && (
           <div role="status" className={`flex min-h-12 items-center gap-2.5 rounded-[14px] px-4 text-sm font-bold ${result.ok ? 'bg-[#DCFCE7] text-[#166534]' : 'bg-[#FEF3C7] text-[#92400E]'}`}>
             <span className="flex-auto">{result.ok ? `Published · ${result.n} ${result.n === 1 ? 'change' : 'changes'} on CWL` : result.why}</span>
-            {result.ok && <a href="#/" className="flex min-h-9 items-center rounded-[9px] bg-white px-3.5 text-[#166534] no-underline">Open CWL</a>}
+            {result.ok && <a href="#/cwl" className="flex min-h-9 items-center rounded-[9px] bg-white px-3.5 text-[#166534] no-underline">Open CWL</a>}
           </div>
         )}
 
@@ -262,17 +263,7 @@ function Plan({ roster, me }: { roster: Roster; me: Me }) {
           onBuild={(p: Proposal<LineupBody>) => setMine(toMoves(p.body.moves))}
           onAccepted={() => window.location.reload()} />
 
-        <StatusKey extra={<span className="flex items-center gap-1.5"><span className="h-2.5 w-3.5 rounded-[3px] bg-moved" />Moved</span>} />
-
-        <nav aria-label="Clan" className="grid grid-cols-3 gap-1 rounded-xl bg-well p-1 md:hidden">
-          {cols.map((c) => (
-            <button key={c.clan} type="button" aria-pressed={c.clan === phoneClan} onClick={() => setPhoneClan(c.clan)}
-              className={`min-h-[42px] cursor-pointer rounded-[9px] border-0 text-[15px] font-bold ${c.clan === phoneClan ? 'bg-white shadow-[0_1px_3px_rgba(15,23,42,.12)]' : 'bg-transparent text-muted'}`}
-              style={c.clan === phoneClan ? { color: CLAN[c.clan].deep } : undefined}>
-              {c.clan} <span className={`font-semibold ${c.count > CAP ? 'text-[#B91C1C]' : 'opacity-60'}`}>{c.count}</span>
-            </button>
-          ))}
-        </nav>
+        <StatusKey className="max-md:!gap-x-2 max-md:!text-[11px]" only={['active', 'highMiss', 'inactive', 'thin']} extra={<span className="flex flex-none items-center gap-1 md:gap-1.5"><span className="h-2.5 w-3.5 rounded-[3px] bg-moved" />Moved</span>} />
 
         <div className="grid items-start gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr))]">
           {cols.map((c) => {
@@ -281,10 +272,12 @@ function Plan({ roster, me }: { roster: Roster; me: Me }) {
               <section key={c.clan} aria-label={c.clan} className={`overflow-hidden rounded-[18px] border border-line bg-white ${c.clan === phoneClan ? '' : 'max-md:hidden'}`}>
                 <div className="flex items-end justify-between p-4" style={{ background: t.tint }}>
                   <div className="flex flex-col gap-0.5">
-                    <h2 className="font-display m-0 flex items-center gap-2 text-[22px] leading-none" style={{ color: t.deep }}><ClanBadge src={clans[c.clan]?.badge} size={30} />{c.clan}</h2>
+                    <h2 className="font-display m-0 flex items-center gap-2 text-[22px] leading-none" style={{ color: t.deep }}><ClanBadge src={clans[c.clan]?.badge} size={30} />{clans[c.clan]?.name ?? `Frosted ${c.clan}`}</h2>
                     <span className={`text-[13px] font-semibold ${c.count > CAP ? 'text-[#B91C1C]' : 'text-muted'}`}>{c.count}/{CAP}</span>
                   </div>
                   {c.inCwl && (
+                    <div className="flex flex-none flex-col items-end">
+                    <span className="text-[11px] font-bold uppercase tracking-[0.06em] text-muted">Core avg</span>
                     <div className="flex items-baseline gap-2">
                       {Math.abs(c.delta) >= 0.05 && (
                         <span className="text-[13px] font-bold tabular-nums" style={{ color: c.delta > 0 ? '#15803D' : '#C2410C' }}>
@@ -292,6 +285,7 @@ function Plan({ roster, me }: { roster: Roster; me: Me }) {
                         </span>
                       )}
                       <span className="font-display text-[26px] leading-[1.05] tabular-nums" style={{ color: t.deep }}>{c.avg === null ? '—' : c.avg.toFixed(1)}</span>
+                    </div>
                     </div>
                   )}
                 </div>

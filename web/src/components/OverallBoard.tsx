@@ -6,7 +6,7 @@ import { CLAN, CLANS } from '../theme'
 import type { ClanName } from '../types'
 import { norm, SearchBox } from './CwlTab'
 import { CategoryNav, ClanFilter, Empty, useClanPick } from './ExploreTab'
-import { Star, Th } from './ui'
+import { KEY_ROW, Star, Th } from './ui'
 
 type Row = { tag: string; name: string; clan: ClanName; th: number | null; overall: number; cats: Partial<Record<Cat, number>> }
 
@@ -42,7 +42,6 @@ export default function OverallBoard({ q, setQ, wide }: { q: string; setQ: (v: s
   const [sort, setSort] = useState<Cat | 'overall'>('overall')
   const nq = norm(q.trim())
 
-  const counts = Object.fromEntries(CLANS.map((k) => [k, all.filter((r) => r.clan === k).length]))
   const key = (r: Row) => (sort === 'overall' ? r.overall : r.cats[sort] ?? -1)
   const ranked = all.filter((r) => clan === 'All' || r.clan === clan).sort((a, b) => key(b) - key(a) || b.overall - a.overall || a.name.localeCompare(b.name))
   const place = competitionRanks(ranked, (r) => Math.round(key(r) * 10) / 10)
@@ -109,13 +108,20 @@ export default function OverallBoard({ q, setQ, wide }: { q: string; setQ: (v: s
     </ol>
   )
 
+  const legend = (
+    <div aria-label="Key" className={KEY_ROW}>
+      <span>% of max levels</span>
+      {CLANS.map((k) => <span key={k} className="flex items-center gap-1"><span className="h-1.5 w-3 rounded-full" style={{ background: CLAN[k].deep }} />{k}</span>)}
+    </div>
+  )
+
   if (wide) {
     return (
       <main className="mx-auto flex max-w-[1360px] flex-col gap-3.5 px-[clamp(16px,3vw,32px)] pb-12 pt-5">
+        <ClanFilter clan={clan} setClan={setClan} />
         <div className="w-full max-w-[400px]"><SearchBox q={q} setQ={setQ} onEnter={enter} /></div>
         <div className="flex flex-wrap items-center gap-2.5">
           <CategoryNav current="overall" wide />
-          <ClanFilter clan={clan} setClan={setClan} counts={counts} wide />
         </div>
         <div className="flex flex-wrap items-center gap-2 text-sm text-muted">
           {all.length > 0 && (
@@ -126,15 +132,17 @@ export default function OverallBoard({ q, setQ, wide }: { q: string; setQ: (v: s
             </>
           )}
         </div>
+        {legend}
         {board}
       </main>
     )
   }
   return (
     <div className="flex flex-col gap-2.5 pb-6">
+      <div className="px-4 pt-1"><ClanFilter clan={clan} setClan={setClan} /></div>
       <div className="sticky top-0 z-10 bg-page px-4 pb-2 pt-1"><SearchBox q={q} setQ={setQ} onEnter={enter} /></div>
-      <div className="px-4"><ClanFilter clan={clan} setClan={setClan} counts={counts} wide={false} /></div>
       <CategoryNav current="overall" wide={false} />
+      <div className="px-4">{legend}</div>
       <div className="px-4">{board}</div>
     </div>
   )

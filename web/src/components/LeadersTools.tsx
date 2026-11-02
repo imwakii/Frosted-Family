@@ -1,12 +1,11 @@
 import { useState } from 'react'
-import { useClans } from '../clash'
 import { loginHref } from '../auth'
 import { ACTIVITY_LABEL, type Activity, ago, type Candidate, heroChip, type Inactive, reasonLabel, useInactivity, useMakeRoom } from '../leaders'
 import { go, playerHref } from '../route'
-import { CLAN, CLANS } from '../theme'
+import { CLAN } from '../theme'
 import type { ClanName } from '../types'
 import { ClanFilter, type ClanPick, Empty } from './ExploreTab'
-import { ClanBadge, Th } from './ui'
+import { ClanSwitch, Th } from './ui'
 
 // Inactivity and Make room, below the Plan board. Open to everyone for now;
 // the decision to remove anyone stays with Ka Wai in game.
@@ -33,10 +32,9 @@ function Inactivity({ wide }: { wide: boolean }) {
   const rows = (data?.players ?? [])
     .filter((p) => clan === 'All' || p.clan === clan)
     .sort((a, b) => (b.days_inactive ?? -1) - (a.days_inactive ?? -1) || a.name.localeCompare(b.name))
-  const counts = Object.fromEntries(CLANS.map((k) => [k, (data?.players ?? []).filter((p) => p.clan === k).length]))
   return (
     <div className="flex flex-col gap-3">
-      <ClanFilter clan={clan} setClan={setClan} counts={counts} wide={wide} />
+      <ClanFilter clan={clan} setClan={setClan} />
       {denied ? <SignIn /> : !data ? <Empty loading={loading} /> : wide ? (
         <section className="overflow-auto rounded-[18px] border border-line bg-white">
           <table className="min-w-full border-separate border-spacing-0 text-sm">
@@ -108,22 +106,13 @@ function groupByActivity(players: Candidate[]) {
 const SLOT: Record<string, string> = { CORE: 'Core', SUB: 'Sub', 'Sitting Out': 'Not in', OUT: 'Not in' }
 
 function MakeRoom() {
-  const clans = useClans()
   const [clan, setClan] = useState<ClanName>('Cake')
   const { data, loading, denied } = useMakeRoom(clan, true)
   const full = data && data.members >= data.cap
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div role="group" aria-label="Clan" className="grid grid-cols-3 gap-1 rounded-xl bg-well p-1">
-          {CLANS.map((k) => (
-            <button key={k} type="button" aria-pressed={k === clan} onClick={() => setClan(k)}
-              className={`flex min-h-10 cursor-pointer items-center justify-center gap-1 rounded-[9px] border-0 px-3 text-sm font-bold ${k === clan ? 'bg-white shadow-[0_1px_3px_rgba(15,23,42,.12)]' : 'bg-transparent text-muted'}`}
-              style={k === clan ? { color: CLAN[k].deep } : undefined}>
-              <ClanBadge src={clans[k]?.badge} size={20} />{k}
-            </button>
-          ))}
-        </div>
+        <ClanSwitch value={clan} onPick={setClan} />
         {data && (
           <span className={`rounded-full px-3 py-1.5 text-[13px] font-bold tabular-nums ${full ? 'bg-[#FEF3C7] text-[#92400E]' : 'bg-[#EEF1F6] text-ink-2'}`}>
             {data.members}/{data.cap} members

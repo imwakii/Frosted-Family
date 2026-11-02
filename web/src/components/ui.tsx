@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
-import { leagueIcon, thIcon, unitIcon } from '../clash'
-import { CLAN, STATUS } from '../theme'
+import { leagueIcon, thIcon, unitIcon, useClans } from '../clash'
+import { CLAN, CLANS, STATUS } from '../theme'
 import type { ClanName, LiveWar, Status } from '../types'
 
 export function Th({ th, size = 'sm' }: { th: number | null; size?: 'sm' | 'lg' }) {
@@ -64,6 +64,9 @@ function Dot({ status }: { status: Status }) {
   return <span className="size-2 flex-none rounded-full" style={status === 'thin' ? { boxShadow: `inset 0 0 0 1.5px ${s.dot}` } : { background: s.dot }} />
 }
 
+/** Every legend's row: one line, directly above the list it explains. On a very narrow screen it scrolls rather than wraps. */
+export const KEY_ROW = 'flex gap-x-2.5 gap-y-1.5 overflow-x-auto whitespace-nowrap text-xs font-semibold text-muted [scrollbar-width:none] md:flex-wrap md:gap-x-[18px] md:overflow-visible md:text-[13px]'
+
 /** A member's status as a dot; StatusKey says what each colour means. */
 export function StatusDot({ status }: { status: Status }) {
   return <span title={STATUS[status].text} className="flex w-2 flex-none justify-center"><Dot status={status} /><span className="sr-only">{STATUS[status].text}</span></span>
@@ -71,7 +74,7 @@ export function StatusDot({ status }: { status: Status }) {
 
 export function StatusKey({ only, extra, className = '' }: { only?: Status[]; extra?: ReactNode; className?: string }) {
   return (
-    <div aria-label="Key" className={`flex gap-x-2.5 gap-y-1.5 overflow-x-auto whitespace-nowrap text-xs font-semibold text-muted [scrollbar-width:none] md:flex-wrap md:gap-x-[18px] md:overflow-visible md:text-[13px] ${className}`}>
+    <div aria-label="Key" className={`${KEY_ROW} ${className}`}>
       {(only ?? (Object.keys(STATUS) as Status[])).map((k) => <span key={k} className="flex flex-none items-center gap-1 md:gap-1.5"><Dot status={k} />{STATUS[k].text}</span>)}
       {extra}
     </div>
@@ -212,5 +215,32 @@ export function Stars({ n }: { n: number }) {
     <span aria-label={`${n} stars`} className="flex-none tracking-[-1px]">
       {[0, 1, 2].map((i) => <span key={i} className={i < n ? 'text-gold' : 'text-[#AEB7C4]'}>{i < n ? '★' : '☆'}</span>)}
     </span>
+  )
+}
+
+/** The clan switch on every tab: same look, same place, directly under the sub-tabs. */
+export function ClanSwitch<T extends ClanName | 'All'>({ value, onPick, options, live = [], flag = [], off = [] }: {
+  value: T; onPick: (c: T) => void; options?: readonly T[]; live?: ClanName[]; flag?: ClanName[]; off?: ClanName[]
+}) {
+  const clans = useClans()
+  const list = (options ?? CLANS) as readonly T[]
+  return (
+    <nav aria-label="Clan" className="grid w-full max-w-[480px] gap-1 rounded-xl bg-well p-1"
+      style={{ gridTemplateColumns: list.map((k) => (k === 'All' ? '.6fr' : '1fr')).join(' ') }}>
+      {list.map((k) => {
+        const on = k === value
+        const clan = k === 'All' ? null : (k as ClanName)
+        return (
+          <button key={k} type="button" aria-pressed={on} disabled={!!clan && off.includes(clan)} onClick={() => onPick(k)}
+            className={`flex min-h-[42px] min-w-0 cursor-pointer items-center justify-center gap-1 rounded-[9px] border-0 px-1 text-[15px] font-bold disabled:cursor-default disabled:opacity-40 ${on ? 'bg-white shadow-[0_1px_3px_rgba(15,23,42,.12)]' : 'bg-transparent text-muted'}`}
+            style={on && clan ? { color: CLAN[clan].deep } : undefined}>
+            {clan && <ClanBadge src={clans[clan]?.badge} size={20} />}
+            {k}
+            {clan && live.includes(clan) && <span className="ff-live size-1.5 flex-none rounded bg-[#16A34A]" />}
+            {clan && flag.includes(clan) && <span title="A day is not 15" className="size-2 flex-none rounded-full bg-[#DC2626]" />}
+          </button>
+        )
+      })}
+    </nav>
   )
 }

@@ -2,9 +2,9 @@ import { type CSSProperties, useEffect, useState } from 'react'
 import { useYou, YouTag } from './You'
 import { useClans } from '../clash'
 import { ago, type ClanWar, useWarBoard, type WarAttack, type WarBase } from '../leaders'
-import { CLAN } from '../theme'
+import { CLAN, CLANS } from '../theme'
 import type { ClanName } from '../types'
-import { ClanBadge, Stars, Th, useNow } from './ui'
+import { ClanBadge, ClanSwitch, KEY_ROW, Stars, Th, useNow } from './ui'
 
 // Each clan's war, side by side: our bases and badge on the left, the enemy's on the right, facing by map position.
 // The attack log below says who hit whom, how well and roughly when; tapping a base narrows it to that base.
@@ -163,6 +163,11 @@ function WarBoard({ clan, war, now }: { clan: ClanName; war: ClanWar; now: numbe
               Open bases {open.length}
             </button>
         </div>
+        <div aria-label="Key" className={`${KEY_ROW} border-b border-hair px-3 py-2`}>
+          <span className="flex items-center gap-1.5"><span className="size-2 rounded-full border-[1.5px] border-[#94A3B8]" />Attack left</span>
+          <span className="flex items-center gap-1.5"><span className="size-2 rounded-full bg-[#16A34A]" />Used</span>
+          <span className="flex items-center gap-1.5"><span className="text-gold">★</span>Best on this base</span>
+        </div>
         <ol className="m-0 list-none px-1.5 py-1">
           {rows.map((p, i) => (
             <li key={p.position} className={`grid grid-cols-[minmax(0,1fr)_18px_minmax(0,1fr)] items-center gap-0.5 ${i ? 'border-t border-hair' : ''}`}>
@@ -172,13 +177,6 @@ function WarBoard({ clan, war, now }: { clan: ClanName; war: ClanWar; now: numbe
             </li>
           ))}
         </ol>
-        <div aria-label="Key" className="flex flex-wrap justify-center gap-x-[18px] gap-y-1 border-t border-hair px-3 py-2.5 text-xs font-semibold text-muted">
-          {live && <>
-            <span className="flex items-center gap-1.5"><span className="size-2 rounded-full border-[1.5px] border-[#94A3B8]" />Attack left</span>
-            <span className="flex items-center gap-1.5"><span className="size-2 rounded-full bg-[#16A34A]" />Used</span>
-          </>}
-          <span className="flex items-center gap-1.5"><span className="text-gold">★</span>Best on this base</span>
-        </div>
       </section>
 
       {!prep && (
@@ -216,19 +214,10 @@ export default function WarTab({ wide }: { wide: boolean }) {
     ?? wars.find((c) => c.war!.state !== 'warEnded' && c.war!.pairs.some((p) => p.us && yous.includes(p.us.tag)))
     ?? wars.find((c) => c.war!.state === 'inWar') ?? wars[0]
   return (
-    <main className={wide ? 'mx-auto flex max-w-[1360px] flex-col gap-4 px-[clamp(16px,3vw,32px)] pb-12 pt-5' : 'flex flex-col gap-3 px-4 pb-6 pt-3'}>
-      {wars.length > 1 && (
-        <nav aria-label="Clan" className="grid w-full max-w-[480px] gap-1 rounded-xl bg-well p-1" style={{ gridTemplateColumns: `repeat(${wars.length}, 1fr)` }}>
-          {wars.map((c) => (
-            <button key={c.clan} type="button" aria-pressed={c.clan === clan?.clan} onClick={() => setPick(c.clan)}
-              className={`flex min-h-[42px] cursor-pointer items-center justify-center gap-1.5 rounded-[9px] border-0 text-[15px] font-bold ${c.clan === clan?.clan ? 'bg-white shadow-[0_1px_3px_rgba(15,23,42,.12)]' : 'bg-transparent text-muted'}`}
-              style={c.clan === clan?.clan ? { color: CLAN[c.clan].deep } : undefined}>
-              {c.clan}
-              {c.war!.state === 'inWar' && <span className="ff-live size-1.5 rounded bg-[#16A34A]" />}
-            </button>
-          ))}
-        </nav>
-      )}
+    <main className={wide ? 'mx-auto flex max-w-[1360px] flex-col gap-4 px-[clamp(16px,3vw,32px)] pb-12 pt-5' : 'flex flex-col gap-3 px-4 pb-6 pt-1'}>
+      <ClanSwitch value={clan?.clan ?? 'Fire'} onPick={setPick}
+        live={wars.filter((c) => c.war!.state === 'inWar').map((c) => c.clan)}
+        off={data ? CLANS.filter((k) => !wars.some((c) => c.clan === k)) : []} />
       {!data ? (
         loading ? <div aria-busy="true" className="h-64 animate-pulse rounded-2xl bg-well" /> : <div className="rounded-2xl border border-line bg-white p-5 text-sm text-faint">Unavailable right now</div>
       ) : !clan ? (

@@ -73,19 +73,26 @@ export function JumpToYou({ wide }: { wide: boolean }) {
   )
 }
 
+/** Whether Lineups is still asking which member this is. */
+export function useAsksYou(roster: Roster) {
+  const { yous } = useYou()
+  const skipped = useSyncExternalStore((l) => { listeners.add(l); return () => { listeners.delete(l) } }, () => !!read(SKIP_KEY))
+  return !skipped && !roster.players.some((p) => yous.includes(p.tag))
+}
+
 /** Asked once: which member this is; skipping it stays skipped on this device. With onDone, it adds another account. */
 export function YouPrompt({ roster, onDone }: { roster: Roster; onDone?: () => void }) {
   const { yous, addYou } = useYou()
-  const [skipped, setSkipped] = useState(() => !!read(SKIP_KEY))
+  const asks = useAsksYou(roster)
   const [q, setQ] = useState('')
-  if (!onDone && (skipped || roster.players.some((p) => yous.includes(p.tag)))) return null
+  if (!onDone && !asks) return null
   const n = q.trim().toLowerCase()
   const hits = n ? roster.players.filter((p) => !yous.includes(p.tag) && p.name.toLowerCase().includes(n)).slice(0, 5) : []
   return (
     <section aria-label={onDone ? 'Add another account' : 'Which one is you?'} className="flex flex-col gap-2 rounded-2xl border border-line bg-white p-3">
       <div className="flex items-center justify-between gap-2">
         <span className="text-[15px] font-bold text-ink">{onDone ? 'Add another account' : 'Which one is you?'}</span>
-        <button type="button" aria-label={onDone ? 'Close' : 'Skip'} onClick={() => { if (onDone) { onDone(); return } write(SKIP_KEY, '1'); setSkipped(true) }}
+        <button type="button" aria-label={onDone ? 'Close' : 'Skip'} onClick={() => { if (onDone) { onDone(); return } write(SKIP_KEY, '1'); listeners.forEach((l) => l()) }}
           className="flex size-8 flex-none cursor-pointer items-center justify-center rounded-full border-0 bg-transparent text-lg leading-none text-faint hover:bg-page hover:text-ink">×</button>
       </div>
       <div className="relative min-w-0">

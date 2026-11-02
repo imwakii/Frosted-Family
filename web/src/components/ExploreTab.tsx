@@ -1,6 +1,5 @@
 import { YouTag } from './You'
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
-import { useClans } from '../clash'
 import { groupUnits } from '../equipment'
 import OverallBoard from './OverallBoard'
 import RankBoard, { type RankCol } from './RankBoard'
@@ -11,7 +10,7 @@ import { CLAN, CLANS } from '../theme'
 import type { ClanName } from '../types'
 import { norm, SearchBox } from './CwlTab'
 import ClansBoard from './ClansBoard'
-import { ClanBadge, Star, StatusKey, SubNav, Th, UnitIcon } from './ui'
+import { ClanSwitch, Star, StatusKey, SubNav, Th, UnitIcon } from './ui'
 
 export type ClanPick = ClanName | 'All'
 type BoardProps = { q: string; setQ: (v: string) => void; wide: boolean }
@@ -76,20 +75,8 @@ export function CategoryNav({ current, wide }: { current: string; wide: boolean 
 const read = (k: string) => { try { return sessionStorage.getItem(k) } catch { return null } }
 const write = (k: string, v: string) => { try { sessionStorage.setItem(k, v) } catch { /* private mode */ } }
 
-export function ClanFilter({ clan, setClan, counts, wide }: { clan: ClanPick; setClan: (c: ClanPick) => void; counts: Record<string, number>; wide: boolean }) {
-  const clans = useClans()
-  return (
-    <div role="group" aria-label="Clan" className={`gap-1 rounded-xl bg-well p-1 ${wide ? 'inline-grid flex-none auto-cols-max grid-flow-col' : 'grid grid-cols-4'}`}>
-      {(['All', ...CLANS] as const).map((k) => (
-        <button key={k} type="button" aria-pressed={k === clan} onClick={() => setClan(k)}
-          className={`flex min-h-10 cursor-pointer items-center justify-center gap-1 rounded-[9px] border-0 text-sm font-bold ${wide ? 'px-3' : 'px-1'} ${k === clan ? 'bg-white shadow-[0_1px_3px_rgba(15,23,42,.12)]' : 'bg-transparent text-muted'}`}
-          style={k === clan && k !== 'All' ? { color: CLAN[k].deep } : undefined}>
-          {k !== 'All' && <ClanBadge src={clans[k]?.badge} size={20} />}
-          {k}{k !== 'All' && counts[k] ? <span className="font-semibold opacity-60">{counts[k]}</span> : null}
-        </button>
-      ))}
-    </div>
-  )
+export function ClanFilter({ clan, setClan }: { clan: ClanPick; setClan: (c: ClanPick) => void }) {
+  return <ClanSwitch<ClanPick> value={clan} onPick={setClan} options={['All', ...CLANS]} />
 }
 
 export function Empty({ loading }: { loading: boolean }) {
@@ -136,7 +123,6 @@ function MatrixBoard({ cat, q, setQ, wide }: BoardProps & { cat: Cat }) {
   const divider = (i: number) => (opensGroup.has(i) ? 'border-l border-l-line' : '')
   const nq = norm(q.trim())
   const pool = useMemo(() => (data?.players ?? []).filter((p) => clan === 'All' || p.clan === clan), [data, clan])
-  const counts = Object.fromEntries(CLANS.map((k) => [k, (data?.players ?? []).filter((p) => p.clan === k).length]))
   const matchQ = (p: MatrixPlayer) => !nq || norm(p.name).includes(nq) || p.tag.toLowerCase().includes(nq)
   const stamp = data?.as_of ? `${new Date(data.as_of).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'UTC' })} UTC` : null
 
@@ -156,10 +142,10 @@ function MatrixBoard({ cat, q, setQ, wide }: BoardProps & { cat: Cat }) {
 
     return (
       <main className="mx-auto flex max-w-[1360px] flex-col gap-3.5 px-[clamp(16px,3vw,32px)] pb-12 pt-5">
+        <ClanFilter clan={clan} setClan={setClan} />
         <div className="w-full max-w-[400px]"><SearchBox q={q} setQ={setQ} onEnter={() => { if (shown[0]) go.to(playerHref(shown[0].p.tag)) }} /></div>
         <div className="flex flex-wrap items-center gap-2.5">
           <CategoryNav current={cat} wide />
-          <ClanFilter clan={clan} setClan={setClan} counts={counts} wide />
         </div>
         <div className="flex flex-wrap items-center gap-2 text-sm text-muted">
           {data && (
@@ -255,10 +241,10 @@ function MatrixBoard({ cat, q, setQ, wide }: BoardProps & { cat: Cat }) {
 
   return (
     <div className="flex flex-col gap-2.5 pb-6">
+      <div className="px-4 pt-1"><ClanFilter clan={clan} setClan={setClan} /></div>
       <div className="sticky top-0 z-10 bg-page px-4 pb-2 pt-1">
         <SearchBox q={q} setQ={setQ} onEnter={() => { if (shown[0]) go.to(playerHref(shown[0].p.tag)) }} />
       </div>
-      <div className="px-4"><ClanFilter clan={clan} setClan={setClan} counts={counts} wide={false} /></div>
       <CategoryNav current={cat} wide={false} />
       {!data || !u ? <div className="px-4"><Empty loading={loading} /></div> : (
         <>
@@ -350,7 +336,6 @@ function WarBoardView({ q, setQ, wide }: BoardProps) {
   const pick = (c: WarCol) => setSortKey(sort.key === c.key ? { key: c.key, asc: !sort.asc } : { key: c.key, asc: !!c.low })
 
   const nq = norm(q.trim())
-  const counts = Object.fromEntries(CLANS.map((k) => [k, (data?.players ?? []).filter((p) => p.clan === k).length]))
   const ranked = useMemo(() => {
     if (!data || !col) return []
     return data.players
@@ -419,10 +404,8 @@ function WarBoardView({ q, setQ, wide }: BoardProps) {
   if (wide) {
     return (
       <main className="mx-auto flex max-w-[1360px] flex-col gap-3.5 px-[clamp(16px,3vw,32px)] pb-12 pt-5">
+        <ClanFilter clan={clan} setClan={setClan} />
         <div className="w-full max-w-[400px]"><SearchBox q={q} setQ={setQ} onEnter={enter} /></div>
-        <div className="flex flex-wrap items-center gap-2.5">
-          <ClanFilter clan={clan} setClan={setClan} counts={counts} wide />
-        </div>
         <div className="flex flex-wrap items-center gap-3">
           {scopeToggle}{sinceChip}{key}
         </div>
@@ -496,8 +479,8 @@ function WarBoardView({ q, setQ, wide }: BoardProps) {
   const rest = col ? cols.filter((c) => c.key !== col.key).slice(0, 3) : []
   return (
     <div className="flex flex-col gap-2.5 pb-6">
+      <div className="px-4 pt-1"><ClanFilter clan={clan} setClan={setClan} /></div>
       <div className="sticky top-0 z-10 bg-page px-4 pb-2 pt-1"><SearchBox q={q} setQ={setQ} onEnter={enter} /></div>
-      <div className="px-4"><ClanFilter clan={clan} setClan={setClan} counts={counts} wide={false} /></div>
       <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-4">{scopeToggle}{sinceChip}{key}</div>
       {!data || !col ? <div className="px-4"><Empty loading={loading} /></div> : (
         <>

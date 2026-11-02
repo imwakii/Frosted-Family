@@ -2,7 +2,7 @@ import { YouTag } from './You'
 import { useEffect, useMemo, useState } from 'react'
 import { competitionRanks } from '../explore'
 import { go, playerHref } from '../route'
-import { CLAN, CLANS } from '../theme'
+import { CLAN } from '../theme'
 import type { ClanName } from '../types'
 import { norm, SearchBox } from './CwlTab'
 import { ClanFilter, Empty, useClanPick } from './ExploreTab'
@@ -43,7 +43,6 @@ export default function RankBoard({ kind, cols, note, q, setQ, wide }: {
   const col = cols.find((c) => c.key === sortKey) ?? cols[0]
   const nq = norm(q.trim())
   const all = useMemo(() => data?.players ?? [], [data])
-  const counts = Object.fromEntries(CLANS.map((k) => [k, all.filter((r) => r.clan === k).length]))
   const ranked = all.filter((r) => clan === 'All' || r.clan === clan)
     .map((r) => ({ r, v: col.value(r) }))
     .sort((a, b) => (a.v === null ? (b.v === null ? 0 : 1) : b.v === null ? -1 : b.v - a.v) || a.r.name.localeCompare(b.r.name))
@@ -119,8 +118,8 @@ export default function RankBoard({ kind, cols, note, q, setQ, wide }: {
   if (wide) {
     return (
       <main className="mx-auto flex max-w-[1360px] flex-col gap-3.5 px-[clamp(16px,3vw,32px)] pb-12 pt-5">
+        <ClanFilter clan={clan} setClan={setClan} />
         <div className="w-full max-w-[400px]"><SearchBox q={q} setQ={setQ} onEnter={enter} /></div>
-        <div className="flex flex-wrap items-center gap-2.5"><ClanFilter clan={clan} setClan={setClan} counts={counts} wide /></div>
         <div className="flex flex-wrap items-center gap-2 text-sm text-muted">
           {all.length > 0 && chips}
         </div>
@@ -130,8 +129,8 @@ export default function RankBoard({ kind, cols, note, q, setQ, wide }: {
   }
   return (
     <div className="flex flex-col gap-2.5 pb-6">
+      <div className="px-4 pt-1"><ClanFilter clan={clan} setClan={setClan} /></div>
       <div className="sticky top-0 z-10 bg-page px-4 pb-2 pt-1"><SearchBox q={q} setQ={setQ} onEnter={enter} /></div>
-      <div className="px-4"><ClanFilter clan={clan} setClan={setClan} counts={counts} wide={false} /></div>
       <div role="group" aria-label="Rank by" className="flex gap-1 overflow-x-auto px-4 [scrollbar-width:none]">
         {cols.map((c) => (
           <button key={c.key} type="button" aria-pressed={c.key === col.key} onClick={() => setSortKey(c.key)}

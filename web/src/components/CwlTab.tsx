@@ -4,8 +4,8 @@ import { playerHref } from '../route'
 import type { ClanName, LiveWar, Player, Roster } from '../types'
 import { useClans, type ClanMeta } from '../clash'
 import { useWarBoard } from '../leaders'
-import { useYou, YouPrompt, YouTag } from './You'
-import { ClanBadge, Eyebrow, LeaguePill, PlayDays, SearchIcon, StatusDot, StatusKey, Th, useNow, WarPill } from './ui'
+import { useAsksYou, useYou, YouPrompt, YouTag } from './You'
+import { ClanBadge, ClanSwitch, Eyebrow, LeaguePill, PlayDays, SearchIcon, StatusDot, StatusKey, Th, useNow, WarPill } from './ui'
 
 type Props = { roster: Roster; war: Partial<Record<ClanName, LiveWar | null>>; wide: boolean; q: string; setQ: (v: string) => void }
 
@@ -302,19 +302,16 @@ function Phone({ roster, war, q, setQ }: Omit<Props, 'wide'>) {
   const results = nq ? roster.players.filter((p) => matches(p, nq)).slice(0, 12) : []
   const clans = useClans()
   const { planned, day, setDay, live } = useDay(roster, war)
-  // Switching clans while scrolled into a list starts the new list at the top, under the clan switch.
-  const clanNav = useRef<HTMLElement>(null)
-  const pick = (k: ClanName) => {
-    setClan(k)
-    const top = clanNav.current ? clanNav.current.getBoundingClientRect().top + window.scrollY - 80 : 0
-    if (window.scrollY > top) window.scrollTo({ top })
-  }
+  const asks = useAsksYou(roster)
 
   return (
     <>
-      <div className="sticky top-0 z-10 bg-page px-4 pb-3 pt-1">
-        <SearchBox q={q} setQ={setQ} onEnter={() => { if (results[0]) window.location.hash = href(results[0]) }} />
-      </div>
+      <div className="px-4 pb-2.5 pt-1"><ClanSwitch value={clan} onPick={setClan} /></div>
+      {!asks && (
+        <div className="sticky top-0 z-10 bg-page px-4 pb-3 pt-1">
+          <SearchBox q={q} setQ={setQ} onEnter={() => { if (results[0]) window.location.hash = href(results[0]) }} />
+        </div>
+      )}
       <div className="flex flex-col gap-3 px-4 pb-6">
         {nq ? (
           <ul className="m-0 list-none rounded-2xl border border-line bg-white py-1">
@@ -343,16 +340,6 @@ function Phone({ roster, war, q, setQ }: Omit<Props, 'wide'>) {
             <YouPrompt roster={roster} />
             <YouPanel roster={roster} day={live} />
             {planned && <DayPicker day={day} setDay={setDay} live={live} />}
-            <nav ref={clanNav} aria-label="Clan" className="grid grid-cols-3 gap-1 rounded-xl bg-well p-1">
-              {CLANS.map((k) => (
-                <button key={k} type="button" aria-pressed={k === clan} onClick={() => pick(k)}
-                  className={`flex min-h-[42px] cursor-pointer items-center justify-center gap-1 rounded-[9px] border-0 text-[15px] font-bold ${k === clan ? 'bg-white shadow-[0_1px_3px_rgba(15,23,42,.12)]' : 'bg-transparent text-muted'}`}
-                  style={k === clan ? { color: CLAN[k].deep } : undefined}>
-                  <ClanBadge src={clans[k]?.badge} size={22} />
-                  {k}
-                </button>
-              ))}
-            </nav>
             <ClanCard roster={roster} clan={clan} meta={clans[clan]} war={war[clan]} below={<Countdown roster={roster} war={war} slim />} />
             <StatusKey className="px-1" />
             <Groups roster={roster} clan={clan} day={day} />
@@ -369,6 +356,7 @@ function Desktop({ roster, war, q, setQ }: Omit<Props, 'wide'>) {
   const clans = useClans()
   const hits = useMemo(() => (nq ? roster.players.filter((p) => matches(p, nq)) : []), [nq, roster])
   const { planned, day, setDay, live } = useDay(roster, war)
+  const asks = useAsksYou(roster)
 
   useEffect(() => {
     if (!hits.length) return
@@ -379,10 +367,10 @@ function Desktop({ roster, war, q, setQ }: Omit<Props, 'wide'>) {
   return (
     <main className="mx-auto flex max-w-[1360px] flex-col gap-4 px-[clamp(16px,3vw,32px)] pb-12 pt-5">
       <div className="flex flex-wrap items-start gap-3">
-        <div className="flex w-full max-w-[400px] flex-col gap-1">
+        {!asks && <div className="flex w-full max-w-[400px] flex-col gap-1">
           <SearchBox q={q} setQ={setQ} onEnter={() => { if (hits[0]) window.location.hash = href(hits[0]) }} />
           {nq && !hits.length && <span className="px-1 text-sm text-faint">No one by that name</span>}
-        </div>
+        </div>}
         <div className="w-full max-w-[480px] empty:hidden"><YouPanel roster={roster} day={live} /></div>
         <div className="w-full max-w-[480px] empty:hidden"><YouPrompt roster={roster} /></div>
         <div className="w-full max-w-[480px]"><Countdown roster={roster} war={war} /></div>
