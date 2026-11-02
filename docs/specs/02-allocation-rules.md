@@ -154,15 +154,17 @@ let them infer it from the war map. Whether that happened is unrecorded.
 
 Set by Ka Wai on 2 Nov 2026 for the day planner (Leaders → Day planner, `web/src/dayplan.ts`, `server/days.py`).
 
-1. Every player should get the chance at 8 stars, the CWL bonus threshold. That takes three wars if they 3-star two
-   and take at least 2 on the third; a player who falls short gets a fourth day. Days still needed are
-   ceil((8 − stars so far) / 3).
-2. Only players certain to attack get days. High-miss and inactive players, and anyone who has missed an attack this
-   season, get none from the suggestion. Unproven and new players come after proven ones.
-3. The lineup should match the enemy's town halls, slot by slot: 15 TH18s need 15 TH18s. A reliable TH17 still goes
-   ahead of a TH18 who will not attack. Weaker enemies are where lower town halls take their days.
-4. An opponent is known only once its round is drawn. Until then the suggestion uses the expected enemy: rank by rank,
-   the mean town hall of the top 15 of each group clan not yet faced.
+Keeping the league and promoting is the priority. In that order:
+
+1. Only players certain to attack get days. High-miss and inactive players, and anyone who has missed an attack this
+   season, get none from the suggestion, whatever their town hall. A reliable TH17 goes ahead of a TH18 who will not
+   attack. Unproven and new players count as one town hall weaker.
+2. The lineup should match the enemy's town halls, slot by slot: 15 TH18s need 15 TH18s. An opponent is known only
+   once its round is drawn. Until then the suggestion uses the expected enemy: rank by rank, the mean town hall of the
+   top 15 of each group clan not yet faced.
+3. 8 stars, the CWL bonus threshold, decides only between players who fit a slot equally well: the one who needs more
+   days plays. Days still needed are ceil((8 − stars so far) / 3). It never puts a weaker player ahead of a better
+   fit, so some players may not reach 8; the planner flags them.
 
 Days whose war is on or over are fixed to the game's lineup. Fire and Cake leaders may edit and save the shared draft;
 only Ka Wai publishes, and members see their days on Lineups only once he has.

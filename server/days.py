@@ -6,7 +6,7 @@ planned clan their days. A publish needs exactly 15 players on every day of each
 clan's live allocation. The leaders' view lays each day's war over the plan once the collector has it: the lineup in
 game, the opponent's town halls, each attacker's stars, and who missed their attack. For days not yet drawn it gives
 the expected enemy: rank by rank, the mean town hall of the top 15 of each group clan not yet faced. The page's Suggest
-(web/src/dayplan.ts) uses both to give every reliable player the days they need for 8 stars and to match the enemy.
+(web/src/dayplan.ts) uses both to match the enemy with reliable players, and the stars to choose between equal fits.
 """
 from __future__ import annotations
 

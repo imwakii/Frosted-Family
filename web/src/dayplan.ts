@@ -1,13 +1,12 @@
 import type { Player } from './types'
 
-// The day planner's rules, as the co-leaders run CWL:
-//   1. Every reliable player gets the days they need for 8 stars (CWL bonus eligibility): three wars, a fourth if
-//      they fall short. Days needed = ceil((8 − stars expected so far) / 3).
-//   2. Only players certain to attack: high-miss and inactive players, and anyone who missed an attack this season,
-//      get no suggested days. Unproven and new players come after proven ones.
-//   3. Each day's lineup matches the enemy's town halls, slot by slot. Being under an enemy slot costs more than being
-//      over it, and reliability comes first: a reliable TH17 goes ahead of a TH18 who will not attack.
-//      The enemy is the drawn opponent, else the expected one (`upcoming`); with neither, the highest town halls play.
+// The day planner's rules, in priority order. Keeping the league and promoting comes first:
+//   1. Only players certain to attack: high-miss and inactive players, and anyone who missed an attack this season,
+//      get no suggested days, whatever their town hall. Unproven and new players count as one town hall weaker.
+//   2. Each day's lineup matches the enemy's town halls, slot by slot. Being under an enemy slot costs more than being
+//      over it. The enemy is the drawn opponent, else the expected one (`upcoming`); with neither, the highest play.
+//   3. Between players who fit a slot equally well, the one who needs more days for 8 stars plays. Days needed =
+//      ceil((8 − stars expected so far) / 3). 8 stars never puts a weaker player ahead of a better fit.
 // Days whose war is on or over are fixed to the game's lineup; only the days still to come are suggested.
 
 export const DAYS = [1, 2, 3, 4, 5, 6, 7] as const
@@ -77,26 +76,18 @@ export function suggest(pool: Player[], wars: Wars, upcoming: number[] = []): Cl
   for (const d of DAYS) {
     if (locked(wars[d])) { out[d] = [...wars[d].lineup]; continue }
     const left = open.filter((x) => x >= d).length
-    const foe = enemy(wars[d], upcoming).slice(0, TEAM)
-    let team: Player[]
-    if (foe.length) {
-      // Anyone who needs every day left plays regardless; the other slots go, strongest enemy first, to the best fit.
-      team = ok.filter((p) => need[p.tag] >= left).sort(byStrength).slice(0, TEAM)
-      const fit = (p: Player, slot: number) => {
-        const diff = (p.th ?? 0) - slot
-        return (diff >= 0 ? diff * 0.5 : -diff) + tier(p, missed)! - 2 * (need[p.tag] / left)
-      }
-      for (const slot of foe.slice(0, TEAM - team.length)) {
-        const best = ok.filter((p) => !team.includes(p)).sort((a, b) => fit(a, slot) - fit(b, slot) || byStrength(a, b))[0]
-        if (best) team = [...team, best]
-      }
-    } else {
-      // Whoever needs days most urgently first, then the strongest of the rest.
-      const needy = ok.filter((p) => need[p.tag] > 0)
-        .sort((a, b) => need[b.tag] / left - need[a.tag] / left || byStrength(a, b))
-        .slice(0, TEAM)
-      const rest = ok.filter((p) => !needy.includes(p)).sort(byStrength).slice(0, TEAM - needy.length)
-      team = [...needy, ...rest]
+    // Strongest enemy first, each slot to the best fit. With no enemy known, an out-of-reach slot picks the highest.
+    const known = enemy(wars[d], upcoming)
+    const foe = known.length ? known.slice(0, TEAM) : Array<number>(TEAM).fill(99)
+    const fit = (p: Player, slot: number) => {
+      const diff = (p.th ?? 0) - slot
+      return (diff >= 0 ? diff * 0.5 : -diff) + tier(p, missed)!
+    }
+    const team: Player[] = []
+    for (const slot of foe) {
+      const best = ok.filter((p) => !team.includes(p))
+        .sort((a, b) => fit(a, slot) - fit(b, slot) || need[b.tag] / left - need[a.tag] / left || byStrength(a, b))[0]
+      if (best) team.push(best)
     }
     out[d] = team.map((p) => p.tag).sort()
     for (const t of out[d]) if (need[t] > 0) need[t] -= 1
