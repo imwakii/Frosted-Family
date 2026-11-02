@@ -95,29 +95,6 @@ function FromPill({ p }: { p: Player }) {
   )
 }
 
-// Members whose clan in game is not the one they are allocated to, with where to go. Hidden once everyone has moved.
-function MovesToDo({ roster }: { roster: Roster }) {
-  const todo = roster.players.filter((p) => p.inClan && p.inClan !== p.clan)
-  if (!todo.length) return null
-  return (
-    <section aria-label="Moves to make" className="flex flex-col gap-1.5 rounded-2xl border border-[#FDE68A] bg-[#FFFBEB] px-4 py-3">
-      <span className="text-[13px] font-bold text-[#92400E]">Moves to make</span>
-      <ul className="m-0 flex list-none flex-wrap gap-x-4 gap-y-1 p-0">
-        {todo.map((p) => (
-          <li key={p.tag}>
-            <a href={href(p)} className="flex items-center gap-1.5 text-sm text-ink no-underline">
-              <span className="font-semibold">{p.name}</span>
-              <span className="text-xs font-bold" style={{ color: CLAN[p.inClan!].deep }}>{p.inClan}</span>
-              <span className="text-faint">→</span>
-              <span className="text-xs font-bold" style={{ color: CLAN[p.clan].deep }}>{p.clan}</span>
-            </a>
-          </li>
-        ))}
-      </ul>
-    </section>
-  )
-}
-
 // Joined date for a new member. Lineups is public, so the suggested slot stays in the leaders' builder.
 function NewLine({ p }: { p: Player }) {
   // joined_at may be a date or a full timestamp.
@@ -281,7 +258,6 @@ function Phone({ roster, war, q, setQ }: Omit<Props, 'wide'>) {
         ) : (
           <>
             <Countdown roster={roster} war={war} />
-            <MovesToDo roster={roster} />
             {you && <YouCard roster={roster} tag={you} onClear={() => setYou(null)} />}
             <nav ref={clanNav} aria-label="Clan" className="grid grid-cols-3 gap-1 rounded-xl bg-well p-1">
               {CLANS.map((k) => (
@@ -326,7 +302,6 @@ function Desktop({ roster, war, q, setQ }: Omit<Props, 'wide'>) {
         {you && <div className="w-full max-w-[480px]"><YouCard roster={roster} tag={you} onClear={() => setYou(null)} /></div>}
         <div className="w-full max-w-[480px]"><Countdown roster={roster} war={war} /></div>
       </div>
-      <MovesToDo roster={roster} />
       <StatusKey />
       <div ref={grid} onClickCapture={(e) => { const a = (e.target as HTMLElement).closest<HTMLElement>('a[data-tag]'); if (nq && a?.dataset.tag) setYou(a.dataset.tag) }} className="grid items-start gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr))]">
         {CLANS.map((clan) => {
