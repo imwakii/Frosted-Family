@@ -24,7 +24,7 @@ const SUBS = [
   { id: 'upgrades', label: 'Upgrades', href: '#/stats/upgrades' },
   { id: 'donations', label: 'Donations', href: '#/stats/donations' },
   { id: 'capital', label: 'Capital', href: '#/stats/capital' },
-  { id: 'clans', label: 'Clans', href: '#/stats/clans' },
+  { id: 'trends', label: 'Trends', href: '#/stats/trends' },
 ]
 
 type Gift = { donated: number; received: number } | null
@@ -112,7 +112,7 @@ export default function ExploreTab({ sub, kind, ...rest }: BoardProps & { sub: s
     : sub === 'upgrades' ? <UpgradesBoard {...rest} />
     : sub === 'donations' ? <RankBoard key="donations" kind="donations" cols={DONATION_COLS} note="This season" {...rest} />
     : sub === 'capital' ? <RankBoard key="capital" kind="capital" cols={CAPITAL_COLS} {...rest} />
-    : sub === 'clans' ? (
+    : sub === 'trends' ? (
       <main className={rest.wide ? 'mx-auto max-w-[1360px] px-[clamp(16px,3vw,32px)] pb-12 pt-5' : 'pb-6 pt-3'}><ClansBoard wide={rest.wide} /></main>
     )
     : id === 'overall' ? <OverallBoard {...rest} /> : <MatrixBoard cat={id as Cat} {...rest} />

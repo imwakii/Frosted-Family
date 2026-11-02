@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react'
 export type Tab = 'cwl' | 'explore' | 'plan'
 export type Route = { tab: Tab; sub: string; kind: string | null; player: string | null; base: string }
 
-export const STATS_SUBS = ['players', 'war', 'upgrades', 'donations', 'capital', 'clans'] as const
+export const STATS_SUBS = ['players', 'war', 'upgrades', 'donations', 'capital', 'trends'] as const
 export const LEADERS_SUBS = ['builder', 'attacks', 'members'] as const
 
 function parse(): Route {
@@ -20,6 +20,7 @@ function parse(): Route {
     const sub = (LEADERS_SUBS as readonly string[]).includes(parts[1]) ? parts[1] : 'builder'
     return { tab: 'plan', sub, kind: null, player: null, base: `#/leaders/${sub}` }
   }
+  if (parts[0] === 'stats' && parts[1] === 'clans') parts = ['stats', 'trends']  // renamed 2 Nov 2026
   if (parts[0] === 'stats') {
     const sub = (STATS_SUBS as readonly string[]).includes(parts[1]) ? parts[1] : 'players'
     const kind = sub === 'players' ? parts[2] ?? null : null
