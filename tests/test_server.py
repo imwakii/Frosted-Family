@@ -438,6 +438,11 @@ def test_history_gives_first_dates_and_never_a_clan_size(conn, tmp_path, monkeyp
     assert [c["first"] for c in t["clans"][:2]] == ["2017-11-29", "2021-03-03"]
     assert {y["year"]: (y["Fire"], y["Cake"]) for y in t["years"]} == {"2017": (1, 0), "2018": (1, 0), "2021": (0, 2)}
     assert [r["tag"] for r in t["longest"]] == ["#OLD", "#NEW"]  # oldest first; a member with no record is left out
+    # Someone who joined after the import takes the collector's date; the earlier date wins if both exist.
+    with conn:
+        conn.execute("INSERT INTO member_first_seen (player_tag, first_seen) VALUES ('#NONE', '2026-11-05T01:00:00Z'), ('#OLD', '2026-10-31T20:30:04Z')")
+    assert history.since("#NONE", conn) == "2026-11-05" and history.since("#OLD", conn) == "2017-11-29"
+    assert [r["tag"] for r in history.timeline(conn)["longest"]] == ["#OLD", "#NEW", "#NONE"]
 
 
 def test_history_is_absent_without_its_file(conn, tmp_path, monkeypatch):

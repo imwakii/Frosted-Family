@@ -22,6 +22,15 @@ type History = {
 const BAR: Record<ClanName, string> = { Fire: '#E8703A', Cake: '#1D5FB0', Flakes: '#8B7BEB' }
 const fullDate = (d: string) => new Date(`${d}T00:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' })
 const LONGEST_SHOWN = 15
+// How long since a date, to the month; under a month, in days.
+function tenure(since: string, now = Date.now()) {
+  const from = new Date(`${since}T00:00:00Z`), to = new Date(now)
+  let months = (to.getUTCFullYear() - from.getUTCFullYear()) * 12 + to.getUTCMonth() - from.getUTCMonth()
+  if (to.getUTCDate() < from.getUTCDate()) months -= 1
+  if (months < 1) { const d = Math.max(0, Math.floor((now - from.getTime()) / 86_400_000)); return d ? `${d}d` : 'Today' }
+  const y = Math.floor(months / 12), m = months % 12
+  return y ? (m ? `${y}y ${m}m` : `${y}y`) : `${m}m`
+}
 
 let cached: Promise<History | null> | null = null
 const load = () => (cached ??= fetch('/api/stats/history', { headers: { Accept: 'application/json' } })
@@ -44,13 +53,15 @@ export default function HistoryBoard({ wide }: { wide: boolean }) {
   const [data, setData] = useState<History | null>(null)
   const [loading, setLoading] = useState(true)
   const [clan, setClan] = useClanPick()
+  const [showAll, setShowAll] = useState(false)
   const clans = useClans()
   useEffect(() => { let live = true; load().then((d) => { if (live) { setData(d); setLoading(false) } }); return () => { live = false } }, [])
 
   const shownClans = clan === 'All' ? CLANS : [clan]
   const total = (y: Year) => shownClans.reduce((n, c) => n + y[c], 0)
   const peak = data ? Math.max(1, ...data.years.map(total)) : 1
-  const longest = (data?.longest ?? []).filter((r) => clan === 'All' || r.clan === clan).slice(0, LONGEST_SHOWN)
+  const members = (data?.longest ?? []).filter((r) => clan === 'All' || r.clan === clan)
+  const longest = showAll ? members : members.slice(0, LONGEST_SHOWN)
 
   const body = !data ? <Empty loading={loading} /> : (
     <div className="grid w-full max-w-[1100px] items-start gap-5 lg:grid-cols-2">
@@ -114,12 +125,21 @@ export default function HistoryBoard({ wide }: { wide: boolean }) {
                 <span className="w-5 flex-none text-right text-xs font-bold tabular-nums text-faint">{i + 1}</span>
                 <Th th={r.th} />
                 <span className="min-w-0 flex-auto truncate text-[15px] font-semibold"><YouTag tag={r.tag} />{r.name} {clan === 'All' && <span className="text-[11px] font-bold" style={{ color: CLAN[r.clan].deep }}>{r.clan}</span>}</span>
-                <span className="flex-none text-xs font-bold tabular-nums text-ink-2">{fullDate(r.since)}</span>
+                <span className="flex flex-none flex-col items-end">
+                  <span className="text-[13px] font-extrabold tabular-nums text-ink">{tenure(r.since)}</span>
+                  <span className="text-[11px] font-semibold tabular-nums text-faint">{fullDate(r.since)}</span>
+                </span>
                 <RowChevron />
               </a>
             </li>
           ))}
         </ol>
+        {members.length > LONGEST_SHOWN && (
+          <button type="button" aria-expanded={showAll} onClick={() => setShowAll((v) => !v)}
+            className="min-h-11 cursor-pointer rounded-xl border border-line bg-white text-sm font-bold text-ink-2 hover:bg-page">
+            {showAll ? 'Show fewer' : `Show all ${members.length}`}
+          </button>
+        )}
       </Section>
       <p className="m-0 px-1 text-xs text-faint lg:col-span-2">Dates are when Clash of Stats first saw a player, so some are approximate and some members may be missing.</p>
     </div>

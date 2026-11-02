@@ -16,7 +16,6 @@ from pathlib import Path
 from server import profiles
 
 CLANS = {"fire": "Fire", "cake": "Cake", "flakes": "Flakes"}
-LONGEST = 30
 
 
 def path() -> Path:
@@ -44,15 +43,21 @@ def load() -> dict | None:
     return _load(str(p), p.stat().st_mtime) if p.exists() else None
 
 
-def since(tag: str) -> str | None:
-    """The first date any of our clans saw this player, or None."""
+def since(tag: str, conn=None) -> str | None:
+    """The first date any of our clans saw this player: the imported history, or with conn also what the collector
+    has seen, so someone who joined after the import still has a date."""
     h = load()
     spans = h["by_tag"].get(tag) if h else None
-    return min(r["first"] for r in spans) if spans else None
+    dates = [r["first"] for r in spans] if spans else []
+    if conn is not None:
+        seen = conn.execute("SELECT first_seen FROM member_first_seen WHERE player_tag=?", (tag,)).fetchone()
+        if seen and seen[0]:
+            dates.append(seen[0][:10])
+    return min(dates) if dates else None
 
 
 def timeline(conn) -> dict | None:
-    """GET /stats/history: each clan's start, first appearances by year, and the longest-serving current members."""
+    """GET /stats/history: each clan's start, first appearances by year, and every current member by time in the family."""
     h = load()
     if not h:
         return None
@@ -66,7 +71,7 @@ def timeline(conn) -> dict | None:
     members = profiles.current_members(conn) if conn else []
     longest = []
     for m in members:
-        first = since(m["tag"])
+        first = since(m["tag"], conn)
         if first:
             longest.append({**profiles.row(m), "since": first})
     longest.sort(key=lambda r: (r["since"], r["name"] or ""))

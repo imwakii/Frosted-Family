@@ -463,7 +463,7 @@ def player_card(conn, tag: str) -> dict:
         "record": own and {"from": record["window_from"], "attacks": own["attacks"], "missed": own["missed"],
                            "three_star_rate": own["three_star_rate"]},
         "tracked_from": api_day(first),
-        "family_since": history.since(tag),
+        "family_since": history.since(tag, conn),
         "streaks": streaks_for(conn, tag),
         "war_stars": prof["war_stars"] if prof else None, "donations": prof["donations"] if prof else None,
         "donations_received": prof["donations_received"] if prof else None,
