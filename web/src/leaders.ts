@@ -68,10 +68,24 @@ export type LogEvent = {
 }
 export type ClanLog = { since: string | null; upgrade_days: number; events: LogEvent[]; upgrades: Upgrade[] }
 
-export const useClanLog = () =>
-  useLoad<ClanLog>('log', () => (mock()
-    ? import('./devMock').then((m) => m.mockUpgrades()).then((d) => ({ since: null, upgrade_days: 14, events: [], upgrades: (d as { upgrades: Upgrade[] }).upgrades }))
-    : getJson<ClanLog>('/api/log').then((d) => (d && Array.isArray(d.events) ? d : null))))
+const loadClanLog = (): Promise<ClanLog | null> => (mock()
+  ? import('./devMock').then((m) => m.mockUpgrades()).then((d) => ({ since: null, upgrade_days: 14, events: [], upgrades: (d as { upgrades: Upgrade[] }).upgrades }))
+  : getJson<ClanLog>('/api/log').then((d) => (d && Array.isArray(d.events) ? d : null)))
+
+// Refetched every 5 minutes while open and on coming back to the app; a failed refetch keeps what is showing.
+export function useClanLog() {
+  const [state, setState] = useState<{ data: ClanLog | null; loading: boolean }>({ data: null, loading: true })
+  useEffect(() => {
+    let live = true
+    const tick = () => loadClanLog().then((data) => { if (live) setState((s) => ({ data: data ?? s.data, loading: false })) }, () => { if (live) setState((s) => ({ ...s, loading: false })) })
+    const back = () => { if (document.visibilityState === 'visible') tick() }
+    tick()
+    const id = window.setInterval(tick, 300_000)
+    document.addEventListener('visibilitychange', back)
+    return () => { live = false; window.clearInterval(id); document.removeEventListener('visibilitychange', back) }
+  }, [])
+  return state
+}
 
 export const useInactivity = (enabled: boolean) =>
   useLoad<{ players: Inactive[]; as_of: string | null }>(enabled ? 'inactivity' : null, () => (mock()

@@ -60,6 +60,18 @@ def test_a_collector_outage_is_not_everyone_leaving(conn):
     assert kinds(conn) == []
 
 
+def test_the_day_first_times_begin_is_not_everyone_coming_back(conn):
+    poll(conn, "2026-11-01T10:00:00Z", fire=["#A"])
+    poll(conn, "2026-11-01T23:50:00Z", fire=["#A"])
+    conn.execute("DELETE FROM member_day_first")  # as on a database from before the table
+    for at in ("2026-11-02T00:10:00Z", "2026-11-02T00:20:00Z", "2026-11-02T04:40:00Z"):
+        conn.execute("INSERT INTO polls VALUES (?,?,0,0)", (at, at))
+    poll(conn, "2026-11-02T04:50:00Z", fire=["#A"])
+    assert kinds(conn) == []
+    poll(conn, "2026-11-03T04:50:00Z", fire=["#A"])
+    assert kinds(conn) == []
+
+
 def test_changing_clan_is_a_move_not_a_leave(conn):
     poll(conn, "2026-11-01T10:00:00Z", fire=["#A"], cake=["#C"])
     poll(conn, "2026-11-02T10:00:00Z", cake=["#A", "#C"])

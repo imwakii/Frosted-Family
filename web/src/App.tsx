@@ -15,8 +15,8 @@ import { UtcClock } from './components/ui'
 const TABS = [
   { id: 'war', label: 'War', href: '#/war', icon: <path d="M5 5l14 14M19 5L5 19M4 16l4 4M20 16l-4 4" /> },
   { id: 'cwl', label: 'CWL', href: '#/cwl', icon: <path d="M4 6h16M4 12h16M4 18h10" /> },
-  { id: 'explore', label: 'Stats', href: '#/stats/players', icon: <path d="M5 20V10M12 20V4M19 20v-7" /> },
   { id: 'log', label: 'Log', href: '#/log', icon: <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></> },
+  { id: 'explore', label: 'Stats', href: '#/stats/players', icon: <path d="M5 20V10M12 20V4M19 20v-7" /> },
   { id: 'plan', label: 'Plan', href: '#/plan/builder', icon: <path d="M7 4v16M17 4v16M3 8h8M13 16h8" /> },
 ] as const
 

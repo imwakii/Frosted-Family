@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 
-// Hash routes: #/war (where the app opens), #/cwl, #/stats/<sub>[/<category>], #/log, #/plan/<sub>. A player sheet opens over
+// Hash routes: #/war (where the app opens), #/cwl, #/log, #/stats/<sub>[/<category>], #/plan/<sub>. A player sheet opens over
 // Lineups or Stats by appending /p/<tag without #>, and closes by dropping it.
 // Old links (#/explore/<kind>, #/leaders/<sub>) are rewritten to their new place.
 export type Tab = 'cwl' | 'explore' | 'log' | 'war' | 'plan'

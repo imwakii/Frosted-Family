@@ -18,9 +18,10 @@ ROLE_RANK = {"member": 0, "admin": 1, "coLeader": 2, "leader": 3}
 
 
 def day_firsts(conn) -> dict[tuple, str]:
+    # The table's first day began part-way through, so its times there are not when anyone's day began.
     try:
         return {(r["clan_tag"], r["player_tag"], r["snapshot_date"]): r["first_at"]
-                for r in conn.execute("SELECT * FROM member_day_first")}
+                for r in conn.execute("SELECT * FROM member_day_first WHERE snapshot_date > (SELECT MIN(snapshot_date) FROM member_day_first)")}
     except sqlite3.OperationalError:
         return {}  # the collector creates the table on its next pass
 
