@@ -1,6 +1,6 @@
 """GET /war/board: each clan's war for the War tab, public.
 
-The war being fought, else the one in preparation, else the last one for three days after it ended. During CWL a day's
+The war being fought, else the one in preparation, else the last one, however long ago it ended. During CWL a day's
 war runs while the next day's prepares, so a clan can also have a next war. Bases are paired by rank on the map (a CWL
 war's map positions have gaps, so each side is numbered 1 to its size), with a log of every attack, newest first: who hit whom, stars, damage, and when the collector first saw it,
 since the API gives no attack times. A war the collector last saw in progress whose end has passed is over,
@@ -10,11 +10,10 @@ from __future__ import annotations
 
 import json
 import sqlite3
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 from frosted.config import CLAN_TAGS
 
-ENDED_SHOWN = timedelta(days=3)
 UPSET_TH_GAP = 2           # one town hall up is routine now
 UPSETS_SHOWN = 3
 WIN_BONUS = 10             # stars a CWL win adds in the group table
@@ -36,9 +35,7 @@ def pick_war(conn, clan_tag: str, now: datetime):
             return w, False
     ended = [w for w in rows if w["end_time"]]
     ended.sort(key=lambda w: w["end_time"], reverse=True)
-    if ended and ended[0]["end_time"][:15] >= stamp(now - ENDED_SHOWN):
-        return ended[0], True
-    return None, False
+    return (ended[0], True) if ended else (None, False)
 
 
 def next_war(conn, clan_tag: str, current, now: datetime):

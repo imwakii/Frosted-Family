@@ -8,7 +8,7 @@ import { Card, COLOR, Dot, ticks, useWidth } from './ClansBoard'
 import { norm, SearchBox } from './CwlTab'
 import { ClanFilter, Empty, useClanPick } from './ExploreTab'
 import ReactionBar from './ReactionBar'
-import { chip, POINT, Th, UnitIcon, RowChevron } from './ui'
+import { chip, POINT, Th, UnitIcon } from './ui'
 import { YouTag } from './You'
 
 // GET /api/log: what has happened in the family, newest day first. Each day opens with who came, went or changed role,
@@ -218,7 +218,8 @@ function UpgradeRow({ ups, showClan, open, onToggle }: { ups: Upgrade[]; showCla
           <span className="truncate text-[13px] text-muted">{u.category === 'town_hall' ? 'Town Hall' : u.unit} {change(u)}</span>
         </span>
         {when}
-        <RowChevron />
+        {/* The same arrow as a group's, at every width, so each row's time lines up: this one opens the card. */}
+        <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#A3957C" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" className="flex-none"><path d="M9 6l6 6-6 6" /></svg>
       </a>
     )
   }

@@ -237,11 +237,11 @@ def test_war_board_pairs_bases_and_shows_who_hit_whom(conn):
     assert hit["ours"] and {"stars", "destruction", "seen_at"} <= set(hit) and hit["seen_at"]
     base = next(p["them"] for p in fire["pairs"] if p["them"] and p["them"]["tag"] == hit["defender"]["tag"])
     assert base["best"] == hit["stars"]
-    # Once its end has passed the war is over, and shown for three days.
+    # Once its end has passed the war is over, and stays until the clan's next war, however long that takes.
     later = {c["clan"]: c for c in war.board(conn, now=datetime(2026, 11, 6, tzinfo=timezone.utc))["clans"]}
     assert later["Fire"]["war"]["state"] == "warEnded"
-    gone = {c["clan"]: c for c in war.board(conn, now=datetime(2026, 12, 1, tzinfo=timezone.utc))["clans"]}
-    assert gone["Fire"]["war"] is None
+    months = {c["clan"]: c for c in war.board(conn, now=datetime(2027, 3, 1, tzinfo=timezone.utc))["clans"]}
+    assert months["Fire"]["war"]["state"] == "warEnded"
 
 
 def test_a_member_who_joins_between_profile_runs_is_fetched_on_the_next_pass(conn):
