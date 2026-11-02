@@ -13,6 +13,7 @@ from __future__ import annotations
 import json
 import os
 import sys
+from datetime import datetime, timedelta, timezone
 from urllib.parse import quote
 
 import httpx
@@ -71,7 +72,12 @@ def collect_clan(conn, api: Api, clan_tag: str, now: str) -> list[str]:
     items = members.get("items", []) if members else []
     if members is not None:
         db.upsert_members(conn, clan_tag, items, now)
+    collect_wars(conn, api, clan_tag)
+    return [m["tag"] for m in items]
 
+
+def collect_wars(conn, api: Api, clan_tag: str) -> None:
+    """One clan's current war and its league group's wars."""
     war = api.get(f"/clans/{enc(clan_tag)}/currentwar")
     # During CWL this endpoint reports notInWar; the league wars come through the group below.
     if war and war.get("state") not in (None, "notInWar") and "preparationStartTime" in war:
@@ -80,7 +86,6 @@ def collect_clan(conn, api: Api, clan_tag: str, now: str) -> list[str]:
     group = api.get(f"/clans/{enc(clan_tag)}/currentwar/leaguegroup")
     if group:
         collect_league_group(conn, api, group, clan_tag)
-    return [m["tag"] for m in items]
 
 
 def collect_league_group(conn, api: Api, group: dict, our_clan_tag: str) -> None:
@@ -167,6 +172,22 @@ def run(conn, client: httpx.Client, force_profiles: bool = False) -> Api:
     return api
 
 
+def run_wars(conn, client: httpx.Client, now: datetime | None = None) -> Api:
+    """The every-minute pass: only the wars of clans with one on or in preparation, so the War tab stays current without
+    storing members or profiles more often. With no war on it calls nothing; the 10-minute pass finds new wars."""
+    api = Api(client)
+    # A war whose end passed over an hour ago and never showed as ended is left to the 10-minute pass.
+    since = ((now or datetime.now(timezone.utc)) - timedelta(hours=1)).strftime("%Y%m%dT%H%M%S")
+    for clan_tag in CLAN_TAGS.values():
+        on = conn.execute(
+            """SELECT 1 FROM wars WHERE ? IN (clan_tag, opponent_tag) AND state IN ('inWar', 'preparation')
+               AND substr(end_time, 1, 15) >= ? LIMIT 1""", (clan_tag, since)).fetchone()
+        if on:
+            with conn:
+                collect_wars(conn, api, clan_tag)
+    return api
+
+
 def main() -> int:
     token = os.environ.get("COC_API_TOKEN")
     if not token:
@@ -175,7 +196,7 @@ def main() -> int:
     conn = db.connect(os.environ.get("FROSTED_DB", DEFAULT_DB))
     headers = {"Authorization": f"Bearer {token}", "Accept": "application/json"}
     with httpx.Client(base_url=API, headers=headers, timeout=20) as client:
-        api = run(conn, client, force_profiles="--profiles" in sys.argv)
+        api = run_wars(conn, client) if "--wars" in sys.argv else run(conn, client, force_profiles="--profiles" in sys.argv)
     log(f"poll done: {api.calls} calls, {api.errors} errors")
     # A pass where every call failed (bad token, IP not on the key) should show as a failed unit.
     return 1 if api.calls and api.errors == api.calls else 0

@@ -71,8 +71,8 @@ export function StatusDot({ status }: { status: Status }) {
 
 export function StatusKey({ only, extra, className = '' }: { only?: Status[]; extra?: ReactNode; className?: string }) {
   return (
-    <div aria-label="Key" className={`flex flex-wrap gap-x-[18px] gap-y-1.5 text-[13px] font-semibold text-muted ${className}`}>
-      {(only ?? (Object.keys(STATUS) as Status[])).map((k) => <span key={k} className="flex items-center gap-1.5"><Dot status={k} />{STATUS[k].text}</span>)}
+    <div aria-label="Key" className={`flex gap-x-2.5 gap-y-1.5 overflow-x-auto whitespace-nowrap text-xs font-semibold text-muted [scrollbar-width:none] md:flex-wrap md:gap-x-[18px] md:overflow-visible md:text-[13px] ${className}`}>
+      {(only ?? (Object.keys(STATUS) as Status[])).map((k) => <span key={k} className="flex flex-none items-center gap-1 md:gap-1.5"><Dot status={k} />{STATUS[k].text}</span>)}
       {extra}
     </div>
   )

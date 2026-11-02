@@ -296,3 +296,20 @@ def test_an_attack_stored_before_stamping_has_no_time(conn):
     poll(conn, Recorder())
     fire = next(c for c in war.board(conn, now=datetime(2026, 11, 4, 12, tzinfo=timezone.utc))["clans"] if c["clan"] == "Fire")["war"]
     assert fire["log"] and all(a["seen_at"] is None for a in fire["log"])
+
+
+def test_the_minute_pass_only_touches_clans_with_a_war_on(conn):
+    from datetime import datetime, timezone
+    poll(conn, Recorder())
+    minute = Recorder()
+    with httpx.Client(base_url=collect.API, transport=httpx.MockTransport(minute)) as client:
+        collect.run_wars(conn, client, now=datetime(2026, 11, 4, 12, tzinfo=timezone.utc))
+    assert minute.paths and all("currentwar" in p or "clanwarleagues" in p for p in minute.paths)
+    assert any("%23CL0G80LV" in p for p in minute.paths)  # Fire has a war on
+    assert not any("%232JJYV0JVV" in p for p in minute.paths)  # Flakes does not
+
+    # Long after the war's end, nothing is called.
+    quiet = Recorder()
+    with httpx.Client(base_url=collect.API, transport=httpx.MockTransport(quiet)) as client:
+        collect.run_wars(conn, client, now=datetime(2027, 1, 1, tzinfo=timezone.utc))
+    assert quiet.paths == []

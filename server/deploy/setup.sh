@@ -50,6 +50,7 @@ install_app() {
   as_bot "$BOT_HOME/venv/bin/pip" install -q -r "$BOT_HOME/repo/server/requirements.txt"
 
   cp "$DEPLOY"/frosted-api.service "$DEPLOY"/frosted-collect.service "$DEPLOY"/frosted-collect.timer \
+    "$DEPLOY"/frosted-collect-wars.service "$DEPLOY"/frosted-collect-wars.timer \
     "$DEPLOY"/frosted-pull.service "$DEPLOY"/frosted-pull.timer /etc/systemd/system/
   systemctl daemon-reload
   systemctl enable -q frosted-api
@@ -58,9 +59,9 @@ install_app() {
   # (FROSTED_BRANCH=...) leaves the timer off so it cannot move the checkout back.
   if [ "$BRANCH" = main ]; then systemctl enable -q --now frosted-pull.timer; else systemctl disable -q --now frosted-pull.timer 2>/dev/null || true; fi
   if grep -q '^COC_API_TOKEN=.\+' "$BOT_HOME/api.env"; then
-    systemctl enable -q --now frosted-collect.timer
+    systemctl enable -q --now frosted-collect.timer frosted-collect-wars.timer
     systemctl start frosted-collect.service || true  # one pass now; its outcome shows in `status`
-    echo "Collector timer on (every 10 minutes)."
+    echo "Collector timers on (every 10 minutes; wars every minute while one is on)."
   else
     echo "api.env has no COC_API_TOKEN yet: add it, then rerun install to start the collector."
   fi
@@ -78,7 +79,7 @@ caddy_site() {
 }
 
 status() {
-  systemctl --no-pager --lines=0 status frosted-api frosted-collect.timer frosted-pull.timer || true
+  systemctl --no-pager --lines=0 status frosted-api frosted-collect.timer frosted-collect-wars.timer frosted-pull.timer || true
   echo "checkout: $(as_bot git -C "$BOT_HOME/repo" rev-parse --abbrev-ref HEAD) at $(as_bot git -C "$BOT_HOME/repo" rev-parse --short HEAD)"
   journalctl -u frosted-collect --no-pager -n 5 -o cat || true
   if [ -f "$BOT_HOME/data/frosted.db" ]; then

@@ -7,7 +7,7 @@ import { ClanBadge, Th, useNow } from './ui'
 
 // Each clan's war, side by side: our bases and badge on the left, the enemy's on the right, facing by map position.
 // The attack log below says who hit whom, how well and roughly when; tapping a base narrows it to that base.
-// Refetched every minute; the collector polls every 10.
+// Refetched every minute; the collector checks wars every minute while one is on.
 
 // The API's times look like 20261104T080000.000Z.
 const at = (t: string | null) => {
@@ -62,7 +62,7 @@ function LogRow({ a, accent, now }: { a: WarAttack; accent: string; now: number 
       <span className="flex items-center gap-2 text-xs">
         <Stars n={a.stars} />
         <span className="font-bold tabular-nums text-ink-2">{Math.round(a.destruction)}%</span>
-        {a.seen_at && <span title="To within about 10 minutes" className="ml-auto font-semibold text-faint">~{ago(a.seen_at, now)}</span>}
+        {a.seen_at && <span title="To within about a minute" className="ml-auto font-semibold text-faint">~{ago(a.seen_at, now)}</span>}
       </span>
     </li>
   )

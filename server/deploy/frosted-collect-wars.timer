@@ -1,0 +1,11 @@
+[Unit]
+Description=Frosted Family war check (every minute, half a minute off the 10-minute pass)
+
+[Timer]
+OnCalendar=*-*-* *:*:30
+Persistent=false
+AccuracySec=5s
+Unit=frosted-collect-wars.service
+
+[Install]
+WantedBy=timers.target
