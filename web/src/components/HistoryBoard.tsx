@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useClans } from '../clash'
-import { playerHref } from '../route'
+import { go, playerHref } from '../route'
 import { CLAN, CLANS } from '../theme'
 import type { ClanName } from '../types'
+import { norm, SearchBox } from './CwlTab'
 import { ClanFilter, Empty, useClanPick } from './ExploreTab'
 import { ClanBadge, KEY_ROW, RowChevron, Th } from './ui'
 import { YouTag } from './You'
@@ -49,7 +50,7 @@ function Section({ title, note, children }: { title: string; note?: string; chil
   )
 }
 
-export default function HistoryBoard({ wide }: { wide: boolean }) {
+export default function HistoryBoard({ q, setQ, wide }: { q: string; setQ: (v: string) => void; wide: boolean }) {
   const [data, setData] = useState<History | null>(null)
   const [loading, setLoading] = useState(true)
   const [clan, setClan] = useClanPick()
@@ -61,11 +62,16 @@ export default function HistoryBoard({ wide }: { wide: boolean }) {
   const total = (y: Year) => shownClans.reduce((n, c) => n + y[c], 0)
   const peak = data ? Math.max(1, ...data.years.map(total)) : 1
   const members = (data?.longest ?? []).filter((r) => clan === 'All' || r.clan === clan)
-  const longest = showAll ? members : members.slice(0, LONGEST_SHOWN)
+  const nq = norm(q.trim())
+  // Searching shows every match with their real place in the family, and nothing else on the page.
+  const ranked = members.map((r, i) => ({ r, place: i + 1 }))
+  const matches = nq ? ranked.filter(({ r }) => norm(r.name).includes(nq) || r.tag.toLowerCase().includes(nq)) : ranked
+  const longest = nq || showAll ? matches : matches.slice(0, LONGEST_SHOWN)
+  const enter = () => { if (longest[0]) go.to(playerHref(longest[0].r.tag)) }
 
   const body = !data ? <Empty loading={loading} /> : (
     <div className="grid w-full max-w-[1100px] items-start gap-5 lg:grid-cols-2">
-      <div className="flex flex-col gap-5">
+      {!nq && <div className="flex flex-col gap-5">
         <div className="grid grid-cols-2 gap-2">
           <div className="flex flex-col rounded-2xl border border-line bg-white p-3">
             <span className="font-display text-[26px] leading-tight tabular-nums text-ink">{data.players.toLocaleString('en-GB')}</span>
@@ -115,15 +121,15 @@ export default function HistoryBoard({ wide }: { wide: boolean }) {
             </ol>
           </div>
         </Section>
-      </div>
+      </div>}
 
       <Section title="Longest in the family" note="Current members">
         {/* The full list scrolls in place, so opening it leaves the page where it is. */}
-        <ol className={`m-0 list-none rounded-2xl border border-line bg-white py-1 ${showAll ? 'max-h-[530px] overflow-y-auto overscroll-contain' : ''}`}>
-          {longest.map((r, i) => (
+        <ol className={`m-0 list-none rounded-2xl border border-line bg-white py-1 ${showAll && !nq ? 'max-h-[530px] overflow-y-auto overscroll-contain' : ''}`}>
+          {longest.map(({ r, place }, i) => (
             <li key={r.tag}>
               <a href={playerHref(r.tag)} className={`flex min-h-[52px] items-center gap-2.5 px-3.5 py-1.5 text-ink no-underline hover:bg-hover ${i ? 'border-t border-hair' : ''}`}>
-                <span className="w-5 flex-none text-right text-xs font-bold tabular-nums text-faint">{i + 1}</span>
+                <span className="w-5 flex-none text-right text-xs font-bold tabular-nums text-faint">{place}</span>
                 <Th th={r.th} />
                 <span className="min-w-0 flex-auto truncate text-[15px] font-semibold"><YouTag tag={r.tag} />{r.name} {clan === 'All' && <span className="text-[11px] font-bold" style={{ color: CLAN[r.clan].deep }}>{r.clan}</span>}</span>
                 <span className="flex flex-none flex-col items-end">
@@ -134,8 +140,9 @@ export default function HistoryBoard({ wide }: { wide: boolean }) {
               </a>
             </li>
           ))}
+          {!longest.length && <li className="p-4 text-sm text-faint">No one by that name</li>}
         </ol>
-        {members.length > LONGEST_SHOWN && (
+        {!nq && members.length > LONGEST_SHOWN && (
           <button type="button" aria-expanded={showAll} onClick={() => setShowAll((v) => !v)}
             className="min-h-11 cursor-pointer rounded-xl border border-line bg-white text-sm font-bold text-ink-2 hover:bg-page">
             {showAll ? 'Show fewer' : `Show all ${members.length}`}
@@ -149,12 +156,14 @@ export default function HistoryBoard({ wide }: { wide: boolean }) {
   return wide ? (
     <main className="mx-auto flex max-w-[1360px] flex-col gap-3.5 px-[clamp(16px,3vw,32px)] pb-12 pt-5">
       <ClanFilter clan={clan} setClan={setClan} />
+      <div className="w-full max-w-[400px]"><SearchBox q={q} setQ={setQ} onEnter={enter} /></div>
       {body}
     </main>
   ) : (
-    <div className="flex flex-col gap-2.5 px-4 pb-6 pt-1">
-      <ClanFilter clan={clan} setClan={setClan} />
-      {body}
+    <div className="flex flex-col gap-2.5 pb-6">
+      <div className="px-4 pt-1"><ClanFilter clan={clan} setClan={setClan} /></div>
+      <div className="sticky top-0 z-10 bg-page px-4 pb-2 pt-1"><SearchBox q={q} setQ={setQ} onEnter={enter} /></div>
+      <div className="px-4">{body}</div>
     </div>
   )
 }

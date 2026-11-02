@@ -101,7 +101,7 @@ const cellTone = (l: number | null, max: number) =>
 export default function ExploreTab({ sub, kind, ...rest }: BoardProps & { sub: string; kind: string | null }) {
   const id = NAV.find((c) => c.id === kind)?.id ?? 'overall'
   const board = sub === 'badges' ? <BadgesBoard {...rest} />
-    : sub === 'history' ? <HistoryBoard wide={rest.wide} />
+    : sub === 'history' ? <HistoryBoard {...rest} />
     : sub === 'war' ? <WarBoardView {...rest} />
     : sub === 'upgrades' ? <UpgradesBoard {...rest} />
     : sub === 'donations' ? <RankBoard key="donations" kind="donations" cols={DONATION_COLS} note="This season" {...rest} />
