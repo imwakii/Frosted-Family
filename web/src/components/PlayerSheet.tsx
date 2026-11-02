@@ -29,7 +29,7 @@ function Badges({ badges }: { badges: NonNullable<PlayerCard['badges']> }) {
               onPointerEnter={(e) => { if (e.pointerType === 'mouse') setHover(b.id) }}
               onPointerLeave={(e) => { if (e.pointerType === 'mouse') setHover(null) }}
               onClick={() => setPinned((p) => (p === b.id ? null : b.id))}
-              className={`flex cursor-pointer items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-bold ${TIER_LOOK[b.tier ?? 'silver'][open?.id === b.id ? 'on' : 'chip']}`}>
+              className={`flex min-h-8 cursor-pointer items-center gap-1.5 rounded-full border px-2.5 text-xs font-bold ${TIER_LOOK[b.tier ?? 'silver'][open?.id === b.id ? 'on' : 'chip']}`}>
               <span aria-hidden="true">{BADGES[b.id]?.icon}</span>{BADGES[b.id]?.label ?? b.label}
             </button>
           </li>
@@ -128,6 +128,7 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
   const base = roster.players.find((p) => p.tag === tag)
   const [extra, setExtra] = useState<Partial<Player> | null>(null)
   const [card, setCard] = useState<PlayerCard | null>(null)
+  const [cardLoading, setCardLoading] = useState(true)
   const { yous, addYou, removeYou } = useYou()
   const isMine = yous.includes(tag)
   const accounts = roster.players.filter((x) => yous.includes(x.tag))
@@ -137,8 +138,9 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
     let live = true
     setExtra(null)
     setCard(null)
+    setCardLoading(true)
     loadPlayer(tag).then((x) => { if (live && x && x.tag === tag) setExtra(x) })
-    loadPlayerCard(tag).then((x) => { if (live) setCard(x) })
+    loadPlayerCard(tag).then((x) => { if (live) { setCard(x); setCardLoading(false) } })
     return () => { live = false }
   }, [tag])
 
@@ -182,7 +184,7 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
               <span className="min-w-0 truncate">{where}</span>
               {p && (
                 <button type="button" onClick={() => (isMine ? removeYou(tag) : addYou(tag))}
-                  className={`flex-none cursor-pointer whitespace-nowrap rounded-md border-0 px-1.5 py-px text-[11px] font-bold ${isMine ? 'bg-ink text-white' : 'bg-[#EEF1F6] text-ink-2 hover:bg-well'}`}>
+                  className={`min-h-8 flex-none cursor-pointer whitespace-nowrap rounded-lg border-0 px-2.5 text-xs font-bold ${isMine ? 'bg-ink text-white' : 'bg-[#EEF1F6] text-ink-2 hover:bg-well'}`}>
                   {isMine ? 'You · undo' : yous.length ? 'Also me' : 'This is me'}
                 </button>
               )}
@@ -244,11 +246,12 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
               )}
             </div>
             {card?.badges?.length ? <Badges badges={card.badges} /> : null}
-            <Section title="War record" note={rec?.from ? `Since ${dayMonth(rec.from)}` : fmtWindow(roster.window)}>
+            {/* The monthly figures stand in only if the live ones fail, so the numbers do not change under the reader. */}
+            <Section title="War record" note={cardLoading ? null : rec?.from ? `Since ${dayMonth(rec.from)}` : fmtWindow(roster.window)}>
               <div className="grid grid-cols-3 gap-2">
-                <Stat label="Three stars" value={pct(threeStar)} />
-                <Stat label="Missed" value={pct(missed)} />
-                <Stat label="Attacks" value={rec?.attacks ?? p.attacks ?? '—'} />
+                <Stat label="Three stars" value={cardLoading ? '—' : pct(threeStar)} />
+                <Stat label="Missed" value={cardLoading ? '—' : pct(missed)} />
+                <Stat label="Attacks" value={cardLoading ? '—' : rec?.attacks ?? p.attacks ?? '—'} />
               </div>
             </Section>
             {card?.streaks && (

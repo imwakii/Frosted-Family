@@ -1,14 +1,16 @@
-import { type CSSProperties, useEffect, useState } from 'react'
-import { useYou, YouPrompt, YouTag } from './You'
+import { type CSSProperties, Fragment, useEffect, useRef, useState } from 'react'
+import { useYou, YouTag } from './You'
 import { useClans } from '../clash'
+import { useWide } from '../data'
 import { ago, type ClanWar, useWarBoard, type WarAttack, type WarBase } from '../leaders'
 import { playerHref } from '../route'
 import { CLAN, CLANS } from '../theme'
-import type { ClanName, Roster } from '../types'
+import type { ClanName } from '../types'
 import { ClanBadge, ClanSwitch, KEY_ROW, Stars, Th, useNow } from './ui'
 
 // Each clan's war, side by side: our bases and badge on the left, the enemy's on the right, facing by map position.
-// The attack log below says who hit whom, how well and roughly when; tapping a base narrows it to that base.
+// The attack log says who hit whom, how well and roughly when. Tapping a base narrows the log beside the board,
+// or on narrower screens, where the log is far below, opens that base's attacks under its row.
 // Refetched every minute; the collector checks wars every minute while one is on.
 
 // The API's times look like 20261104T080000.000Z.
@@ -101,7 +103,10 @@ function WarBoard({ clan, war, now }: { clan: ClanName; war: ClanWar; now: numbe
   const [picked, setPicked] = useState<string | null>(null)
   const [openOnly, setOpenOnly] = useState(false)
   const { yous } = useYou()
+  const sideBySide = useWide('(min-width: 1024px)')
+  const opened = useRef<HTMLLIElement>(null)
   useEffect(() => { setPicked(null); setOpenOnly(false) }, [clan])
+  useEffect(() => { if (picked) opened.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }) }, [picked])
   const end = at(war.end_time), start = at(war.start_time)
   const live = war.state === 'inWar', over = war.state === 'warEnded', prep = war.state === 'preparation'
   const won = war.stars > war.opponent_stars || (war.stars === war.opponent_stars && war.destruction > war.opponent_destruction)
@@ -110,14 +115,27 @@ function WarBoard({ clan, war, now }: { clan: ClanName; war: ClanWar; now: numbe
   const total = war.team_size * war.attacks_allowed
   // Bases still worth hitting: not yet three-starred.
   const open = war.pairs.filter((p) => p.them && p.them.best !== 3)
-  const rows = openOnly ? open : war.pairs
+  const rows = live && openOnly ? open : war.pairs
   // All your accounts in this war, together; tapping goes to the first with an attack left.
   const accounts = war.pairs.flatMap((p) => (p.us && yous.includes(p.us.tag) ? [p.us] : []))
   const mineLeft = accounts.reduce((n, b) => n + b.allowed - b.used, 0)
   const mine = accounts.find((b) => b.used < b.allowed) ?? accounts[0]
-  const log = picked ? war.log.filter((a) => a.attacker.tag === picked || a.defender.tag === picked) : war.log
+  const pickedLog = picked ? war.log.filter((a) => a.attacker.tag === picked || a.defender.tag === picked) : []
+  const log = picked && sideBySide ? pickedLog : war.log
   const pickedName = picked ? war.pairs.flatMap((p) => [p.us, p.them]).find((b) => b?.tag === picked)?.name : null
-  const toggle = (tag?: string) => tag && setPicked((p) => (p === tag ? null : tag))
+  const toggle = (tag?: string) => {
+    if (!tag) return
+    if (!rows.some((p) => p.us?.tag === tag || p.them?.tag === tag)) setOpenOnly(false)
+    setPicked((p) => (p === tag ? null : tag))
+  }
+  const pickedActions = picked && (
+    <span className="flex flex-none items-center gap-1.5">
+      {war.pairs.some((p) => p.us?.tag === picked) && (
+        <a href={playerHref(picked)} className="flex min-h-8 items-center rounded-full bg-ink px-2.5 text-xs font-bold text-white no-underline">View card</a>
+      )}
+      <button type="button" onClick={() => setPicked(null)} className="min-h-8 cursor-pointer rounded-full border border-line bg-white px-2.5 text-xs font-bold text-ink-2 hover:bg-page">{sideBySide ? 'Show all' : 'Close'}</button>
+    </span>
+  )
   const score = (stars: number, pct: number, used: number, deep: string, right?: boolean) => (
     <span className={`flex flex-col gap-0.5 ${right ? 'items-end' : 'items-start'} ${prep ? 'invisible' : ''}`}>
       <span className="font-display flex items-baseline gap-1 text-[26px] leading-none tabular-nums" style={{ color: deep }}>{stars}<span className="text-base text-gold">★</span></span>
@@ -154,28 +172,49 @@ function WarBoard({ clan, war, now }: { clan: ClanName; war: ClanWar; now: numbe
           <span className="text-center text-[11px] font-semibold text-faint">Updated {ago(war.updated_at, now)}</span>
         </div>
         <div className="flex min-h-[53px] items-center gap-2 border-b border-hair px-3 py-2">
-            {live && mine && (
-              <button type="button" onClick={() => toggle(mine.tag)} className={`min-h-9 cursor-pointer rounded-full border-0 px-3 text-[13px] font-bold ${mineLeft ? 'bg-[#FEF3C7] text-[#92400E]' : 'bg-[#DCFCE7] text-[#166534]'}`}>
-                You: {mineLeft ? `${mineLeft} ${mineLeft === 1 ? 'attack' : 'attacks'} left` : 'all attacked'}
-              </button>
+            {live ? (
+              <>
+                {mine && (
+                  <button type="button" onClick={() => toggle(mine.tag)} className={`min-h-9 cursor-pointer rounded-full border-0 px-3 text-[13px] font-bold ${mineLeft ? 'bg-[#FEF3C7] text-[#92400E]' : 'bg-[#DCFCE7] text-[#166534]'}`}>
+                    You: {mineLeft ? `${mineLeft} ${mineLeft === 1 ? 'attack' : 'attacks'} left` : 'all attacked'}
+                  </button>
+                )}
+                <button type="button" aria-pressed={openOnly} disabled={!open.length} onClick={() => { setOpenOnly((v) => !v); setPicked(null) }}
+                  className={`ml-auto min-h-9 cursor-pointer rounded-full border px-3 text-[13px] font-bold disabled:cursor-default disabled:opacity-50 ${openOnly ? 'border-ink bg-ink text-white' : 'border-line bg-white text-ink-2 hover:bg-page'}`}>
+                  Open bases {open.length}
+                </button>
+              </>
+            ) : (
+              <span className="text-[13px] font-semibold text-muted">{over ? `${war.pairs.filter((p) => p.them?.best === 3).length} of ${war.team_size} bases three-starred` : 'Preparation day'}</span>
             )}
-            <button type="button" aria-pressed={openOnly} disabled={!open.length} onClick={() => setOpenOnly((v) => !v)}
-              className={`ml-auto min-h-9 cursor-pointer rounded-full border px-3 text-[13px] font-bold disabled:cursor-default disabled:opacity-50 ${openOnly ? 'border-ink bg-ink text-white' : 'border-line bg-white text-ink-2 hover:bg-page'}`}>
-              Open bases {open.length}
-            </button>
         </div>
         <div aria-label="Key" className={`${KEY_ROW} border-b border-hair px-3 py-2`}>
-          <span className="flex items-center gap-1.5"><span className="size-2 rounded-full border-[1.5px] border-[#94A3B8]" />Attack left</span>
-          <span className="flex items-center gap-1.5"><span className="size-2 rounded-full bg-[#16A34A]" />Used</span>
+          {live && <>
+            <span className="flex items-center gap-1.5"><span className="size-2 rounded-full border-[1.5px] border-[#94A3B8]" />Attack left</span>
+            <span className="flex items-center gap-1.5"><span className="size-2 rounded-full bg-[#16A34A]" />Used</span>
+          </>}
           <span className="flex items-center gap-1.5"><span className="text-gold">★</span>Best on this base</span>
         </div>
         <ol className="m-0 list-none px-1.5 py-1">
           {rows.map((p, i) => (
-            <li key={p.position} className={`grid grid-cols-[minmax(0,1fr)_18px_minmax(0,1fr)] items-center gap-0.5 ${i ? 'border-t border-hair' : ''}`}>
-              <Base b={p.us} live={live} picked={!!p.us && p.us.tag === picked} onPick={() => toggle(p.us?.tag)} />
-              <span className="text-center text-[11px] font-bold tabular-nums text-faint">{p.position}</span>
-              <Base b={p.them} right live={live} picked={!!p.them && p.them.tag === picked} onPick={() => toggle(p.them?.tag)} />
-            </li>
+            <Fragment key={p.position}>
+              <li className={`grid grid-cols-[minmax(0,1fr)_18px_minmax(0,1fr)] items-center gap-0.5 ${i ? 'border-t border-hair' : ''}`}>
+                <Base b={p.us} live={live} picked={!!p.us && p.us.tag === picked} onPick={() => toggle(p.us?.tag)} />
+                <span className="text-center text-[11px] font-bold tabular-nums text-faint">{p.position}</span>
+                <Base b={p.them} right live={live} picked={!!p.them && p.them.tag === picked} onPick={() => toggle(p.them?.tag)} />
+              </li>
+              {!sideBySide && picked && (p.us?.tag === picked || p.them?.tag === picked) && (
+                <li ref={opened} className="mb-1.5 scroll-mb-[72px] overflow-hidden rounded-xl border border-line bg-white">
+                  <div className="flex items-center justify-between gap-2 px-3 py-2">
+                    <span className="min-w-0 truncate text-sm font-bold text-ink">{pickedName}</span>
+                    {pickedActions}
+                  </div>
+                  {pickedLog.length ? (
+                    <ol className="m-0 list-none p-0">{pickedLog.map((a) => <LogRow key={a.order} a={a} accent={t.deep} now={now} />)}</ol>
+                  ) : <p className="m-0 border-t border-hair px-3 py-3 text-sm text-faint">No attacks yet</p>}
+                </li>
+              )}
+            </Fragment>
           ))}
         </ol>
       </section>
@@ -183,15 +222,8 @@ function WarBoard({ clan, war, now }: { clan: ClanName; war: ClanWar; now: numbe
       {!prep && (
         <section aria-label="Attacks" className="overflow-hidden rounded-[18px] border border-line bg-white">
           <div className="flex items-center justify-between gap-2 px-3.5 py-2.5">
-            <span className="min-w-0 truncate text-sm font-bold text-ink">{pickedName ?? 'Attacks'}</span>
-            {picked ? (
-              <span className="flex flex-none items-center gap-1.5">
-                {war.pairs.some((p) => p.us?.tag === picked) && (
-                  <a href={playerHref(picked)} className="flex min-h-8 items-center rounded-full bg-ink px-2.5 text-xs font-bold text-white no-underline">View card</a>
-                )}
-                <button type="button" onClick={() => setPicked(null)} className="min-h-8 cursor-pointer rounded-full border border-line bg-white px-2.5 text-xs font-bold text-ink-2 hover:bg-page">Show all</button>
-              </span>
-            ) : (
+            <span className="min-w-0 truncate text-sm font-bold text-ink">{(sideBySide && pickedName) || 'Attacks'}</span>
+            {picked && sideBySide ? pickedActions : (
               <span className="flex flex-none items-center gap-3 text-xs font-semibold text-muted">
                 <span className="flex items-center gap-1.5"><span className="h-3 w-[3px] rounded" style={{ background: t.deep }} />Ours</span>
                 <span className="flex items-center gap-1.5"><span className="h-3 w-[3px] rounded" style={{ background: ENEMY }} />Enemy</span>
@@ -209,7 +241,7 @@ function WarBoard({ clan, war, now }: { clan: ClanName; war: ClanWar; now: numbe
   )
 }
 
-export default function WarTab({ roster, wide }: { roster: Roster; wide: boolean }) {
+export default function WarTab({ wide }: { wide: boolean }) {
   const { data, loading } = useWarBoard()
   const [pick, setPick] = useState<ClanName | null>(null)
   const { yous } = useYou()
@@ -224,7 +256,6 @@ export default function WarTab({ roster, wide }: { roster: Roster; wide: boolean
       <ClanSwitch value={clan?.clan ?? 'Fire'} onPick={setPick}
         live={wars.filter((c) => c.war!.state === 'inWar').map((c) => c.clan)}
         off={data ? CLANS.filter((k) => !wars.some((c) => c.clan === k)) : []} />
-      <YouPrompt roster={roster} />
       {!data ? (
         loading ? <div aria-busy="true" className="h-64 animate-pulse rounded-2xl bg-well" /> : <div className="rounded-2xl border border-line bg-white p-5 text-sm text-faint">Unavailable right now</div>
       ) : !clan ? (

@@ -41,7 +41,7 @@ function Cell({ plays, war, tag, ring, onToggle, label, changed }: {
     <td className={`border-b border-hair p-0 text-center ${changed ? 'bg-moved' : ''}`}>
       {onToggle ? (
         <button type="button" aria-label={label} aria-pressed={plays} onClick={onToggle}
-          className="flex h-10 w-full min-w-[27px] md:min-w-[34px] cursor-pointer items-center justify-center border-0 bg-transparent hover:bg-hover">{dot}</button>
+          className="flex h-10 w-full min-w-6 md:min-w-[34px] cursor-pointer items-center justify-center border-0 bg-transparent hover:bg-hover">{dot}</button>
       ) : <span className="flex h-10 min-w-[27px] md:min-w-[34px] items-center justify-center">{dot}</span>}
     </td>
   )
@@ -236,11 +236,15 @@ export default function DayPlanner({ roster, me }: { roster: Roster; me: Me }) {
               const short = !unreliable && !onTrial(p, w) && !onTrack(p.tag, plan, w)
               return (
                 <tr key={p.tag} className={unreliable ? 'opacity-60' : ''}>
-                  <td className={`sticky left-0 z-[1] max-w-[104px] border-b border-hair bg-white py-1 pl-2.5 pr-1 md:max-w-[170px] md:pl-3 md:pr-1.5 ${i === core.length && core.length ? 'border-t-2 border-t-line' : ''}`}>
+                  <td className={`sticky left-0 z-[1] max-w-[153px] border-b border-hair bg-white py-1 pl-2.5 pr-1 md:max-w-[170px] md:pl-3 md:pr-1.5 ${i === core.length && core.length ? 'border-t-2 border-t-line' : ''}`}>
                     <span className="flex min-w-0 items-center gap-2">
-                      <Th th={p.th} />
-                      <span className="truncate font-semibold">{p.name}</span>
-                      <StatusDot status={p.status} />
+                      {/* On a phone the status sits on the town hall, so the name keeps the room. */}
+                      <span className="relative flex-none">
+                        <Th th={p.th} />
+                        <span className="absolute bottom-0 right-0 flex rounded-full bg-white p-px md:hidden"><StatusDot status={p.status} /></span>
+                      </span>
+                      <span className="truncate font-semibold max-md:text-[13px]">{p.name}</span>
+                      <span className="flex max-md:hidden"><StatusDot status={p.status} /></span>
                     </span>
                   </td>
                   {DAYS.map((d) => (
@@ -266,7 +270,7 @@ export default function DayPlanner({ roster, me }: { roster: Roster; me: Me }) {
     {/* Row links would leave the planner, so a preview keeps its rows in place. */}
     {preview && (
       <div onClickCapture={(e) => { if ((e.target as HTMLElement).closest('a')) e.preventDefault() }}>
-        <CwlTab roster={previewRoster} war={war} wide={wide} q={q} setQ={setQ} />
+        <CwlTab roster={previewRoster} war={war} wide={wide} q={q} setQ={setQ} lock={{ clan, options: CWL, onPick: (c) => setClan(c as CwlClan) }} />
       </div>
     )}
     </>

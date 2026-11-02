@@ -103,7 +103,18 @@ function LineChart({ lines, xs, xLabel, fmt, dots = false }: { lines: Line[]; xs
   const spill = ends.length ? last(ends).y - (H - B) : 0
   if (spill > 0) ends.forEach((e) => { e.y -= spill })
 
-  const xt = xs.length <= 6 || iw / xs.length > 44 ? xs : [x0, xs[Math.floor(xs.length / 2)], x1]
+  // The middle label is the date nearest the middle of the range; one that would touch its neighbour is dropped.
+  const mid = xs.reduce((a, b) => (Math.abs(b - (x0 + x1) / 2) < Math.abs(a - (x0 + x1) / 2) ? b : a), x0)
+  const wanted = xs.length <= 6 || iw / xs.length > 44 ? xs : [...new Set([x0, mid, x1])]
+  const textW = (x: number) => xLabel(x).length * 6
+  let reach = sx(x0) + textW(x0)
+  const xt = wanted.filter((x, i) => {
+    if (i === 0 || i === wanted.length - 1) return true
+    const from = sx(x) - textW(x) / 2, to = sx(x) + textW(x) / 2
+    if (from < reach + 8 || to > sx(x1) - textW(x1) - 8) return false
+    reach = to
+    return true
+  })
   const hx = hover === null ? null : xs[hover]
   const move = (e: PointerEvent) => {
     const r = (e.currentTarget as Element).getBoundingClientRect()

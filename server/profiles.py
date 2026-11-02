@@ -15,6 +15,7 @@ from fastapi import HTTPException
 
 from frosted.config import TAG_TO_CLAN
 from server import baseline
+from server.db import clean_name
 
 # Hourly: about 115 calls a pass, well inside the API's limits. Due after 55 minutes so it lands on the 10-minute
 # pass nearest the hour instead of slipping to the next one.
@@ -63,7 +64,7 @@ def upsert_profile(conn: sqlite3.Connection, p: dict, fetched_at: str) -> None:
              war_stars=excluded.war_stars, attack_wins=excluded.attack_wins, defense_wins=excluded.defense_wins,
              donations=excluded.donations, donations_received=excluded.donations_received,
              capital_contributions=excluded.capital_contributions""",
-        (tag, fetched_at, p.get("name"), (p.get("clan") or {}).get("tag"), p.get("townHallLevel"), p.get("expLevel"),
+        (tag, fetched_at, clean_name(p.get("name")), (p.get("clan") or {}).get("tag"), p.get("townHallLevel"), p.get("expLevel"),
          p.get("trophies"), p.get("bestTrophies"), league, p.get("warStars"), p.get("attackWins"),
          p.get("defenseWins"), p.get("donations"), p.get("donationsReceived"), p.get("clanCapitalContributions")),
     )

@@ -4,11 +4,10 @@ import { CLAN, SLOT_TEXT } from '../theme'
 import { playerHref } from '../route'
 import { SearchIcon, Th } from './ui'
 
-// Which accounts are this person's: their main and any alts. Asked once on Lineups, changed from any player's sheet,
+// Which accounts are this person's: their main and any alts. Added from the header's Add me, changed from any player's sheet,
 // and shown on every list. Kept in this browser only; the server never knows, and nobody else sees it.
 
 const YOU_KEY = 'ff-you'
-const SKIP_KEY = 'ff-you-skip'
 const listeners = new Set<() => void>()
 const read = (key: string) => { try { return localStorage.getItem(key) } catch { return null } }
 const write = (key: string, v: string | null) => {
@@ -74,28 +73,19 @@ export function JumpToYou({ wide }: { wide: boolean }) {
   )
 }
 
-/** Whether Lineups is still asking which member this is. */
-export function useAsksYou(roster: Roster) {
-  const { yous } = useYou()
-  const skipped = useSyncExternalStore((l) => { listeners.add(l); return () => { listeners.delete(l) } }, () => !!read(SKIP_KEY))
-  return !skipped && !roster.players.some((p) => yous.includes(p.tag))
-}
-
-/** Asked once: which member this is; skipping it stays skipped on this device. With onDone, it adds another account. */
-export function YouPrompt({ roster, onDone, autoFocus }: { roster: Roster; onDone?: () => void; autoFocus?: boolean }) {
+/** Finds a member by name and marks them as this person: their first account, or another one. */
+export function YouPrompt({ roster, onDone, autoFocus }: { roster: Roster; onDone: () => void; autoFocus?: boolean }) {
   const { yous, addYou } = useYou()
-  const asks = useAsksYou(roster)
   const [q, setQ] = useState('')
   const id = useId()
-  if (!onDone && !asks) return null
   const adding = roster.players.some((p) => yous.includes(p.tag))
   const n = q.trim().toLowerCase()
   const hits = n ? roster.players.filter((p) => !yous.includes(p.tag) && p.name.toLowerCase().includes(n)).slice(0, 5) : []
   return (
-    <section aria-label={adding ? 'Add another account' : 'Which one is you?'} className="flex flex-col gap-2 rounded-2xl border border-line bg-white p-3">
+    <section aria-label={adding ? 'Add another account' : 'Add me'} className="flex flex-col gap-2 rounded-2xl border border-line bg-white p-3">
       <div className="flex items-center justify-between gap-2">
-        <span className="text-[15px] font-bold text-ink">{adding ? 'Add another account' : 'Which one is you?'}</span>
-        <button type="button" aria-label={onDone ? 'Close' : 'Skip'} onClick={() => { if (onDone) { onDone(); return } write(SKIP_KEY, '1'); listeners.forEach((l) => l()) }}
+        <span className="text-[15px] font-bold text-ink">{adding ? 'Add another account' : 'Add me'}</span>
+        <button type="button" aria-label="Close" onClick={onDone}
           className="flex size-8 flex-none cursor-pointer items-center justify-center rounded-full border-0 bg-transparent text-lg leading-none text-faint hover:bg-page hover:text-ink">×</button>
       </div>
       <div className="relative min-w-0">
@@ -108,7 +98,7 @@ export function YouPrompt({ roster, onDone, autoFocus }: { roster: Roster; onDon
         <ul className="m-0 flex list-none flex-col p-0">
           {hits.map((p, i) => (
             <li key={p.tag}>
-              <button type="button" onClick={() => { addYou(p.tag); onDone?.() }} className={`flex min-h-11 w-full cursor-pointer items-center gap-2.5 border-0 bg-transparent px-1 text-left hover:bg-hover ${i ? 'border-t border-hair' : ''}`}>
+              <button type="button" onClick={() => { addYou(p.tag); onDone() }} className={`flex min-h-11 w-full cursor-pointer items-center gap-2.5 border-0 bg-transparent px-1 text-left hover:bg-hover ${i ? 'border-t border-hair' : ''}`}>
                 <Th th={p.th} />
                 <span className="min-w-0 flex-auto truncate text-sm font-semibold text-ink">{p.name}</span>
                 <span className="flex-none text-xs font-bold" style={{ color: CLAN[p.clan].deep }}>{p.clan} · {SLOT_TEXT[p.slot]}</span>
@@ -123,16 +113,17 @@ export function YouPrompt({ roster, onDone, autoFocus }: { roster: Roster; onDon
 }
 
 /** Your own card from any tab: the first of your accounts; the card switches between them. */
-export function YouChip({ roster, wide }: { roster: Roster; wide: boolean }) {
+export function YouChip({ roster, compact }: { roster: Roster; compact?: boolean }) {
   const { yous } = useYou()
   const [picking, setPicking] = useState(false)
   const p = roster.players.find((x) => yous.includes(x.tag))
   if (!p) {
     return (
       <>
-        <button type="button" onClick={() => setPicking(true)}
-          className="flex min-h-9 flex-none cursor-pointer items-center gap-1 whitespace-nowrap rounded-full border-0 bg-action px-3 text-[13px] font-bold text-white hover:bg-action-deep">
-          <span aria-hidden="true" className="text-base leading-none">+</span>{wide ? 'Add yourself' : 'Add me'}
+        <button type="button" aria-label="Add me" onClick={() => setPicking(true)}
+          className={`flex min-h-9 flex-none cursor-pointer items-center justify-center gap-1 whitespace-nowrap rounded-full border-0 bg-action text-[13px] font-bold text-white hover:bg-action-deep ${compact ? 'w-9' : 'px-3'}`}>
+          <span aria-hidden="true" className="text-base leading-none">+</span>
+          {!compact && <><span className="lg:hidden">Add me</span><span className="max-lg:hidden">Add yourself</span></>}
         </button>
         {picking && (
           <div className="ff-fade fixed inset-0 z-50 flex items-start justify-center bg-[rgba(15,23,42,.4)] px-4 pt-20" onClick={(e) => { if (e.target === e.currentTarget) setPicking(false) }}>
@@ -144,9 +135,9 @@ export function YouChip({ roster, wide }: { roster: Roster; wide: boolean }) {
   }
   return (
     <a href={playerHref(p.tag)} aria-label={`Your card, ${p.name}`}
-      className="flex min-h-9 max-w-[170px] flex-none items-center gap-1.5 rounded-full border border-line bg-white py-0.5 pl-1 pr-2.5 text-ink no-underline hover:bg-page">
+      className={`flex min-h-9 max-w-[170px] flex-none items-center gap-1.5 rounded-full border border-line bg-white py-0.5 pl-1 text-ink no-underline hover:bg-page ${compact ? 'pr-1' : 'pr-2.5'}`}>
       <Th th={p.th} />
-      <span className="truncate text-[13px] font-bold">{wide ? p.name : 'You'}</span>
+      {!compact && <span className="truncate text-[13px] font-bold"><span className="lg:hidden">You</span><span className="max-lg:hidden">{p.name}</span></span>}
     </a>
   )
 }

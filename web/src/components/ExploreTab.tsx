@@ -39,9 +39,9 @@ const DONATION_COLS: RankCol[] = [
   { key: 'ratio', label: 'Ratio', value: (r) => { const d = r.donations as Gift; return d && d.received ? d.donated / d.received : null }, fmt: (v) => v.toFixed(1) },
 ]
 const CAPITAL_COLS: RankCol[] = [
-  { key: 'loot', label: 'Last raid loot', value: (r) => (r.capital as Cap)?.raid_loot ?? null },
-  { key: 'attacks', label: 'Last raid attacks', value: (r) => (r.capital as Cap)?.raid_attacks ?? null },
-  { key: 'contributed', label: 'All-time contributed', value: (r) => (r.capital as Cap)?.contributed ?? null },
+  { key: 'loot', label: 'Last raid loot', chip: 'Raid loot', sub: 'Loot', value: (r) => (r.capital as Cap)?.raid_loot ?? null },
+  { key: 'attacks', label: 'Last raid attacks', chip: 'Raid attacks', sub: 'Attacks', value: (r) => (r.capital as Cap)?.raid_attacks ?? null },
+  { key: 'contributed', label: 'All-time contributed', chip: 'All-time', sub: 'All-time', subFmt: (v) => (v >= 1_000_000 ? `${(v / 1_000_000).toFixed(1)}M` : v.toLocaleString('en-GB')), value: (r) => (r.capital as Cap)?.contributed ?? null },
 ]
 
 export function useClanPick() {
@@ -483,7 +483,7 @@ function WarBoardView({ q, setQ, wide }: BoardProps) {
     )
   }
 
-  const rest = col ? cols.filter((c) => c.key !== col.key).slice(0, 3) : []
+  const rest = col ? cols.filter((c) => c.key !== col.key).slice(0, 2) : []
   return (
     <div className="flex flex-col gap-2.5 pb-6">
       <div className="px-4 pt-1"><ClanFilter clan={clan} setClan={setClan} /></div>
@@ -517,9 +517,9 @@ function WarBoardView({ q, setQ, wide }: BoardProps) {
                     <span className="flex min-w-0 items-center gap-1.5">
                       <span className="truncate text-[15px] font-semibold"><YouTag tag={r.tag} />{r.name}</span>
                       <MissDot r={r} />
+                      {clan === 'All' && <span className="flex-none text-[11px] font-bold" style={{ color: CLAN[r.clan].deep }}>{r.clan}</span>}
                     </span>
                     <span className="truncate text-xs text-faint">
-                      {clan === 'All' && <span className="font-bold" style={{ color: CLAN[r.clan].deep }}>{r.clan} · </span>}
                       {rest.map((c, j) => { const x = c.value(r); return <span key={c.key}>{j ? ' · ' : ''}{c.label} {x === null ? '—' : c.fmt(x)}</span> })}
                     </span>
                   </span>

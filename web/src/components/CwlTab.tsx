@@ -4,10 +4,14 @@ import { playerHref } from '../route'
 import type { ClanName, LiveWar, Player, Roster } from '../types'
 import { useClans, type ClanMeta } from '../clash'
 import { useWarBoard } from '../leaders'
-import { useAsksYou, useYou, YouPrompt, YouTag } from './You'
+import { useYou, YouPrompt, YouTag } from './You'
 import { ClanBadge, ClanSwitch, Eyebrow, LeaguePill, PlayDays, SearchIcon, StatusDot, StatusKey, Th, useNow, WarPill, RowChevron } from './ui'
 
-type Props = { roster: Roster; war: Partial<Record<ClanName, LiveWar | null>>; wide: boolean; q: string; setQ: (v: string) => void }
+type Props = {
+  roster: Roster; war: Partial<Record<ClanName, LiveWar | null>>; wide: boolean; q: string; setQ: (v: string) => void
+  // A leader's preview: the clans being planned, with the clan picked in the planner.
+  lock?: { clan: ClanName; options: readonly ClanName[]; onPick: (c: ClanName) => void }
+}
 
 export const norm = (s: string) => s.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
 const matches = (p: Player, q: string) => norm(p.name).includes(q) || p.tag.toLowerCase().includes(q)
@@ -48,7 +52,7 @@ function clanFacts(roster: Roster, clan: ClanName, meta?: ClanMeta) {
   return {
     inCwl: !!info?.inCwl,
     league,
-    format: info?.inCwl ? `${league ? `${league} · ` : ''}15v15` : league ? `${league} · not in CWL` : 'Not in CWL this month',
+    format: info?.inCwl ? `${league ? `${league} · ` : ''}15v15` : league ? `${league} · no CWL` : 'Not in CWL this month',
     avg: avg === null ? '—' : avg.toFixed(1),
     name: meta?.name ?? `Frosted ${clan}`,
     badge: meta?.badge ?? null,
@@ -82,10 +86,10 @@ function ClanCard({ roster, clan, meta, war, compact, below }: { roster: Roster;
 export function SearchBox({ q, setQ, tall, onEnter }: { q: string; setQ: (v: string) => void; tall?: boolean; onEnter?: () => void }) {
   return (
     <div className="relative min-w-0">
-      <label htmlFor="find" className="sr-only">Find your name</label>
+      <label htmlFor="find" className="sr-only">Find name</label>
       <SearchIcon />
       <input
-        id="find" type="search" placeholder="Find your name" value={q} autoComplete="off" spellCheck={false}
+        id="find" type="search" placeholder="Find name" value={q} autoComplete="off" spellCheck={false}
         onChange={(e) => setQ(e.target.value)}
         onKeyDown={(e) => { if (e.key === 'Enter') onEnter?.() }}
         className={`${tall ? 'h-[52px]' : 'h-12'} w-full rounded-[14px] border border-line bg-white pl-[42px] pr-3.5 text-base text-ink placeholder:text-faint`}
@@ -295,23 +299,22 @@ function readClan(): ClanName {
   } catch { return 'Fire' }
 }
 
-function Phone({ roster, war, q, setQ }: Omit<Props, 'wide'>) {
-  const [clan, setClan] = useState<ClanName>(readClan)
-  useEffect(() => { try { sessionStorage.setItem('ff-clan', clan) } catch { /* private mode */ } }, [clan])
+function Phone({ roster, war, q, setQ, lock }: Omit<Props, 'wide'>) {
+  const [own, setOwn] = useState<ClanName>(readClan)
+  useEffect(() => { try { sessionStorage.setItem('ff-clan', own) } catch { /* private mode */ } }, [own])
+  const clan = lock?.clan ?? own
+  const inCwl = !!roster.clans[clan]?.inCwl
   const nq = norm(q.trim())
   const results = nq ? roster.players.filter((p) => matches(p, nq)).slice(0, 12) : []
   const clans = useClans()
   const { planned, day, setDay, live } = useDay(roster, war)
-  const asks = useAsksYou(roster)
 
   return (
     <>
-      <div className="px-4 pb-2.5 pt-1"><ClanSwitch value={clan} onPick={setClan} /></div>
-      {!asks && (
-        <div className="sticky top-0 z-10 bg-page px-4 pb-3 pt-1">
-          <SearchBox q={q} setQ={setQ} onEnter={() => { if (results[0]) window.location.hash = href(results[0]) }} />
-        </div>
-      )}
+      <div className="px-4 pb-2.5 pt-1"><ClanSwitch<ClanName> value={clan} onPick={lock?.onPick ?? setOwn} options={lock?.options} /></div>
+      <div className="sticky top-0 z-10 bg-page px-4 pb-3 pt-1">
+        <SearchBox q={q} setQ={setQ} onEnter={() => { if (results[0]) window.location.hash = href(results[0]) }} />
+      </div>
       <div className="flex flex-col gap-3 px-4 pb-6">
         {nq ? (
           <ul className="m-0 list-none rounded-2xl border border-line bg-white py-1">
@@ -338,10 +341,9 @@ function Phone({ roster, war, q, setQ }: Omit<Props, 'wide'>) {
           </ul>
         ) : (
           <>
-            <YouPrompt roster={roster} />
             <YouPanel roster={roster} day={live} />
-            {planned && <DayPicker day={day} setDay={setDay} live={live} />}
-            <ClanCard roster={roster} clan={clan} meta={clans[clan]} war={war[clan]} below={<Countdown roster={roster} war={war} slim />} />
+            {planned && inCwl && <DayPicker day={day} setDay={setDay} live={live} />}
+            <ClanCard roster={roster} clan={clan} meta={clans[clan]} war={war[clan]} below={inCwl ? <Countdown roster={roster} war={war} slim /> : undefined} />
             <StatusKey className="px-1" />
             <Groups roster={roster} clan={clan} day={day} />
           </>
@@ -351,13 +353,12 @@ function Phone({ roster, war, q, setQ }: Omit<Props, 'wide'>) {
   )
 }
 
-function Desktop({ roster, war, q, setQ }: Omit<Props, 'wide'>) {
+function Desktop({ roster, war, q, setQ, lock }: Omit<Props, 'wide'>) {
   const nq = norm(q.trim())
   const grid = useRef<HTMLDivElement>(null)
   const clans = useClans()
   const hits = useMemo(() => (nq ? roster.players.filter((p) => matches(p, nq)) : []), [nq, roster])
   const { planned, day, setDay, live } = useDay(roster, war)
-  const asks = useAsksYou(roster)
 
   useEffect(() => {
     if (!hits.length) return
@@ -368,18 +369,17 @@ function Desktop({ roster, war, q, setQ }: Omit<Props, 'wide'>) {
   return (
     <main className="mx-auto flex max-w-[1360px] flex-col gap-4 px-[clamp(16px,3vw,32px)] pb-12 pt-5">
       <div className="flex flex-wrap items-start gap-3">
-        {!asks && <div className="flex w-full max-w-[400px] flex-col gap-1">
+        <div className="flex w-full max-w-[400px] flex-col gap-1">
           <SearchBox q={q} setQ={setQ} onEnter={() => { if (hits[0]) window.location.hash = href(hits[0]) }} />
           {nq && !hits.length && <span className="px-1 text-sm text-faint">No one by that name</span>}
-        </div>}
+        </div>
         <div className="w-full max-w-[480px] empty:hidden"><YouPanel roster={roster} day={live} /></div>
-        <div className="w-full max-w-[480px] empty:hidden"><YouPrompt roster={roster} /></div>
         <div className="w-full max-w-[480px]"><Countdown roster={roster} war={war} /></div>
       </div>
       {planned && <DayPicker day={day} setDay={setDay} live={live} />}
       <StatusKey />
       <div ref={grid} className="grid items-start gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr))]">
-        {CLANS.map((clan) => {
+        {(lock?.options ?? CLANS).map((clan) => {
           return (
             <section key={clan} aria-label={clan} className="overflow-hidden rounded-[18px] border border-line bg-white pb-2.5">
               <ClanCard roster={roster} clan={clan} meta={clans[clan]} war={war[clan]} compact />

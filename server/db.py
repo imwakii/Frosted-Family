@@ -251,6 +251,11 @@ WHERE w.state = 'warEnded' AND m.attacks_used < w.attacks_per_member;
 """
 
 
+def clean_name(name: str | None) -> str | None:
+    """A name without the replacement character a broken emoji leaves behind."""
+    return name.replace("\ufffd", "").strip() if name else name
+
+
 def utcnow() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
@@ -273,7 +278,7 @@ def connect_readonly(path: str | Path) -> sqlite3.Connection:
 def upsert_members(conn: sqlite3.Connection, clan_tag: str, items: list[dict], seen_at: str) -> int:
     day = seen_at[:10]
     rows = [
-        (clan_tag, m["tag"], day, seen_at, m.get("name"), m.get("role"), m.get("townHallLevel"), m.get("expLevel"),
+        (clan_tag, m["tag"], day, seen_at, clean_name(m.get("name")), m.get("role"), m.get("townHallLevel"), m.get("expLevel"),
          m.get("trophies"), m.get("donations"), m.get("donationsReceived"))
         for m in items
     ]
@@ -350,7 +355,7 @@ def upsert_war(conn: sqlite3.Connection, war: dict, *, kind: str, war_tag: str |
                    ON CONFLICT (war_key, player_tag) DO UPDATE SET
                      name=excluded.name, town_hall=excluded.town_hall, map_position=excluded.map_position,
                      attacks_used=excluded.attacks_used, opponent_attacks=excluded.opponent_attacks""",
-                (key, m["tag"], side["tag"], m.get("name"), m.get("townhallLevel"), m.get("mapPosition"),
+                (key, m["tag"], side["tag"], clean_name(m.get("name")), m.get("townhallLevel"), m.get("mapPosition"),
                  len(attacks), m.get("opponentAttacks")),
             )
             conn.executemany(

@@ -11,7 +11,8 @@ import { Th, RowChevron } from './ui'
 // GET /api/explore/{donations|capital}: one row per current member from their latest profile.
 type Row = { tag: string; name: string; clan: ClanName; th: number | null; [k: string]: unknown }
 type Board = { updated_at: string | null; players: Row[] }
-export type RankCol = { key: string; label: string; value: (r: Row) => number | null; fmt?: (v: number) => string }
+// chip and sub are the shorter names a phone uses, on its sort buttons and under each name.
+export type RankCol = { key: string; label: string; value: (r: Row) => number | null; fmt?: (v: number) => string; chip?: string; sub?: string; subFmt?: (v: number) => string }
 
 const cache = new Map<string, Promise<Board | null>>()
 
@@ -105,7 +106,7 @@ export default function RankBoard({ kind, cols, note, q, setQ, wide }: {
             <span className="flex min-w-0 flex-auto flex-col">
               <span className="truncate text-[15px] font-semibold"><YouTag tag={x.r.tag} />{x.r.name}</span>
               <span className="truncate text-xs text-muted">
-                {cols.filter((c) => c.key !== col.key).map((c) => `${c.label} ${fmt(c, c.value(x.r))}`).join(' · ')}
+                {cols.filter((c) => c.key !== col.key).map((c) => { const v = c.value(x.r); return `${c.sub ?? c.label} ${v !== null && c.subFmt ? c.subFmt(v) : fmt(c, v)}` }).join(' · ')}
               </span>
             </span>
             <span className="flex-none text-right text-sm font-extrabold tabular-nums">{fmt(col, x.v)}</span>
@@ -136,7 +137,7 @@ export default function RankBoard({ kind, cols, note, q, setQ, wide }: {
         {cols.map((c) => (
           <button key={c.key} type="button" aria-pressed={c.key === col.key} onClick={() => setSortKey(c.key)}
             className={`flex min-h-8 flex-none cursor-pointer items-center whitespace-nowrap rounded-lg border px-2.5 text-[13px] font-bold ${c.key === col.key ? 'border-ink-2 bg-white text-ink' : 'border-transparent bg-transparent text-faint'}`}>
-            {c.label}
+            {c.chip ?? c.label}
           </button>
         ))}
       </div>

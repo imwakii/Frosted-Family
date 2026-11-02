@@ -114,7 +114,7 @@ function until(ms: number) {
 export function WarPill({ war, now = Date.now() }: { war: LiveWar | null | undefined; now?: number }) {
   const [open, setOpen] = useState(false)
   // self-start keeps the pill compact inside the header's flex column.
-  const box = 'inline-flex h-7 max-w-full items-center gap-1.5 self-start whitespace-nowrap rounded-full px-2.5 text-xs font-bold'
+  const box = 'inline-flex h-8 max-w-full items-center gap-1.5 self-start whitespace-nowrap rounded-full px-2.5 text-xs font-bold'
   const ended = war?.state === 'warEnded' && (war.endTime === null || now - war.endTime < ENDED_SHOWN)
   if (!war || (war.state === 'warEnded' && !ended)) {
     return <span className={`${box} bg-white/60 font-semibold text-[#94A3B8]`}>No war</span>
@@ -141,7 +141,7 @@ export function WarPill({ war, now = Date.now() }: { war: LiveWar | null | undef
       <button type="button" aria-expanded={open} title={`vs ${war.opponent}`} onClick={() => setOpen((o) => !o)}
         className={`${box} cursor-pointer border-0 bg-white text-[#15803D] shadow-[0_1px_2px_rgba(15,23,42,.08)]`}>
         <span className="ff-live size-2 flex-none rounded bg-[#16A34A]" />
-        {war.day ? `Day ${war.day}` : 'Live'}
+        {war.day ? `Day ${war.day}` : 'War'}
         <span className="font-display text-[13px] font-normal text-ink tabular-nums"><Star /> {war.stars}–{war.opponentStars}</span>
       </button>
       {open && <span aria-hidden="true" className="fixed inset-0 z-30" onClick={() => setOpen(false)} />}
@@ -161,7 +161,7 @@ export function WarPill({ war, now = Date.now() }: { war: LiveWar | null | undef
 export function SubNav({ items, current, wide }: { items: { id: string; label: string; href: string }[]; current: string; wide: boolean }) {
   const ref = useRef<HTMLElement>(null)
   // A section past the edge is scrolled into view when it is the one open.
-  useEffect(() => { ref.current?.querySelector('[aria-current="page"]')?.scrollIntoView({ inline: 'nearest', block: 'nearest' }) }, [current])
+  useEffect(() => { ref.current?.querySelector('[aria-current="page"]')?.scrollIntoView({ inline: 'center', block: 'nearest' }) }, [current])
   return (
     <div className={wide ? 'border-b border-line bg-white' : 'px-4'}>
       {/* On phones the row is tighter, and fades at the right edge when it runs past it, so it reads as scrollable. */}
@@ -192,7 +192,7 @@ export function UtcClock({ wide }: { wide: boolean }) {
   const day = d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' })
   return (
     <span className="whitespace-nowrap rounded-full border border-line bg-white px-2.5 py-[5px] text-xs font-bold text-muted tabular-nums md:px-3 md:py-1.5 md:text-[13px]">
-      {wide && <span className="font-semibold text-faint">{day} · </span>}{time} UTC
+      {wide && <span className="font-semibold text-faint max-lg:hidden">{day} · </span>}{time} UTC
     </span>
   )
 }

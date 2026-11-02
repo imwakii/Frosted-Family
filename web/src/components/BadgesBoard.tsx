@@ -18,6 +18,8 @@ type Row = { tag: string; name: string; clan: ClanName; th: number | null; badge
 
 const medals = (r: Row, t: Tier) => r.badges.filter((b) => b.tier === t).length
 const medalScore = (r: Row) => medals(r, 'gold') * 10_000 + medals(r, 'silver') * 100 + medals(r, 'bronze')
+// A phone row holds this many, best first, and counts the rest.
+const CHIPS_ON_PHONE = 6
 
 export default function BadgesBoard({ q, setQ, wide }: { q: string; setQ: (v: string) => void; wide: boolean }) {
   const { data, loading } = useBoard('badges')
@@ -74,12 +76,16 @@ export default function BadgesBoard({ q, setQ, wide }: { q: string; setQ: (v: st
                 <span className="w-6 flex-none text-right text-xs font-bold tabular-nums text-faint">{place.get(x) ?? '—'}</span>
                 <Th th={x.r.th} />
                 <span className="flex min-w-0 flex-auto flex-col gap-0.5">
-                  <span className="truncate text-[15px] font-semibold"><YouTag tag={x.r.tag} />{x.r.name} {clan === 'All' && <span className="text-[11px] font-bold" style={{ color: CLAN[x.r.clan].deep }}>{x.r.clan}</span>}</span>
+                  <span className="flex min-w-0 items-baseline gap-1.5">
+                    <span className="truncate text-[15px] font-semibold"><YouTag tag={x.r.tag} />{x.r.name}</span>
+                    {clan === 'All' && <span className="flex-none text-[11px] font-bold" style={{ color: CLAN[x.r.clan].deep }}>{x.r.clan}</span>}
+                  </span>
                   {x.held ? <span className="truncate text-xs text-muted">{x.held.detail}</span> : (
-                    <span aria-label={x.r.badges.map((b) => `${BADGES[b.id]?.label ?? b.label}, ${b.tier}`).join('; ')} className="flex flex-wrap gap-1">
-                      {x.r.badges.map((b) => (
+                    <span aria-label={x.r.badges.map((b) => `${BADGES[b.id]?.label ?? b.label}, ${b.tier}`).join('; ')} className={`flex items-center ${wide ? 'flex-wrap gap-1' : '-space-x-1'}`}>
+                      {[...x.r.badges].sort((a, b) => TIERS.indexOf(b.tier) - TIERS.indexOf(a.tier)).slice(0, wide ? undefined : CHIPS_ON_PHONE).map((b) => (
                         <span key={b.id} title={`${BADGES[b.id]?.label ?? b.label} · ${TIER_LOOK[b.tier].name}`} className={`flex size-[22px] items-center justify-center rounded-full border text-[11px] ${TIER_LOOK[b.tier].chip}`}>{BADGES[b.id]?.icon}</span>
                       ))}
+                      {!wide && x.r.badges.length > CHIPS_ON_PHONE && <span className="pl-2 text-[11px] font-bold text-muted">+{x.r.badges.length - CHIPS_ON_PHONE}</span>}
                     </span>
                   )}
                 </span>
