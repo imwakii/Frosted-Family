@@ -6,14 +6,21 @@ import { CLAN, cycleLong, cycleShort, fmtScore, fmtWindow } from '../theme'
 import type { Player, Roster } from '../types'
 import { Arrow, PlayDays, Stars, StatusPill, Th, UnitIcon } from './ui'
 
-// Named from the game. Each says what earns it; the server adds what earned it for this player.
-const BADGES: Record<string, { icon: string; label: string; means: string }> = {
-  sharpshooter: { icon: '⭐', label: 'Three-Star General', means: 'Three stars on at least 85% of war attacks, over 20 or more attacks.' },
-  never_misses: { icon: '⚔️', label: 'Battle Ready', means: 'No missed war attacks, over 20 or more attacks.' },
-  wall: { icon: '🛡️', label: 'Unbreakable', means: 'One of the five bases giving up the fewest stars per attack, over 20 or more defences.' },
-  giant_slayer: { icon: '🪓', label: 'Giant Slayer', means: 'Three-starred a higher town hall in war.' },
-  top_donor: { icon: '🤝', label: 'Friend in Need', means: 'One of the three biggest donors in the family this season.' },
-  maxed_heroes: { icon: '👑', label: 'Hero Hall Legend', means: 'Every hero at max level.' },
+// Named from the game. Each says what earns it and where its three tiers sit (server/profiles.py sets the lines);
+// the server adds the tier and what earned it for this player.
+const BADGES: Record<string, { icon: string; label: string; means: string; ladder: [string, string, string] }> = {
+  sharpshooter: { icon: '⭐', label: 'Three-Star General', means: 'Three stars on your war attacks, over 20 or more attacks.', ladder: ['80%', '85%', '90%'] },
+  never_misses: { icon: '⚔️', label: 'Battle Ready', means: 'War attacks made with none missed.', ladder: ['20', '50', '75'] },
+  wall: { icon: '🛡️', label: 'Unbreakable', means: 'Fewest stars given up per attack, over 20 or more defences.', ladder: ['Top 20', 'Top 10', 'Top 5'] },
+  giant_slayer: { icon: '🪓', label: 'Giant Slayer', means: 'Three-star war hits on a higher town hall.', ladder: ['1', '3', '5'] },
+  top_donor: { icon: '🤝', label: 'Friend in Need', means: 'Biggest donors in the family this season.', ladder: ['Top 10', 'Top 3', '#1'] },
+  maxed_heroes: { icon: '👑', label: 'Hero Hall Legend', means: 'Hero levels as a share of the maximum.', ladder: ['95%', '99%', 'All max'] },
+}
+const TIERS = ['bronze', 'silver', 'gold'] as const
+const TIER_LOOK = {
+  bronze: { chip: 'border-[#D9A77A] bg-[#FBEFE4] text-[#8A4B1F]', on: 'border-[#8A4B1F] bg-[#F5DFCB] text-[#8A4B1F]', ink: '#E8B48A', name: 'Bronze' },
+  silver: { chip: 'border-[#B8C2D0] bg-[#F1F4F8] text-[#475569]', on: 'border-[#475569] bg-[#E2E8F0] text-[#475569]', ink: '#CBD5E1', name: 'Silver' },
+  gold: { chip: 'border-[#E9B949] bg-[#FEF3C7] text-[#92400E]', on: 'border-[#92400E] bg-[#FDE68A] text-[#92400E]', ink: '#FDE68A', name: 'Gold' },
 }
 
 // Explained on hover with a mouse, and on tap on a phone. Tapping elsewhere closes it.
@@ -37,7 +44,7 @@ function Badges({ badges }: { badges: NonNullable<PlayerCard['badges']> }) {
               onPointerEnter={(e) => { if (e.pointerType === 'mouse') setHover(b.id) }}
               onPointerLeave={(e) => { if (e.pointerType === 'mouse') setHover(null) }}
               onClick={() => setPinned((p) => (p === b.id ? null : b.id))}
-              className={`flex cursor-pointer items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-bold ${open?.id === b.id ? 'border-[#92400E] bg-[#FEF3C7] text-[#92400E]' : 'border-[#F5D98A] bg-[#FFFBEB] text-[#92400E]'}`}>
+              className={`flex cursor-pointer items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-bold ${TIER_LOOK[b.tier ?? 'silver'][open?.id === b.id ? 'on' : 'chip']}`}>
               <span aria-hidden="true">{BADGES[b.id]?.icon}</span>{BADGES[b.id]?.label ?? b.label}
             </button>
           </li>
@@ -45,9 +52,18 @@ function Badges({ badges }: { badges: NonNullable<PlayerCard['badges']> }) {
       </ul>
       {open && (
         <div role="tooltip" className="absolute inset-x-0 top-full z-10 mt-1.5 flex flex-col gap-0.5 rounded-xl bg-ink px-3 py-2.5 text-white shadow-[0_8px_24px_rgba(15,23,42,.3)]">
-          <span className="text-[13px] font-bold">{BADGES[open.id]?.label ?? open.label}</span>
+          <span className="text-[13px] font-bold">{BADGES[open.id]?.label ?? open.label}{open.tier && <span style={{ color: TIER_LOOK[open.tier].ink }}> · {TIER_LOOK[open.tier].name}</span>}</span>
           {BADGES[open.id] && <span className="text-xs">{BADGES[open.id].means}</span>}
-          <span className="text-xs font-semibold text-[#FDE68A]">{open.detail}</span>
+          {open.tier && BADGES[open.id] && (
+            <span className="mt-0.5 grid grid-cols-3 gap-1 text-[11px]">
+              {TIERS.map((t, i) => (
+                <span key={t} className={`rounded-md px-1.5 py-1 text-center ${t === open.tier ? 'bg-white/15 font-bold' : 'text-white/60'}`} style={t === open.tier ? { color: TIER_LOOK[t].ink } : undefined}>
+                  {TIER_LOOK[t].name}<br />{BADGES[open.id].ladder[i]}
+                </span>
+              ))}
+            </span>
+          )}
+          <span className="text-xs font-semibold" style={{ color: open.tier ? TIER_LOOK[open.tier].ink : '#FDE68A' }}>{open.detail}</span>
         </div>
       )}
     </div>
@@ -78,6 +94,7 @@ function Stat({ label, value, sub }: { label: string; value: ReactNode; sub?: st
   )
 }
 
+const dayMonth = (d: string) => new Date(`${d}T00:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' })
 const LIST = 'm-0 flex list-none flex-col rounded-xl border border-line p-0'
 const num = (v: number | null | undefined) => (v === null || v === undefined ? '—' : v >= 1_000_000 ? `${(v / 1_000_000).toFixed(1)}M` : v.toLocaleString('en-GB'))
 
@@ -101,7 +118,7 @@ function Trend({ p, cycles }: { p: Player; cycles: string[] }) {
   const label = pts.map((pt) => `${cycleLong(pt.c)} ${fmtScore(pt.s)}`).join(', ')
 
   return (
-    <Section title="Score by cycle">
+    <Section title="Score by cycle" note="Monthly">
       <svg role="img" aria-label={`Score by cycle: ${label}`} viewBox="-8 -12 366 130" className="h-auto w-full overflow-visible">
         <line x1="0" y1={H} x2={W} y2={H} stroke="#EEF1F6" />
         {runs.map((r) => <polyline key={r} points={r} fill="none" stroke={accent} strokeWidth="3" strokeLinejoin="round" strokeLinecap="round" />)}
@@ -153,6 +170,11 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
   const where = p ? `${p.clan} · ${p.slot === 'NEW' ? 'new' : inCwl ? { CORE: 'core', SUB: 'sub', OUT: 'not in' }[p.slot] : 'not in CWL'}` : ''
   const c = p && CLAN[p.clan]
   const pct = (v: number | null) => (v === null ? '—' : `${v.toFixed(1)}%`)
+  const cycle = roster.cycles[roster.cycles.length - 1]
+  // The live record once the server sends it: the export's window to now, as on War record and the badges.
+  const rec = card?.record
+  const threeStar = rec ? (rec.three_star_rate === null ? null : rec.three_star_rate * 100) : p?.threeStar ?? null
+  const missed = rec ? (rec.attacks + rec.missed ? (100 * rec.missed) / (rec.attacks + rec.missed) : null) : p?.missPct ?? null
 
   return (
     <div className="fixed inset-0 z-40">
@@ -199,7 +221,7 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
             <div className="flex flex-col gap-3 rounded-2xl p-4" style={{ background: c.tint }}>
               <div className="flex items-end justify-between gap-3">
                 <div className="flex flex-col">
-                  <span className="text-xs font-bold uppercase tracking-[0.06em]" style={{ color: c.label }}>Score</span>
+                  <span className="text-xs font-bold uppercase tracking-[0.06em]" style={{ color: c.label }}>Score{cycle ? ` · ${cycleShort(cycle)}` : ''}</span>
                   <span className="font-display text-5xl leading-none tabular-nums" style={{ color: c.deep }}>{fmtScore(p.score)}</span>
                 </div>
                 <div className="flex flex-col items-end gap-1">
@@ -218,18 +240,22 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
               )}
             </div>
             {card?.badges?.length ? <Badges badges={card.badges} /> : null}
-            <Section title="War record" note={fmtWindow(roster.window)}>
+            <Section title="War record" note={rec?.from ? `Since ${dayMonth(rec.from)}` : fmtWindow(roster.window)}>
               <div className="grid grid-cols-3 gap-2">
-                <Stat label="Three stars" value={pct(p.threeStar)} />
-                <Stat label="Missed" value={pct(p.missPct)} />
-                <Stat label="Attacks" value={p.attacks ?? '—'} />
-                {card && <>
-                  {card.streaks && <Stat label="3★ streak" value={<>{card.streaks.three_stars > 1 && <span aria-hidden="true">🔥 </span>}{card.streaks.three_stars}</>} sub={`best ${card.streaks.three_stars_best}`} />}
-                  {card.streaks && <Stat label="No-miss wars" value={card.streaks.clean_wars} sub="in a row" />}
-                  <Stat label="War stars" value={num(card.war_stars)} sub="all time" />
-                </>}
+                <Stat label="Three stars" value={pct(threeStar)} />
+                <Stat label="Missed" value={pct(missed)} />
+                <Stat label="Attacks" value={rec?.attacks ?? p.attacks ?? '—'} />
               </div>
             </Section>
+            {card?.streaks && (
+              <Section title="Streaks" note={card.tracked_from ? `Since ${dayMonth(card.tracked_from)}` : null}>
+                <div className="grid grid-cols-3 gap-2">
+                  <Stat label="3★ now" value={<>{card.streaks.three_stars > 1 && <span aria-hidden="true">🔥 </span>}{card.streaks.three_stars}</>} />
+                  <Stat label="3★ best" value={card.streaks.three_stars_best} />
+                  <Stat label="No-miss wars" value={card.streaks.clean_wars} />
+                </div>
+              </Section>
+            )}
             <Trend p={p} cycles={roster.cycles} />
             {card && card.heroes.length > 0 && (
               <Section title="Heroes and gear">
@@ -285,10 +311,11 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
               </Section>
             )}
             {card && (
-              <Section title="Giving">
-                <div className="grid grid-cols-3 gap-2">
+              <Section title="Totals">
+                <div className="grid grid-cols-2 gap-2">
                   <Stat label="Donated" value={num(card.donations)} sub="this season" />
                   <Stat label="Received" value={num(card.donations_received)} sub="this season" />
+                  <Stat label="War stars" value={num(card.war_stars)} sub="all time" />
                   <Stat label="Capital" value={num(card.capital)} sub="all time" />
                 </div>
               </Section>

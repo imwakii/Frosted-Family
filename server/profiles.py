@@ -24,11 +24,16 @@ PETS, SIEGE, SUPER = set(KINDS["pets"]), set(KINDS["siege_machines"]), set(KINDS
 
 
 CARD_ATTACKS, CARD_UPGRADES, CARD_UPGRADE_DAYS = 8, 6, 30
-# Badge lines, set against the family's numbers on 2 Nov 2026 so each is earned by a handful of members.
-BADGE_MIN_RECORD = 20        # attacks or defences before a rate counts
-BADGE_SHARPSHOOTER = 0.85    # three-star rate
-BADGE_WALLS = 5              # members conceding the fewest stars per defence
-BADGE_DONORS = 3             # top donors this season
+# Bronze, silver and gold lines, set against the family's numbers on 2 Nov 2026 so gold stays rare. Keep in step with the
+# ladders in web/src/components/PlayerSheet.tsx.
+BADGE_MIN_RECORD = 20                  # attacks or defences before a rate counts
+BADGE_THREE_STARS = (0.80, 0.85, 0.90) # three-star rate
+BADGE_NO_MISS = (20, 50, 75)           # attacks with none missed
+BADGE_HELD = (20, 10, 5)               # rank among members by fewest stars conceded per defence
+BADGE_SLAIN = (1, 3, 5)                # three-star hits on a higher town hall
+BADGE_DONORS = (10, 3, 1)              # rank among donors this season
+BADGE_HEROES = (0.95, 0.99, 1.0)       # hero levels, as a share of the maximum
+TIERS = ("bronze", "silver", "gold")
 
 def profiles_due(conn: sqlite3.Connection, now: str) -> bool:
     last = conn.execute("SELECT MAX(started_at) FROM profile_runs").fetchone()[0]
@@ -322,40 +327,64 @@ def streaks_for(conn, tag: str) -> dict:
     return {"three_stars": now, "three_stars_best": best, "clean_wars": clean}
 
 
-def badges_for(conn, tag: str, heroes: list[dict]) -> list[dict]:
-    """Earned from the player's war record (the export plus recorded wars) and profile, with what earned each."""
+def tier_of(value, lines) -> str | None:
+    """The highest tier a value reaches, lines running bronze to gold, upward."""
+    reached = [t for t, line in zip(TIERS, lines) if value >= line]
+    return reached[-1] if reached else None
+
+
+def tier_by_rank(rank: int | None, lines) -> str | None:
+    """The same for a rank, where lower is better: lines give the last rank each tier reaches."""
+    reached = [t for t, line in zip(TIERS, lines) if rank is not None and rank <= line]
+    return reached[-1] if reached else None
+
+
+def badges_for(conn, tag: str, heroes: list[dict], record: dict | None = None) -> list[dict]:
+    """Earned from the player's war record (the export plus recorded wars) and profile, each at a tier, gold first,
+    with what earned it."""
     out = []
-    rows = war_record(conn)["players"]
+
+    def earn(id_, label, tier, detail):
+        if tier:
+            out.append({"id": id_, "label": label, "tier": tier, "detail": detail})
+
+    rows = (record or war_record(conn))["players"]
     mine = next((r for r in rows if r["tag"] == tag), None)
     w = mine["war"] if mine else None
     if w and w["attacks"] >= BADGE_MIN_RECORD:
-        if (w["three_star_rate"] or 0) >= BADGE_SHARPSHOOTER:
-            out.append({"id": "sharpshooter", "label": "Three-Star General", "detail": f"{round(w['three_star_rate'] * 100)}% three stars"})
+        rate = w["three_star_rate"] or 0
+        earn("sharpshooter", "Three-Star General", tier_of(rate, BADGE_THREE_STARS), f"{rate * 100:.1f}% three stars")
         if w["missed"] == 0:
-            out.append({"id": "never_misses", "label": "Battle Ready", "detail": f"{w['attacks']} attacks, none missed"})
+            earn("never_misses", "Battle Ready", tier_of(w["attacks"], BADGE_NO_MISS), f"{w['attacks']} attacks, none missed")
     held = sorted((r["war"]["defense"]["avg_stars_conceded"], r["tag"]) for r in rows
                   if r["war"] and r["war"]["defense"]["defenses"] >= BADGE_MIN_RECORD)
-    if tag in [t for _, t in held[:BADGE_WALLS]]:
-        out.append({"id": "wall", "label": "Unbreakable", "detail": f"{next(v for v, t in held if t == tag)} stars conceded per attack"})
+    place = next((i + 1 for i, (_, t) in enumerate(held) if t == tag), None)
+    if place:
+        earn("wall", "Unbreakable", tier_by_rank(place, BADGE_HELD), f"#{place} in the family, {held[place - 1][0]} stars conceded per attack")
     upsets = conn.execute("""SELECT COUNT(*) FROM attacks a
         JOIN war_members m ON m.war_key = a.war_key AND m.player_tag = a.attacker_tag
         JOIN war_members d ON d.war_key = a.war_key AND d.player_tag = a.defender_tag
         WHERE a.attacker_tag=? AND a.stars = 3 AND d.town_hall > m.town_hall""", (tag,)).fetchone()[0]
-    if upsets:
-        out.append({"id": "giant_slayer", "label": "Giant Slayer", "detail": f"{upsets} three-star {'hit' if upsets == 1 else 'hits'} on a higher town hall"})
-    givers = sorted((r for r in current_members(conn) if r["donations"]), key=lambda r: -r["donations"])
-    top = [r["tag"] for r in givers[:BADGE_DONORS]]
-    if tag in top:
-        out.append({"id": "top_donor", "label": "Friend in Need", "detail": f"#{top.index(tag) + 1} in the family this season"})
-    if heroes and all(h["max"] and h["level"] >= h["max"] for h in heroes):
-        out.append({"id": "maxed_heroes", "label": "Hero Hall Legend", "detail": "Every hero at max level"})
-    return out
+    earn("giant_slayer", "Giant Slayer", tier_of(upsets, BADGE_SLAIN), f"{upsets} three-star {'hit' if upsets == 1 else 'hits'} on a higher town hall")
+    givers = [r["tag"] for r in sorted((r for r in current_members(conn) if r["donations"]), key=lambda r: -r["donations"])]
+    if tag in givers:
+        rank = givers.index(tag) + 1
+        earn("top_donor", "Friend in Need", tier_by_rank(rank, BADGE_DONORS), f"#{rank} donor in the family this season")
+    top = sum(h["max"] or 0 for h in heroes)
+    if heroes and top:
+        share = sum(h["level"] for h in heroes) / top
+        earn("maxed_heroes", "Hero Hall Legend", tier_of(share, BADGE_HEROES), f"Heroes at {int(share * 100)}% of max level")
+    return sorted(out, key=lambda b: -TIERS.index(b["tier"]))
 
 
 def player_card(conn, tag: str) -> dict:
     """What the player sheet adds to the roster row: heroes and their gear, badges, streaks, season totals, latest
-    attacks and upgrades."""
+    attacks and upgrades. Each block says what period it covers: the war record runs from the export's window to now,
+    the same figures the War record board and the badges use, and streaks only over the wars the collector has seen."""
     from server import leaders  # leaders imports this module
+    record = war_record(conn)
+    own = next((r["war"] for r in record["players"] if r["tag"] == tag), None)
+    first = conn.execute("SELECT MIN(start_time) FROM wars WHERE start_time IS NOT NULL").fetchone()[0]
     prof = conn.execute("SELECT * FROM player_profiles WHERE player_tag=?", (tag,)).fetchone()
     gear: dict[str, list[dict]] = {}
     for u in conn.execute("""SELECT * FROM player_units WHERE player_tag=? AND kind='equipment' AND hero IS NOT NULL
@@ -375,7 +404,10 @@ def player_card(conn, tag: str) -> dict:
                         "target": a["target"], "target_th": a["target_th"], "target_position": a["target_position"]})
     mine = [u for u in leaders.upgrades(conn, CARD_UPGRADE_DAYS)["upgrades"] if u["tag"] == tag][:CARD_UPGRADES]
     return {
-        "heroes": heroes, "attacks": attacks, "upgrades": mine, "badges": badges_for(conn, tag, heroes),
+        "heroes": heroes, "attacks": attacks, "upgrades": mine, "badges": badges_for(conn, tag, heroes, record),
+        "record": own and {"from": record["window_from"], "attacks": own["attacks"], "missed": own["missed"],
+                           "three_star_rate": own["three_star_rate"]},
+        "tracked_from": api_day(first),
         "streaks": streaks_for(conn, tag),
         "war_stars": prof["war_stars"] if prof else None, "donations": prof["donations"] if prof else None,
         "donations_received": prof["donations_received"] if prof else None,

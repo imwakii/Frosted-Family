@@ -324,8 +324,13 @@ def test_the_player_card_has_heroes_totals_attacks_and_upgrades(conn):
     assert card["war_stars"] is not None and "upgrades" in card
     hit = card["attacks"][0]
     assert {"stars", "destruction", "opponent", "target"} <= set(hit) and hit["opponent"]
-    assert profiles.player_card(conn, "#NOBODY") == {
-        "heroes": [], "attacks": [], "upgrades": [], "badges": [], "war_stars": None, "donations": None,
+    assert card["record"]["attacks"] >= 1 and {"from", "missed", "three_star_rate"} <= set(card["record"])
+    assert card["tracked_from"]  # streaks say how far back they go
+    nobody = profiles.player_card(conn, "#NOBODY")
+    assert nobody["tracked_from"] == card["tracked_from"]
+    del nobody["tracked_from"]
+    assert nobody == {
+        "heroes": [], "attacks": [], "upgrades": [], "badges": [], "record": None, "war_stars": None, "donations": None,
         "donations_received": None, "capital": None,
         "streaks": {"three_stars": 0, "three_stars_best": 0, "clean_wars": 0}}
 
@@ -352,18 +357,32 @@ def test_streaks_count_the_current_and_best_runs_and_clean_wars(conn):
     assert profiles.streaks_for(conn, "#P") == {"three_stars": 2, "three_stars_best": 3, "clean_wars": 2}
 
 
-def test_badges_are_earned_from_the_record(conn, monkeypatch):
+def test_badges_are_earned_at_a_tier_gold_first(conn, monkeypatch):
     from server import profiles
     war = lambda attacks, three, missed, conceded, defenses=30: {
         "attacks": attacks, "three_star_rate": three, "missed": missed,
         "defense": {"defenses": defenses, "avg_stars_conceded": conceded}}
-    rows = [{"tag": "#ACE", "war": war(40, 0.9, 0, 1.0)}, {"tag": "#NEW", "war": war(5, 1.0, 0, 3.0, defenses=2)}]
-    rows += [{"tag": f"#X{i}", "war": war(40, 0.5, 3, 1.5 + i / 10)} for i in range(6)]
+    rows = [{"tag": "#ACE", "war": war(60, 0.92, 0, 1.0)}, {"tag": "#NEW", "war": war(5, 1.0, 0, 3.0, defenses=2)}]
+    rows += [{"tag": f"#X{i}", "war": war(40, 0.5, 3, 1.5 + i / 10)} for i in range(30)]
     monkeypatch.setattr(profiles, "war_record", lambda c: {"players": rows})
-    monkeypatch.setattr(profiles, "current_members", lambda c: [{"tag": "#ACE", "donations": 900}, {"tag": "#X0", "donations": 0}])
-    maxed = [{"level": 100, "max": 100}]
-    ids = lambda tag, heroes=(): [b["id"] for b in profiles.badges_for(conn, tag, list(heroes))]
-    assert ids("#ACE", maxed) == ["sharpshooter", "never_misses", "wall", "top_donor", "maxed_heroes"]
-    assert ids("#NEW") == []  # too few attacks or defences to count
-    assert "wall" in ids("#X3") and "wall" not in ids("#X4")  # the five who concede least
-    assert ids("#X0", [{"level": 90, "max": 100}]) == ["wall"]
+    monkeypatch.setattr(profiles, "current_members", lambda c: [{"tag": t, "donations": d} for t, d in (("#ACE", 900), ("#X1", 800), ("#X0", 0))])
+    tiers = lambda tag, heroes=(): {b["id"]: b["tier"] for b in profiles.badges_for(conn, tag, list(heroes))}
+    h = lambda level: [{"level": level, "max": 100}]
+    assert tiers("#ACE", h(100)) == {"sharpshooter": "gold", "never_misses": "silver", "wall": "gold", "top_donor": "gold", "maxed_heroes": "gold"}
+    assert tiers("#NEW") == {}  # too few attacks or defences to count
+    # Places: ACE first, then X0 second, so X3 is fifth (gold), X4 sixth (silver), X9 eleventh (bronze), X19 past it.
+    assert tiers("#X3")["wall"] == "gold" and tiers("#X4")["wall"] == "silver" and tiers("#X9")["wall"] == "bronze"
+    assert "wall" not in tiers("#X19")
+    assert tiers("#X1")["top_donor"] == "silver"
+    assert tiers("#X0", h(99))["maxed_heroes"] == "silver" and tiers("#X0", h(95))["maxed_heroes"] == "bronze"
+    assert "maxed_heroes" not in tiers("#X0", h(90))
+    order = [b["tier"] for b in profiles.badges_for(conn, "#X3", h(95))]
+    assert order == sorted(order, key=lambda t: -profiles.TIERS.index(t))
+
+
+def test_tier_lines():
+    from server.profiles import tier_by_rank, tier_of
+    assert tier_of(0.79, (0.8, 0.85, 0.9)) is None and tier_of(0.8, (0.8, 0.85, 0.9)) == "bronze"
+    assert tier_of(0.9, (0.8, 0.85, 0.9)) == "gold"
+    assert tier_by_rank(1, (10, 3, 1)) == "gold" and tier_by_rank(3, (10, 3, 1)) == "silver"
+    assert tier_by_rank(11, (10, 3, 1)) is None and tier_by_rank(None, (10, 3, 1)) is None
