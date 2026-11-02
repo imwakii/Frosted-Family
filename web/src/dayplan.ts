@@ -7,8 +7,9 @@ import type { ClanName, Player, Slot } from './types'
 //      over it. The enemy is the drawn opponent, else the expected one (`upcoming`); with neither, the highest play.
 //   3. Between players who fit a slot equally well, the one who needs more days for 8 stars plays. Days needed =
 //      ceil((8 − stars expected so far) / 3). 8 stars never puts a weaker player ahead of a better fit.
-//   4. New members are tried out: up to two a day who have not played yet, highest town hall first, on the weakest
-//      enemy slots and only if they are within a town hall of them. One who attacks counts as proven from then on and
+//   4. New members are tried out from the first open day, so we learn early who can be counted on: up to two a day who
+//      have not played yet, whichever group the lineup has them in, highest town hall first, those already on the roster
+//      ahead of the rest, on the weakest enemy slots and only if they are within a town hall of them. One who attacks counts as proven from then on and
 //      competes for days like anyone else, so a TH18 keeps playing until 8 stars. One who misses gets no more days.
 //   5. Weakest of all: consecutive days are easier to remember. Between equal fits, once anyone who needs every day
 //      left for 8 stars is in, a player who played the day before stays in.
@@ -52,14 +53,17 @@ export const earned = (wars: Wars, tag: string) =>
 
 export const missedThisSeason = (wars: Wars) => new Set(Object.values(wars).flatMap((w) => w.missed))
 
+/** New to us with no war record, even once a leader has placed them as a sub. */
+const isNew = (p: Player) => p.slot === 'NEW' || p.status === 'new'
+
 /** A new member who has yet to attack in a war this season. */
 export const onTrial = (p: Player, wars: Wars) =>
-  p.slot === 'NEW' && !Object.values(wars).some((w) => locked(w) && w.stars[p.tag] !== undefined)
+  isNew(p) && !Object.values(wars).some((w) => locked(w) && w.stars[p.tag] !== undefined)
 
 /** 0 proven, 1 unproven or new, null not suggested. */
 export function tier(p: Player, missed: Set<string>, wars: Wars): number | null {
   if (missed.has(p.tag) || p.status === 'highMiss' || p.status === 'inactive') return null
-  return p.status === 'active' || (p.slot === 'NEW' && !onTrial(p, wars)) ? 0 : 1
+  return p.status === 'active' || (isNew(p) && !onTrial(p, wars)) ? 0 : 1
 }
 
 const daysFor = (stars: number) => Math.max(0, Math.ceil((TARGET - stars) / 3))
@@ -90,7 +94,7 @@ export function suggest(pool: Player[], wars: Wars, upcoming: number[] = []): Cl
   // Not yet tried: one in a war still being fought is waiting on its result.
   const inGame = new Set(Object.values(wars).filter(locked).flatMap((w) => w.lineup))
   const untried = pool.filter((p) => onTrial(p, wars) && tier(p, missed, wars) !== null && !inGame.has(p.tag))
-    .sort((a, b) => (b.th ?? 0) - (a.th ?? 0) || (b.score ?? 0) - (a.score ?? 0))
+    .sort((a, b) => (b.th ?? 0) - (a.th ?? 0) || Number(a.slot === 'NEW') - Number(b.slot === 'NEW') || (b.score ?? 0) - (a.score ?? 0))
   const strongest = [...ok].sort(byStrength)
   const out: ClanDays = {}
   const open = DAYS.filter((d) => !locked(wars[d]))
