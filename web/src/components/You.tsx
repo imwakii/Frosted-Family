@@ -1,4 +1,4 @@
-import { useEffect, useRef, useSyncExternalStore, useState } from 'react'
+import { useEffect, useId, useRef, useSyncExternalStore, useState } from 'react'
 import type { Roster } from '../types'
 import { CLAN, SLOT_TEXT } from '../theme'
 import { playerHref } from '../route'
@@ -86,6 +86,7 @@ export function YouPrompt({ roster, onDone, autoFocus }: { roster: Roster; onDon
   const { yous, addYou } = useYou()
   const asks = useAsksYou(roster)
   const [q, setQ] = useState('')
+  const id = useId()
   if (!onDone && !asks) return null
   const adding = roster.players.some((p) => yous.includes(p.tag))
   const n = q.trim().toLowerCase()
@@ -98,9 +99,9 @@ export function YouPrompt({ roster, onDone, autoFocus }: { roster: Roster; onDon
           className="flex size-8 flex-none cursor-pointer items-center justify-center rounded-full border-0 bg-transparent text-lg leading-none text-faint hover:bg-page hover:text-ink">×</button>
       </div>
       <div className="relative min-w-0">
-        <label htmlFor="who" className="sr-only">Your name in the game</label>
+        <label htmlFor={id} className="sr-only">Your name in the game</label>
         <SearchIcon />
-        <input id="who" type="search" autoFocus={autoFocus} placeholder="Your name in the game" value={q} autoComplete="off" spellCheck={false} onChange={(e) => setQ(e.target.value)}
+        <input id={id} type="search" autoFocus={autoFocus} placeholder="Your name in the game" value={q} autoComplete="off" spellCheck={false} onChange={(e) => setQ(e.target.value)}
           className="h-11 w-full rounded-xl border border-line bg-white pl-[42px] pr-3.5 text-base text-ink placeholder:text-faint" />
       </div>
       {hits.length > 0 && (
@@ -122,12 +123,10 @@ export function YouPrompt({ roster, onDone, autoFocus }: { roster: Roster; onDon
 }
 
 /** Your own card from any tab: the first of your accounts; the card switches between them. */
-export function YouChip({ roster, wide, promptShown }: { roster: Roster; wide: boolean; promptShown: boolean }) {
+export function YouChip({ roster, wide }: { roster: Roster; wide: boolean }) {
   const { yous } = useYou()
-  const asks = useAsksYou(roster)
   const [picking, setPicking] = useState(false)
   const p = roster.players.find((x) => yous.includes(x.tag))
-  if (!p && promptShown && asks) return null  // the page is already asking
   if (!p) {
     return (
       <>
