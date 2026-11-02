@@ -329,6 +329,7 @@ def test_the_player_card_has_heroes_totals_attacks_and_upgrades(conn):
     nobody = profiles.player_card(conn, "#NOBODY")
     assert nobody["tracked_from"] == card["tracked_from"]
     del nobody["tracked_from"]
+    del nobody["family_since"]
     assert nobody == {
         "heroes": [], "attacks": [], "upgrades": [], "badges": [], "record": None, "war_stars": None, "donations": None,
         "donations_received": None, "capital": None,
@@ -417,3 +418,36 @@ def test_the_newer_badges_come_from_raids_upgrades_cleanups_and_stars(conn, monk
     assert tiers("#VET") == {"war_hero": "silver"}
     assert tiers("#BOB") == {"builder": "silver"}
     assert tiers("#R") == {"raider": "silver"} and tiers("#OLD") == {}  # the latest raid only
+
+
+def test_history_gives_first_dates_and_never_a_clan_size(conn, tmp_path, monkeypatch):
+    from server import history, profiles
+    (tmp_path / "h.json").write_text(json.dumps({"read_at": "x", "clans": {
+        "fire": [["Old", "#OLD", "Member", "November 29, 2017", "Still a Member"], ["Gone", "#GONE", "?", "January 8, 2018", "January 10, 2018"]],
+        "cake": [["Old", "#OLD", "Elder", "May 2, 2021", "June 1, 2021"], ["Newer", "#NEW", "Member", "March 3, 2021", "Still a Member"]],
+        "flakes": []}}), encoding="utf-8")
+    monkeypatch.setenv("FROSTED_HISTORY", str(tmp_path / "h.json"))
+    monkeypatch.setattr(profiles, "current_members", lambda c: [
+        {"tag": "#NEW", "name": "Newer", "snap_name": None, "clan_tag": "#X", "town_hall": 15, "snap_th": None},
+        {"tag": "#OLD", "name": "Old", "snap_name": None, "clan_tag": "#X", "town_hall": 18, "snap_th": None},
+        {"tag": "#NONE", "name": "Unseen", "snap_name": None, "clan_tag": "#X", "town_hall": 9, "snap_th": None}])
+    # The earliest date in any clan, across clans.
+    assert history.since("#OLD") == "2017-11-29" and history.since("#UNKNOWN") is None
+    t = history.timeline(conn)
+    assert t["players"] == 3 and t["in_several"] == 1
+    assert [c["first"] for c in t["clans"][:2]] == ["2017-11-29", "2021-03-03"]
+    assert {y["year"]: (y["Fire"], y["Cake"]) for y in t["years"]} == {"2017": (1, 0), "2018": (1, 0), "2021": (0, 2)}
+    assert [r["tag"] for r in t["longest"]] == ["#OLD", "#NEW"]  # oldest first; a member with no record is left out
+
+
+def test_history_is_absent_without_its_file(conn, tmp_path, monkeypatch):
+    from server import history
+    monkeypatch.setenv("FROSTED_HISTORY", str(tmp_path / "none.json"))
+    assert history.load() is None and history.since("#X") is None and history.timeline(conn) is None
+
+
+def test_the_family_history_file_is_well_formed():
+    from server import history
+    h = history.load()
+    assert h and h["rows"] and len(h["by_tag"]) > 2000
+    assert all(r["tag"].startswith("#") and len(r["first"]) == 10 for r in h["rows"])

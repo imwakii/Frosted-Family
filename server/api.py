@@ -30,7 +30,7 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException, Request
 
 from frosted.config import CLAN_TAGS, TAG_TO_CLAN
-from server import auth, days, db, leaders, members, plan, profiles, proposals, stats, war
+from server import auth, days, db, history, leaders, members, plan, profiles, proposals, stats, war
 
 DEFAULT_DB = "/opt/bots/frosted/data/frosted.db"
 ROSTER_FIELDS = ("tag", "name", "clan", "cwl_slot", "transferred_from", "tier", "final_score", "offense_score",
@@ -202,6 +202,14 @@ def player(tag: str):
 @app.get("/allocation.csv")
 def allocation():
     return plan.allocation_csv()
+
+
+@app.get("/stats/history")
+def stats_history():
+    t = history.timeline(open_db())
+    if t is None:
+        raise HTTPException(404, "no history file")
+    return t
 
 
 @app.get("/stats/clans")

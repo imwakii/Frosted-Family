@@ -117,6 +117,7 @@ export type PlayerCard = {
   badges?: { id: string; label: string; detail: string; tier?: 'bronze' | 'silver' | 'gold' }[]
   record?: { from: string | null; attacks: number; missed: number; three_star_rate: number | null } | null
   tracked_from?: string | null
+  family_since?: string | null
   streaks?: { three_stars: number; three_stars_best: number; clean_wars: number }
   attacks: { stars: number; destruction: number; kind: string; day: number | null; opponent: string | null; target: string | null; target_th: number | null; target_position: number | null }[]
   upgrades: { unit: string; from: number; to: number; at: string }[]

@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react'
 export type Tab = 'cwl' | 'explore' | 'war' | 'plan'
 export type Route = { tab: Tab; sub: string; kind: string | null; player: string | null; base: string }
 
-export const STATS_SUBS = ['players', 'badges', 'war', 'upgrades', 'donations', 'capital', 'trends'] as const
+export const STATS_SUBS = ['players', 'badges', 'war', 'upgrades', 'donations', 'capital', 'trends', 'history'] as const
 export const LEADERS_SUBS = ['builder', 'days', 'members'] as const
 
 function parse(): Route {

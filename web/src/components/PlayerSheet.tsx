@@ -226,10 +226,20 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
                   )}
                 </div>
               </div>
-              {p.days && (
-                <div className="flex items-center justify-between gap-2 border-t pt-2.5" style={{ borderColor: 'rgba(15,23,42,.08)' }}>
-                  <span className="text-[13px] font-semibold text-muted">CWL days</span>
-                  <PlayDays days={p.days} clan={p.clan} size={22} />
+              {(p.days || card?.family_since) && (
+                <div className="flex flex-col gap-2 border-t pt-2.5" style={{ borderColor: 'rgba(15,23,42,.08)' }}>
+                  {p.days && (
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[13px] font-semibold text-muted">CWL days</span>
+                      <PlayDays days={p.days} clan={p.clan} size={22} />
+                    </div>
+                  )}
+                  {card?.family_since && (
+                    <div className="flex items-center justify-between gap-2" title="When Clash of Stats first saw them, so approximate">
+                      <span className="text-[13px] font-semibold text-muted">In the family since</span>
+                      <span className="text-[13px] font-bold tabular-nums text-ink-2">{new Date(`${card.family_since}T00:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' })}</span>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

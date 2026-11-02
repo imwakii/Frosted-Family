@@ -11,6 +11,7 @@ import type { ClanName } from '../types'
 import { norm, SearchBox } from './CwlTab'
 import BadgesBoard from './BadgesBoard'
 import ClansBoard from './ClansBoard'
+import HistoryBoard from './HistoryBoard'
 import { ClanSwitch, Star, StatusKey, SubNav, Th, UnitIcon, RowChevron } from './ui'
 
 export type ClanPick = ClanName | 'All'
@@ -27,6 +28,7 @@ const SUBS = [
   { id: 'donations', label: 'Donations', href: '#/stats/donations' },
   { id: 'capital', label: 'Capital', href: '#/stats/capital' },
   { id: 'trends', label: 'Trends', href: '#/stats/trends' },
+  { id: 'history', label: 'History', href: '#/stats/history' },
 ]
 
 type Gift = { donated: number; received: number } | null
@@ -99,6 +101,7 @@ const cellTone = (l: number | null, max: number) =>
 export default function ExploreTab({ sub, kind, ...rest }: BoardProps & { sub: string; kind: string | null }) {
   const id = NAV.find((c) => c.id === kind)?.id ?? 'overall'
   const board = sub === 'badges' ? <BadgesBoard {...rest} />
+    : sub === 'history' ? <HistoryBoard wide={rest.wide} />
     : sub === 'war' ? <WarBoardView {...rest} />
     : sub === 'upgrades' ? <UpgradesBoard {...rest} />
     : sub === 'donations' ? <RankBoard key="donations" kind="donations" cols={DONATION_COLS} note="This season" {...rest} />

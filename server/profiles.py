@@ -436,7 +436,7 @@ def player_card(conn, tag: str) -> dict:
     """What the player sheet adds to the roster row: heroes and their gear, badges, streaks, season totals, latest
     attacks and upgrades. Each block says what period it covers: the war record runs from the export's window to now,
     the same figures the War record board and the badges use, and streaks only over the wars the collector has seen."""
-    from server import leaders  # leaders imports this module
+    from server import history, leaders  # both import this module
     record = war_record(conn)
     own = next((r["war"] for r in record["players"] if r["tag"] == tag), None)
     first = conn.execute("SELECT MIN(start_time) FROM wars WHERE start_time IS NOT NULL").fetchone()[0]
@@ -463,6 +463,7 @@ def player_card(conn, tag: str) -> dict:
         "record": own and {"from": record["window_from"], "attacks": own["attacks"], "missed": own["missed"],
                            "three_star_rate": own["three_star_rate"]},
         "tracked_from": api_day(first),
+        "family_since": history.since(tag),
         "streaks": streaks_for(conn, tag),
         "war_stars": prof["war_stars"] if prof else None, "donations": prof["donations"] if prof else None,
         "donations_received": prof["donations_received"] if prof else None,
