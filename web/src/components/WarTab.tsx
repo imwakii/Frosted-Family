@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { type CSSProperties, useEffect, useState } from 'react'
 import { useYou, YouTag } from './You'
 import { useClans } from '../clash'
 import { ago, type ClanWar, useWarBoard, type WarAttack, type WarBase } from '../leaders'
@@ -21,14 +21,24 @@ const left = (ms: number) => {
 }
 const ENEMY = '#D5DBE5'
 
-// The tab's crossed swords between the two clans; they clash, with a spark, while the war is live.
+// Where each spark flies from the point of impact, in px, and its colour.
+const SPARKS = [[0, -34, '#F59E0B'], [25, -25, '#EF4444'], [36, -4, '#FBBF24'], [27, 20, '#F97316'], [-27, 20, '#FBBF24'], [-36, -4, '#EF4444'], [-25, -25, '#F97316'], [12, -32, '#F59E0B'], [-12, -32, '#EF4444']] as const
+
+// The tab's crossed swords between the two clans. While the war is live they wind up and strike, with a flash,
+// a shockwave and flying sparks; the two badges recoil from the blow.
 function Swords({ live, color }: { live: boolean; color: string }) {
   return (
-    <span className="flex size-11 items-center justify-center rounded-full bg-white shadow-[0_2px_8px_rgba(15,23,42,.12)]">
+    <span className={`relative z-[1] flex size-11 items-center justify-center rounded-full bg-white shadow-[0_2px_8px_rgba(15,23,42,.12)] ${live ? 'ff-shake' : ''}`}>
       <svg aria-hidden="true" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.4" strokeLinecap="round" className="overflow-visible">
         <g className={live ? 'ff-sword-a' : ''}><path d="M5 5l14 14M16 20l4-4" /></g>
         <g className={live ? 'ff-sword-b' : ''}><path d="M19 5L5 19M4 16l4 4" /></g>
-        {live && <circle cx="12" cy="10" r="2.2" fill="#F59E0B" stroke="none" className="ff-spark" />}
+        {live && <>
+          <circle cx="12" cy="9" r="4" stroke="#F59E0B" strokeWidth="1.8" className="ff-ring" />
+          <circle cx="12" cy="9" r="3.4" fill="#FDE68A" stroke="none" className="ff-flash" />
+          {SPARKS.map(([dx, dy, c], i) => (
+            <circle key={i} cx="12" cy="9" r={i % 2 ? 1.7 : 2.3} fill={c} stroke="none" className="ff-burst" style={{ '--dx': `${dx}px`, '--dy': `${dy}px` } as CSSProperties} />
+          ))}
+        </>}
       </svg>
     </span>
   )
@@ -124,13 +134,13 @@ function WarBoard({ clan, war, now }: { clan: ClanName; war: ClanWar; now: numbe
           </div>
           <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-2">
             <div className="flex min-w-0 flex-col items-start gap-1.5">
-              <span className="h-11"><ClanBadge src={war.badge ?? clans[clan]?.badge} size={44} /></span>
+              <span className={`h-11 ${live ? 'ff-recoil-l' : ''}`}><ClanBadge src={war.badge ?? clans[clan]?.badge} size={44} /></span>
               <span className="font-display max-w-full truncate text-[17px] leading-tight" style={{ color: t.deep }}>{clan}</span>
               {score(war.stars, war.destruction, war.attacks_used, t.deep)}
             </div>
             <Swords live={live} color={t.deep} />
             <div className="flex min-w-0 flex-col items-end gap-1.5 text-right">
-              <span className="h-11"><ClanBadge src={war.opponent_badge} size={44} /></span>
+              <span className={`h-11 ${live ? 'ff-recoil-r' : ''}`}><ClanBadge src={war.opponent_badge} size={44} /></span>
               <span className="font-display max-w-full truncate text-[17px] leading-tight text-ink-2">{war.opponent}</span>
               {score(war.opponent_stars, war.opponent_destruction, war.opponent_attacks_used, '#475569', true)}
             </div>

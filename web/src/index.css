@@ -44,11 +44,29 @@ input[type="search"]:focus, select:focus-visible { outline: none; border-color: 
 .ff-plan-row:hover select, .ff-plan-row select:focus { border-color: #CBD5E1; background-color: #FFFFFF; }
 @media (hover: none) { .ff-plan-row select { border-color: #E3E7EF; background-color: #FFFFFF; } }
 
-/* War tab: the swords clash while a war is live. Each pivots on its hilt. */
-@keyframes ff-sword-a { 0%, 55%, 100% { transform: rotate(-7deg); } 72% { transform: rotate(9deg); } 82% { transform: rotate(2deg); } }
-@keyframes ff-sword-b { 0%, 55%, 100% { transform: rotate(7deg); } 72% { transform: rotate(-9deg); } 82% { transform: rotate(-2deg); } }
-@keyframes ff-spark { 0%, 66%, 100% { opacity: 0; transform: scale(.3); } 72% { opacity: 1; transform: scale(1.5); } 86% { opacity: 0; transform: scale(2); } }
-.ff-sword-a { transform-box: view-box; transform-origin: 19px 19px; animation: ff-sword-a 2.4s ease-in-out infinite; }
-.ff-sword-b { transform-box: view-box; transform-origin: 5px 19px; animation: ff-sword-b 2.4s ease-in-out infinite; }
-.ff-spark { transform-box: fill-box; transform-origin: center; animation: ff-spark 2.4s ease-out infinite; }
-@media (prefers-reduced-motion: reduce) { .ff-sword-a, .ff-sword-b { animation: none; } .ff-spark { display: none; } }
+/* War tab: the swords clash while a war is live. Wind up, strike at 58%, burst, recoil. Each sword pivots on its hilt. */
+@keyframes ff-sword-a { 0%, 20% { transform: rotate(-10deg); } 50% { transform: rotate(-20deg); } 58% { transform: rotate(14deg); } 66% { transform: rotate(-4deg); } 74%, 100% { transform: rotate(-10deg); } }
+@keyframes ff-sword-b { 0%, 20% { transform: rotate(10deg); } 50% { transform: rotate(20deg); } 58% { transform: rotate(-14deg); } 66% { transform: rotate(4deg); } 74%, 100% { transform: rotate(10deg); } }
+@keyframes ff-shake {
+  0%, 57%, 78%, 100% { transform: none; }
+  58% { transform: scale(1.22) rotate(-5deg); } 62% { transform: scale(1.1) translate(2px, -2px) rotate(4deg); }
+  66% { transform: scale(1.06) translate(-2px, 1px) rotate(-3deg); } 72% { transform: translate(1px, 1px) rotate(1deg); }
+}
+@keyframes ff-flash { 0%, 57%, 72%, 100% { opacity: 0; transform: scale(.4); } 58% { opacity: 1; transform: scale(1.5); } }
+@keyframes ff-ring { 0%, 57%, 84%, 100% { opacity: 0; transform: scale(.3); } 58% { opacity: .9; transform: scale(.5); } 83% { opacity: 0; transform: scale(5); } }
+@keyframes ff-burst { 0%, 57%, 89%, 100% { opacity: 0; transform: translate(0, 0) scale(1); } 58% { opacity: 1; transform: translate(0, 0) scale(1.2); } 80% { opacity: .95; } 88% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(.55); } }
+@keyframes ff-recoil-l { 0%, 57%, 78%, 100% { transform: none; } 60% { transform: translateX(-5px) rotate(-5deg); } }
+@keyframes ff-recoil-r { 0%, 57%, 78%, 100% { transform: none; } 60% { transform: translateX(5px) rotate(5deg); } }
+.ff-sword-a { transform-box: view-box; transform-origin: 19px 19px; animation: ff-sword-a 1.9s cubic-bezier(.5, 0, .2, 1) infinite; }
+.ff-sword-b { transform-box: view-box; transform-origin: 5px 19px; animation: ff-sword-b 1.9s cubic-bezier(.5, 0, .2, 1) infinite; }
+.ff-shake { animation: ff-shake 1.9s linear infinite; }
+.ff-flash, .ff-ring { transform-box: fill-box; transform-origin: center; }
+.ff-flash { animation: ff-flash 1.9s ease-out infinite; }
+.ff-ring { animation: ff-ring 1.9s ease-out infinite; }
+.ff-burst { transform-box: fill-box; transform-origin: center; animation: ff-burst 1.9s cubic-bezier(.1, .7, .3, 1) infinite; }
+.ff-recoil-l { animation: ff-recoil-l 1.9s ease-out infinite; }
+.ff-recoil-r { animation: ff-recoil-r 1.9s ease-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .ff-sword-a, .ff-sword-b, .ff-shake, .ff-recoil-l, .ff-recoil-r { animation: none; }
+  .ff-flash, .ff-ring, .ff-burst { display: none; }
+}
