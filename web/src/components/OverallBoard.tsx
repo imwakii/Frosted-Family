@@ -4,6 +4,7 @@ import { CATS, type Cat, competitionRanks, type Matrix, progress, useMatrix } fr
 import { go, playerHref } from '../route'
 import { CLAN, CLANS } from '../theme'
 import type { ClanName } from '../types'
+import { COLOR } from './ClansBoard'
 import { norm, SearchBox } from './CwlTab'
 import { CategoryNav, ClanFilter, Empty, useClanPick } from './ExploreTab'
 import { KEY_ROW, Star, Th, RowChevron } from './ui'
@@ -30,7 +31,7 @@ const pct = (v: number | undefined) => (v === undefined ? '—' : `${Math.round(
 const pct1 = (v: number) => `${(Math.floor(v * 10) / 10).toFixed(1)}%`
 
 function Bar({ v, color }: { v: number; color: string }) {
-  return <span className="block h-1.5 w-full overflow-hidden rounded-full bg-well"><span className="block h-full rounded-full" style={{ width: `${Math.min(v, 100)}%`, background: color }} /></span>
+  return <span className="block h-[3px] w-full overflow-hidden rounded-full bg-hair"><span className="block h-full rounded-full" style={{ width: `${Math.min(v, 100)}%`, background: color }} /></span>
 }
 
 export default function OverallBoard({ q, setQ, wide }: { q: string; setQ: (v: string) => void; wide: boolean }) {
@@ -82,7 +83,7 @@ export default function OverallBoard({ q, setQ, wide }: { q: string; setQ: (v: s
                 </span>
               </td>
               <td className="min-w-[150px] border-b border-hair px-4 py-1.5 group-hover:bg-hover">
-                <span className="flex items-center gap-2.5"><Bar v={r.overall} color={CLAN[r.clan].deep} /><span className="w-14 flex-none text-right font-extrabold tabular-nums text-ink">{pct1(r.overall)}</span></span>
+                <span className="flex items-center gap-2.5"><Bar v={r.overall} color={COLOR[r.clan]} /><span className="w-14 flex-none text-right font-extrabold tabular-nums text-ink">{pct1(r.overall)}</span></span>
               </td>
               {CATS.map((c) => <td key={c.id} className="border-b border-hair px-4 py-1.5 text-right font-semibold tabular-nums text-ink-2 group-hover:bg-hover">{pct(r.cats[c.id])}</td>)}
             </tr>
@@ -99,7 +100,7 @@ export default function OverallBoard({ q, setQ, wide }: { q: string; setQ: (v: s
             <Th th={r.th} />
             <span className="flex min-w-0 flex-auto flex-col gap-1">
               <span className="truncate text-[15px] font-semibold"><YouTag tag={r.tag} />{r.name}</span>
-              <Bar v={key(r)} color={CLAN[r.clan].deep} />
+              <Bar v={key(r)} color={COLOR[r.clan]} />
             </span>
             <span className="w-14 flex-none text-right text-sm font-extrabold tabular-nums">{sort === 'overall' ? pct1(key(r)) : pct(key(r))}</span>
             <RowChevron />
@@ -112,7 +113,7 @@ export default function OverallBoard({ q, setQ, wide }: { q: string; setQ: (v: s
   const legend = (
     <div aria-label="Key" className={KEY_ROW}>
       <span>% of max levels</span>
-      {CLANS.map((k) => <span key={k} className="flex items-center gap-1"><span className="h-1.5 w-3 rounded-full" style={{ background: CLAN[k].deep }} />{k}</span>)}
+      {CLANS.map((k) => <span key={k} className="flex items-center gap-1"><span className="h-[3px] w-3 rounded-full" style={{ background: COLOR[k] }} />{k}</span>)}
     </div>
   )
 
