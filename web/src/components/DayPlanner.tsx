@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { Me } from '../auth'
-import { type DayPlans, getDays, HttpError, publishDays, saveDays } from '../data'
+import { type DayPlans, getDays, HttpError, publishDays, saveDays, useWar, useWide } from '../data'
 import { type ClanDays, DAYS, earned, enemy, locked, missedThisSeason, onTrack, onTrial, slotsBelow, suggest, TARGET, TEAM, tier, type Wars } from '../dayplan'
 import { CLAN } from '../theme'
 import type { Player, Roster, Slot } from '../types'
+import CwlTab from './CwlTab'
 import { StatusDot, Th } from './ui'
 
 // Who plays each of the seven CWL days. Opens on the saved draft, else the published plan, else a suggestion
@@ -53,6 +54,10 @@ export default function DayPlanner({ roster, me }: { roster: Roster; me: Me }) {
   const [busy, setBusy] = useState(false)
   const [confirming, setConfirming] = useState(false)
   const [note, setNote] = useState<{ ok: boolean; text: string } | null>(null)
+  const [preview, setPreview] = useState(false)
+  const [q, setQ] = useState('')
+  const war = useWar()
+  const wide = useWide()
 
   const pools = useMemo(() => Object.fromEntries(CWL.map((c) => [c,
     roster.players.filter((p) => p.clan === c && p.slot !== 'OUT')])) as Record<CwlClan, Player[]>, [roster])
@@ -69,6 +74,15 @@ export default function DayPlanner({ roster, me }: { roster: Roster; me: Me }) {
   }, [pools])
 
   // The draft on the server, as the board would show it.
+  // Lineups as members would see it with the plan on screen; nothing is saved by looking.
+  const previewRoster = useMemo<Roster>(() => ({
+    ...roster,
+    players: roster.players.map((p) => {
+      if (p.clan === 'Flakes') return p
+      const days = plans?.[p.clan as CwlClan]
+      return { ...p, days: days ? DAYS.filter((d) => days[d]?.includes(p.tag)) : p.days }
+    }),
+  }), [roster, plans])
   const saved = useMemo(() => (server?.draft ? start({ ...server, published: null }) : null), [server]) // eslint-disable-line react-hooks/exhaustive-deps
   if (!plans) return <div aria-busy="true" aria-label="Loading" className="mx-auto mt-10 h-64 max-w-[760px] animate-pulse rounded-[18px] bg-well" />
 
@@ -110,11 +124,21 @@ export default function DayPlanner({ roster, me }: { roster: Roster; me: Me }) {
     }
   }
 
+  const Outer = preview ? 'div' : 'main'
   const btn = 'min-h-10 cursor-pointer rounded-[10px] border border-[#D5DBE5] bg-white px-3 text-sm font-semibold text-ink-2 hover:bg-page disabled:cursor-default disabled:opacity-60'
   return (
-    <main className="mx-auto flex max-w-[760px] flex-col gap-3.5 px-[clamp(16px,3vw,32px)] pb-12 pt-3 md:pt-5">
+    <>
+    <Outer className={`mx-auto flex flex-col gap-3.5 px-[clamp(16px,3vw,32px)] pt-3 md:pt-5 ${preview ? 'max-w-[1360px]' : 'max-w-[760px] pb-12'}`}>
       <div className="flex flex-wrap items-center gap-2">
-        <nav aria-label="Clan" className="grid grid-cols-2 gap-1 rounded-xl bg-well p-1">
+        <nav aria-label="View" className="grid grid-cols-2 gap-1 rounded-xl bg-well p-1">
+          {([false, true] as const).map((v) => (
+            <button key={String(v)} type="button" aria-pressed={v === preview} onClick={() => setPreview(v)}
+              className={`min-h-[38px] cursor-pointer rounded-[9px] border-0 px-3 text-[15px] font-bold ${v === preview ? 'bg-white text-ink shadow-[0_1px_3px_rgba(15,23,42,.12)]' : 'bg-transparent text-muted'}`}>
+              {v ? 'Preview' : 'Grid'}
+            </button>
+          ))}
+        </nav>
+        {!preview && <nav aria-label="Clan" className="grid grid-cols-2 gap-1 rounded-xl bg-well p-1">
           {CWL.map((c) => {
             const short = DAYS.some((d) => (plans[c][d]?.length ?? 0) !== TEAM)
             return (
@@ -125,9 +149,9 @@ export default function DayPlanner({ roster, me }: { roster: Roster; me: Me }) {
               </button>
             )
           })}
-        </nav>
+        </nav>}
         <span className="flex-auto" />
-        <button type="button" className={btn} onClick={() => { setNote(null); setPlans((ps) => ({ ...ps!, [clan]: fresh(clan, server) })) }}>Suggest</button>
+        {!preview && <button type="button" className={btn} onClick={() => { setNote(null); setPlans((ps) => ({ ...ps!, [clan]: fresh(clan, server) })) }}>Suggest</button>}
         <button type="button" className={btn} disabled={readOnly || busy || !dirty} onClick={() => send(saveDays, 'Saved for leaders')}>
           {dirty ? 'Save' : 'Saved'}
         </button>
@@ -151,6 +175,7 @@ export default function DayPlanner({ roster, me }: { roster: Roster; me: Me }) {
         <div role="status" className={`flex min-h-11 items-center rounded-[14px] px-4 text-sm font-bold ${note.ok ? 'bg-[#DCFCE7] text-[#166534]' : 'bg-[#FEF3C7] text-[#92400E]'}`}>{note.text}</div>
       )}
 
+      {!preview && <>
       <div aria-label="Key" className="flex flex-wrap gap-x-[18px] gap-y-1.5 text-[13px] font-semibold text-muted">
         <span className="flex items-center gap-1.5"><span className="size-3 rounded-full" style={{ background: t.accent }} />Plays</span>
         <span className="flex items-center gap-1.5"><span className="flex size-4 items-center justify-center rounded-full text-[9px] font-extrabold text-white" style={{ background: t.accent }}>3</span>Stars</span>
@@ -221,6 +246,14 @@ export default function DayPlanner({ roster, me }: { roster: Roster; me: Me }) {
         </table>
       </section>
       {server?.published && <span className="px-1 text-xs font-semibold text-faint">Published by {server.published.updated_by ?? 'the publisher'}</span>}
-    </main>
+      </>}
+    </Outer>
+    {/* Row links would leave the planner, so a preview keeps its rows in place. */}
+    {preview && (
+      <div onClickCapture={(e) => { if ((e.target as HTMLElement).closest('a')) e.preventDefault() }}>
+        <CwlTab roster={previewRoster} war={war} wide={wide} q={q} setQ={setQ} />
+      </div>
+    )}
+    </>
   )
 }
