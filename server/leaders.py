@@ -10,6 +10,7 @@ defenses move them while the player is idle, and a season reset of donations to 
 from __future__ import annotations
 
 import os
+from collections import Counter
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -53,13 +54,9 @@ def first_seen(conn) -> dict[str, str]:
 
 # ─── upgrade feed ─────────────────────────────────────────────────────────────
 
-def upgrades(conn, days: int = 7, clan: str | None = None) -> dict:
-    if clan is not None and clan not in CLAN_TAGS:
-        raise HTTPException(422, f"clan is one of {', '.join(CLAN_TAGS)}")
-    if conn is None:
-        return {"days": days, "clan": clan, "as_of": None, "upgrades": []}
-    cutoff = (now() - timedelta(days=days)).strftime("%Y-%m-%dT%H:%M:%SZ")
-    ms, start = members_by_tag(conn), first_seen(conn)
+def upgrade_events(conn) -> list[tuple]:
+    """Every upgrade on record as (tag, unit, category, from, to, at, change), whether or not the player is still here."""
+    start = first_seen(conn)
     events = []
     prev: dict[tuple, int] = {}
     for u in conn.execute("SELECT * FROM player_unit_history ORDER BY player_tag, kind, name, level"):
@@ -77,8 +74,35 @@ def upgrades(conn, days: int = 7, clan: str | None = None) -> dict:
         if before and s["town_hall"] and s["town_hall"] > before:
             events.append((s["player_tag"], "Town Hall", "town_hall", before, s["town_hall"], s["fetched_at"],
                            "level_up"))
+    return events
+
+
+def upgrade_counts(conn) -> list[dict]:
+    """Upgrades per UTC day, clan and category, each under the clan the player was in that day, so past days stay put
+    when people leave or move."""
+    clans: dict[str, list[tuple[str, str]]] = {}
+    for r in conn.execute("SELECT player_tag, snapshot_date, clan_tag FROM member_snapshots ORDER BY player_tag, seen_at"):
+        clans.setdefault(r["player_tag"], []).append((r["snapshot_date"], r["clan_tag"]))
+    counts: Counter = Counter()
+    for tag, _unit, cat, _frm, _to, at, _change in upgrade_events(conn):
+        days = clans.get(tag)
+        if days:
+            before = [c for d, c in days if d <= at[:10]]
+            clan = TAG_TO_CLAN.get(before[-1] if before else days[0][1])
+            if clan:
+                counts[(at[:10], clan, cat)] += 1
+    return [{"day": d, "clan": c, "category": k, "n": n} for (d, c, k), n in sorted(counts.items())]
+
+
+def upgrades(conn, days: int = 7, clan: str | None = None) -> dict:
+    if clan is not None and clan not in CLAN_TAGS:
+        raise HTTPException(422, f"clan is one of {', '.join(CLAN_TAGS)}")
+    if conn is None:
+        return {"days": days, "clan": clan, "as_of": None, "upgrades": []}
+    cutoff = (now() - timedelta(days=days)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    ms = members_by_tag(conn)
     out = []
-    for tag, unit, cat, frm, to, at, change in events:
+    for tag, unit, cat, frm, to, at, change in upgrade_events(conn):
         m = ms.get(tag)
         if not m or at < cutoff:
             continue

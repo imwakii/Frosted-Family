@@ -7,7 +7,7 @@ type Range = '30d' | 'all'
 const SERIES: StatClan[] = [...CLANS, 'Family']
 // Cake uses its accent: the deep blue sits too close to Flakes' violet for colour-blind readers.
 // Mid-tone clan hues, softer than the badge colours, so lines and bars read calmly on white.
-const COLOR: Record<StatClan, string> = { Fire: '#F0905F', Cake: '#5A9BE3', Flakes: '#9686EE', Family: '#94A3B8' }
+export const COLOR: Record<StatClan, string> = { Fire: '#F0905F', Cake: '#5A9BE3', Flakes: '#9686EE', Family: '#94A3B8' }
 const DASH: Partial<Record<StatClan, string>> = { Family: '4 3' }
 const OUTCOME = { won: '#BBEACB', draw: '#E2E8F0', lost: '#F9C9C9' } as const
 const OUTCOME_INK = { won: '#166534', draw: '#475569', lost: '#991B1B' } as const
@@ -20,7 +20,7 @@ const compact = (v: number) => (Math.abs(v) >= 1e6 ? `${+(v / 1e6).toFixed(1)}M`
 const pct = (v: number) => `${Math.round(v * 100)}%`
 const last = <T,>(a: T[]) => a[a.length - 1]
 
-function useWidth() {
+export function useWidth() {
   const ref = useRef<HTMLDivElement>(null)
   const [w, setW] = useState(0)
   useEffect(() => {
@@ -34,7 +34,7 @@ function useWidth() {
   return [ref, w] as const
 }
 
-function ticks(lo: number, hi: number, n = 3) {
+export function ticks(lo: number, hi: number, n = 3) {
   if (lo === hi) { const d = Math.abs(lo) > 2 ? Math.max(1, Math.abs(lo) * 0.02) : Math.abs(lo) * 0.05 || 0.1; lo -= d; hi += d }
   const raw = (hi - lo) / n
   const p = 10 ** Math.floor(Math.log10(raw))
@@ -44,7 +44,7 @@ function ticks(lo: number, hi: number, n = 3) {
   return out
 }
 
-const Dot = ({ k }: { k: StatClan }) => <span aria-hidden="true" className="size-2 flex-none rounded-full" style={{ background: COLOR[k] }} />
+export const Dot = ({ k }: { k: StatClan }) => <span aria-hidden="true" className="size-2 flex-none rounded-full" style={{ background: COLOR[k] }} />
 
 function Key({ k }: { k: StatClan }) {
   return (
@@ -55,7 +55,7 @@ function Key({ k }: { k: StatClan }) {
   )
 }
 
-function Card({ title, aside, children }: { title: string; aside?: ReactNode; children: ReactNode }) {
+export function Card({ title, aside, children }: { title: string; aside?: ReactNode; children: ReactNode }) {
   return (
     <section aria-label={title} className="flex min-w-0 flex-col gap-3 rounded-2xl border border-line bg-white p-4">
       <header className="flex items-baseline justify-between gap-2">

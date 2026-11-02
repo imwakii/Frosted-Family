@@ -66,7 +66,8 @@ export type LogEvent = {
   kind: 'joined' | 'rejoined' | 'visited' | 'left' | 'moved' | 'promoted' | 'demoted'
   tag: string; name: string | null; th: number | null; clan: ClanName; from_clan?: ClanName; role?: string; at: string; approx: boolean
 }
-export type ClanLog = { since: string | null; upgrade_days: number; events: LogEvent[]; upgrades: Upgrade[] }
+export type UpgradeCount = { day: string; clan: ClanName; category: UpgradeCategory; n: number }
+export type ClanLog = { since: string | null; upgrade_days: number; events: LogEvent[]; upgrades: Upgrade[]; upgrade_counts?: UpgradeCount[] }
 
 const loadClanLog = (): Promise<ClanLog | null> => (mock()
   ? import('./devMock').then((m) => m.mockUpgrades()).then((d) => ({ since: null, upgrade_days: 14, events: [], upgrades: (d as { upgrades: Upgrade[] }).upgrades }))

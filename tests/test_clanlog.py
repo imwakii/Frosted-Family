@@ -99,3 +99,16 @@ def test_role_changes_are_known_to_the_day(conn):
 
 def test_no_database_is_an_empty_log():
     assert clanlog.clan_log(None)["events"] == []
+
+
+def test_upgrades_per_day_stay_with_the_clan_of_that_day_after_leaving(conn):
+    from server import leaders
+    poll(conn, "2026-11-01T10:00:00Z", fire=["#A"])
+    poll(conn, "2026-11-02T10:00:00Z", cake=["#A"])
+    poll(conn, "2026-11-03T10:00:00Z")
+    for at, level in (("2026-10-31T10:00:00Z", 1), ("2026-11-01T12:00:00Z", 2), ("2026-11-02T12:00:00Z", 3)):
+        conn.execute("INSERT INTO player_unit_history (player_tag, kind, name, level, seen_at) VALUES ('#A','hero','King',?,?)", (level, at))
+    assert leaders.upgrade_counts(conn) == [
+        {"day": "2026-11-01", "clan": "Fire", "category": "hero", "n": 1},
+        {"day": "2026-11-02", "clan": "Cake", "category": "hero", "n": 1},
+    ]

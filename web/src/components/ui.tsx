@@ -246,6 +246,12 @@ export function ClanSwitch<T extends ClanName | 'All'>({ value, onPick, options,
 }
 
 /** Says a row opens a player's card; phones have no hover to say it for them. */
+// A row shaped as an arrow: the war log and the clan log both say direction this way.
+export const POINT = {
+  right: { cls: 'pl-3 pr-5', style: { clipPath: 'polygon(0 0,calc(100% - 10px) 0,100% 50%,calc(100% - 10px) 100%,0 100%)' } },
+  left: { cls: 'pl-5 pr-3', style: { clipPath: 'polygon(10px 0,100% 0,100% 100%,10px 100%,0 50%)' } },
+}
+
 export const RowChevron = () => (
   <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#B6BFCC" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" className="-ml-1 flex-none md:hidden">
     <path d="M9 6l6 6-6 6" />

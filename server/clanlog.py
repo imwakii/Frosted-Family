@@ -94,9 +94,9 @@ def _gone(r, clan_last, missed, add) -> None:
 
 
 def clan_log(conn) -> dict:
-    """GET /log: every member event on record, newest first, and the last two weeks' upgrades."""
+    """GET /log: every member event on record, newest first, the last two weeks' upgrades and all upgrades by day."""
     if conn is None:
-        return {"since": None, "upgrade_days": UPGRADE_DAYS, "events": [], "upgrades": []}
+        return {"since": None, "upgrade_days": UPGRADE_DAYS, "events": [], "upgrades": [], "upgrade_counts": []}
     since = conn.execute("SELECT MIN(snapshot_date) FROM member_snapshots").fetchone()[0]
     return {"since": since, "upgrade_days": UPGRADE_DAYS, "events": member_events(conn),
-            "upgrades": leaders.upgrades(conn, UPGRADE_DAYS)["upgrades"]}
+            "upgrades": leaders.upgrades(conn, UPGRADE_DAYS)["upgrades"], "upgrade_counts": leaders.upgrade_counts(conn)}

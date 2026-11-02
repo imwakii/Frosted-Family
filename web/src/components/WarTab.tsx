@@ -6,10 +6,11 @@ import { ago, type ClanWar, useWarBoard, type WarAttack, type WarBase } from '..
 import { playerHref } from '../route'
 import { CLAN, CLANS } from '../theme'
 import type { ClanName } from '../types'
-import { ClanBadge, ClanSwitch, KEY_ROW, Stars, Th, useNow } from './ui'
+import { ClanBadge, ClanSwitch, KEY_ROW, POINT, Stars, Th, useNow } from './ui'
 
 // Each clan's war, side by side: our bases and badge on the left, the enemy's on the right, facing by map position.
-// The attack log says who hit whom, how well and roughly when. Tapping a base narrows the log beside the board,
+// The attack log says who hit whom, how well and roughly when: we stay on the left and they on the right, and each row
+// points the way the attack went. Tapping a base narrows the log beside the board,
 // or on narrower screens, where the log is far below, opens that base's attacks under its row.
 // Refetched every minute; the collector checks wars every minute while one is on.
 
@@ -23,6 +24,7 @@ const left = (ms: number) => {
   return m < 60 ? `${m}m` : `${Math.floor(m / 60)}h ${m % 60}m`
 }
 const ENEMY = '#D5DBE5'
+const ENEMY_ROW = '#F1F5F9'
 
 // Where each spark flies from the point of impact, in px, and its colour.
 const SPARKS = [[0, -34, '#F59E0B'], [25, -25, '#EF4444'], [36, -4, '#FBBF24'], [27, 20, '#F97316'], [-27, 20, '#FBBF24'], [-36, -4, '#EF4444'], [-25, -25, '#F97316'], [12, -32, '#F59E0B'], [-12, -32, '#EF4444']] as const
@@ -78,20 +80,24 @@ function Base({ b, right, live, picked, onPick }: { b: WarBase | null; right?: b
   )
 }
 
-function LogRow({ a, accent, now }: { a: WarAttack; accent: string; now: number }) {
+function LogRow({ a, tint, now }: { a: WarAttack; tint: string; now: number }) {
+  const point = a.ours ? POINT.right : POINT.left
+  const us = a.ours ? a.attacker : a.defender
+  const them = a.ours ? a.defender : a.attacker
+  const who = (hit: boolean) => (hit ? 'text-ink-2 font-medium' : 'text-ink font-bold')
   return (
-    <li className="flex flex-col gap-0.5 border-t border-hair py-2 pl-3 pr-3.5" style={{ boxShadow: `inset 3px 0 0 ${a.ours ? accent : ENEMY}` }}>
-      <span className="flex min-w-0 items-center gap-1.5 text-[13px] font-semibold text-ink">
-        <span className="flex-none text-[11px] font-bold tabular-nums text-faint">{a.attacker.position}</span>
-        <span className="min-w-0 truncate">{a.attacker.name}</span>
-        <span aria-label="attacked" className="flex-none font-extrabold text-faint">→</span>
-        <span className="flex-none text-[11px] font-bold tabular-nums text-faint">{a.defender.position}</span>
-        <span className="min-w-0 truncate">{a.defender.name}</span>
+    <li aria-label={`${a.attacker.name} attacked ${a.defender.name}`} className={`grid min-h-[46px] grid-cols-[minmax(0,1fr)_88px_minmax(0,1fr)] items-center gap-1.5 py-1 text-[13px] ${point.cls}`} style={{ ...point.style, background: a.ours ? tint : ENEMY_ROW }}>
+      <span className={`flex min-w-0 items-center gap-1.5 ${who(!a.ours)}`}>
+        <span className="flex-none text-[11px] font-bold tabular-nums text-faint">{us.position}</span>
+        <span className="min-w-0 truncate">{us.name}</span>
       </span>
-      <span className="flex items-center gap-2 text-xs">
+      <span className="flex flex-col items-center gap-0.5 text-[11px]">
         <Stars n={a.stars} />
-        <span className="font-bold tabular-nums text-ink-2">{Math.round(a.destruction)}%</span>
-        {a.seen_at && <span title="To within about a minute" className="ml-auto font-semibold text-faint">~{ago(a.seen_at, now)}</span>}
+        <span className="whitespace-nowrap tabular-nums text-muted"><b className="font-bold text-ink-2">{Math.round(a.destruction)}%</b>{a.seen_at && <span title="To within about a minute"> · ~{ago(a.seen_at, now)}</span>}</span>
+      </span>
+      <span className={`flex min-w-0 items-center justify-end gap-1.5 ${who(a.ours)}`}>
+        <span className="min-w-0 truncate">{them.name}</span>
+        <span className="flex-none text-[11px] font-bold tabular-nums text-faint">{them.position}</span>
       </span>
     </li>
   )
@@ -210,7 +216,7 @@ function WarBoard({ clan, war, now }: { clan: ClanName; war: ClanWar; now: numbe
                     {pickedActions}
                   </div>
                   {pickedLog.length ? (
-                    <ol className="m-0 list-none p-0">{pickedLog.map((a) => <LogRow key={a.order} a={a} accent={t.deep} now={now} />)}</ol>
+                    <ol className="m-0 flex list-none flex-col gap-1 px-2 pb-2">{pickedLog.map((a) => <LogRow key={a.order} a={a} tint={t.tint} now={now} />)}</ol>
                   ) : <p className="m-0 border-t border-hair px-3 py-3 text-sm text-faint">No attacks yet</p>}
                 </li>
               )}
@@ -225,14 +231,14 @@ function WarBoard({ clan, war, now }: { clan: ClanName; war: ClanWar; now: numbe
             <span className="min-w-0 truncate text-sm font-bold text-ink">{(sideBySide && pickedName) || 'Attacks'}</span>
             {picked && sideBySide ? pickedActions : (
               <span className="flex flex-none items-center gap-3 text-xs font-semibold text-muted">
-                <span className="flex items-center gap-1.5"><span className="h-3 w-[3px] rounded" style={{ background: t.deep }} />Ours</span>
-                <span className="flex items-center gap-1.5"><span className="h-3 w-[3px] rounded" style={{ background: ENEMY }} />Enemy</span>
+                <span className="flex items-center gap-1.5"><span aria-hidden="true" style={{ color: t.deep }}>▶</span>Ours</span>
+                <span className="flex items-center gap-1.5"><span aria-hidden="true" className="text-faint">◀</span>Enemy</span>
               </span>
             )}
           </div>
           {log.length ? (
-            <ol className="m-0 list-none p-0">
-              {log.map((a) => <LogRow key={a.order} a={a} accent={t.deep} now={now} />)}
+            <ol className="m-0 flex list-none flex-col gap-1 px-2 pb-2">
+              {log.map((a) => <LogRow key={a.order} a={a} tint={t.tint} now={now} />)}
             </ol>
           ) : <p className="m-0 border-t border-hair px-3.5 py-5 text-sm text-faint">No attacks yet</p>}
         </section>
