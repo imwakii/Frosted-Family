@@ -53,7 +53,7 @@ export default function App() {
   const closeSheet = useCallback(() => go.closePlayer(), [])
   // The live UTC clock; on Plan a signed-in account sits beside it (in its place on phones).
   const account = route.tab === 'plan' && auth.me.user ? <Account me={auth.me} onSignOut={auth.signOut} /> : null
-  const you = roster && <YouChip roster={roster} wide={wide} />
+  const you = roster && <YouChip roster={roster} wide={wide} promptShown={!route.player && (route.tab === 'war' || route.tab === 'cwl')} />
   const corner = wide
     ? <span className="flex items-center gap-2">{you}<UtcClock wide />{account}</span>
     : <span className="flex items-center gap-1.5">{you}{account ?? <UtcClock wide={false} />}</span>
@@ -89,7 +89,7 @@ export default function App() {
           {[48, 120, 46, 320].map((h, i) => <div key={i} className="animate-pulse rounded-2xl bg-well" style={{ height: h }} />)}
         </div>
       ) : route.tab === 'war' ? (
-        <WarTab wide={wide} />
+        <WarTab roster={roster} wide={wide} />
       ) : route.tab === 'plan' ? (
         <PlanTab sub={route.sub} roster={roster} me={auth.me} ready={auth.status === 'ready'} wide={wide} onSignOut={auth.signOut} />
       ) : route.tab === 'explore' ? (

@@ -82,24 +82,25 @@ export function useAsksYou(roster: Roster) {
 }
 
 /** Asked once: which member this is; skipping it stays skipped on this device. With onDone, it adds another account. */
-export function YouPrompt({ roster, onDone }: { roster: Roster; onDone?: () => void }) {
+export function YouPrompt({ roster, onDone, autoFocus }: { roster: Roster; onDone?: () => void; autoFocus?: boolean }) {
   const { yous, addYou } = useYou()
   const asks = useAsksYou(roster)
   const [q, setQ] = useState('')
   if (!onDone && !asks) return null
+  const adding = roster.players.some((p) => yous.includes(p.tag))
   const n = q.trim().toLowerCase()
   const hits = n ? roster.players.filter((p) => !yous.includes(p.tag) && p.name.toLowerCase().includes(n)).slice(0, 5) : []
   return (
-    <section aria-label={onDone ? 'Add another account' : 'Which one is you?'} className="flex flex-col gap-2 rounded-2xl border border-line bg-white p-3">
+    <section aria-label={adding ? 'Add another account' : 'Which one is you?'} className="flex flex-col gap-2 rounded-2xl border border-line bg-white p-3">
       <div className="flex items-center justify-between gap-2">
-        <span className="text-[15px] font-bold text-ink">{onDone ? 'Add another account' : 'Which one is you?'}</span>
+        <span className="text-[15px] font-bold text-ink">{adding ? 'Add another account' : 'Which one is you?'}</span>
         <button type="button" aria-label={onDone ? 'Close' : 'Skip'} onClick={() => { if (onDone) { onDone(); return } write(SKIP_KEY, '1'); listeners.forEach((l) => l()) }}
           className="flex size-8 flex-none cursor-pointer items-center justify-center rounded-full border-0 bg-transparent text-lg leading-none text-faint hover:bg-page hover:text-ink">×</button>
       </div>
       <div className="relative min-w-0">
         <label htmlFor="who" className="sr-only">Your name in the game</label>
         <SearchIcon />
-        <input id="who" type="search" placeholder="Your name in the game" value={q} autoComplete="off" spellCheck={false} onChange={(e) => setQ(e.target.value)}
+        <input id="who" type="search" autoFocus={autoFocus} placeholder="Your name in the game" value={q} autoComplete="off" spellCheck={false} onChange={(e) => setQ(e.target.value)}
           className="h-11 w-full rounded-xl border border-line bg-white pl-[42px] pr-3.5 text-base text-ink placeholder:text-faint" />
       </div>
       {hits.length > 0 && (
@@ -121,10 +122,27 @@ export function YouPrompt({ roster, onDone }: { roster: Roster; onDone?: () => v
 }
 
 /** Your own card from any tab: the first of your accounts; the card switches between them. */
-export function YouChip({ roster, wide }: { roster: Roster; wide: boolean }) {
+export function YouChip({ roster, wide, promptShown }: { roster: Roster; wide: boolean; promptShown: boolean }) {
   const { yous } = useYou()
+  const asks = useAsksYou(roster)
+  const [picking, setPicking] = useState(false)
   const p = roster.players.find((x) => yous.includes(x.tag))
-  if (!p) return null
+  if (!p && promptShown && asks) return null  // the page is already asking
+  if (!p) {
+    return (
+      <>
+        <button type="button" onClick={() => setPicking(true)}
+          className="flex min-h-9 flex-none cursor-pointer items-center gap-1 whitespace-nowrap rounded-full border-0 bg-action px-3 text-[13px] font-bold text-white hover:bg-action-deep">
+          <span aria-hidden="true" className="text-base leading-none">+</span>{wide ? 'Add yourself' : 'Add me'}
+        </button>
+        {picking && (
+          <div className="ff-fade fixed inset-0 z-50 flex items-start justify-center bg-[rgba(15,23,42,.4)] px-4 pt-20" onClick={(e) => { if (e.target === e.currentTarget) setPicking(false) }}>
+            <div className="w-full max-w-[420px] shadow-[0_20px_50px_rgba(15,23,42,.25)]"><YouPrompt roster={roster} onDone={() => setPicking(false)} autoFocus /></div>
+          </div>
+        )}
+      </>
+    )
+  }
   return (
     <a href={playerHref(p.tag)} aria-label={`Your card, ${p.name}`}
       className="flex min-h-9 max-w-[170px] flex-none items-center gap-1.5 rounded-full border border-line bg-white py-0.5 pl-1 pr-2.5 text-ink no-underline hover:bg-page">

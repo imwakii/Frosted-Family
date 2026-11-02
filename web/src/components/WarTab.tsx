@@ -1,10 +1,10 @@
 import { type CSSProperties, useEffect, useState } from 'react'
-import { useYou, YouTag } from './You'
+import { useYou, YouPrompt, YouTag } from './You'
 import { useClans } from '../clash'
 import { ago, type ClanWar, useWarBoard, type WarAttack, type WarBase } from '../leaders'
 import { playerHref } from '../route'
 import { CLAN, CLANS } from '../theme'
-import type { ClanName } from '../types'
+import type { ClanName, Roster } from '../types'
 import { ClanBadge, ClanSwitch, KEY_ROW, Stars, Th, useNow } from './ui'
 
 // Each clan's war, side by side: our bases and badge on the left, the enemy's on the right, facing by map position.
@@ -209,7 +209,7 @@ function WarBoard({ clan, war, now }: { clan: ClanName; war: ClanWar; now: numbe
   )
 }
 
-export default function WarTab({ wide }: { wide: boolean }) {
+export default function WarTab({ roster, wide }: { roster: Roster; wide: boolean }) {
   const { data, loading } = useWarBoard()
   const [pick, setPick] = useState<ClanName | null>(null)
   const { yous } = useYou()
@@ -224,6 +224,7 @@ export default function WarTab({ wide }: { wide: boolean }) {
       <ClanSwitch value={clan?.clan ?? 'Fire'} onPick={setPick}
         live={wars.filter((c) => c.war!.state === 'inWar').map((c) => c.clan)}
         off={data ? CLANS.filter((k) => !wars.some((c) => c.clan === k)) : []} />
+      <YouPrompt roster={roster} />
       {!data ? (
         loading ? <div aria-busy="true" className="h-64 animate-pulse rounded-2xl bg-well" /> : <div className="rounded-2xl border border-line bg-white p-5 text-sm text-faint">Unavailable right now</div>
       ) : !clan ? (
