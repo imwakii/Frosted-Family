@@ -161,6 +161,18 @@ function useYou() {
 }
 
 // The member this device last searched for, pinned above the lineups.
+// The seven CWL days, filled where the published day plan has you playing.
+function PlayDays({ days, clan }: { days: number[]; clan: ClanName }) {
+  return (
+    <span aria-label={days.length ? `Plays day ${days.join(', ')}` : 'No days planned'} className="flex gap-[3px]">
+      {[1, 2, 3, 4, 5, 6, 7].map((d) => (
+        <span key={d} className="flex size-[15px] items-center justify-center rounded-full text-[9px] font-extrabold"
+          style={days.includes(d) ? { background: CLAN[clan].accent, color: '#fff' } : { boxShadow: 'inset 0 0 0 1.5px #E2E8F0', color: '#94A3B8' }}>{d}</span>
+      ))}
+    </span>
+  )
+}
+
 function YouCard({ roster, tag, onClear }: { roster: Roster; tag: string; onClear: () => void }) {
   const p = roster.players.find((x) => x.tag === tag)
   if (!p) return null
@@ -170,8 +182,11 @@ function YouCard({ roster, tag, onClear }: { roster: Roster; tag: string; onClea
         <span className="flex-none rounded-md bg-ink px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-[0.06em] text-white">You</span>
         <Th th={p.th} />
         <span className="min-w-0 truncate text-[15px] font-semibold">{p.name}</span>
-        <span className="ml-auto flex-none whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-bold" style={{ background: CLAN[p.clan].tint, color: CLAN[p.clan].deep }}>
-          {p.clan} · {roster.clans[p.clan]?.inCwl ? SLOT_TEXT[p.slot] : 'Not in'}
+        <span className="ml-auto flex flex-none flex-col items-end gap-0.5">
+          <span className="whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-bold" style={{ background: CLAN[p.clan].tint, color: CLAN[p.clan].deep }}>
+            {p.clan} · {roster.clans[p.clan]?.inCwl ? SLOT_TEXT[p.slot] : 'Not in'}
+          </span>
+          {p.days && <PlayDays days={p.days} clan={p.clan} />}
         </span>
       </a>
       <button type="button" aria-label="Unpin" onClick={onClear}

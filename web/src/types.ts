@@ -24,6 +24,8 @@ export interface Player {
   rejoined?: boolean
   /** The clan the member is in now, in game; differs from clan until they make their move. */
   inClan?: ClanName | null
+  /** CWL days in the published day plan; [] for none, null when the clan has no plan. */
+  days?: number[] | null
 }
 
 export interface ClanInfo { league: string | null; inCwl: boolean }

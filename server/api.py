@@ -29,7 +29,7 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException, Request
 
 from frosted.config import CLAN_TAGS, TAG_TO_CLAN
-from server import auth, db, leaders, members, plan, profiles, stats
+from server import auth, days, db, leaders, members, plan, profiles, stats
 
 DEFAULT_DB = "/opt/bots/frosted/data/frosted.db"
 ROSTER_FIELDS = ("tag", "name", "clan", "cwl_slot", "transferred_from", "tier", "final_score", "current_th", "flags")
@@ -97,6 +97,10 @@ def roster():
         for r in unscored:
             if r["tag"] in scores:
                 r["final_score"] = f"{scores[r['tag']]:.2f}"
+    # The published day plan: each player of a planned clan with the CWL days they play.
+    planned = days.member_days()
+    for r in rows:
+        r["days"] = planned.get(r["tag"]) if r["tag"] else None
     return {"players": rows, "allocation": meta, "last_poll": last_poll(conn)}
 
 
@@ -220,6 +224,7 @@ def explore(board: str):
 
 app.include_router(auth.router)
 app.include_router(plan.router)
+app.include_router(days.router)
 app.include_router(leaders.router)
 
 

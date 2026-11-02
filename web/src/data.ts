@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import type { ClanDays, Wars } from './dayplan'
 import type { ClanName, LiveWar, Player, Roster, Slot, Status } from './types'
 
 export class HttpError extends Error {
@@ -28,6 +29,7 @@ type ApiPlayer = {
   tier: string; final_score: number | string | null; current_th: number | string | null
   snapshot: { name?: string; town_hall?: number; clan?: string | null } | null
   left?: boolean; joined_at?: string | null; suggested_slot?: string | null; suggested_reason?: string | null; rejoined?: boolean
+  days?: number[] | null
 }
 type ApiWar = {
   state: string; kind?: string | null; day: number | null; team_size: number; opponent: { name: string } | null
@@ -81,6 +83,7 @@ function mergeRoster(api: { players: ApiPlayer[] }, base: Roster | null): Roster
       suggestedReason: a.suggested_reason ?? null,
       rejoined: !!a.rejoined,
       inClan: asClan(a.snapshot?.clan),
+      days: a.days ?? null,
     }
   })
   return {
@@ -195,3 +198,11 @@ export const checkPlan = (moves: PlanMove[], overrideValve: boolean, csrf: strin
   send<{ ok: boolean; problems: string[] }>('/api/plan/check', 'POST', csrf, { moves, ...(overrideValve ? { override_valve: true } : {}) })
 export const publishPlan = (moves: PlanMove[], overrideValve: boolean, csrf: string | null) =>
   send<{ ok: boolean }>('/api/plan/publish', 'POST', csrf, { moves, ...(overrideValve ? { override_valve: true } : {}) })
+
+// The day planner under /plan/days: one shared draft per CWL season, and the publish members see.
+type DayClans = Partial<Record<'Fire' | 'Cake', ClanDays>>
+type DaySaved = { clans: DayClans; updated_at: string; updated_by: string | null }
+export type DayPlans = { season: string; draft: DaySaved | null; published: DaySaved | null; wars: Record<'Fire' | 'Cake', Wars> }
+export const getDays = () => getJson<DayPlans>('/api/plan/days', { credentials: 'same-origin' })
+export const saveDays = (season: string, clans: DayClans, csrf: string | null) => send<DayPlans>('/api/plan/days', 'PUT', csrf, { season, clans })
+export const publishDays = (season: string, clans: DayClans, csrf: string | null) => send<DayPlans>('/api/plan/days/publish', 'POST', csrf, { season, clans })

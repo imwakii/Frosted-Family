@@ -5,6 +5,7 @@ import { CLAN, CLANS, GROUPS, coreAvg, fmtScore } from '../theme'
 import type { ClanName, Player, Roster, Slot } from '../types'
 import { useClans } from '../clash'
 import LeadersTools from './LeadersTools'
+import DayPlanner from './DayPlanner'
 import WarAttacks from './WarAttacks'
 import { Arrow, ClanBadge, StatusDot, StatusKey, SubNav, Th } from './ui'
 
@@ -367,6 +368,7 @@ type PlanProps = { roster: Roster; me: Me; ready: boolean; wide: boolean; onSign
 
 const SUBS = [
   { id: 'builder', label: 'Lineup builder', href: '#/leaders/builder' },
+  { id: 'days', label: 'Day planner', href: '#/leaders/days' },
   { id: 'attacks', label: 'Attacks', href: '#/leaders/attacks' },
   { id: 'members', label: 'Members', href: '#/leaders/members' },
 ]
@@ -379,7 +381,7 @@ export default function PlanTab({ sub, roster, me, ready, wide, onSignOut }: Pla
   return (
     <>
       <SubNav items={SUBS} current={sub} wide={wide} />
-      {sub === 'members' ? <LeadersTools wide={wide} /> : sub === 'attacks' ? <WarAttacks wide={wide} /> : <Plan roster={roster} me={me} />}
+      {sub === 'members' ? <LeadersTools wide={wide} /> : sub === 'attacks' ? <WarAttacks wide={wide} /> : sub === 'days' ? <DayPlanner roster={roster} me={me} /> : <Plan roster={roster} me={me} />}
     </>
   )
 }

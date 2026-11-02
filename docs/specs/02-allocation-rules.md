@@ -149,3 +149,17 @@ let them infer it from the war map. Whether that happened is unrecorded.
 - **Flakes runs 30v30 in Crystal at all TH levels.** True in the June 2026 handover. Flakes now sits out.
 - **Cake in Masters 1, Fire in Masters.** The June handover league table is stale. Fire is Champion 3.
 - **The VIROX override**, keeping him in Cake CORE at a 31.2% miss rate. VIROX left in the August mutiny.
+
+## Who plays which CWL day
+
+Set by Ka Wai on 2 Nov 2026 for the day planner (Leaders → Day planner, `web/src/dayplan.ts`, `server/days.py`).
+
+1. Every player should get the chance at 8 stars, the CWL bonus threshold. That takes three wars if they 3-star two
+   and take at least 2 on the third; a player who falls short gets a fourth day. Days still needed are
+   ceil((8 − stars so far) / 3).
+2. Only players certain to attack get days. High-miss and inactive players, and anyone who has missed an attack this
+   season, get none from the suggestion. Unproven and new players come after proven ones.
+3. Among reliable players, higher town halls fill the spare slots: they score better and defend better.
+
+Days whose war is on or over are fixed to the game's lineup. Fire and Cake leaders may edit and save the shared draft;
+only Ka Wai publishes, and members see their days on Lineups only once he has.

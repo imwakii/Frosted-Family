@@ -252,3 +252,13 @@ def test_a_member_who_joins_between_profile_runs_is_fetched_on_the_next_pass(con
     players = [p for p in second.paths if p.startswith("/v1/players/")]
     assert players == [f"/v1/players/%23{fetched[0].lstrip('#')}"]
     assert conn.execute("SELECT COUNT(*) FROM player_profiles WHERE player_tag = ?", (fetched[0],)).fetchone()[0] == 1
+
+
+def test_day_planner_sees_each_cwl_day_with_lineup_and_stars(conn):
+    from server import days
+    poll(conn, Recorder())
+    season = conn.execute("SELECT season FROM wars WHERE kind='cwl' LIMIT 1").fetchone()[0]
+    fire = days.wars(conn, season)["Fire"]
+    assert fire and all(set(w) >= {"state", "opponent", "opponent_th", "lineup", "stars", "missed"} for w in fire.values())
+    day = fire[max(fire, key=int)]
+    assert set(day["stars"]) <= set(day["lineup"])
