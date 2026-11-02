@@ -1,15 +1,18 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { thIcon, useClans } from '../clash'
-import { setDayPick, useCwlGroups } from '../leaders'
-import { go, playerHref } from '../route'
-import { CLAN, fmtScore } from '../theme'
+import { useWarBoard } from '../explore'
+import { setDayPick, setWarClan, useCwlGroups } from '../leaders'
+import { go } from '../route'
+import { CLAN } from '../theme'
 import type { ClanName, Roster } from '../types'
 import { clanFacts } from './CwlTab'
-import { ClanBadge, DayRow, Eyebrow, LeaguePill, RowChevron, StatusDot, Th } from './ui'
+import { ClanBadge, DayRow, Eyebrow, LeaguePill } from './ui'
 
-// A clan's card, as a player has one: how strong it is, its town halls, this CWL so far and its strongest players.
+// A clan's card, as a player has one: its size and place, how strong it is at war, its town halls and this CWL so far.
 
-const TOP_SHOWN = 5
+const num = (v: number | null, digits = 0) => (v === null ? '—' : v.toLocaleString('en-GB', { minimumFractionDigits: digits, maximumFractionDigits: digits }))
+const pct = (v: number | null) => (v === null ? '—' : `${Math.round(v)}%`)
+const per = (a: number, b: number) => (b ? a / b : null)
 
 export default function ClanSheet({ clan, roster, wide, onClose }: { clan: ClanName; roster: Roster; wide: boolean; onClose: () => void }) {
   const f = clanFacts(roster, clan, useClans()[clan])
@@ -18,7 +21,24 @@ export default function ClanSheet({ clan, roster, wide, onClose }: { clan: ClanN
   const place = group ? group.table.findIndex((r) => r.ours) : -1
   const players = roster.players.filter((p) => p.clan === clan)
   const ths = [...new Set(players.flatMap((p) => (p.th ? [p.th] : [])))].sort((a, b) => b - a)
-  const top = players.filter((p) => p.score !== null).sort((a, b) => (b.score ?? 0) - (a.score ?? 0)).slice(0, TOP_SHOWN)
+  const record = useWarBoard('all').data
+  // Every current member's war history added up, so a rate weighs each attack alike rather than each player.
+  const strength = useMemo(() => {
+    const tags = new Set(players.map((p) => p.tag))
+    const rows = record?.players.filter((r) => tags.has(r.tag)) ?? []
+    const sum = (v: (r: (typeof rows)[number]) => number | null | undefined) => rows.reduce((n, r) => n + (v(r) ?? 0), 0)
+    const attacks = sum((r) => r.war?.attacks), defenses = sum((r) => r.war?.defense?.defenses)
+    const known = rows.filter((r) => r.war_stars != null).length
+    return {
+      warStars: per(sum((r) => r.war_stars), known),
+      threeStar: per(100 * sum((r) => r.war?.three_stars), attacks),
+      stars: per(sum((r) => r.war?.stars), attacks),
+      missed: per(100 * sum((r) => r.war?.missed), attacks + sum((r) => r.war?.missed)),
+      conceded: per(sum((r) => r.war?.defense?.stars_conceded), defenses),
+      threeStarred: per(100 * sum((r) => r.war?.defense?.three_stars_conceded), defenses),
+    }
+  }, [record, players])
+  const top15 = place >= 0 ? group?.table[place].strength : null
   const close = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
@@ -65,6 +85,29 @@ export default function ClanSheet({ clan, roster, wide, onClose }: { clan: ClanN
           ))}
         </dl>
 
+        <section aria-label="Strength" className="flex flex-col gap-1.5">
+          <Eyebrow>Strength</Eyebrow>
+          <dl className="m-0 grid grid-cols-6 gap-2">
+            {[
+              { label: 'Avg war stars', value: num(strength.warStars) },
+              { label: '3-star rate', value: pct(strength.threeStar) },
+              { label: 'Stars per attack', value: num(strength.stars, 2) },
+              { label: 'Attacks missed', value: pct(strength.missed) },
+              { label: 'Stars given up', value: num(strength.conceded, 2) },
+              { label: 'Bases 3-starred', value: pct(strength.threeStarred) },
+              ...(top15 ? [
+                { label: 'Heroes, top 15', value: num(top15.heroes), wide: true },
+                { label: 'Gear, top 15', value: num(top15.equipment), wide: true },
+              ] : []),
+            ].map((x) => (
+              <div key={x.label} className={`flex flex-col items-center gap-0.5 rounded-xl bg-[#F6EEDC] px-1 py-2 ${'wide' in x ? 'col-span-3' : 'col-span-2'}`}>
+                <dd className="m-0 whitespace-nowrap text-[17px] font-bold leading-none tabular-nums text-ink">{x.value}</dd>
+                <dt className="whitespace-nowrap text-[11px] font-semibold text-muted">{x.label}</dt>
+              </div>
+            ))}
+          </dl>
+        </section>
+
         <section aria-label="Town halls" className="flex flex-col gap-1.5">
           <Eyebrow>Town halls</Eyebrow>
           <ul className="m-0 flex list-none flex-wrap gap-x-3 gap-y-1.5 p-0">
@@ -80,28 +123,10 @@ export default function ClanSheet({ clan, roster, wide, onClose }: { clan: ClanN
         {group && group.days.length > 0 && (
           <section aria-label="This CWL" className="flex flex-col gap-1.5">
             <Eyebrow>This CWL</Eyebrow>
-            <DayRow days={group.days} pick={null} onPick={(d) => { setDayPick(d); go.to('#/war') }} drawnOnly />
+            <DayRow days={group.days} pick={null} onPick={(d) => { setWarClan(clan); setDayPick(d); go.to('#/war') }} drawnOnly />
           </section>
         )}
 
-        {top.length > 0 && (
-          <section aria-label="Strongest" className="flex flex-col gap-1.5">
-            <Eyebrow>Strongest</Eyebrow>
-            <ol className="m-0 list-none rounded-2xl border border-line py-1">
-              {top.map((p, i) => (
-                <li key={p.tag}>
-                  <a href={playerHref(p.tag)} className={`flex min-h-[44px] items-center gap-2.5 px-3 text-ink no-underline hover:bg-hover ${i ? 'border-t border-hair' : ''}`}>
-                    <Th th={p.th} />
-                    <span className="min-w-0 flex-auto truncate text-sm font-semibold">{p.name}</span>
-                    <StatusDot status={p.status} />
-                    <span className="w-10 flex-none text-right text-sm font-bold tabular-nums text-muted">{fmtScore(p.score)}</span>
-                    <RowChevron />
-                  </a>
-                </li>
-              ))}
-            </ol>
-          </section>
-        )}
       </section>
     </div>
   )

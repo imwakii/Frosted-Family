@@ -77,8 +77,9 @@ export type WarScope = 'all' | 'cwl'
 export type WarRow = {
   tag: string; name: string; clan: ClanName; th: number | null
   war_stars?: number | null
-  war: { wars: number; attacks: number; stars: number; three_stars: number; missed: number; avg_destruction: number | null; from?: string | null } | null
+  war: { wars: number; attacks: number; stars: number; three_stars: number; missed: number; avg_destruction: number | null; from?: string | null; defense?: Defense | null } | null
 }
+type Defense = { defenses: number; stars_conceded: number; three_stars_conceded: number }
 export type WarBoard = { scope: WarScope | null; since: string | null; windowFrom: string | null; recordedFrom: string | null; season: string | null; updated_at: string | null; players: WarRow[] }
 
 type WarBlock = { wars_played: number; attacks_used: number; attacks_missed: number; three_star_rate: number | null; avg_stars: number | null; avg_destruction: number | null }
@@ -95,7 +96,7 @@ function fromApi(w: ApiWar | null | undefined): WarRow['war'] {
   if (!w) return null
   return {
     wars: w.recorded_wars ?? w.wars ?? 0, attacks: w.attacks ?? 0, stars: w.stars ?? 0, three_stars: w.three_stars ?? 0, missed: w.missed ?? 0,
-    avg_destruction: w.recorded_avg_destruction ?? w.avg_destruction ?? null, from: w.from ?? null,
+    avg_destruction: w.recorded_avg_destruction ?? w.avg_destruction ?? null, from: w.from ?? null, defense: w.defense ?? null,
   }
 }
 

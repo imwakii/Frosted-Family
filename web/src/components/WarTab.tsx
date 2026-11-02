@@ -3,7 +3,7 @@ import WarRecap from './WarRecap'
 import { useYou, YouTag } from './You'
 import { useClans } from '../clash'
 import { useWide } from '../data'
-import { ago, type ClanWar, setDayPick, useCwlDay, useCwlGroups, useDayPick, useWarBoard, type WarAttack, type WarBase } from '../leaders'
+import { ago, type ClanWar, setDayPick, setWarClan, useCwlDay, useCwlGroups, useDayPick, useWarBoard, useWarClan, type WarAttack, type WarBase } from '../leaders'
 import { clanHref, playerHref } from '../route'
 import { CLAN, CLANS } from '../theme'
 import type { ClanName } from '../types'
@@ -292,7 +292,7 @@ function OtherDay({ clan, warKey, now }: { clan: ClanName; warKey: string; now: 
 
 export default function WarTab({ wide }: { wide: boolean }) {
   const { data, loading } = useWarBoard()
-  const [pick, setPick] = useState<ClanName | null>(null)
+  const pick = useWarClan()
   const { yous } = useYou()
   const now = useNow(30_000)
   const wars = (data?.clans ?? []).filter((c) => c.war)
@@ -311,7 +311,7 @@ export default function WarTab({ wide }: { wide: boolean }) {
   const other = !nearby && days.find((d) => d.day === picked)
   return (
     <main className={wide ? 'mx-auto flex max-w-[1360px] flex-col gap-4 px-[clamp(16px,3vw,32px)] pb-12 pt-5' : 'flex flex-col gap-3 px-4 pb-6 pt-1'}>
-      <ClanSwitch value={clan?.clan ?? 'Fire'} onPick={setPick}
+      <ClanSwitch value={clan?.clan ?? 'Fire'} onPick={setWarClan}
         live={wars.filter((c) => c.war!.state === 'inWar').map((c) => c.clan)}
         off={data ? CLANS.filter((k) => !wars.some((c) => c.clan === k)) : []} />
       {!data ? (

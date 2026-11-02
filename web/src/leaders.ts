@@ -164,6 +164,11 @@ const onDayPick = (run: () => void) => { dayListeners.add(run); return () => { d
 export const setDayPick = (d: number | 'all' | null) => { dayPick = d; dayListeners.forEach((run) => run()) }
 export const useDayPick = () => useSyncExternalStore(onDayPick, () => dayPick)
 
+// The clan picked on the War tab, which a clan card can also set. null opens on your own war.
+let warClan: ClanName | null = null
+export const setWarClan = (c: ClanName | null) => { warClan = c; dayListeners.forEach((run) => run()) }
+export const useWarClan = () => useSyncExternalStore(onDayPick, () => warClan)
+
 export const useCwlGroups = () => usePolled('groups', loadCwlGroups)
 export const useCwlDay = (clan: ClanName, key: string) =>
   usePolled(`${clan}${key}`, () => getJson<ClanWar>(`/api/war/cwl/day?clan=${clan}&key=${encodeURIComponent(key)}`))
