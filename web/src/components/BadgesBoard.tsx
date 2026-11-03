@@ -19,7 +19,6 @@ type Row = { tag: string; name: string; clan: ClanName; th: number | null; badge
 const medals = (r: Row, t: Tier) => r.badges.filter((b) => b.tier === t).length
 const medalScore = (r: Row) => medals(r, 'gold') * 10_000 + medals(r, 'silver') * 100 + medals(r, 'bronze')
 // A phone row holds this many, best first, and counts the rest.
-const CHIPS_ON_PHONE = 6
 
 export default function BadgesBoard({ q, setQ, wide }: { q: string; setQ: (v: string) => void; wide: boolean }) {
   const { data, loading } = useBoard('badges')
@@ -46,7 +45,7 @@ export default function BadgesBoard({ q, setQ, wide }: { q: string; setQ: (v: st
         <button type="button" aria-pressed={!pick} onClick={() => setPick(null)} className={chip(!pick)}>All badges</button>
         {Object.entries(BADGES).map(([id, b]) => (
           <button key={id} type="button" aria-pressed={pick === id} onClick={() => setPick(id)} className={chip(pick === id)}>
-            <span aria-hidden="true">{b.icon}</span>{b.label}
+            {b.label}
           </button>
         ))}
       </div>
@@ -80,11 +79,8 @@ export default function BadgesBoard({ q, setQ, wide }: { q: string; setQ: (v: st
                     {clan === 'All' && <span className="flex-none text-[11px] font-bold" style={{ color: CLAN[x.r.clan].deep }}>{x.r.clan}</span>}
                   </span>
                   {x.held ? <span className="truncate text-xs text-muted">{x.held.detail}</span> : (
-                    <span aria-label={x.r.badges.map((b) => `${BADGES[b.id]?.label ?? b.label}, ${b.tier}`).join('; ')} className={`flex items-center ${wide ? 'flex-wrap gap-1' : '-space-x-1'}`}>
-                      {[...x.r.badges].sort((a, b) => TIERS.indexOf(b.tier) - TIERS.indexOf(a.tier)).slice(0, wide ? undefined : CHIPS_ON_PHONE).map((b) => (
-                        <span key={b.id} title={`${BADGES[b.id]?.label ?? b.label} · ${TIER_LOOK[b.tier].name}`} className={`flex size-[22px] items-center justify-center rounded-full border text-[11px] ${TIER_LOOK[b.tier].chip}`}>{BADGES[b.id]?.icon}</span>
-                      ))}
-                      {!wide && x.r.badges.length > CHIPS_ON_PHONE && <span className="pl-2 text-[11px] font-bold text-muted">+{x.r.badges.length - CHIPS_ON_PHONE}</span>}
+                    <span className="truncate text-xs text-muted">
+                      {[...x.r.badges].sort((a, b) => TIERS.indexOf(b.tier) - TIERS.indexOf(a.tier)).map((b) => BADGES[b.id]?.label ?? b.label).join(' · ')}
                     </span>
                   )}
                 </span>

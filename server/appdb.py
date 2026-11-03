@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS proposals (
     decided_at TEXT
 );
 CREATE TABLE IF NOT EXISTS reactions (
-    target TEXT NOT NULL,             -- what was reacted to: see server/reactions.py
+    target TEXT NOT NULL,             -- what was reacted to; the feature was removed on 4 Nov 2026 and its rows are kept
     emoji TEXT NOT NULL,
     user_id TEXT NOT NULL,            -- Discord id
     name TEXT,                        -- their name in the family's server when they reacted

@@ -2,7 +2,6 @@ import type { ClanWar, WarRecap as Recap } from '../leaders'
 import { playerHref } from '../route'
 import { CLAN } from '../theme'
 import type { ClanName } from '../types'
-import ReactionBar from './ReactionBar'
 import { RowChevron } from './ui'
 
 // When a war ends: who was best, any big upset, and an image of it to post in Discord. The score is on the board above.
@@ -67,7 +66,6 @@ async function saveImage(clan: ClanName, war: ClanWar, result: string, r: Recap)
 
 export default function WarRecap({ clan, war, result, recap }: { clan: ClanName; war: ClanWar; result: string; recap: Recap }) {
   const row = 'flex min-h-[52px] items-center gap-3 px-3.5 py-1.5 text-ink no-underline'
-  const bar = (id: string) => war.war_key && <ReactionBar target={`war:${war.war_key}:${id}`} className="px-3.5 pb-2" />
   const stars = (s: string) => <span aria-hidden="true" className="whitespace-nowrap text-[13px] leading-none text-gold">{s}</span>
   return (
     <div aria-label="War recap">
@@ -82,7 +80,6 @@ export default function WarRecap({ clan, war, result, recap }: { clan: ClanName;
         </span>
         <RowChevron />
       </a>
-      {bar('mvp')}
       {recap.upsets.map((u) => (
         <div key={`${u.attacker.tag}-${u.defender.tag}`} className="border-t border-hair">
         <a href={playerHref(u.attacker.tag)} className={`${row} hover:bg-hover`}>
@@ -96,7 +93,6 @@ export default function WarRecap({ clan, war, result, recap }: { clan: ClanName;
           </span>
           <RowChevron />
         </a>
-        {bar(`upset:${u.attacker.tag}:${u.defender.tag}`)}
         </div>
       ))}
       <div className="flex justify-end border-y border-hair px-3 py-2">

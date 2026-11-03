@@ -2,9 +2,10 @@ import { useCallback, useState } from 'react'
 import { EARLIER, LATEST, type Update } from '../updates'
 import { CardSheet } from './ClanSheet'
 import { Eyebrow } from './ui'
+import { firstVisit } from './Welcome'
 
 // The header's What's new button and its card. A new update opens the card once and lights the button until it is seen;
-// a link that opens a player or clan keeps its own sheet, and only the button lights.
+// a link that opens a player or clan keeps its own sheet, and only the button lights. A first visit gets the welcome instead.
 
 const SEEN = 'ff-whats-new'
 const seen = () => { try { return localStorage.getItem(SEEN) === LATEST.id } catch { return true } }
@@ -36,8 +37,8 @@ const Groups = ({ update, quiet }: { update: Update; quiet?: boolean }) => (
 )
 
 export default function WhatsNew({ wide }: { wide: boolean }) {
-  const [fresh, setFresh] = useState(() => !seen())
-  const [open, setOpen] = useState(() => !seen() && !/\/(p|c|e|u)\//.test(window.location.hash))
+  const [fresh, setFresh] = useState(() => !seen() && !firstVisit)
+  const [open, setOpen] = useState(() => !seen() && !firstVisit && !/\/(p|c|e|u)\//.test(window.location.hash))
   const close = useCallback(() => {
     setOpen(false)
     setFresh(false)

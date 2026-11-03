@@ -43,7 +43,6 @@ export const UPDATES: Update[] = [
         title: 'Log tab (new)',
         lines: [
           'Added member and upgrade activity.',
-          'Added reactions to new town halls.',
         ],
       },
       {

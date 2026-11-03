@@ -31,7 +31,7 @@ function Badges({ badges }: { badges: NonNullable<PlayerCard['badges']> }) {
               onPointerLeave={(e) => { if (e.pointerType === 'mouse') setHover(null) }}
               onClick={() => setPinned((p) => (p === b.id ? null : b.id))}
               className={`flex min-h-8 cursor-pointer items-center gap-1.5 rounded-full border px-2.5 text-xs font-bold ${TIER_LOOK[b.tier ?? 'silver'][open?.id === b.id ? 'on' : 'chip']}`}>
-              <span aria-hidden="true">{BADGES[b.id]?.icon}</span>{BADGES[b.id]?.label ?? b.label}
+              {BADGES[b.id]?.label ?? b.label}
             </button>
           </li>
         ))}
@@ -283,7 +283,7 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
             {card?.streaks && (
               <Section title="Streaks" note={card.tracked_from ? `Since ${dayMonth(card.tracked_from)}` : null}>
                 <div className="grid grid-cols-3 gap-2">
-                  <Stat label="3★ now" value={<>{card.streaks.three_stars > 1 && <span aria-hidden="true">🔥 </span>}{card.streaks.three_stars}</>} />
+                  <Stat label="3★ now" value={<>{card.streaks.three_stars}</>} />
                   <Stat label="3★ best" value={card.streaks.three_stars_best} />
                   <Stat label="No-miss wars" value={card.streaks.clean_wars} />
                 </div>

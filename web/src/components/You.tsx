@@ -74,7 +74,7 @@ export function JumpToYou({ wide }: { wide: boolean }) {
 }
 
 /** Finds a member by name and marks them as this person: their first account, or another one. */
-export function YouPrompt({ roster, onDone, autoFocus }: { roster: Roster; onDone: () => void; autoFocus?: boolean }) {
+export function YouPrompt({ roster, onDone, autoFocus, bare }: { roster: Roster; onDone: () => void; autoFocus?: boolean; bare?: boolean }) {
   const { yous, addYou } = useYou()
   const [q, setQ] = useState('')
   const id = useId()
@@ -82,12 +82,14 @@ export function YouPrompt({ roster, onDone, autoFocus }: { roster: Roster; onDon
   const n = q.trim().toLowerCase()
   const hits = n ? roster.players.filter((p) => !yous.includes(p.tag) && p.name.toLowerCase().includes(n)).slice(0, 5) : []
   return (
-    <section aria-label={adding ? 'Add another account' : 'Add me'} className="flex flex-col gap-2 rounded-2xl border border-line bg-white p-3">
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-[15px] font-bold text-ink">{adding ? 'Add another account' : 'Add me'}</span>
-        <button type="button" aria-label="Close" onClick={onDone}
-          className="flex size-8 flex-none cursor-pointer items-center justify-center rounded-full border-0 bg-transparent text-lg leading-none text-faint hover:bg-page hover:text-ink">×</button>
-      </div>
+    <section aria-label={adding ? 'Add another account' : 'Add me'} className={`flex flex-col gap-2 ${bare ? '' : 'rounded-2xl border border-line bg-white p-3'}`}>
+      {!bare && (
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[15px] font-bold text-ink">{adding ? 'Add another account' : 'Add me'}</span>
+          <button type="button" aria-label="Close" onClick={onDone}
+            className="flex size-8 flex-none cursor-pointer items-center justify-center rounded-full border-0 bg-transparent text-lg leading-none text-faint hover:bg-page hover:text-ink">×</button>
+        </div>
+      )}
       <div className="relative min-w-0">
         <label htmlFor={id} className="sr-only">Your name in the game</label>
         <SearchIcon />
@@ -113,7 +115,7 @@ export function YouPrompt({ roster, onDone, autoFocus }: { roster: Roster; onDon
 }
 
 /** Your own card from any tab: the first of your accounts; the card switches between them. */
-export function YouChip({ roster, compact, iconOnly }: { roster: Roster; compact?: boolean; iconOnly?: boolean }) {
+export function YouChip({ roster, compact }: { roster: Roster; compact?: boolean }) {
   const { yous } = useYou()
   const [picking, setPicking] = useState(false)
   const p = roster.players.find((x) => yous.includes(x.tag))
@@ -121,7 +123,7 @@ export function YouChip({ roster, compact, iconOnly }: { roster: Roster; compact
     return (
       <>
         <button type="button" aria-label="Add me" onClick={() => setPicking(true)}
-          className={`flex h-9 flex-none cursor-pointer items-center justify-center gap-1 whitespace-nowrap rounded-full border border-line bg-white text-[13px] font-bold text-ink-2 hover:bg-hover ${compact ? 'w-9' : 'px-2 lg:px-3'}`}>
+          className={`flex h-9 flex-none cursor-pointer items-center justify-center gap-0.5 whitespace-nowrap rounded-full border border-line bg-white text-[13px] font-bold text-ink-2 hover:bg-hover ${compact ? 'w-9' : 'px-2 lg:px-3'}`}>
           <span aria-hidden="true" className="text-base leading-none">+</span>
           {!compact && <><span className="lg:hidden">Add me</span><span className="max-lg:hidden">Add yourself</span></>}
         </button>
@@ -135,9 +137,9 @@ export function YouChip({ roster, compact, iconOnly }: { roster: Roster; compact
   }
   return (
     <a href={playerHref(p.tag)} aria-label={`Your card, ${p.name}`}
-      className={`flex h-9 max-w-[170px] flex-none items-center gap-1.5 overflow-hidden rounded-full border border-line bg-white text-ink no-underline hover:bg-page ${iconOnly ? 'w-9 justify-center' : `py-0.5 pl-1 ${compact ? 'pr-1' : 'pr-2.5'}`}`}>
+      className={`flex h-9 min-w-0 max-w-[170px] items-center gap-1 overflow-hidden rounded-full border border-line bg-white py-0.5 pl-0.5 text-ink no-underline hover:bg-page ${compact ? 'flex-none pr-0.5' : 'pr-2'}`}>
       <Th th={p.th} />
-      {!compact && !iconOnly && <span className="truncate text-[13px] font-bold"><span className="lg:hidden">You</span><span className="max-lg:hidden">{p.name}</span></span>}
+      {!compact && <span className="min-w-0 truncate text-[13px] font-bold">{p.name}</span>}
     </a>
   )
 }
