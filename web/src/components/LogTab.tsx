@@ -24,7 +24,7 @@ const KINDS: { id: UpgradeCategory | 'all'; label: string }[] = [
   { id: 'all', label: 'All' }, { id: 'hero', label: 'Heroes' }, { id: 'equipment', label: 'Equipment' }, { id: 'troop', label: 'Troops' },
   { id: 'spell', label: 'Spells' }, { id: 'pet', label: 'Pets' }, { id: 'siege', label: 'Sieges' }, { id: 'town_hall', label: 'Town hall' },
 ]
-const TOP = 10
+const TOP = 5
 const LAST_LOOK = 'ff-log-seen'
 
 function readLook(): { at: string; rank: number | null } | null {
