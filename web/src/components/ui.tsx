@@ -248,6 +248,7 @@ export function DayRow({ days = [], pick, onPick, live = 0, roster, drawnOnly }:
   const grab = (on: boolean) => (on ? (grabbing ? 'cursor-grabbing' : 'cursor-grab') : '')
   return (
     <nav {...navProps} aria-label="CWL day" className={`relative grid w-full max-w-[480px] touch-pan-y select-none gap-1 rounded-xl bg-well p-1 ${roster ? 'grid-cols-[1.7fr_repeat(7,1fr)]' : 'grid-cols-7'}`}>
+      {slideStyle && <span aria-hidden="true" className={`absolute inset-y-1 left-0 rounded-[9px] bg-white shadow-[0_1px_3px_rgba(43,33,20,.12)] ${slideMotion}`} style={slideStyle} />}
       {roster && (
         <button type="button" aria-pressed={pick === 'all'} onClick={() => onPick('all')}
           className={`${cell} ${grab(pick === 'all')} bg-transparent text-[13px] font-bold transition-colors duration-200 motion-reduce:transition-none ${pick === 'all' ? 'text-ink' : 'text-muted'}`}>Roster</button>
@@ -256,19 +257,19 @@ export function DayRow({ days = [], pick, onPick, live = 0, roster, drawnOnly }:
         const d = days.find((x) => x.day === n)
         const over = d?.state === 'warEnded', fighting = d?.state === 'inWar' || (!d && n === live), prep = d?.state === 'preparation'
         const won = d && over ? dayWon(d) : null
-        // A day in preparation wears the peach of the War tab's Preparation pill.
-        const background = over ? (won === true ? '#DCEFD5' : won === false ? '#F8D5CF' : '#EFE6D2') : prep ? '#FFEDD5' : pick === n || fighting ? '#FFFBF1' : 'transparent'
+        // A day in preparation wears the peach of the War tab's Preparation pill. The picked day lets the white highlight
+        // show through, and its score says the result instead.
+        const background = pick === n ? 'transparent' : over ? (won === true ? '#DCEFD5' : won === false ? '#F8D5CF' : '#EFE6D2') : prep ? '#FFEDD5' : fighting ? '#FFFBF1' : 'transparent'
+        const score = fighting || (pick === n && won === true) ? 'text-[#15803D]' : pick === n && won === false ? 'text-[#B91C1C]' : 'text-ink-2'
         return (
           <button key={n} type="button" aria-pressed={pick === n} aria-label={`Day ${n}${prep ? ', preparation' : ''}`} disabled={drawnOnly && !d} onClick={() => onPick(n)}
             className={`${cell} ${grab(pick === n)}`} style={{ background }}>
             <span className={`text-sm font-bold leading-tight ${prep ? 'text-[#B4451A]' : pick === n ? 'text-ink' : 'text-muted'}`}>{n}</span>
-            {d && (over || fighting) && <span className={`text-[10px] font-bold leading-tight ${fighting ? 'text-[#15803D]' : 'text-ink-2'}`}>{d.stars}–{d.opponent_stars}</span>}
+            {d && (over || fighting) && <span className={`text-[10px] font-bold leading-tight ${score}`}>{d.stars}–{d.opponent_stars}</span>}
             {fighting && <span className="ff-live absolute right-1 top-1 size-1.5 rounded bg-[#16A34A]" />}
           </button>
         )
       })}
-      {/* The ring rides over the days, so a day's result colour still shows under it. */}
-      {slideStyle && <span aria-hidden="true" className={`pointer-events-none absolute inset-y-1 left-0 rounded-[9px] shadow-[inset_0_0_0_2px_var(--color-ink)] ${slideMotion}`} style={slideStyle} />}
     </nav>
   )
 }
