@@ -180,6 +180,25 @@ export const UPDATES: Update[] = [
       },
     ],
   },
+  {
+    id: '2026-11-04-5',
+    date: '4 Nov 2026',
+    groups: [
+      {
+        title: 'Plan tab',
+        lines: [
+          'Added side-by-side clan comparison.',
+        ],
+      },
+      {
+        title: 'Player cards',
+        lines: [
+          'Added any-two-player comparison.',
+          'Added Change on both compared players.',
+        ],
+      },
+    ],
+  },
 ]
 
 export const LATEST = UPDATES[UPDATES.length - 1]

@@ -4,6 +4,7 @@ import { checkPlan, type DayBody, type DayPlans, getDays, getProposals, HttpErro
 import { type ClanDays, DAYS, DRAFT_KEY, earned, enemy, locked, missedThisSeason, onTrack, onTrial, slotsBelow, suggest, TARGET, TEAM, tier, type Wars, asPlanned } from '../dayplan'
 import { CLAN, CLANS } from '../theme'
 import type { ClanName, Player, Roster, Slot } from '../types'
+import ClanCompare from './ClanCompare'
 import CwlTab from './CwlTab'
 import PlanActivity from './PlanActivity'
 import { lineupBoard, type Moves, type Place, PlaceSelect, placeLabel, PlanRow, readDraft, toList } from './PlanTab'
@@ -71,6 +72,13 @@ export default function DayPlanner({ roster: base, me, onPublished }: { roster: 
   const [note, setNote] = useState<{ ok: boolean; text: string } | null>(null)
   const [preview, setPreview] = useState(false)
   const [q, setQ] = useState('')
+  // A history entry of its own, so the phone's back button closes it and keeps the plan on screen.
+  const [comparing, setComparing] = useState(false)
+  useEffect(() => {
+    const on = () => setComparing(false)
+    window.addEventListener('popstate', on)
+    return () => window.removeEventListener('popstate', on)
+  }, [])
   const war = useWar()
   const wide = useWide()
   const proposals = useProposals<DayBody>('days')
@@ -265,6 +273,7 @@ export default function DayPlanner({ roster: base, me, onPublished }: { roster: 
           <span className={col.count > 50 ? 'font-bold text-[#B91C1C]' : ''}>{col.count}/50 members</span>
           {col.inCwl && col.avg !== null && <span>Core avg {col.avg.toFixed(1)}{Math.abs(col.delta) >= 0.05 && ` (${col.delta > 0 ? '+' : '−'}${Math.abs(col.delta).toFixed(1)})`}</span>}
           {nMoves > 0 && <button type="button" onClick={() => setMoves({})} className="min-h-6 cursor-pointer border-0 bg-transparent p-0 font-bold text-action">{nMoves} {nMoves === 1 ? 'move' : 'moves'} · Reset</button>}
+          <button type="button" onClick={() => { history.pushState(null, ''); setComparing(true) }} className="ml-auto min-h-8 cursor-pointer border-0 bg-transparent p-0 font-bold text-action">Compare</button>
         </p>
       )}
 
@@ -365,6 +374,7 @@ export default function DayPlanner({ roster: base, me, onPublished }: { roster: 
       </>}
       {!preview && <PlanActivity days={proposals} lineup={lineup} published={server?.published} />}
     </Outer>
+    {comparing && <ClanCompare cols={cols} moves={moves} plans={shown} players={roster.players} wide={wide} onClose={() => window.history.back()} />}
     {confirming && (
       <div className="ff-fade fixed inset-0 z-50 flex items-center justify-center bg-[rgba(43,33,20,.4)] p-4" onClick={(e) => { if (e.target === e.currentTarget) setConfirming(false) }}>
         <section role="dialog" aria-modal="true" aria-label="Publish to members"

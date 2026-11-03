@@ -10,7 +10,7 @@ import { useYou } from './You'
 
 // Two members side by side, from either's player card: who leads where, on the same figures the cards and Stats show.
 
-type Line = { label: string; a: number | null; b: number | null; show?: (v: number) => string; low?: boolean; unit?: string }
+export type Line = { label: string; a: number | null; b: number | null; show?: (v: number) => string; low?: boolean; unit?: string; even?: boolean }
 
 const whole = (v: number) => Math.round(v).toLocaleString('en-GB')
 const percent = (v: number) => `${v.toFixed(1)}%`
@@ -20,7 +20,7 @@ const missed = (p: Player, c: PlayerCard | null) => {
   return r ? (r.attacks + r.missed ? (100 * r.missed) / (r.attacks + r.missed) : null) : p.missPct ?? null
 }
 /** Which side is ahead: -1 the first, 1 the second, 0 neither or level. */
-const ahead = ({ a, b, low }: Line) => (a === null || b === null || a === b ? 0 : (a > b) !== !!low ? -1 : 1)
+export const ahead = ({ a, b, low, even }: Line) => (even || a === null || b === null || a === b ? 0 : (a > b) !== !!low ? -1 : 1)
 
 function usePlayerCard(tag: string) {
   const [card, setCard] = useState<PlayerCard | null>(null)
@@ -33,7 +33,7 @@ function usePlayerCard(tag: string) {
   return card
 }
 
-function Row({ line, a, b }: { line: Line; a: string; b: string }) {
+export function Row({ line, a, b }: { line: Line; a: string; b: string }) {
   const lead = ahead(line)
   const value = (v: number | null, side: number, deep: string) => (
     <span className={`text-center text-sm tabular-nums ${lead === side ? 'font-extrabold' : lead ? 'font-semibold text-faint' : 'font-semibold text-ink-2'}`} style={lead === side ? { color: deep } : undefined}>
@@ -139,13 +139,16 @@ export default function CompareSheet({ roster, a: aTag, b: bTag, wide, onClose }
   const all = sections.flatMap((s) => s.lines)
   const leadA = all.filter((l) => ahead(l) === -1).length, leadB = all.filter((l) => ahead(l) === 1).length
   const ca = CLAN[a.clan].deep, cb = CLAN[b.clan].deep
-  const person = (p: Player, leads: number, deep: string) => (
-    <a href={`${window.location.hash.split('/v/')[0]}/p/${encodeURIComponent(p.tag.slice(1))}`} className="flex min-w-0 flex-col items-center gap-0.5 text-center no-underline">
-      <Th th={p.th} size="lg" />
-      <span className="font-display max-w-full truncate text-[17px] leading-tight" style={{ color: deep }}>{p.name}</span>
-      <span className="text-[11px] font-bold text-muted">{p.clan}</span>
-      <span className="font-display text-[26px] leading-none tabular-nums" style={{ color: deep }}>{leads}</span>
-    </a>
+  const person = (p: Player, stays: Player, leads: number, deep: string) => (
+    <div className="flex min-w-0 flex-col items-center gap-1">
+      <a href={`${window.location.hash.split('/v/')[0]}/p/${encodeURIComponent(p.tag.slice(1))}`} className="flex min-w-0 max-w-full flex-col items-center gap-0.5 text-center no-underline">
+        <Th th={p.th} size="lg" />
+        <span className="font-display max-w-full truncate text-[17px] leading-tight" style={{ color: deep }}>{p.name}</span>
+        <span className="text-[11px] font-bold text-muted">{p.clan}</span>
+        <span className="font-display text-[26px] leading-none tabular-nums" style={{ color: deep }}>{leads}</span>
+      </a>
+      <button type="button" aria-label={`Change ${p.name}`} onClick={() => go.to(compareHref(stays.tag))} className="min-h-8 cursor-pointer rounded-full border border-line bg-white px-2.5 text-xs font-bold text-ink-2 hover:bg-page">Change</button>
+    </div>
   )
   return (
     <CardSheet label={`${a.name} and ${b.name}`} wide={wide} onClose={onClose} head={<>
@@ -158,12 +161,9 @@ export default function CompareSheet({ roster, a: aTag, b: bTag, wide, onClose }
       <span className="font-display min-w-0 flex-auto truncate text-[22px] leading-tight text-ink">Compare</span>
     </>}>
       <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
-        {person(a, leadA, ca)}
-        <div className="flex flex-col items-center gap-1">
-          <span className="text-[11px] font-bold uppercase tracking-[0.06em] text-faint">Ahead on</span>
-          <button type="button" onClick={() => go.to(compareHref(a.tag))} className="min-h-8 cursor-pointer rounded-full border border-line bg-white px-2.5 text-xs font-bold text-ink-2 hover:bg-page">Change</button>
-        </div>
-        {person(b, leadB, cb)}
+        {person(a, b, leadA, ca)}
+        <span className="text-[11px] font-bold uppercase tracking-[0.06em] text-faint">Ahead on</span>
+        {person(b, a, leadB, cb)}
       </div>
       {sections.map((s) => (
         <section key={s.title} aria-label={s.title} className="flex flex-col">
