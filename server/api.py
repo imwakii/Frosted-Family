@@ -18,6 +18,7 @@ site through a Vercel rewrite.
     GET /war/cwl         each clan's league group: table with town halls, days played, stars toward the 8
     GET /war/cwl/day     one of a clan's wars by its key, for the day row
     GET /war/log         every finished war we hold for a clan, newest first
+    GET /calendar        one month: Supercell's events, what repeats, the family's wars and plans (server/events.py)
     /auth/*, /plan/*     Discord sign-in for leaders (server/auth.py) and the Plan tab (server/plan.py)
     /push/*              phones that asked for alerts (server/push.py)
 
@@ -35,7 +36,7 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException, Request
 
 from frosted.config import CLAN_TAGS, TAG_TO_CLAN
-from server import auth, clanlog, days, db, history, leaders, members, plan, profiles, proposals, push, stats, visits, war
+from server import auth, clanlog, days, db, events, history, leaders, members, plan, profiles, proposals, push, stats, visits, war
 
 DEFAULT_DB = "/opt/bots/frosted/data/frosted.db"
 ROSTER_FIELDS = ("tag", "name", "clan", "cwl_slot", "transferred_from", "tier", "final_score", "offense_score",
@@ -275,6 +276,7 @@ app.include_router(proposals.router)
 app.include_router(leaders.router)
 app.include_router(visits.router)
 app.include_router(push.router)
+app.include_router(events.router)
 
 
 @app.middleware("http")

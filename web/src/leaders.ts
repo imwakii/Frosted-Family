@@ -1,3 +1,4 @@
+import type { CalMonth } from './calendar'
 import { useEffect, useState, useSyncExternalStore } from 'react'
 import type { ClanName } from './types'
 
@@ -173,6 +174,7 @@ export const setWarClan = (c: ClanName | null) => { warClan = c; dayListeners.fo
 export const useWarClan = () => useSyncExternalStore(onDayPick, () => warClan)
 
 export const useCwlGroups = () => usePolled('groups', loadCwlGroups)
+export const useCalendar = (month: string) => usePolled(`cal${month}`, () => getJson<CalMonth>(`/api/calendar?month=${month}`))
 export const useWarLog = (clan: ClanName) => usePolled(`log${clan}`, () => getJson<{ clan: ClanName; wars: LogWar[] }>(`/api/war/log?clan=${clan}`))
 export const useCwlDay = (clan: ClanName, key: string) =>
   usePolled(`${clan}${key}`, () => getJson<ClanWar>(`/api/war/cwl/day?clan=${clan}&key=${encodeURIComponent(key)}`))

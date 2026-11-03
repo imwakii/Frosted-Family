@@ -7,6 +7,7 @@ pass moves on. The token comes from COC_API_TOKEN and is never printed.
 
     python -m server.collect                 # uses FROSTED_DB, default /opt/bots/frosted/data/frosted.db
     python -m server.collect --profiles      # also fetch every member's profile now (otherwise every hour)
+    python -m server.collect --news          # also read Supercell's news and the Gold Pass now (otherwise twice a day)
 """
 from __future__ import annotations
 
@@ -19,7 +20,7 @@ from urllib.parse import quote
 import httpx
 
 from frosted.config import CLAN_TAGS
-from server import db, profiles, stats
+from server import db, events, profiles, stats
 
 API = "https://api.clashofclans.com/v1"
 DEFAULT_DB = "/opt/bots/frosted/data/frosted.db"
@@ -28,6 +29,7 @@ OTHER_WARS_EVERY = timedelta(minutes=10)
 STRENGTH_EVERY = timedelta(days=1)
 GROUP_KEPT = timedelta(days=45)  # longer than the gap between two CWLs, so the last group shows until the next is drawn
 LINEUP = 15
+NEWS_AGENT = "FrostedFamilyCalendar/1.0 (+https://frosted-family.vercel.app)"
 
 
 class Api:
@@ -194,7 +196,19 @@ def collect_profiles(conn, api: Api, tags: list[str], now: str) -> None:
         conn.execute("INSERT OR REPLACE INTO profile_runs VALUES (?,?)", (now, stored))
 
 
-def run(conn, client: httpx.Client, force_profiles: bool = False) -> Api:
+def collect_calendar(conn, api: Api) -> None:
+    """The Gold Pass season from the API, and Supercell's dated events from its news. Never stops war collection."""
+    season = api.get("/goldpass/seasons/current", quiet=(404,))
+    with conn:
+        events.store_gold_pass(conn, season)
+    try:
+        with httpx.Client(base_url=events.SITE, headers={"User-Agent": NEWS_AGENT}, follow_redirects=True, timeout=20) as site:
+            events.collect_news(conn, site, datetime.now(timezone.utc))
+    except (httpx.HTTPError, ValueError) as e:
+        log(f"news not read: {type(e).__name__}: {e}")
+
+
+def run(conn, client: httpx.Client, force_profiles: bool = False, force_news: bool = False) -> Api:
     api = Api(client)
     started = db.utcnow()
     tags: list[str] = []
@@ -216,6 +230,8 @@ def run(conn, client: httpx.Client, force_profiles: bool = False) -> Api:
             if p:
                 with conn:
                     profiles.upsert_profile(conn, p, started)
+    if force_news or events.news_due(datetime.now(timezone.utc)):
+        collect_calendar(conn, api)
     with conn:
         stats.record_day(conn, started)  # today's clan_daily rows for /stats/clans
         conn.execute("INSERT OR REPLACE INTO polls VALUES (?,?,?,?)", (started, db.utcnow(), api.calls, api.errors))
@@ -253,7 +269,7 @@ def main() -> int:
     conn = db.connect(os.environ.get("FROSTED_DB", DEFAULT_DB))
     headers = {"Authorization": f"Bearer {token}", "Accept": "application/json"}
     with httpx.Client(base_url=API, headers=headers, timeout=20) as client:
-        api = run_wars(conn, client) if "--wars" in sys.argv else run(conn, client, force_profiles="--profiles" in sys.argv)
+        api = run_wars(conn, client) if "--wars" in sys.argv else run(conn, client, force_profiles="--profiles" in sys.argv, force_news="--news" in sys.argv)
     log(f"poll done: {api.calls} calls, {api.errors} errors")
     # A pass where every call failed (bad token, IP not on the key) should show as a failed unit.
     return 1 if api.calls and api.errors == api.calls else 0

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useAuth, type Me } from './auth'
+import CalendarTab from './components/CalendarTab'
 import CwlTab from './components/CwlTab'
 import ClanSheet from './components/ClanSheet'
 import CompareSheet from './components/CompareSheet'
@@ -26,6 +27,7 @@ const WAR_SUBS = [{ id: 'latest', label: 'Current', href: '#/war' }, { id: 'log'
 const TABS = [
   { id: 'war', label: 'War', href: '#/war', icon: <path d="M5 5l14 14M19 5L5 19M4 16l4 4M20 16l-4 4" /> },
   { id: 'cwl', label: 'CWL', href: '#/cwl', icon: <path d="M8.5 20.5h7M12 15.5v5M7.5 4h9v6.5a4.5 4.5 0 0 1-9 0V4zM7.5 6.5H4.5c0 2 1 3.2 3 3.6M16.5 6.5h3c0 2-1 3.2-3 3.6" /> },
+  { id: 'calendar', label: 'Calendar', href: '#/calendar', icon: <path d="M7 3v4M17 3v4M4 10h16M6 5h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z" /> },
   { id: 'log', label: 'Log', href: '#/log', icon: <path d="M4 6h16M4 12h16M4 18h10" /> },
   { id: 'explore', label: 'Stats', href: '#/stats/players', icon: <path d="M5 20V10M12 20V4M19 20v-7" /> },
   { id: 'plan', label: 'Plan', href: '#/plan/days', icon: <path d="M7 4v16M17 4v16M3 8h8M13 16h8" /> },
@@ -126,6 +128,8 @@ export default function App() {
         </>
       ) : route.tab === 'plan' ? (
         <PlanTab sub={route.sub} roster={roster} onPublished={reload} me={auth.me} ready={auth.status === 'ready'} wide={wide} onSignOut={auth.signOut} />
+      ) : route.tab === 'calendar' ? (
+        <CalendarTab wide={wide} />
       ) : route.tab === 'log' ? (
         <LogTab roster={roster} q={q} setQ={setQ} wide={wide} />
       ) : route.tab === 'explore' ? (
@@ -148,7 +152,7 @@ export default function App() {
         <a href="https://supercell.com/en/fan-content-policy/" target="_blank" rel="noopener noreferrer" className="text-faint underline hover:text-muted">Fan Content Policy</a>
       </footer>
 
-      {!route.player && (install.show ? <InstallHint onDismiss={install.dismiss} /> : wide && route.tab !== 'plan' && <JumpToYou wide={wide} />)}
+      {!route.player && (install.show ? <InstallHint onDismiss={install.dismiss} /> : wide && route.tab !== 'plan' && route.tab !== 'calendar' && <JumpToYou wide={wide} />)}
 
       {roster && <Welcome roster={roster} wide={wide} />}
       {roster && route.player &&<PlayerSheet tag={route.player} roster={roster} wide={wide} onClose={closeSheet} />}
