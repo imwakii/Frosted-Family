@@ -1,67 +1,65 @@
-import { useMemo, useState } from 'react'
-import { type CalEvent, dayOf, familyItems, fmtDate, fmtIn, fmtInDays, fmtRange, fmtWhen, gameItems, isOn, type Item, shiftMonth } from '../calendar'
+import { useEffect, useMemo, useState } from 'react'
+import { type CalDay, type CalEvent, dayOf, fmtDay, fmtMonth, fmtRange, fmtTime, fmtWhen, layWeek, oneCwl, shiftMonth, span, weeksOf, byWeight } from '../calendar'
 import { useCalendar } from '../leaders'
 import { CLAN, CLANS } from '../theme'
 import type { ClanName } from '../types'
-import { ClanSwitch, useNow } from './ui'
+import { chip, ClanSwitch, useNow } from './ui'
 import { warLogHref } from './WarLog'
 
-// What's on next, and when: the family's wars first, then the game's events (server/events.py).
+// One month: what Supercell announced, what the game repeats, and the family's wars and plans (server/events.py).
 
+const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 const OPTIONS = ['All', ...CLANS] as const
+const MONTHS_BACK = 1, MONTHS_ON = 3
 
-// Clan colour is for clan events only.
-const barOf = (e: CalEvent) => (e.clan ? CLAN[e.clan].accent : e.kind === 'clan_games' ? '#2F7F86' : e.kind === 'raid' ? '#A3957C' : '#C4901A')
-
-function hrefOf({ e, day, rest }: Item) {
-  if (e.url) return e.url
-  if (rest || !e.clan) return null
-  const key = day ? day.war_key : e.war_key, state = day ? day.state : e.state
-  if (!key) return null
-  return state === 'inWar' || state === 'preparation' ? '#/war' : warLogHref(e.clan as ClanName, key)
+// Clan colour is for one clan's events only. CWL for the family is the app's dark brown, and the rest have quiet colours.
+const FAMILY = '#33271A'
+const LOOK = {
+  clan_games: { bg: '#D6E6E4', fg: '#1F5A5F', bar: '#2F7F86' },
+  raid: { bg: '#E3D8BF', fg: '#463A29', bar: '#A3957C' },
+  game: { bg: '#F7EBC4', fg: '#6B4F0B', bar: '#C4901A' },
 }
 
-function titleOf({ e, day, rest }: Item) {
-  if (rest) return `${e.clan} CWL days ${rest[0]} to ${rest[1]}`
-  if (day) return <>{e.clan} CWL day {day.day}{day.opponent && <> v <bdi>{day.opponent}</bdi></>}</>
-  if (e.war_key) return <>{e.clan} v <bdi>{e.opponent}</bdi>{e.kind === 'friendly' ? ', friendly' : ''}</>
-  return e.title
+function look(e: CalEvent): { bg: string; fg: string; bar: string; outline?: string } {
+  if (e.members) return e.expected ? { bg: 'transparent', fg: FAMILY, bar: FAMILY, outline: `1.5px dashed ${FAMILY}` } : { bg: FAMILY, fg: '#FFFBF1', bar: FAMILY }
+  if (e.clan) {
+    const c = CLAN[e.clan]
+    if (e.expected) return { bg: 'transparent', fg: c.deep, bar: c.accent, outline: `1.5px dashed ${c.accent}` }
+    return e.kind === 'cwl' ? { bg: c.accent, fg: '#FFFBF1', bar: c.accent } : { bg: c.tint, fg: c.deep, bar: c.accent, outline: `1px solid ${c.accent}` }
+  }
+  const k = e.kind === 'clan_games' || e.kind === 'raid' ? LOOK[e.kind] : LOOK.game
+  return e.expected ? { ...k, bg: 'transparent', outline: `1.5px dashed ${k.bar}` } : k
 }
 
-function Row({ item, now, utc }: { item: Item; now: number; utc: boolean }) {
-  const { e, day, rest } = item
-  const on = !rest && isOn(item, now, utc)
-  const today = dayOf(now, utc)
-  const state = day ? day.state : e.state
-  const stars = day ? day.stars : e.stars, against = day ? day.opponent_stars : e.opponent_stars
-  const tag = e.source === 'plan' ? 'Planned' : e.expected ? 'Expected' : day?.state === 'notDrawn' ? 'Not drawn' : null
-  const when = rest
-    ? `Until ${fmtWhen(item.end, utc)}`
-    : on
-      ? `Until ${e.timed ? fmtWhen(item.end, utc) : fmtDate(item.end)}`
-      : e.timed ? fmtWhen(item.start, utc) : fmtRange(item.start, item.end)
-  const href = hrefOf(item)
+const live = (s?: string) => s === 'inWar' || s === 'preparation'
+
+function warHref(clan: ClanName, key: string | null | undefined, state?: string) {
+  if (!key || state === 'notDrawn') return null
+  return live(state) ? '#/war' : warLogHref(clan, key)
+}
+
+function Score({ stars, against, state }: { stars?: number; against?: number; state?: string }) {
+  if (state !== 'warEnded' && state !== 'inWar') return null
+  return <span className="flex-none text-[13px] font-bold tabular-nums text-ink-2">{stars ?? 0}–{against ?? 0}</span>
+}
+
+function Row({ e, href, title, when, right, tag }: { e: CalEvent; href?: string | null; title: React.ReactNode; when: React.ReactNode; right?: React.ReactNode; tag?: string | null }) {
   const external = !!href && href.startsWith('http')
   const body = (
     <>
-      <span aria-hidden="true" className="w-1 flex-none self-stretch rounded" style={{ background: barOf(e) }} />
+      <span aria-hidden="true" className="w-1 flex-none self-stretch rounded" style={{ background: look(e).bar }} />
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <span className="min-w-0 text-[14px] font-bold text-ink">{titleOf(item)}</span>
+        <span className="min-w-0 text-[14px] font-bold text-ink">{title}</span>
         <span className="flex flex-wrap items-center gap-x-1.5 text-xs font-semibold text-muted">
           {when}
           {tag && <span className="rounded-full bg-well px-1.5 py-px text-[11px] font-bold text-ink-2">{tag}</span>}
           {external && <span className="text-faint underline">Supercell</span>}
         </span>
       </span>
-      <span className="flex flex-none flex-col items-end gap-0.5 text-right">
-        {on
-          ? <span className="flex items-center gap-1 text-[13px] font-bold text-[#15803D]"><span className="ff-live size-1.5 rounded bg-[#16A34A]" />Now</span>
-          : <span className="text-[13px] font-bold text-ink-2">{e.timed ? fmtIn(item.start, now) : fmtInDays(item.start, today)}</span>}
-        {state === 'inWar' && <span className="text-xs font-bold tabular-nums text-muted">{stars ?? 0}–{against ?? 0}</span>}
-      </span>
+      {right}
     </>
   )
-  const cls = 'flex min-h-[56px] items-center gap-2.5 px-3 py-2 text-ink no-underline'
+  const cls = 'flex min-h-[52px] items-center gap-2.5 px-3 py-2 text-ink no-underline'
   return (
     <li className="border-t border-hair first:border-t-0">
       {href ? <a href={href} {...(external ? { target: '_blank', rel: 'noopener noreferrer' } : {})} className={`${cls} hover:bg-hover`}>{body}</a> : <div className={cls}>{body}</div>}
@@ -69,46 +67,169 @@ function Row({ item, now, utc }: { item: Item; now: number; utc: boolean }) {
   )
 }
 
-function List({ title, items, now, utc }: { title: string; items: Item[]; now: number; utc: boolean }) {
+const tagOf = (e: CalEvent) => (e.source === 'plan' ? 'Planned' : e.expected ? 'Expected' : null)
+
+/** What a CWL band means on one day: the days fought on it, or the preparation before the first. */
+function cwlRows(e: CalEvent, day: string, utc: boolean) {
+  const clan = e.clan as ClanName
+  const on = (e.days ?? []).filter((d) => { const [a, b] = span({ ...e, start: d.start, end: d.end }, utc); return a <= day && day <= b })
+  if (!on.length) return <Row key={e.id} e={e} title={`${clan} CWL`} when={`Preparation from ${fmtTime(e.start, utc)}`} href="#/war" />
+  return on.map((d: CalDay) => (
+    <Row key={`${e.id}-${d.day}`} e={e} href={warHref(clan, d.war_key, d.state)}
+      title={<>{clan} CWL day {d.day}{d.opponent && <> v <bdi>{d.opponent}</bdi></>}</>}
+      when={`${fmtWhen(d.start, utc)} to ${fmtWhen(d.end, utc)}`} tag={d.state === 'notDrawn' ? 'Not drawn' : null}
+      right={<Score stars={d.stars} against={d.opponent_stars} state={d.state} />} />
+  ))
+}
+
+/** The family's CWL on one day: each CWL day once, with each clan's own opponent, times and score under it. */
+function familyCwlRows(e: CalEvent, date: string, utc: boolean) {
+  const lines = (e.members ?? []).flatMap((m): { m: CalEvent; d: CalDay | null; n: number }[] => {
+    const [from, to] = span(m, utc)
+    if (date < from || date > to) return []
+    const on = (m.days ?? []).filter((d) => { const [a, b] = span({ ...m, start: d.start, end: d.end }, utc); return a <= date && date <= b })
+    return on.length ? on.map((d) => ({ m, d, n: d.day })) : [{ m, d: null, n: 0 }]
+  })
+  return [...new Set(lines.map((l) => l.n))].sort((a, b) => a - b).map((n) => (
+    <li key={`${e.id}-${n}`} className="flex gap-2.5 border-t border-hair px-3 py-2 first:border-t-0">
+      <span aria-hidden="true" className="w-1 flex-none self-stretch rounded" style={{ background: FAMILY }} />
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
+        <span className="text-[14px] font-bold text-ink">{n ? `CWL day ${n}` : 'CWL preparation'}</span>
+        {lines.filter((l) => l.n === n).map(({ m, d }) => {
+          const clan = m.clan as ClanName
+          const href = d ? warHref(clan, d.war_key, d.state) : '#/war'
+          const body = (
+            <>
+              <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                <span className="min-w-0 text-[13px] font-bold text-ink">
+                  <span style={{ color: CLAN[clan].deep }}>{clan}</span>
+                  {d?.opponent && <> v <bdi>{d.opponent}</bdi></>}
+                  {d?.state === 'notDrawn' && <span className="ml-1.5 rounded-full bg-well px-1.5 py-px text-[11px] text-ink-2">Not drawn</span>}
+                </span>
+                <span className="text-xs font-semibold text-muted">{d ? `${fmtWhen(d.start, utc)} to ${fmtWhen(d.end, utc)}` : `Preparation from ${fmtTime(m.start, utc)}`}</span>
+              </span>
+              {d && <Score stars={d.stars} against={d.opponent_stars} state={d.state} />}
+            </>
+          )
+          const cls = 'flex min-h-11 items-center gap-2 text-ink no-underline'
+          return href ? <a key={clan} href={href} className={`${cls} hover:bg-hover`}>{body}</a> : <div key={clan} className={cls}>{body}</div>
+        })}
+      </div>
+    </li>
+  ))
+}
+
+function DayList({ events, day, utc }: { events: CalEvent[]; day: string; utc: boolean }) {
+  const on = events.filter((e) => { const [a, b] = span(e, utc); return a <= day && day <= b }).sort(byWeight)
   return (
     <section className="overflow-hidden rounded-2xl border border-line bg-white">
-      <h2 className="m-0 px-3 pb-2 pt-3 text-[15px] font-extrabold text-ink">{title}</h2>
-      {items.length
-        ? <ul className="m-0 list-none border-t border-hair p-0">{items.map((i) => <Row key={i.key} item={i} now={now} utc={utc} />)}</ul>
-        : <p className="m-0 border-t border-hair px-3 py-4 text-sm font-semibold text-faint">Nothing coming up</p>}
+      <h2 className="m-0 px-3 pb-2 pt-3 text-[15px] font-extrabold text-ink">{fmtDay(day)}</h2>
+      {on.length ? (
+        <ul className="m-0 list-none border-t border-hair p-0">
+          {on.map((e) => {
+            if (e.members?.[0].days) return familyCwlRows(e, day, utc)
+            if (e.kind === 'cwl' && e.days) return cwlRows(e, day, utc)
+            if (e.war_key) {
+              return <Row key={e.id} e={e} href={warHref(e.clan as ClanName, e.war_key, e.state)} title={<>{e.clan} v <bdi>{e.opponent}</bdi>{e.kind === 'friendly' ? ', friendly' : ''}</>}
+                when={`${fmtWhen(e.start, utc)} to ${fmtWhen(e.end, utc)}`} right={<Score stars={e.stars} against={e.opponent_stars} state={e.state} />} />
+            }
+            return <Row key={e.id} e={e} href={e.url} title={e.title} tag={tagOf(e)}
+              when={e.timed ? `${fmtWhen(e.start, utc)} to ${fmtWhen(e.end, utc)}` : fmtRange(e.start, e.end)} />
+          })}
+        </ul>
+      ) : <p className="m-0 border-t border-hair px-3 py-4 text-sm font-semibold text-faint">Nothing on</p>}
     </section>
   )
 }
 
-export default function CalendarTab() {
+function Week({ week, events, utc, compact, today, pick, onPick }: {
+  week: (string | null)[]; events: CalEvent[]; utc: boolean; compact: boolean; today: string; pick: string; onPick: (d: string) => void
+}) {
+  const lanes = 5
+  const { bands, hidden } = useMemo(() => layWeek(week, events, utc, lanes), [week, events, utc])
+  const used = bands.length ? Math.max(...bands.map((b) => b.lane)) + 1 : 0
+  const barH = compact ? 16 : 20, gap = compact ? 2 : 3, top = compact ? 28 : 32
+  return (
+    <div className="relative border-t border-hair" style={{ minHeight: compact ? 56 : 92, paddingBottom: 6 }}>
+      <div className="absolute inset-0 grid grid-cols-7">
+        {week.map((d, i) => d ? (
+          <button key={d} type="button" aria-pressed={d === pick} aria-label={fmtDay(d)} onClick={() => onPick(d)}
+            className={`relative flex cursor-pointer justify-between border-0 p-1 text-left ${i ? 'border-l border-solid border-hair' : ''} ${d === pick ? 'bg-transparent shadow-[inset_0_0_0_2px_var(--color-gold)]' : 'bg-transparent hover:bg-hover'}`}>
+            <span className={`flex size-[22px] items-center justify-center rounded-full text-xs font-bold tabular-nums ${d === today ? 'bg-ink text-white' : 'text-ink-2'}`}>{+d.slice(8)}</span>
+            {hidden[d] ? <span className="pr-0.5 pt-0.5 text-[11px] font-bold text-faint">+{hidden[d]}</span> : null}
+          </button>
+        ) : <span key={i} className={`bg-page/50 ${i ? 'border-l border-hair' : ''}`} />)}
+      </div>
+      <div aria-hidden="true" className="pointer-events-none relative grid grid-cols-7" style={{ paddingTop: top, rowGap: gap, gridTemplateRows: `repeat(${used}, ${barH}px)` }}>
+        {bands.map(({ e, col, len, lane, opensBefore, runsOn }) => {
+          const l = look(e)
+          const radius = `${opensBefore ? 0 : 6}px ${runsOn ? 0 : 6}px ${runsOn ? 0 : 6}px ${opensBefore ? 0 : 6}px`
+          const inset = { marginLeft: opensBefore ? 0 : compact ? 2 : 4, marginRight: runsOn ? 0 : compact ? 2 : 4 }
+          return (
+            <span key={e.id} className={`flex min-w-0 items-center overflow-hidden whitespace-nowrap font-bold leading-none ${compact ? 'px-1 text-[10px]' : 'px-1.5 text-[11px]'}`}
+              style={{ gridColumn: `${col + 1} / span ${len}`, gridRow: lane + 1, background: l.bg, color: l.fg, outline: l.outline, outlineOffset: -1.5, borderRadius: radius, ...inset }}>
+              <bdi className="truncate">{e.title}</bdi>
+            </span>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+export default function CalendarTab({ wide }: { wide: boolean }) {
   const now = useNow(60_000)
   let utc = false
   try { utc = localStorage.getItem('ff-clock') === 'utc' } catch { /* private mode */ }
-  const thisMonth = dayOf(now, utc).slice(0, 7)
+  const today = dayOf(now, utc)
+  const thisMonth = today.slice(0, 7)
+  const [month, setMonth] = useState(thisMonth)
   const [clan, setClan] = useState<(typeof OPTIONS)[number]>('All')
-  const current = useCalendar(thisMonth)
-  const next = useCalendar(shiftMonth(thisMonth, 1))
+  const [pick, setPick] = useState(today)
+  const { data, loading } = useCalendar(month)
+  useEffect(() => { setPick(month === thisMonth ? today : `${month}-01`) }, [month])  // eslint-disable-line react-hooks/exhaustive-deps
 
-  // An event that crosses into next month comes back from both.
+  const weeks = useMemo(() => weeksOf(month), [month])
   const events = useMemo(() => {
-    const byId = new Map<string, CalEvent>()
-    for (const e of [...(current.data?.events ?? []), ...(next.data?.events ?? [])]) if (!byId.has(e.id)) byId.set(e.id, e)
-    return [...byId.values()]
-  }, [current.data, next.data])
-  const family = familyItems(events.filter((e) => clan === 'All' || e.clan === clan), now, utc)
-  const game = gameItems(events, now, utc)
+    const shown = (data?.events ?? []).filter((e) => clan === 'All' || !e.clan || e.clan === clan)
+    return clan === 'All' ? oneCwl(shown) : shown
+  }, [data, clan])
+  const earliest = shiftMonth(thisMonth, -MONTHS_BACK), latest = shiftMonth(thisMonth, MONTHS_ON)
+
+  const arrow = (by: number, off: boolean, d: string) => (
+    <button type="button" aria-label={by < 0 ? 'Previous month' : 'Next month'} disabled={off} onClick={() => setMonth(shiftMonth(month, by))}
+      className="flex size-10 flex-none cursor-pointer items-center justify-center rounded-full border border-line bg-white text-ink-2 hover:bg-hover disabled:cursor-default disabled:opacity-40">
+      <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d={d} /></svg>
+    </button>
+  )
 
   return (
-    <main className="mx-auto flex max-w-[1100px] flex-col gap-3 px-4 pb-6 pt-3 md:px-[clamp(16px,3vw,32px)] md:pt-4">
-      <div className="w-full md:w-[360px]"><ClanSwitch value={clan} onPick={setClan} options={OPTIONS} /></div>
-      {!current.data && !current.loading ? (
+    <main className="mx-auto flex max-w-[1360px] flex-col gap-3 px-4 pb-6 pt-3 md:px-[clamp(16px,3vw,32px)] md:pt-4">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2.5">
+        <div className="flex items-center gap-1.5 md:gap-2">
+          {arrow(-1, month <= earliest, 'M15 6l-6 6 6 6')}
+          <h1 className="font-display m-0 min-w-[8em] text-center text-[20px] font-normal text-brand md:min-w-[9.5em] md:text-2xl">{fmtMonth(month)}</h1>
+          {arrow(1, month >= latest, 'M9 6l6 6-6 6')}
+          {month !== thisMonth && <button type="button" className={chip(false)} onClick={() => setMonth(thisMonth)}>Today</button>}
+        </div>
+        <div className="w-full md:w-[360px]"><ClanSwitch value={clan} onPick={setClan} options={OPTIONS} /></div>
+      </div>
+
+      {!data && !loading ? (
         <p className="px-4 pt-12 text-center text-sm font-semibold text-faint">Calendar unavailable. Try again shortly.</p>
-      ) : !current.data ? (
+      ) : !data ? (
         <div aria-busy="true" aria-label="Loading" className="h-[420px] animate-pulse rounded-2xl bg-well" />
       ) : (
-        <div className="grid items-start gap-3 lg:grid-cols-2">
-          <List title="Family wars" items={family} now={now} utc={utc} />
-          <List title="Game events" items={game} now={now} utc={utc} />
+        <div className="grid items-start gap-3 lg:grid-cols-[minmax(0,1fr)_360px]">
+          <div className="flex min-w-0 flex-col gap-2">
+            <section aria-label={fmtMonth(month)} className="overflow-hidden rounded-2xl border border-line bg-white">
+              <div className="grid grid-cols-7 text-center text-[11px] font-bold uppercase tracking-[0.04em] text-faint">
+                {WEEKDAYS.map((d) => <span key={d} className="py-1.5">{wide ? d : d.slice(0, 1)}</span>)}
+              </div>
+              {weeks.map((w, i) => <Week key={i} week={w} events={events} utc={utc} compact={!wide} today={today} pick={pick} onPick={setPick} />)}
+            </section>
+          </div>
+          <DayList events={events} day={pick} utc={utc} />
         </div>
       )}
     </main>
