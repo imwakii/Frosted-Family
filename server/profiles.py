@@ -10,6 +10,7 @@ import json
 import sqlite3
 from datetime import datetime, timedelta, timezone
 from importlib import resources
+from math import ceil
 
 from fastapi import HTTPException
 
@@ -39,6 +40,7 @@ BADGE_UPGRADE_DAYS = 30
 BADGE_LOOT = (20_000, 25_000, 30_000)  # capital gold looted in the latest raid weekend
 BADGE_CLEANUPS = (1, 3, 5)             # three-star hits on a base someone else failed to clear
 BADGE_WAR_STARS = (2_000, 3_000, 5_000)  # war stars, all time
+EIGHT_KEPT = timedelta(days=3)         # how long after a league the card still shows its stars
 TIERS = ("bronze", "silver", "gold")
 
 def profiles_due(conn: sqlite3.Connection, now: str) -> bool:
@@ -433,6 +435,48 @@ def badges_for(conn, tag: str, heroes: list[dict], ctx: dict | None = None) -> l
     return sorted(out, key=lambda b: -TIERS.index(b["tier"]))
 
 
+def next_badge(tag: str, heroes: list[dict], ctx: dict) -> dict | None:
+    """The badge tier this player is closest to, out of those they have started on. Rank badges depend on everyone else, and a
+    raid's loot starts again each weekend, so neither is a goal to count down to."""
+    options = []
+
+    def near(id_, label, value, lines, text):
+        for tier, line in zip(TIERS, lines):
+            if value < line:
+                if value > 0:
+                    options.append({"id": id_, "label": label, "tier": tier, "text": text(line - value), "pct": round(100 * value / line)})
+                return
+
+    w = ctx["war"].get(tag)
+    if w and w["attacks"] >= BADGE_MIN_RECORD:
+        near("sharpshooter", "Three-Star General", w["three_star_rate"] or 0, BADGE_THREE_STARS, lambda g: f"{g * 100:.1f}% more three stars")
+        if w["missed"] == 0:
+            near("never_misses", "Battle Ready", w["attacks"], BADGE_NO_MISS, lambda n: f"{n} more {'attack' if n == 1 else 'attacks'}, none missed")
+    near("giant_slayer", "Giant Slayer", ctx["slain"].get(tag, 0), BADGE_SLAIN, lambda n: f"{n} more three-star {'hit' if n == 1 else 'hits'} on a higher town hall")
+    near("cleanup", "Cleanup Crew", ctx["cleanups"].get(tag, 0), BADGE_CLEANUPS, lambda n: f"{n} more {'base' if n == 1 else 'bases'} others couldn't clear")
+    near("war_hero", "War Hero", ctx["war_stars"].get(tag) or 0, BADGE_WAR_STARS, lambda n: f"{n:,} more war stars")
+    near("builder", "Master Builder", ctx["upgrades"].get(tag, 0), BADGE_UPGRADES, lambda n: f"{n} more {'upgrade' if n == 1 else 'upgrades'} in {BADGE_UPGRADE_DAYS} days")
+    top = sum(h["max"] or 0 for h in heroes)
+    if top:
+        have = sum(h["level"] for h in heroes)
+        near("maxed_heroes", "Hero Hall Legend", have / top, BADGE_HEROES, lambda g: f"{ceil(g * top)} more hero levels")
+    return max(options, key=lambda o: o["pct"]) if options else None
+
+
+def eight_for(conn, tag: str, now: datetime | None = None) -> dict | None:
+    """The player's stars toward the 8 for the CWL bonus, while a league is on or just over; otherwise nothing to show."""
+    now = now or datetime.now(timezone.utc)
+    last = conn.execute("SELECT season, MAX(end_time) AS end_time FROM wars WHERE kind='cwl' AND season IS NOT NULL GROUP BY season ORDER BY end_time DESC LIMIT 1").fetchone()
+    if not last or not last["end_time"] or last["end_time"][:15] < (now - EIGHT_KEPT).strftime("%Y%m%dT%H%M%S"):
+        return None
+    me = conn.execute("""SELECT COUNT(DISTINCT m.war_key) AS played, COALESCE(SUM(a.stars), 0) AS stars
+                         FROM war_members m JOIN wars w ON w.war_key=m.war_key AND w.kind='cwl' AND w.season=? AND w.state<>'preparation'
+                         LEFT JOIN attacks a ON a.war_key=m.war_key AND a.attacker_tag=m.player_tag
+                         WHERE m.player_tag=?""", (last["season"], tag)).fetchone()
+    begun = conn.execute("SELECT MAX(round) FROM wars WHERE kind='cwl' AND season=? AND state<>'preparation'", (last["season"],)).fetchone()[0]
+    return {"season": last["season"], "stars": me["stars"], "played": me["played"], "begun": begun or 0}
+
+
 def player_card(conn, tag: str) -> dict:
     """What the player sheet adds to the roster row: heroes and their gear, badges, streaks, season totals, latest
     attacks and upgrades. Each block says what period it covers: the war record runs from the export's window to now,
@@ -458,9 +502,12 @@ def player_card(conn, tag: str) -> dict:
         attacks.append({"stars": a["stars"], "destruction": a["destruction"], "kind": a["kind"], "day": a["round"],
                         "opponent": a["opponent_name"] if a["attacker_clan_tag"] == a["clan_tag"] else a["clan_name"],
                         "target": a["target"], "target_th": a["target_th"], "target_position": a["target_position"]})
-    mine = [u for u in leaders.upgrades(conn, CARD_UPGRADE_DAYS)["upgrades"] if u["tag"] == tag][:CARD_UPGRADES]
+    history_30d = [u for u in leaders.upgrades(conn, CARD_UPGRADE_DAYS)["upgrades"] if u["tag"] == tag]
+    mine = history_30d[:CARD_UPGRADES]
+    ctx = badge_context(conn, record)
     return {
-        "heroes": heroes, "attacks": attacks, "upgrades": mine, "badges": badges_for(conn, tag, heroes, badge_context(conn, record)),
+        "heroes": heroes, "attacks": attacks, "upgrades": mine, "upgrade_history": history_30d, "badges": badges_for(conn, tag, heroes, ctx),
+        "next_badge": next_badge(tag, heroes, ctx), "eight": eight_for(conn, tag),
         "record": own and {"from": record["window_from"], "attacks": own["attacks"], "missed": own["missed"],
                            "three_star_rate": own["three_star_rate"]},
         "tracked_from": api_day(first),

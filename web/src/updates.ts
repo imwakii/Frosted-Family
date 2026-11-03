@@ -107,7 +107,7 @@ export const UPDATES: Update[] = [
   },
   {
     // Further ids for the same day: the batch grew after the first, so the card opens once more.
-    id: '2026-11-04-11',
+    id: '2026-11-04-12',
     date: '4 Nov 2026',
     highlights: [
       { title: 'Phone alerts', line: 'Choose what your phone tells you.', icon: 'bell' },
@@ -152,6 +152,8 @@ export const UPDATES: Update[] = [
       {
         title: 'Log tab',
         lines: [
+          'Added each player\'s upgrade history.',
+          'Added Since you last looked.',
           'Added Most upgrades to Upgrades.',
           'Changed Log to open on recent days.',
         ],
@@ -185,6 +187,8 @@ export const UPDATES: Update[] = [
       {
         title: 'Player cards',
         lines: [
+          'Added your stars toward 8.',
+          'Added the next badge you could earn.',
           'Fixed move notes after sign-up closes.',
           'Added side-by-side player comparison.',
           'Added Change on both compared players.',
@@ -195,6 +199,7 @@ export const UPDATES: Update[] = [
       {
         title: 'General',
         lines: [
+          'Added small animations.',
           'Added swiping between clans and days.',
           'Added a search icon on phones.',
           'Added a first-visit welcome.',

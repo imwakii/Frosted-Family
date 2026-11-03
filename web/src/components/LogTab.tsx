@@ -1,7 +1,7 @@
-import { type PointerEvent, useMemo, useState } from 'react'
+import { type PointerEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { thIcon } from '../clash'
 import { ago, type LogEvent, type Upgrade, type UpgradeCategory, type UpgradeCount, type UpgradeLeader, useClanLog } from '../leaders'
-import { go, playerHref, useDrill } from '../route'
+import { go, historyHref, markFromCard, playerHref, useDrill } from '../route'
 import { CLAN, CLANS } from '../theme'
 import type { ClanName, Roster } from '../types'
 import { Card, COLOR, Dot, ticks, useWidth } from './ClansBoard'
@@ -9,7 +9,7 @@ import { norm, PhoneSearch, SearchBox } from './CwlTab'
 import { ClanFilter, Empty, useClanPick } from './ExploreTab'
 import { Bar } from './OverallBoard'
 import { chip, Eyebrow, POINT, RowChevron, Th, UnitIcon } from './ui'
-import { YouTag } from './You'
+import { useYou, YouTag } from './You'
 
 // GET /api/log: what has happened in the family, newest day first. Each day opens with who came, went or changed role,
 // so a busy day of upgrades does not bury them; a player's upgrades that day share one row, a new town hall has its own.
@@ -25,6 +25,41 @@ const KINDS: { id: UpgradeCategory | 'all'; label: string }[] = [
   { id: 'spell', label: 'Spells' }, { id: 'pet', label: 'Pets' }, { id: 'siege', label: 'Sieges' }, { id: 'town_hall', label: 'Town hall' },
 ]
 const TOP = 10
+const LAST_LOOK = 'ff-log-seen'
+
+function readLook(): { at: string; rank: number | null } | null {
+  try { return JSON.parse(localStorage.getItem(LAST_LOOK) ?? 'null') } catch { return null }
+}
+
+/** What is new since this browser last opened Log, and where you now stand. Nothing on a first look, or when nothing has changed. */
+function SinceLastLook({ data, roster }: { data: { events: LogEvent[]; upgrades: Upgrade[] }; roster: Roster }) {
+  const { yous } = useYou()
+  const [last] = useState(readLook)
+  const rank = roster.players.find((p) => yous.includes(p.tag))?.rank ?? null
+  const saved = useRef(false)
+  useEffect(() => {
+    if (saved.current) return
+    saved.current = true
+    try { localStorage.setItem(LAST_LOOK, JSON.stringify({ at: new Date().toISOString(), rank })) } catch { /* private mode */ }
+  }, [rank])
+  if (!last) return null
+  const ups = data.upgrades.filter((u) => u.at > last.at).length
+  const joined = data.events.filter((e) => e.at > last.at && (e.kind === 'joined' || e.kind === 'rejoined')).length
+  const left = data.events.filter((e) => e.at > last.at && e.kind === 'left').length
+  const moved = last.rank && rank ? last.rank - rank : 0
+  const parts = [
+    ups > 0 && `${ups} ${ups === 1 ? 'upgrade' : 'upgrades'}`,
+    joined > 0 && `${joined} joined`,
+    left > 0 && `${left} left`,
+    moved !== 0 && `you moved ${moved > 0 ? 'up' : 'down'} ${Math.abs(moved)} ${Math.abs(moved) === 1 ? 'place' : 'places'}`,
+  ].filter(Boolean)
+  if (!parts.length) return null
+  return (
+    <p className="ff-rise m-0 rounded-[14px] bg-[#F6EEDC] px-4 py-2.5 text-sm text-ink-2">
+      <span className="font-bold text-ink">Since you last looked: </span>{parts.join(', ')}
+    </p>
+  )
+}
 const ROLE: Record<string, string> = { member: 'Member', admin: 'Elder', coLeader: 'Co-leader', leader: 'Leader' }
 const MARK: Record<LogEvent['kind'], { point: typeof POINT.right | null; bg: string; fg: string }> = {
   joined: { point: POINT.right, bg: '#E7EFD6', fg: '#2F6B2A' },
@@ -51,9 +86,9 @@ function says(e: LogEvent) {
 
 // The feed's days are the viewer's own, as the clock is. A bare date has no time to place, so it stays as it is.
 const localDay = (x: Date) => `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`
-const feedDay = (at: string) => (at.length === 10 ? at : localDay(new Date(at)))
+export const feedDay = (at: string) => (at.length === 10 ? at : localDay(new Date(at)))
 
-function dayLabel(day: string, now = new Date()) {
+export function dayLabel(day: string, now = new Date()) {
   const yesterday = new Date(now)
   yesterday.setDate(now.getDate() - 1)
   if (day === localDay(now)) return 'Today'
@@ -277,7 +312,7 @@ function MostUpgrades({ board, clan, nq }: { board: UpgradeLeader[]; clan: ClanN
         <ol className="m-0 list-none rounded-2xl border border-line bg-white py-1">
           {shown.map((r, i) => (
             <li key={r.tag}>
-              <a href={playerHref(r.tag)} data-tag={r.tag} className={`flex min-h-[56px] items-center gap-3 px-3.5 py-1.5 text-ink no-underline hover:bg-hover ${i ? 'border-t border-hair' : ''}`}>
+              <a href={historyHref(r.tag, days)} onClick={() => markFromCard(false)} data-tag={r.tag} className={`flex min-h-[56px] items-center gap-3 px-3.5 py-1.5 text-ink no-underline hover:bg-hover ${i ? 'border-t border-hair' : ''}`}>
                 <span className="w-6 flex-none text-right text-xs font-bold tabular-nums text-faint">{ranked.findIndex((x) => n(x) === n(r)) + 1}</span>
                 <Th th={r.th} />
                 <span className="flex min-w-0 flex-auto flex-col gap-1">
@@ -352,6 +387,7 @@ export default function LogTab({ roster, q, setQ, wide }: { roster: Roster; q: s
       </div>
     </section>
   )
+  const look = view === 'all' && !!data && !nq && <SinceLastLook data={data} roster={roster} />
   const leaders = view === 'upgrades' && !!data && (
     <section aria-label="Most upgrades" className="flex flex-col gap-1.5">
       <Eyebrow>Most upgrades</Eyebrow>
@@ -405,7 +441,7 @@ export default function LogTab({ roster, q, setQ, wide }: { roster: Roster; q: s
           <div className="w-[clamp(220px,28vw,340px)] flex-none"><SearchBox q={q} setQ={setQ} onEnter={enter} /></div>
         </div>
         {filters}
-        <div className="flex w-full flex-col gap-3">{chart}{leaders}{kinds}{feed}</div>
+        <div className="flex w-full flex-col gap-3">{look}{chart}{leaders}{kinds}{feed}</div>
       </main>
     )
   }
@@ -413,7 +449,7 @@ export default function LogTab({ roster, q, setQ, wide }: { roster: Roster; q: s
     <div className="flex flex-col gap-2.5 pb-6">
       <PhoneSearch q={q} setQ={setQ} onEnter={enter}><ClanFilter clan={clan} setClan={setClan} /></PhoneSearch>
       {filters}
-      <div className="flex flex-col gap-3 px-4">{chart}{leaders}{kinds}{feed}</div>
+      <div className="flex flex-col gap-3 px-4">{look}{chart}{leaders}{kinds}{feed}</div>
     </div>
   )
 }

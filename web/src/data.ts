@@ -119,12 +119,15 @@ export type PlayerCard = {
   heroes: { name: string; level: number; max: number | null; gear?: { name: string; level: number; max: number | null }[] }[]
   // Until the server has them, a card arrives without these.
   badges?: { id: string; label: string; detail: string; tier?: 'bronze' | 'silver' | 'gold' }[]
+  next_badge?: { id: string; label: string; tier: 'bronze' | 'silver' | 'gold'; text: string; pct: number } | null
+  eight?: { season: string; stars: number; played: number; begun: number } | null
   record?: { from: string | null; attacks: number; missed: number; three_star_rate: number | null } | null
   tracked_from?: string | null
   family_since?: string | null
   streaks?: { three_stars: number; three_stars_best: number; clean_wars: number }
   attacks: { stars: number; destruction: number; kind: string; day: number | null; opponent: string | null; target: string | null; target_th: number | null; target_position: number | null }[]
   upgrades: { unit: string; category?: string; from: number; to: number; at: string }[]
+  upgrade_history?: { unit: string; category?: string; from: number; to: number; at: string }[]
   war_stars: number | null; donations: number | null; donations_received: number | null; capital: number | null
 }
 

@@ -194,9 +194,12 @@ export function PlayDays({ days, clan, size = 15 }: { days: number[]; clan: Clan
 
 /** Stars out of three, for one attack or the best on a base. */
 export function Stars({ n }: { n: number }) {
+  // A star that has just been won pops in; the ones already there stay still.
+  const was = useRef(n)
+  useEffect(() => { was.current = n }, [n])
   return (
     <span aria-label={`${n} stars`} className="flex-none tracking-[-1px]">
-      {[0, 1, 2].map((i) => <span key={i} className={i < n ? 'text-gold' : 'text-[#C9BCA0]'}>{i < n ? '★' : '☆'}</span>)}
+      {[0, 1, 2].map((i) => <span key={i} className={`${i < n ? 'text-gold' : 'text-[#C9BCA0]'} ${i < n && i >= was.current ? 'ff-pop' : ''}`}>{i < n ? '★' : '☆'}</span>)}
     </span>
   )
 }

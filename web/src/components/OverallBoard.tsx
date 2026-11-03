@@ -33,7 +33,7 @@ const pct1 = (v: number) => `${(Math.floor(v * 10) / 10).toFixed(1)}%`
 
 // The one progress bar on the Stats boards, in the clan's soft colour.
 export function Bar({ v, color }: { v: number; color: string }) {
-  return <span className="block h-[3px] w-full overflow-hidden rounded-full bg-hair"><span className="block h-full rounded-full" style={{ width: `${Math.min(v, 100)}%`, background: color }} /></span>
+  return <span className="block h-[3px] w-full overflow-hidden rounded-full bg-hair"><span className="ff-grow block h-full rounded-full" style={{ width: `${Math.min(v, 100)}%`, background: color }} /></span>
 }
 
 export default function OverallBoard({ q, setQ, wide }: { q: string; setQ: (v: string) => void; wide: boolean }) {

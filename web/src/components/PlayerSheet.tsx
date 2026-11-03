@@ -3,15 +3,17 @@ import { loadPlayerAll, type PlayerCard, playerNow, stillToMove } from '../data'
 import { BADGES, TIER_LOOK, TIERS } from '../badges'
 import { ago } from '../leaders'
 import { CATS } from '../explore'
-import { compareHref, go, markFromCard, playerHref, upgradeHref } from '../route'
+import { compareHref, go, historyHref, markFromCard, playerHref, upgradeHref } from '../route'
 import Info from './Info'
+import { StarBurst, useCountUp, useNewIds, useOnce } from './Motion'
+import { Bar } from './OverallBoard'
 import { useYou } from './You'
 import { CLAN, cycleLong, cycleShort, fmtScore, fmtWindow } from '../theme'
 import type { Player, Roster } from '../types'
 import { Arrow, PlayDays, RowChevron, Stars, StatusPill, Th, UnitIcon } from './ui'
 
 // Explained on hover with a mouse, and on tap on a phone. Tapping elsewhere closes it.
-function Badges({ badges }: { badges: NonNullable<PlayerCard['badges']> }) {
+function Badges({ badges, fresh = [] }: { badges: NonNullable<PlayerCard['badges']>; fresh?: string[] }) {
   const [hover, setHover] = useState<string | null>(null)
   const [pinned, setPinned] = useState<string | null>(null)
   const open = badges.find((b) => b.id === (hover ?? pinned))
@@ -31,7 +33,7 @@ function Badges({ badges }: { badges: NonNullable<PlayerCard['badges']> }) {
               onPointerEnter={(e) => { if (e.pointerType === 'mouse') setHover(b.id) }}
               onPointerLeave={(e) => { if (e.pointerType === 'mouse') setHover(null) }}
               onClick={() => setPinned((p) => (p === b.id ? null : b.id))}
-              className={`flex min-h-8 cursor-pointer items-center gap-1.5 rounded-full border px-2.5 text-xs font-bold ${TIER_LOOK[b.tier ?? 'silver'][open?.id === b.id ? 'on' : 'chip']}`}>
+              className={`${fresh.includes(`${b.id}-${b.tier}`) ? 'ff-shine' : ''} flex min-h-8 cursor-pointer items-center gap-1.5 rounded-full border px-2.5 text-xs font-bold ${TIER_LOOK[b.tier ?? 'silver'][open?.id === b.id ? 'on' : 'chip']}`}>
               {BADGES[b.id]?.label ?? b.label}
             </button>
           </li>
@@ -93,7 +95,6 @@ function Stat({ label, value, sub, onOpen }: { label: string; value: ReactNode; 
 }
 
 // Where a unit's ranking lives; a new town hall has none, so it opens the Log.
-const UPGRADE_HOME: Record<string, string> = { hero: 'heroes', equipment: 'equipment', troop: 'troops', spell: 'spells', pet: 'pets', siege: 'sieges' }
 const unitHash = (cat: string) => `#/stats/players/${cat}`
 
 const dayMonth = (d: string) => new Date(`${d}T00:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' })
@@ -171,6 +172,10 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
   }, [onClose])
 
   const p: Player | undefined = base && { ...base, ...extra, history: extra?.history ?? base.history }
+  const score = useCountUp(p?.score ?? null, isMine ? `ff-seen-score-${tag}` : null)
+  const eight = isMine ? card?.eight : null
+  const reached = useOnce(eight && eight.stars >= 8 ? `ff-eight-${eight.season}-${tag}` : null)
+  const freshBadges = useNewIds(isMine && card?.badges ? card.badges.map((b) => `${b.id}-${b.tier}`) : null, isMine ? `ff-seen-badges-${tag}` : null)
   const inCwl = p ? !!roster.clans[p.clan]?.inCwl : false
   const where = p ? `${p.clan} · ${p.slot === 'NEW' ? 'new' : inCwl ? { CORE: 'core', SUB: 'sub', OUT: 'not in' }[p.slot] : 'not in CWL'}` : ''
   const c = p && CLAN[p.clan]
@@ -237,7 +242,7 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
               <div className="flex items-end justify-between gap-3">
                 <div className="flex flex-col">
                   <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.06em]" style={{ color: c.label }}>Score{cycle ? ` · ${cycleShort(cycle)}` : ''}<Info topic="score" /></span>
-                  <span className="font-display text-5xl leading-none tabular-nums" style={{ color: c.deep }}>{fmtScore(p.score)}</span>
+                  <span className="font-display text-5xl leading-none tabular-nums" style={{ color: c.deep }}>{fmtScore(score)}</span>
                 </div>
                 <div className="flex flex-col items-end gap-1">
                   <StatusPill status={p.status} className="!px-2.5 !py-[3px] !text-xs !font-bold" />
@@ -247,6 +252,15 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
                   )}
                 </div>
               </div>
+              {eight && (
+                <div className="flex flex-col gap-1.5 border-t pt-2.5" style={{ borderColor: 'rgba(43,33,20,.08)' }}>
+                  <div className="flex items-baseline justify-between gap-2">
+                    <span className="text-[13px] font-semibold text-muted">Stars toward 8</span>
+                    <span className="text-[13px] font-bold tabular-nums text-ink-2">{eight.stars} of 8{eight.stars < 8 && p.days ? ` · ${((n) => `${n} ${n === 1 ? 'day' : 'days'} left`)(p.days.filter((d) => d > eight.begun).length)}` : ''}</span>
+                  </div>
+                  <Bar v={(eight.stars / 8) * 100} color={c.deep} />
+                </div>
+              )}
               {(p.days || card?.family_since || cardLoading) && (
                 <div className="flex flex-col gap-2 border-t pt-2.5" style={{ borderColor: 'rgba(43,33,20,.08)' }}>
                   {p.days && (
@@ -272,7 +286,18 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
               </div>
             ) : (
             <div className="ff-fade flex flex-none flex-col gap-4">
-            {card?.badges?.length ? <Badges badges={card.badges} /> : null}
+            <StarBurst show={reached} />
+            {card?.badges?.length ? <Badges badges={card.badges} fresh={freshBadges} /> : null}
+            {isMine && card?.next_badge && (
+              <div className="flex flex-col gap-1.5 rounded-xl bg-[#F6EEDC] px-3 py-2.5">
+                <span className="flex items-baseline justify-between gap-2">
+                  <span className="truncate text-[13px] font-bold text-ink">Next: {BADGES[card.next_badge.id]?.label ?? card.next_badge.label}, {card.next_badge.tier}</span>
+                  <span className="flex-none text-xs font-bold tabular-nums text-muted">{card.next_badge.pct}%</span>
+                </span>
+                <Bar v={card.next_badge.pct} color={c.deep} />
+                <span className="text-[13px] text-muted">{card.next_badge.text}</span>
+              </div>
+            )}
             {/* The picker lists your own accounts first, so comparing with yourself stays one tap and anyone else is a search away. */}
             <a href={compareHref(tag)} onClick={() => markFromCard(true)}
               className="flex min-h-11 flex-none items-center justify-center rounded-xl bg-[#F6EEDC] text-sm font-bold text-ink no-underline hover:bg-well">
@@ -354,7 +379,7 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
                 <ul className={LIST}>
                   {card.upgrades.slice(0, 4).map((u, i) => (
                     <li key={`${u.unit}-${u.to}`} className={i ? 'border-t border-hair' : ''}>
-                      <button type="button" onClick={() => (u.category && UPGRADE_HOME[u.category] ? toUnit(UPGRADE_HOME[u.category], u.unit) : go.drill('#/log', { tag, unit: 'Town Hall' }))}
+                      <button type="button" onClick={() => { markFromCard(true); go.to(historyHref(tag, 30)) }}
                         className="flex min-h-10 w-full cursor-pointer items-center gap-2 border-0 bg-transparent px-3 py-1.5 text-left text-[13px] hover:bg-hover">
                         <UnitIcon name={u.unit} size={26} />
                         <span className="min-w-0 flex-auto truncate font-semibold text-ink">{u.unit}</span>

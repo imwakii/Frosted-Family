@@ -5,6 +5,7 @@ import CwlTab from './components/CwlTab'
 import ClanSheet from './components/ClanSheet'
 import CompareSheet from './components/CompareSheet'
 import RivalSheet from './components/RivalSheet'
+import UpgradeHistory from './components/UpgradeHistory'
 import UpgradeSheet from './components/UpgradeSheet'
 import Welcome from './components/Welcome'
 import Settings from './components/Settings'
@@ -113,6 +114,7 @@ export default function App() {
         </header>
       )}
 
+      <div key={route.tab} className="ff-fade">
       {error ? (
         <p className="px-4 pt-16 text-center text-sm font-semibold text-faint">Roster unavailable. Try again shortly.</p>
       ) : !roster ? (
@@ -138,6 +140,7 @@ export default function App() {
           {route.sub !== 'lineups' ? <CwlGroup wide={wide} /> : <CwlTab roster={roster} war={war} wide={wide} q={q} setQ={setQ} />}
         </>
       )}
+      </div>
 
       {!!auth.me.user && !!visits?.total && (
         <p className="m-0 px-4 pb-1 pt-3 text-center text-xs font-semibold text-muted">
@@ -157,6 +160,7 @@ export default function App() {
       {roster && route.clan && !route.player && <ClanSheet clan={route.clan} roster={roster} wide={wide} onClose={closeSheet} />}
       {roster && route.compare && !route.player && <CompareSheet roster={roster} {...route.compare} wide={wide} onClose={closeSheet} />}
       {route.upgrade && !route.player && <UpgradeSheet {...route.upgrade} wide={wide} onClose={closeSheet} />}
+      {roster && route.history && !route.player && <UpgradeHistory key={route.history.tag} {...route.history} roster={roster} wide={wide} onClose={closeSheet} />}
       {route.rival && !route.player && <RivalSheet clan={route.rival.clan} tag={route.rival.tag} wide={wide} onClose={closeSheet} />}
 
       {!wide && (

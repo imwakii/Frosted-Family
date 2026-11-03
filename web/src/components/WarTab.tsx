@@ -9,6 +9,7 @@ import { clanHref, go, playerHref, rivalHref } from '../route'
 import { CLAN, CLANS } from '../theme'
 import type { ClanName, Roster } from '../types'
 import Info from './Info'
+import { StarBurst, useOnce } from './Motion'
 import { ClanBadge, ClanSwitch, DayRow, KEY_ROW, POINT, STICKY_SWITCH, Stars, Th, useNow } from './ui'
 
 // Each clan's war, side by side: our bases and badge on the left, the enemy's on the right, facing by map position.
@@ -174,6 +175,7 @@ export function WarBoard({ clan, war, now, roster }: { clan: ClanName; war: Clan
   // All your accounts in this war, together; tapping goes to the first with an attack left.
   const accounts = war.pairs.flatMap((p) => (p.us && yous.includes(p.us.tag) ? [p.us] : []))
   const mineLeft = accounts.reduce((n, b) => n + b.allowed - b.used, 0)
+  const cheer = useOnce(over && won && !draw && war.kind === 'cwl' && accounts.length > 0 ? `ff-won-${clan}-${war.end_time}` : null)
   const mine = accounts.find((b) => b.used < b.allowed) ?? accounts[0]
   const pickedLog = picked ? war.log.filter((a) => a.attacker.tag === picked || a.defender.tag === picked) : []
   const log = picked && sideBySide ? pickedLog : war.log
@@ -204,6 +206,7 @@ export function WarBoard({ clan, war, now, roster }: { clan: ClanName; war: Clan
   )
   return (
     <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_400px] lg:items-stretch">
+      <StarBurst show={cheer} />
       <section aria-label={`${clan} against ${war.opponent}`} className="overflow-hidden rounded-2xl border border-line bg-white">
         <div className="flex flex-col gap-2 p-3.5" style={{ background: t.tint }}>
           <div className="flex justify-center">
