@@ -112,6 +112,7 @@ def war_view(conn, w, clan_tag: str, over: bool) -> dict:
     right = {b["position"]: b for t, b in bases.items() if t not in ours}
     return {
         "kind": w["kind"], "state": "warEnded" if over else w["state"], "day": w["round"], "team_size": w["team_size"],
+        "opponent_tag": w[f"{them}_tag"],
         "updated_at": w["updated_at"],
         "preparation_start": w["preparation_start"], "start_time": w["start_time"], "end_time": w["end_time"], "attacks_allowed": allowed, "opponent": w[f"{them}_name"],
         "badge": badge_of(conn, clan_tag), "opponent_badge": badge_of(conn, w[f"{them}_tag"]),
@@ -166,6 +167,20 @@ def day_facts(conn, w, clan_tag: str, now_s: str) -> dict:
             "destruction": w[f"{us}_destruction"], "opponent_destruction": w[f"{them}_destruction"]}
 
 
+def group_clan_wars(conn, wars: list, tag: str, names: dict, now_s: str) -> list[dict]:
+    """One group clan's days so far, from the scores stored for the group table."""
+    rows = []
+    for w in sorted(wars, key=lambda w: w["round"] or 0):
+        if tag not in (w["clan_tag"], w["opponent_tag"]):
+            continue
+        us, them = ("clan", "opponent") if w["clan_tag"] == tag else ("opponent", "clan")
+        over = w["state"] == "warEnded" or bool(w["end_time"] and w["end_time"][:15] < now_s)
+        rows.append({"day": w["round"], "state": "warEnded" if over else w["state"], "opponent_tag": w[f"{them}_tag"], "opponent": names.get(w[f"{them}_tag"]),
+                     "opponent_badge": badge_of(conn, w[f"{them}_tag"]), "stars": w[f"{us}_stars"], "opponent_stars": w[f"{them}_stars"],
+                     "destruction": w[f"{us}_destruction"], "opponent_destruction": w[f"{them}_destruction"]})
+    return rows
+
+
 def group_view(conn, clan_tag: str, now: datetime) -> dict | None:
     latest = conn.execute("SELECT MAX(season) FROM cwl_group_clans WHERE our_clan_tag=?", (clan_tag,)).fetchone()[0]
     if not latest:
@@ -183,8 +198,12 @@ def group_view(conn, clan_tag: str, now: datetime) -> dict | None:
         """SELECT * FROM wars WHERE kind='regular' AND ? IN (clan_tag, opponent_tag) AND preparation_start<?
            ORDER BY preparation_start DESC LIMIT 1""", (clan_tag, first)).fetchone() if first else None
     power = {r["clan_tag"]: r for r in conn.execute("SELECT * FROM cwl_group_strength WHERE season=? AND players>0", (latest,))}
+    facts = {r["clan_tag"]: r for r in conn.execute("SELECT * FROM cwl_group_profile WHERE season=? AND level IS NOT NULL", (latest,))}
+    names = {c["clan_tag"]: c["name"] for c in clans}
     table = [{**r, "badge": badge_of(conn, r["tag"]), "ours": r["tag"] == clan_tag,
-              "strength": {k: power[r["tag"]][k] for k in ("war_stars", "heroes", "equipment")} if r["tag"] in power else None}
+              "strength": {k: power[r["tag"]][k] for k in ("war_stars", "heroes", "equipment")} if r["tag"] in power else None,
+              "profile": {k: facts[r["tag"]][k] for k in ("level", "war_wins", "win_streak", "war_league", "members")} if r["tag"] in facts else None,
+              "wars": group_clan_wars(conn, wars, r["tag"], names, now_s)}
              for r in group_table(clans, wars, now_s)]
     return {"season": latest, "table": table, "days": days, "before": day_facts(conn, last, clan_tag, now_s) if last else None,
             "eight": eight_stars(conn, clan_tag, latest)}
@@ -203,6 +222,17 @@ def cwl_day(conn, clan: str, war_key: str, now: datetime | None = None) -> dict 
         return None
     over = w["state"] == "warEnded" or bool(w["end_time"] and w["end_time"][:15] < stamp(now or datetime.now(timezone.utc)))
     return war_view(conn, w, tag, over)
+
+
+def war_log(conn, clan: str, now: datetime | None = None) -> dict | None:
+    """Every finished war we hold for a clan, newest first."""
+    tag = CLAN_TAGS.get(clan)
+    if not tag:
+        return None
+    now_s = stamp(now or datetime.now(timezone.utc))
+    rows = conn.execute("SELECT * FROM wars WHERE ? IN (clan_tag, opponent_tag) AND state<>'preparation' ORDER BY end_time DESC", (tag,)).fetchall() if conn else []
+    facts = ({**day_facts(conn, w, tag, now_s), "kind": w["kind"], "end_time": w["end_time"], "team_size": w["team_size"]} for w in rows)
+    return {"clan": clan, "wars": [f for f in facts if f["state"] == "warEnded"]}
 
 
 def board(conn, now: datetime | None = None) -> dict:

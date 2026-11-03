@@ -1,10 +1,11 @@
 import { type CSSProperties, Fragment, useEffect, useRef, useState } from 'react'
+import WarLog from './WarLog'
 import WarRecap from './WarRecap'
 import { useYou, YouTag } from './You'
 import { useClans } from '../clash'
 import { useWide } from '../data'
 import { ago, type ClanWar, setDayPick, setWarClan, useCwlDay, useCwlGroups, useDayPick, useWarBoard, useWarClan, type WarAttack, type WarBase } from '../leaders'
-import { clanHref, playerHref } from '../route'
+import { clanHref, go, playerHref, rivalHref } from '../route'
 import { CLAN, CLANS } from '../theme'
 import type { ClanName, Roster } from '../types'
 import { ClanBadge, ClanSwitch, DayRow, KEY_ROW, POINT, Stars, Th, useNow } from './ui'
@@ -196,6 +197,10 @@ export function WarBoard({ clan, war, now, roster }: { clan: ClanName; war: Clan
     </span>
   )
   const gaps = lineupGaps(war, clan, roster)
+  const opponent = <>
+    <span className={`h-11 ${live ? 'ff-recoil-r' : ''}`}><ClanBadge src={war.opponent_badge} size={44} /></span>
+    <span className="font-display max-w-full truncate text-[17px] leading-tight text-ink-2">{war.opponent}</span>
+  </>
   const score = (stars: number, pct: number, used: number, deep: string) => !prep && (
     <span className="flex flex-col items-center gap-0.5">
       <span className="font-display flex items-baseline gap-1 text-[26px] leading-none tabular-nums" style={{ color: deep }}>{stars}<span className="text-base text-gold">★</span></span>
@@ -221,10 +226,10 @@ export function WarBoard({ clan, war, now, roster }: { clan: ClanName; war: Clan
             </div>
             <Swords live={live} sway={prep} color={t.deep} />
             <div className="flex min-w-0 flex-col items-center gap-1.5">
-              <span className="flex max-w-full flex-col items-center gap-1.5">
-                <span className={`h-11 ${live ? 'ff-recoil-r' : ''}`}><ClanBadge src={war.opponent_badge} size={44} /></span>
-                <span className="font-display max-w-full truncate text-[17px] leading-tight text-ink-2">{war.opponent}</span>
-              </span>
+              {/* A league group clan has a card; a regular war's opponent does not. */}
+              {war.kind === 'cwl' && war.opponent_tag ? (
+                <a href={rivalHref(clan, war.opponent_tag)} className="flex max-w-full flex-col items-center gap-1.5 no-underline">{opponent}</a>
+              ) : <span className="flex max-w-full flex-col items-center gap-1.5">{opponent}</span>}
               {score(war.opponent_stars, war.opponent_destruction, war.opponent_attacks_used, '#5E5240')}
             </div>
           </div>
@@ -331,7 +336,7 @@ function OtherDay({ clan, warKey, now, roster }: { clan: ClanName; warKey: strin
   return <WarBoard key={warKey} clan={clan} war={data} now={now} roster={roster} />
 }
 
-export default function WarTab({ wide, roster }: { wide: boolean; roster: Roster }) {
+export default function WarTab({ wide, roster, sub, opened }: { wide: boolean; roster: Roster; sub: string; opened: string | null }) {
   const { data, loading } = useWarBoard()
   const pick = useWarClan()
   const { yous } = useYou()
@@ -348,10 +353,28 @@ export default function WarTab({ wide, roster }: { wide: boolean; roster: Roster
   const fallback = clan ? [clan.war, clan.next].flatMap((w) => (w?.day ? [{ ...w, day: w.day, war_key: w.war_key ?? '' }] : [])) : []
   const group = groups?.clans.find((c) => c.clan === clan?.clan)?.group
   const days = group?.days ?? fallback
-  const before = group?.before
-  const picked = onCwl && typeof dayPick === 'number' && (dayPick ? days.some((d) => d.day === dayPick) : !!before) ? dayPick : null
+  const picked = onCwl && typeof dayPick === 'number' && days.some((d) => d.day === dayPick) ? dayPick : null
   const nearby = clan && (picked === null || picked === clan.war!.day ? clan.war! : picked === clan.next?.day ? clan.next : null)
-  const other = !nearby && (picked === 0 ? before : days.find((d) => d.day === picked))
+  const other = !nearby && days.find((d) => d.day === picked)
+  if (sub === 'log') {
+    // The clan is in the link to a past war, so the link opens the same war for anyone.
+    const [linkClan, linkKey] = opened?.split('/') ?? []
+    const logClan = (linkClan as ClanName) ?? clan?.clan ?? pick ?? 'Fire'
+    return (
+      <main className={wide ? 'mx-auto flex max-w-[1360px] flex-col gap-4 px-[clamp(16px,3vw,32px)] pb-12 pt-5' : 'flex flex-col gap-3 px-4 pb-6 pt-3'}>
+        <ClanSwitch value={logClan} onPick={(c) => { setWarClan(c); go.to('#/war/log') }} />
+        {linkKey ? (
+          <>
+            <a href="#/war/log" className="flex min-h-9 items-center gap-1 self-start text-[13px] font-bold text-action no-underline">
+              <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M15 6l-6 6 6 6" /></svg>
+              War log
+            </a>
+            <OtherDay clan={logClan} warKey={decodeURIComponent(linkKey)} now={now} roster={roster} />
+          </>
+        ) : <WarLog clan={logClan} />}
+      </main>
+    )
+  }
   return (
     <main className={wide ? 'mx-auto flex max-w-[1360px] flex-col gap-4 px-[clamp(16px,3vw,32px)] pb-12 pt-5' : 'flex flex-col gap-3 px-4 pb-6 pt-1'}>
       <ClanSwitch value={clan?.clan ?? 'Fire'} onPick={setWarClan}

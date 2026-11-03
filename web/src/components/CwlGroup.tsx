@@ -1,23 +1,74 @@
 import { useEffect, useMemo, useState } from 'react'
 import { thIcon } from '../clash'
 import { type CwlRow, type EightRow, useCwlGroups } from '../leaders'
-import { clanHref, playerHref } from '../route'
+import { clanHref, playerHref, rivalHref } from '../route'
 import { CLAN, CLANS } from '../theme'
 import type { ClanName } from '../types'
 import { readClan } from './CwlTab'
-import { chip, ClanBadge, ClanSwitch, Th } from './ui'
+import { chip, ClanBadge, ClanSwitch, dayWon, Th } from './ui'
 
-// A clan's league group: one table ranked as the game ranks it, with each clan's signed-up town halls beside its score,
-// then who has the 8 stars for the bonus. Each day's war is on the War tab.
+// A clan's league group. Standings: who is winning, ranked as the game ranks it, with each clan's days. Group: how the
+// clans compare, by signed-up town halls or strength, then who has the 8 stars for the bonus. Each day's war is on the War tab.
 
 const EIGHT = 8
 const EIGHT_SHOWN = 5
-const COLS = 'grid-cols-[14px_minmax(0,1fr)_38px_repeat(5,26px)] md:grid-cols-[18px_minmax(0,1fr)_56px_repeat(5,44px)]'
-const POWER_COLS = 'grid-cols-[14px_minmax(0,1fr)_38px_repeat(3,44px)] md:grid-cols-[18px_minmax(0,1fr)_56px_repeat(3,76px)]'
-const POWER = [{ k: 'war_stars', label: 'War stars' }, { k: 'heroes', label: 'Heroes' }, { k: 'equipment', label: 'Gear' }] as const
+const COLS = 'grid-cols-[14px_minmax(0,1fr)_repeat(5,30px)] md:grid-cols-[18px_minmax(0,1fr)_repeat(5,44px)]'
+const POWER_COLS = 'grid-cols-[14px_minmax(0,1fr)_repeat(3,58px)] md:grid-cols-[18px_minmax(0,1fr)_repeat(3,76px)]'
+const STANDING_COLS = 'grid-cols-[14px_minmax(0,1fr)_42px_34px_52px] md:grid-cols-[18px_minmax(0,1fr)_repeat(7,38px)_52px_44px_72px]'
+const DAYS = [1, 2, 3, 4, 5, 6, 7]
+const POWER = [{ k: 'war_stars', label: 'War stars' }, { k: 'heroes', label: 'Heroes' }, { k: 'equipment', label: 'Equipment' }] as const
+
+function ClanLink({ r, clan }: { r: CwlRow; clan: ClanName }) {
+  return (
+    <a href={r.ours ? clanHref(clan) : rivalHref(clan, r.tag)} className="flex min-h-11 min-w-0 items-center gap-1.5 no-underline">
+      <span className="flex size-[22px] flex-none items-center justify-center"><ClanBadge src={r.badge} size={22} /></span>
+      {r.ours
+        ? <span className="min-w-0 truncate text-[13px] font-bold md:text-[15px]" style={{ color: CLAN[clan].deep }}>{clan}</span>
+        : <bdi className="min-w-0 truncate text-[13px] font-semibold text-ink-2 md:text-[15px]">{r.name}</bdi>}
+    </a>
+  )
+}
+
+function Standings({ rows, clan }: { rows: CwlRow[]; clan: ClanName }) {
+  const { tint } = CLAN[clan]
+  const head = 'text-center text-[10px] font-bold leading-tight text-muted md:text-xs'
+  return (
+    <section aria-label="Standings" className="overflow-hidden rounded-2xl border border-line bg-white">
+      <div className={`grid items-center gap-x-1 border-b border-hair px-2.5 py-1.5 md:gap-x-1.5 md:px-3.5 ${STANDING_COLS}`}>
+        <span />
+        <span />
+        {DAYS.map((d) => <span key={d} className={`${head} max-md:hidden`}>Day {d}</span>)}
+        <span className={head}>Won</span>
+        <span className="text-center text-gold" aria-label="Stars">★</span>
+        <span className={head}>Damage</span>
+      </div>
+      <ol className="m-0 list-none">
+        {rows.map((r, n) => (
+          <li key={r.tag} className={`grid min-h-[46px] items-center gap-x-1 px-2.5 md:gap-x-1.5 md:px-3.5 ${STANDING_COLS} ${n ? 'border-t border-hair' : ''}`} style={r.ours ? { background: tint } : undefined}>
+            <span className="text-right text-xs font-bold tabular-nums text-faint">{n + 1}</span>
+            <ClanLink r={r} clan={clan} />
+            {DAYS.map((d) => {
+              const w = r.wars?.find((x) => x.day === d && x.state !== 'preparation')
+              const result = w?.state === 'warEnded' ? dayWon(w) : null
+              return (
+                <span key={d} aria-label={w ? `Day ${d}: ${w.stars} stars` : `Day ${d}: not played`}
+                  className={`flex h-8 items-center justify-center rounded-md text-xs font-bold tabular-nums max-md:hidden ${w ? (result === false ? 'bg-[#FEE2E2] text-[#991B1B]' : result ? 'bg-[#DCFCE7] text-[#166534]' : 'bg-[#F6EEDC] text-ink-2') : 'text-[#C9BCA0]'}`}>
+                  {w ? w.stars : '·'}
+                </span>
+              )
+            })}
+            <span className="text-center text-[13px] font-bold tabular-nums text-ink-2">{r.won}–{r.lost}</span>
+            <span className="font-display text-center text-[17px] tabular-nums text-ink">{r.stars}</span>
+            <span className="text-center text-xs font-semibold tabular-nums text-muted">{Math.round(r.destruction).toLocaleString('en-GB')}%</span>
+          </li>
+        ))}
+      </ol>
+    </section>
+  )
+}
 
 function GroupTable({ rows, clan }: { rows: CwlRow[]; clan: ClanName }) {
-  const { deep, tint } = CLAN[clan]
+  const { tint } = CLAN[clan]
   const top = Math.max(...rows.flatMap((r) => r.town_halls), 0)
   // The four highest town halls in the group, then everything under them.
   const heads = [top, top - 1, top - 2, top - 3, top - 4]
@@ -33,13 +84,12 @@ function GroupTable({ rows, clan }: { rows: CwlRow[]; clan: ClanName }) {
       {canCompare && (
         <div role="group" aria-label="Compare by" className="flex gap-1.5 border-b border-hair px-2.5 py-2 md:px-3.5">
           <button type="button" aria-pressed={!compare} onClick={() => setPower(false)} className={chip(!compare)}>Town halls</button>
-          <button type="button" aria-pressed={compare} onClick={() => setPower(true)} className={chip(compare)}>Against us</button>
+          <button type="button" aria-pressed={compare} onClick={() => setPower(true)} className={chip(compare)}>Strength</button>
         </div>
       )}
       <div className={`grid items-center gap-x-1 border-b border-hair px-2.5 py-1.5 md:gap-x-1.5 md:px-3.5 ${cols}`}>
         <span />
         <span className="text-[11px] font-bold uppercase tracking-[0.06em] text-faint">{compare ? 'Top 15 avg' : 'Signed up'}</span>
-        <span className="text-center text-gold" aria-label="Stars">★</span>
         {compare ? POWER.map((p) => <span key={p.k} className="text-center text-[10px] font-bold leading-tight text-muted md:text-xs">{p.label}</span>) : heads.map((h, i) => (
           <span key={h} className="flex flex-col items-center">
             {i < 4 && thIcon(h)
@@ -52,16 +102,7 @@ function GroupTable({ rows, clan }: { rows: CwlRow[]; clan: ClanName }) {
         {rows.map((r, n) => (
           <li key={r.tag} className={`grid min-h-[46px] items-center gap-x-1 px-2.5 md:gap-x-1.5 md:px-3.5 ${cols} ${n ? 'border-t border-hair' : ''}`} style={r.ours ? { background: tint } : undefined}>
             <span className="text-right text-xs font-bold tabular-nums text-faint">{n + 1}</span>
-            <span className="flex min-w-0 items-center gap-1.5">
-              <span className="flex size-[22px] flex-none items-center justify-center"><ClanBadge src={r.badge} size={22} /></span>
-              {r.ours
-                ? <a href={clanHref(clan)} className="min-w-0 truncate text-[13px] font-bold no-underline md:text-[15px]" style={{ color: deep }}>{clan}</a>
-                : <bdi className="min-w-0 truncate text-[13px] font-semibold text-ink-2 md:text-[15px]">{r.name}</bdi>}
-            </span>
-            <span className="flex flex-col items-center leading-none">
-              <span className="font-display text-[17px] tabular-nums text-ink">{r.stars}</span>
-              {r.destruction > 0 && <span className="mt-0.5 text-[10px] font-semibold tabular-nums text-faint">{Math.round(r.destruction).toLocaleString('en-GB')}%</span>}
-            </span>
+            <ClanLink r={r} clan={clan} />
             {compare ? POWER.map((p) => {
               const v = r.strength?.[p.k]
               const gap = v != null && ours && !r.ours ? Math.round(v - ours[p.k]) : null
@@ -119,7 +160,7 @@ function Eight({ rows }: { rows: EightRow[] }) {
   )
 }
 
-export default function CwlGroup({ wide }: { wide: boolean }) {
+export default function CwlGroup({ wide, view }: { wide: boolean; view: 'group' | 'standings' }) {
   const { data, loading } = useCwlGroups()
   const [own, setOwn] = useState<ClanName>(readClan)
   useEffect(() => { try { sessionStorage.setItem('ff-clan', own) } catch { /* private mode */ } }, [own])
@@ -132,6 +173,8 @@ export default function CwlGroup({ wide }: { wide: boolean }) {
         loading ? <div aria-busy="true" className="h-64 animate-pulse rounded-2xl bg-well" /> : <div className="rounded-2xl border border-line bg-white p-5 text-sm text-faint">Unavailable right now</div>
       ) : !shown?.group ? (
         <div className="rounded-2xl border border-line bg-white px-6 py-14 text-center text-sm font-semibold text-faint">No CWL group yet</div>
+      ) : view === 'standings' ? (
+        <Standings rows={shown.group.table} clan={shown.clan} />
       ) : (
         <div className="grid items-start gap-3 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] lg:gap-4">
           <GroupTable rows={shown.group.table} clan={shown.clan} />

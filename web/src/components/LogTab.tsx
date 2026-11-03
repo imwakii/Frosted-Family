@@ -17,6 +17,7 @@ import { YouTag } from './You'
 // A new town hall is a milestone: a gold row at the top of its day, or an ordinary row in the Upgrades view.
 
 type View = 'all' | 'members' | 'upgrades'
+const DAYS_SHOWN = 2
 const VIEWS: { id: View; label: string }[] = [{ id: 'all', label: 'All' }, { id: 'members', label: 'Members' }, { id: 'upgrades', label: 'Upgrades' }]
 const KINDS: { id: UpgradeCategory | 'all'; label: string }[] = [
   { id: 'all', label: 'All' }, { id: 'hero', label: 'Heroes' }, { id: 'equipment', label: 'Equipment' }, { id: 'troop', label: 'Troops' },
@@ -258,7 +259,8 @@ export default function LogTab({ roster, q, setQ, wide }: { roster: Roster; q: s
   const [view, setView] = useState<View>('all')
   const [kind, setKind] = useState<UpgradeCategory | 'all'>('all')
   const [open, setOpen] = useState<string | null>(null)
-  useDrill((d) => !!data && d.unit === 'Town Hall', () => setView('all'))
+  const [allDays, setAllDays] = useState(false)
+  useDrill((d) => !!data && d.unit === 'Town Hall', () => { setView('all'); setAllDays(true) })
   const nq = norm(q.trim())
   const here = useMemo(() => new Set(roster.players.map((p) => p.tag)), [roster])
   const named = (x: { name: string | null; tag: string }) => !nq || norm(x.name ?? '').includes(nq) || x.tag.toLowerCase().includes(nq)
@@ -284,6 +286,9 @@ export default function LogTab({ roster, q, setQ, wide }: { roster: Roster; q: s
     g.set(key, [...(g.get(key) ?? []), u])
   })
   const order = [...days.keys()].sort().reverse()
+  // The feed opens on its last two days with anything in them. A search or a kind is looking for something, so it reaches the whole history.
+  const looking = !!nq || (view === 'upgrades' && kind !== 'all')
+  const shown = allDays || looking ? order : order.slice(0, DAYS_SHOWN)
 
   const filters = (
     <div className={`flex flex-col gap-1.5 ${wide ? '' : 'px-4'}`}>
@@ -306,7 +311,7 @@ export default function LogTab({ roster, q, setQ, wide }: { roster: Roster; q: s
     ? <div className="rounded-2xl border border-line bg-white p-5 text-sm text-faint">{nq ? 'No one by that name' : 'Nothing here yet'}</div>
     : (
       <div className="flex flex-col gap-3">
-        {order.map((d) => {
+        {shown.map((d) => {
           const day = days.get(d)!
           const groups = [...day.groups.entries()].sort((a, b) => b[1][0].at.localeCompare(a[1][0].at))
           return (
@@ -329,6 +334,9 @@ export default function LogTab({ roster, q, setQ, wide }: { roster: Roster; q: s
             </section>
           )
         })}
+        {shown.length < order.length && (
+          <button type="button" onClick={() => setAllDays(true)} className="min-h-11 w-full cursor-pointer rounded-2xl border border-line bg-white text-[13px] font-bold text-action hover:bg-page">Show all {order.length} days</button>
+        )}
         {started && <span className="px-1 text-xs font-semibold text-faint">Members since {started} · upgrades from the last {data.upgrade_days} days</span>}
       </div>
     )

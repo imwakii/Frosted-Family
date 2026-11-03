@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
 import type { ClanName } from './types'
 
-// Hash routes: #/war (where the app opens), #/cwl[/group], #/log, #/stats/<sub>[/<category>], #/plan/<sub>. A player sheet opens over
-// Lineups or Stats by appending /p/<tag without #>, and closes by dropping it; a clan card the same way with /c/<clan>.
+// Hash routes: #/war[/log[/<clan>/<war key>]] (where the app opens), #/cwl[/standings|/group], #/log, #/stats/<sub>[/<category>], #/plan/<sub>. A player sheet opens over
+// Lineups or Stats by appending /p/<tag without #>, and closes by dropping it; a clan card the same way with /c/<clan>,
+// and a league group clan's card with /e/<our clan>/<its tag without #>.
 // Old links (#/explore/<kind>, #/leaders/<sub>) are rewritten to their new place.
 export type Tab = 'cwl' | 'explore' | 'log' | 'war' | 'plan'
-export type Route = { tab: Tab; sub: string; kind: string | null; player: string | null; clan: ClanName | null; base: string }
+export type Route = { tab: Tab; sub: string; kind: string | null; player: string | null; clan: ClanName | null; rival: { clan: ClanName; tag: string } | null; base: string }
 
 export const STATS_SUBS = ['players', 'badges', 'war', 'donations', 'capital', 'trends', 'history'] as const
 export const LEADERS_SUBS = ['builder', 'days', 'members'] as const
@@ -21,10 +22,17 @@ function parse(): Route {
   const decoded = tag ? decodeTag(tag) : null
   const player = decoded ? '#' + decoded : null
   const card = head.match(/(?:^|\/)c\/(Fire|Cake|Flakes)$/)
-  return { ...place(card ? head.slice(0, card.index) : head, player), clan: card ? (card[1] as ClanName) : null }
+  const enemy = head.match(/(?:^|\/)e\/(Fire|Cake|Flakes)\/([^/]+)$/)
+  const rivalTag = enemy ? decodeTag(enemy[2]) : null
+  const cut = enemy ?? card
+  return {
+    ...place(cut ? head.slice(0, cut.index) : head, player),
+    clan: card ? (card[1] as ClanName) : null,
+    rival: enemy && rivalTag ? { clan: enemy[1] as ClanName, tag: '#' + rivalTag } : null,
+  }
 }
 
-function place(path: string, player: string | null): Omit<Route, 'clan'> {
+function place(path: string, player: string | null): Omit<Route, 'clan' | 'rival'> {
   let parts = path.split('/').filter(Boolean)
   if (parts[0] === 'explore') parts = parts[1] === 'war' || parts[1] === 'upgrades' ? ['stats', parts[1]] : ['stats', 'players', ...parts.slice(1, 2)]
   if ((parts[0] === 'plan' || parts[0] === 'leaders') && parts[1] === 'attacks') parts = ['war']  // moved 2 Nov 2026
@@ -41,10 +49,14 @@ function place(path: string, player: string | null): Omit<Route, 'clan'> {
   }
   if (parts[0] === 'log') return { tab: 'log', sub: '', kind: null, player, base: '#/log' }
   if (parts[0] === 'cwl') {
-    const group = parts[1] === 'group'
-    return { tab: 'cwl', sub: group ? 'group' : 'lineups', kind: null, player, base: group ? '#/cwl/group' : '#/cwl' }
+    const sub = parts[1] === 'group' || parts[1] === 'standings' ? parts[1] : 'lineups'
+    return { tab: 'cwl', sub, kind: null, player, base: sub === 'lineups' ? '#/cwl' : `#/cwl/${sub}` }
   }
-  return { tab: 'war', sub: '', kind: null, player, base: '#/war' }
+  if (parts[0] === 'war' && parts[1] === 'log') {
+    const kind = parts[2] && parts[3] ? `${parts[2]}/${parts[3]}` : null
+    return { tab: 'war', sub: 'log', kind, player, base: `#/war/log${kind ? '/' + kind : ''}` }
+  }
+  return { tab: 'war', sub: 'latest', kind: null, player, base: '#/war' }
 }
 
 export function useRoute() {
@@ -53,7 +65,7 @@ export function useRoute() {
     const on = () => {
       const r = parse()
       // Rewrite an old link in place, so the address bar shows the new route.
-      const want = r.base + (r.clan ? `/c/${r.clan}` : '') + (r.player ? `/p/${encodeURIComponent(r.player.slice(1))}` : '')
+      const want = r.base + (r.clan ? `/c/${r.clan}` : '') + (r.rival ? `/e/${r.rival.clan}/${encodeURIComponent(r.rival.tag.slice(1))}` : '') + (r.player ? `/p/${encodeURIComponent(r.player.slice(1))}` : '')
       if (want && window.location.hash !== want) history.replaceState(null, '', want)
       setRoute(r)
     }
@@ -72,6 +84,9 @@ export const playerHref = (tag: string) => {
 
 /** Link to a clan's card over the current view. */
 export const clanHref = (clan: ClanName) => `${parse().base}/c/${clan}`
+
+/** Link to a league group clan's card over the current view, set against our clan in that group. */
+export const rivalHref = (clan: ClanName, tag: string) => `${parse().base}/e/${clan}/${encodeURIComponent(tag.replace(/^#/, ''))}`
 
 // A tap on a player card's figure opens the ranking behind it: that unit or column, across the family, with the player's
 // row shown. Boards read it once they hold the data it names.

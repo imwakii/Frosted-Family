@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useAuth, type Me } from './auth'
 import CwlTab from './components/CwlTab'
 import ClanSheet from './components/ClanSheet'
+import RivalSheet from './components/RivalSheet'
 import CwlGroup from './components/CwlGroup'
 import ExploreTab from './components/ExploreTab'
 import LogTab from './components/LogTab'
@@ -13,9 +14,10 @@ import { JumpToYou, YouChip } from './components/You'
 import { fetchPlayer, useRoster, useWar, useWide } from './data'
 import { useVisits } from './visits'
 import { decodeTag, go, onDrill, useRoute } from './route'
-import { SubNav, UtcClock } from './components/ui'
+import { Clock, SubNav } from './components/ui'
 
-const CWL_SUBS = [{ id: 'lineups', label: 'Lineups', href: '#/cwl' }, { id: 'group', label: 'Group', href: '#/cwl/group' }]
+const CWL_SUBS = [{ id: 'lineups', label: 'Lineups', href: '#/cwl' }, { id: 'standings', label: 'Standings', href: '#/cwl/standings' }, { id: 'group', label: 'Group', href: '#/cwl/group' }]
+const WAR_SUBS = [{ id: 'latest', label: 'Latest', href: '#/war' }, { id: 'log', label: 'War log', href: '#/war/log' }]
 
 const TABS = [
   { id: 'war', label: 'War', href: '#/war', icon: <path d="M5 5l14 14M19 5L5 19M4 16l4 4M20 16l-4 4" /> },
@@ -74,12 +76,12 @@ export default function App() {
   }, [])
   onDrill(useCallback(() => setQ(''), []))
   const closeSheet = useCallback(() => go.closePlayer(), [])
-  // The live UTC clock; on Plan a signed-in account sits beside it, and narrower screens shrink the other two to fit.
+  // The live clock; on Plan a signed-in account sits beside it, and narrower screens shrink the other two to fit.
   const account = route.tab === 'plan' && auth.me.user ? <Account me={auth.me} onSignOut={auth.signOut} /> : null
   const you = roster && <YouChip roster={roster} compact={!roomy && !!account} />
   const corner = wide
-    ? <span className="flex items-center gap-2">{you}<UtcClock wide />{account}</span>
-    : <span className="flex items-center gap-1.5">{you}{account}<UtcClock wide={false} /></span>
+    ? <span className="flex items-center gap-2">{you}<Clock wide />{account}</span>
+    : <span className="flex items-center gap-1.5">{you}{account}<Clock wide={false} /></span>
 
   return (
     <div className={`min-h-dvh ${wide ? '' : 'pb-[calc(58px+env(safe-area-inset-bottom))]'}`}>
@@ -112,7 +114,10 @@ export default function App() {
           {[48, 120, 46, 320].map((h, i) => <div key={i} className="animate-pulse rounded-2xl bg-well" style={{ height: h }} />)}
         </div>
       ) : route.tab === 'war' ? (
-        <WarTab wide={wide} roster={roster} />
+        <>
+          <SubNav items={WAR_SUBS} current={route.sub} wide={wide} />
+          <WarTab wide={wide} roster={roster} sub={route.sub} opened={route.kind} />
+        </>
       ) : route.tab === 'plan' ? (
         <PlanTab sub={route.sub} roster={roster} onPublished={reload} me={auth.me} ready={auth.status === 'ready'} wide={wide} onSignOut={auth.signOut} />
       ) : route.tab === 'log' ? (
@@ -122,7 +127,7 @@ export default function App() {
       ) : (
         <>
           <SubNav items={CWL_SUBS} current={route.sub} wide={wide} />
-          {route.sub === 'group' ? <CwlGroup wide={wide} /> : <CwlTab roster={roster} war={war} wide={wide} q={q} setQ={setQ} />}
+          {route.sub !== 'lineups' ? <CwlGroup wide={wide} view={route.sub === 'group' ? 'group' : 'standings'} /> : <CwlTab roster={roster} war={war} wide={wide} q={q} setQ={setQ} />}
         </>
       )}
 
@@ -140,6 +145,7 @@ export default function App() {
 
       {roster && route.player &&<PlayerSheet tag={route.player} roster={roster} wide={wide} onClose={closeSheet} />}
       {roster && route.clan && !route.player && <ClanSheet clan={route.clan} roster={roster} wide={wide} onClose={closeSheet} />}
+      {route.rival && !route.player && <RivalSheet clan={route.rival.clan} tag={route.rival.tag} wide={wide} onClose={closeSheet} />}
 
       {!wide && (
         <nav aria-label="Sections" className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-gold-line bg-white pb-[env(safe-area-inset-bottom)]">

@@ -49,6 +49,8 @@ class Recorder:
         if path.startswith("/v1/players/%23") and path not in self.routes:
             profile = FIX / f"player_{path.rsplit('%23', 1)[1]}.json"
             return httpx.Response(200, json=fixture(profile.name)) if profile.exists() else httpx.Response(404)
+        if path.startswith("/v1/clans/%23") and path.count("/") == 3 and path not in self.routes:
+            return httpx.Response(404)  # a league group's other clans, for their cards
         target = self.routes[path]  # KeyError: an unexpected call fails the test
         if isinstance(target, int):
             return httpx.Response(target, json={"reason": "accessDenied" if target == 403 else "notFound"})
@@ -282,6 +284,7 @@ def test_expected_enemy_is_the_mean_top_15_of_group_clans_not_yet_faced(conn, mo
         {"tag": "#B", "name": "Weak", "members": roster(14)},
         {"tag": "#C", "name": "Faced", "members": roster(10)}]}
     monkeypatch.setattr(collect, "collect_group_strength", lambda *a: None)
+    monkeypatch.setattr(collect, "collect_group_profiles", lambda *a: None)
     collect.collect_league_group(conn, Recorder(), group, fire)
     assert days.upcoming(conn, "2031-01", "Fire", {"#C"}) == [16.0] * 15
     assert days.upcoming(conn, "2031-01", "Fire", {"#A", "#B", "#C"}) == []

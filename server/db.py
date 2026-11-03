@@ -163,6 +163,19 @@ CREATE TABLE IF NOT EXISTS cwl_group_strength (
     PRIMARY KEY (season, clan_tag)
 );
 
+-- Each group clan's public facts for its card. Refreshed daily while the group is on, and dropped with the rest of the group.
+CREATE TABLE IF NOT EXISTS cwl_group_profile (
+    season TEXT NOT NULL,
+    clan_tag TEXT NOT NULL,
+    level INTEGER,
+    war_wins INTEGER,
+    win_streak INTEGER,
+    war_league TEXT,
+    members INTEGER,
+    updated_at TEXT,
+    PRIMARY KEY (season, clan_tag)
+);
+
 -- CWL war tags seen in a league group, so ended wars are not fetched again.
 CREATE TABLE IF NOT EXISTS cwl_war_tags (
     war_tag TEXT PRIMARY KEY,
@@ -358,6 +371,12 @@ def store_badge(conn: sqlite3.Connection, clan: dict) -> None:
     if badge:
         conn.execute("INSERT INTO war_clan_badges VALUES (?,?) ON CONFLICT (clan_tag) DO UPDATE SET badge=excluded.badge",
                      (clan["tag"], badge))
+
+
+def forget_groups(conn: sqlite3.Connection, before: str, current: str | None) -> None:
+    """Other clans' numbers only matter while we can still be compared with them. Our own wars are in `wars` and stay."""
+    for table in ("cwl_group_clans", "cwl_group_wars", "cwl_group_strength", "cwl_group_profile", "cwl_war_tags"):
+        conn.execute(f"DELETE FROM {table} WHERE season<? AND season IS NOT ?", (before, current))
 
 
 def upsert_group_war(conn: sqlite3.Connection, war: dict, *, war_tag: str, season: str | None, round_no: int) -> None:

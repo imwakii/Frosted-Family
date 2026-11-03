@@ -26,6 +26,7 @@ DEFAULT_DB = "/opt/bots/frosted/data/frosted.db"
 OUR_TAGS = set(CLAN_TAGS.values())
 OTHER_WARS_EVERY = timedelta(minutes=10)
 STRENGTH_EVERY = timedelta(days=1)
+GROUP_KEPT = timedelta(days=45)  # longer than the gap between two CWLs, so the last group shows until the next is drawn
 LINEUP = 15
 
 
@@ -119,8 +120,23 @@ def collect_group_strength(conn, api: Api, group: dict) -> None:
                  (season, clan["tag"], len(rows), avg("war_stars"), avg("heroes"), avg("equipment"), db.utcnow()))
 
 
+def collect_group_profiles(conn, api: Api, group: dict) -> None:
+    """One call per group clan a day, for the facts on its card."""
+    season = group.get("season")
+    since = (datetime.now(timezone.utc) - STRENGTH_EVERY).strftime("%Y-%m-%dT%H:%M:%SZ")
+    done = {r["clan_tag"]: r["updated_at"] for r in conn.execute("SELECT clan_tag, updated_at FROM cwl_group_profile WHERE season=?", (season,))}
+    for c in group.get("clans", []):
+        if done.get(c["tag"], "") >= since:
+            continue
+        p = api.get(f"/clans/{enc(c['tag'])}", quiet=(403, 404)) or {}
+        # Stamped even when nothing came back, as strength is, so a failing clan waits until tomorrow.
+        conn.execute("INSERT OR REPLACE INTO cwl_group_profile VALUES (?,?,?,?,?,?,?,?)",
+                     (season, c["tag"], p.get("clanLevel"), p.get("warWins"), p.get("warWinStreak"), (p.get("warLeague") or {}).get("name"), p.get("members"), db.utcnow()))
+
+
 def collect_league_group(conn, api: Api, group: dict, our_clan_tag: str) -> None:
     season = group.get("season")
+    db.forget_groups(conn, (datetime.now(timezone.utc) - GROUP_KEPT).strftime("%Y-%m-%d"), season)
     # Other clans' wars only feed the group table, so they need not be as fresh as ours.
     others_from = (datetime.now(timezone.utc) - OTHER_WARS_EVERY).strftime("%Y-%m-%dT%H:%M:%SZ")
     for c in group.get("clans", []):
@@ -154,6 +170,7 @@ def collect_league_group(conn, api: Api, group: dict, our_clan_tag: str) -> None
             db.upsert_group_war(conn, war, war_tag=tag, season=season, round_no=i)
             if ours:
                 db.upsert_war(conn, war, kind="cwl", war_tag=tag, season=season, round_no=i)
+    collect_group_profiles(conn, api, group)
     collect_group_strength(conn, api, group)
 
 

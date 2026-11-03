@@ -128,7 +128,7 @@ export type WarRecap = { mvp: WarSide & { stars: number[]; destruction: number; 
 export type WarBase = WarSide & { used: number; allowed: number; best: number | null }
 export type ClanWar = {
   kind: string; state: 'inWar' | 'preparation' | 'warEnded'; day: number | null; team_size: number; updated_at: string
-  preparation_start?: string | null; start_time: string | null; end_time: string | null; attacks_allowed: number; opponent: string
+  preparation_start?: string | null; start_time: string | null; end_time: string | null; attacks_allowed: number; opponent: string; opponent_tag?: string
   stars: number; opponent_stars: number; destruction: number; opponent_destruction: number
   attacks_used: number; opponent_attacks_used: number; badge: string | null; opponent_badge: string | null; log: WarAttack[]; recap?: WarRecap | null; war_key?: string
   pairs: { position: number; us: WarBase | null; them: WarBase | null }[]
@@ -136,8 +136,11 @@ export type ClanWar = {
 export const loadWarBoard = () => getJson<{ clans: { clan: ClanName; war: ClanWar | null; next?: ClanWar | null }[]; last_poll: string | null }>('/api/war/board')
 
 /** Refetched every minute, keeping the last answer on screen meanwhile. */
-export type CwlRow = { tag: string; name: string; badge: string | null; ours: boolean; stars: number; destruction: number; won: number; lost: number; town_halls: number[]; strength: { war_stars: number; heroes: number; equipment: number } | null }
+export type CwlRow = { tag: string; name: string; badge: string | null; ours: boolean; stars: number; destruction: number; won: number; lost: number; town_halls: number[]; strength: { war_stars: number; heroes: number; equipment: number } | null; profile?: CwlProfile | null; wars?: CwlClanWar[] }
+export type CwlProfile = { level: number | null; war_wins: number | null; win_streak: number | null; war_league: string | null; members: number | null }
+export type CwlClanWar = { day: number; state: string; opponent_tag: string; opponent: string | null; opponent_badge: string | null; stars: number; opponent_stars: number; destruction: number; opponent_destruction: number }
 export type CwlDay = { day: number; war_key: string; state: string; opponent: string; opponent_badge: string | null; stars: number; opponent_stars: number; destruction: number; opponent_destruction: number }
+export type LogWar = CwlDay & { kind: string; end_time: string | null; team_size: number | null }
 export type EightRow = { tag: string; name: string; th: number | null; played: number; stars: number }
 export type CwlGroup = { season: string; table: CwlRow[]; days: CwlDay[]; before?: CwlDay | null; eight: EightRow[] }
 const loadCwlGroups = () => getJson<{ clans: { clan: ClanName; group: CwlGroup | null }[] }>('/api/war/cwl')
@@ -157,8 +160,7 @@ function usePolled<T>(key: string, load: () => Promise<T | null>) {
   return state
 }
 
-// The CWL day picked on War or Lineups: both stay on it. null follows the day being fought; 'all' is Lineups' roster;
-// 0 is the war before CWL, opened from a clan card.
+// The CWL day picked on War or Lineups: both stay on it. null follows the day being fought; 'all' is Lineups' roster.
 let dayPick: number | 'all' | null = null
 const dayListeners = new Set<() => void>()
 const onDayPick = (run: () => void) => { dayListeners.add(run); return () => { dayListeners.delete(run) } }
@@ -171,6 +173,7 @@ export const setWarClan = (c: ClanName | null) => { warClan = c; dayListeners.fo
 export const useWarClan = () => useSyncExternalStore(onDayPick, () => warClan)
 
 export const useCwlGroups = () => usePolled('groups', loadCwlGroups)
+export const useWarLog = (clan: ClanName) => usePolled(`log${clan}`, () => getJson<{ clan: ClanName; wars: LogWar[] }>(`/api/war/log?clan=${clan}`))
 export const useCwlDay = (clan: ClanName, key: string) =>
   usePolled(`${clan}${key}`, () => getJson<ClanWar>(`/api/war/cwl/day?clan=${clan}&key=${encodeURIComponent(key)}`))
 

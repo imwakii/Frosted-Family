@@ -127,16 +127,24 @@ export function useNow(ms = 15_000) {
   return now
 }
 
-/** The time now in UTC, the zone every time on the site is in. */
-export function UtcClock({ wide }: { wide: boolean }) {
+/** The time now: in the viewer's own zone, as their device reports it, or in UTC after a tap. The choice is remembered. */
+export function Clock({ wide }: { wide: boolean }) {
   const now = useNow()
+  const [utc, setUtc] = useState(() => { try { return localStorage.getItem('ff-clock') === 'utc' } catch { return false } })
+  const flip = () => {
+    setUtc(!utc)
+    try { localStorage.setItem('ff-clock', utc ? 'local' : 'utc') } catch { /* private mode */ }
+  }
   const d = new Date(now)
-  const time = d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'UTC' })
-  const day = d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' })
+  const timeZone = utc ? 'UTC' : undefined
+  const time = d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone })
+  const day = d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone })
+  const zone = utc ? 'UTC' : new Intl.DateTimeFormat('en-GB', { timeZoneName: 'short' }).formatToParts(d).find((p) => p.type === 'timeZoneName')?.value
   return (
-    <span className="whitespace-nowrap rounded-full border border-line bg-white px-2.5 py-[5px] text-xs font-bold text-muted tabular-nums md:px-3 md:py-1.5 md:text-[13px]">
-      {wide && <span className="font-semibold text-faint max-lg:hidden">{day} · </span>}{time} UTC
-    </span>
+    <button type="button" onClick={flip} aria-label={`${time} ${zone}. Switch to ${utc ? 'your time' : 'UTC'}`}
+      className="cursor-pointer whitespace-nowrap rounded-full border border-line bg-white px-2.5 py-[5px] text-xs font-bold text-muted tabular-nums hover:bg-page md:px-3 md:py-1.5 md:text-[13px]">
+      {wide && <span className="font-semibold text-faint max-lg:hidden">{day} · </span>}{time}{(utc || wide) && ` ${zone}`}
+    </button>
   )
 }
 

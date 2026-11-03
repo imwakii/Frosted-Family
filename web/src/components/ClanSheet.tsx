@@ -1,18 +1,52 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { type ReactNode, useEffect, useMemo, useRef } from 'react'
 import { thIcon, useClans } from '../clash'
 import { useWarBoard } from '../explore'
-import { setDayPick, setWarClan, useCwlGroups } from '../leaders'
+import { setWarClan, useCwlGroups } from '../leaders'
 import { go } from '../route'
 import { CLAN } from '../theme'
 import type { ClanName, Roster } from '../types'
 import { clanFacts } from './CwlTab'
-import { ClanBadge, DayRow, dayWon, Eyebrow, LeaguePill, RowChevron } from './ui'
+import { ClanBadge, Eyebrow, LeaguePill, RowChevron } from './ui'
 
-// A clan's card, as a player has one: its size and place, how strong it is at war, its town halls and this CWL so far.
+// A clan's card, as a player has one: its size and place, how strong it is at war and its town halls.
 
 const num = (v: number | null, digits = 0) => (v === null ? '—' : v.toLocaleString('en-GB', { minimumFractionDigits: digits, maximumFractionDigits: digits }))
 const pct = (v: number | null) => (v === null ? '—' : `${Math.round(v)}%`)
 const per = (a: number, b: number) => (b ? a / b : null)
+
+/** The sheet a clan's card sits in: ours or a league group clan's. */
+export function CardSheet({ label, wide, onClose, head, children }: { label: string; wide: boolean; onClose: () => void; head: ReactNode; children: ReactNode }) {
+  const close = useRef<HTMLButtonElement>(null)
+
+  useEffect(() => {
+    const prev = document.activeElement as HTMLElement | null
+    close.current?.focus()
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', onKey)
+    document.body.style.overflow = 'hidden'
+    return () => { window.removeEventListener('keydown', onKey); document.body.style.overflow = ''; prev?.focus?.() }
+  }, [onClose])
+
+  return (
+    <div className="fixed inset-0 z-40">
+      <div className="ff-fade absolute inset-0 bg-[rgba(43,33,20,.35)]" onClick={onClose} aria-hidden="true" />
+      <section role="dialog" aria-modal="true" aria-label={label}
+        className={wide
+          ? 'ff-sheet absolute left-1/2 top-1/2 flex max-h-[min(720px,90vh)] w-[min(440px,calc(100%-32px))] -translate-x-1/2 -translate-y-1/2 flex-col gap-4 overflow-auto rounded-[22px] bg-white p-6 shadow-[0_20px_50px_rgba(43,33,20,.25)]'
+          : 'ff-sheet absolute inset-x-0 bottom-0 flex max-h-[calc(100dvh-64px)] flex-col gap-4 overflow-auto rounded-t-[22px] bg-white px-5 pb-[max(24px,env(safe-area-inset-bottom))] pt-2.5 shadow-[0_-8px_30px_rgba(43,33,20,.18)]'}>
+        {!wide && <span aria-hidden="true" className="h-[5px] w-10 flex-none self-center rounded-[3px] bg-[#D5C8AC]" />}
+        <div className="flex items-center gap-3">
+          {head}
+          <button ref={close} type="button" aria-label="Close" onClick={onClose}
+            className="ml-auto flex size-11 flex-none cursor-pointer items-center justify-center rounded-full border-0 bg-[#F6EEDC] text-muted hover:bg-well">
+            <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
+          </button>
+        </div>
+        {children}
+      </section>
+    </div>
+  )
+}
 
 export default function ClanSheet({ clan, roster, wide, onClose }: { clan: ClanName; roster: Roster; wide: boolean; onClose: () => void }) {
   const f = clanFacts(roster, clan, useClans()[clan])
@@ -39,44 +73,22 @@ export default function ClanSheet({ clan, roster, wide, onClose }: { clan: ClanN
     }
   }, [record, players])
   const top15 = place >= 0 ? group?.table[place].strength : null
-  const close = useRef<HTMLButtonElement>(null)
-
-  useEffect(() => {
-    const prev = document.activeElement as HTMLElement | null
-    close.current?.focus()
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
-    window.addEventListener('keydown', onKey)
-    document.body.style.overflow = 'hidden'
-    return () => { window.removeEventListener('keydown', onKey); document.body.style.overflow = ''; prev?.focus?.() }
-  }, [onClose])
 
   const facts = [
     { label: f.inCwl ? 'Core avg' : 'Top 15 avg', value: f.avg },
     { label: 'Members', value: String(players.length) },
-    ...(place >= 0 && group ? [{ label: 'Group', value: `${place + 1} of ${group.table.length}` }, { label: 'Stars', value: String(group.table[place].stars) }] : []),
+    ...(place >= 0 && group ? [{ label: 'CWL stars', value: String(group.table[place].stars) }] : []),
   ]
 
   return (
-    <div className="fixed inset-0 z-40">
-      <div className="ff-fade absolute inset-0 bg-[rgba(43,33,20,.35)]" onClick={onClose} aria-hidden="true" />
-      <section role="dialog" aria-modal="true" aria-label={f.name}
-        className={wide
-          ? 'ff-sheet absolute left-1/2 top-1/2 flex max-h-[min(720px,90vh)] w-[min(440px,calc(100%-32px))] -translate-x-1/2 -translate-y-1/2 flex-col gap-4 overflow-auto rounded-[22px] bg-white p-6 shadow-[0_20px_50px_rgba(43,33,20,.25)]'
-          : 'ff-sheet absolute inset-x-0 bottom-0 flex max-h-[calc(100dvh-64px)] flex-col gap-4 overflow-auto rounded-t-[22px] bg-white px-5 pb-[max(24px,env(safe-area-inset-bottom))] pt-2.5 shadow-[0_-8px_30px_rgba(43,33,20,.18)]'}>
-        {!wide && <span aria-hidden="true" className="h-[5px] w-10 flex-none self-center rounded-[3px] bg-[#D5C8AC]" />}
-        <div className="flex items-center gap-3">
-          <ClanBadge src={f.badge} size={60} />
-          <div className="flex min-w-0 flex-auto flex-col gap-1">
-            <span className="font-display truncate text-[26px] leading-tight" style={{ color: c.deep }}>{f.name}</span>
-            <LeaguePill league={f.league} text={f.format.replace('League ', '')} />
-          </div>
-          <button ref={close} type="button" aria-label="Close" onClick={onClose}
-            className="flex size-11 flex-none cursor-pointer items-center justify-center rounded-full border-0 bg-[#F6EEDC] text-muted hover:bg-well">
-            <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
-          </button>
-        </div>
-
-        <dl className={`m-0 grid gap-2 ${facts.length > 2 ? 'grid-cols-4' : 'grid-cols-2'}`}>
+    <CardSheet label={f.name} wide={wide} onClose={onClose} head={<>
+      <ClanBadge src={f.badge} size={60} />
+      <div className="flex min-w-0 flex-auto flex-col gap-1">
+        <span className="font-display truncate text-[26px] leading-tight" style={{ color: c.deep }}>{f.name}</span>
+        <LeaguePill league={f.league} text={f.format.replace('League ', '')} />
+      </div>
+    </>}>
+        <dl className={`m-0 grid gap-2 ${facts.length > 2 ? 'grid-cols-3' : 'grid-cols-2'}`}>
           {facts.map((x) => (
             <div key={x.label} className="flex flex-col items-center gap-0.5 rounded-xl px-1 py-2" style={{ background: c.tint }}>
               <dd className="font-display m-0 whitespace-nowrap text-[19px] leading-none" style={{ color: c.deep }}>{x.value}</dd>
@@ -97,7 +109,7 @@ export default function ClanSheet({ clan, roster, wide, onClose }: { clan: ClanN
               { label: 'Bases 3-starred', value: pct(strength.threeStarred) },
               ...(top15 ? [
                 { label: 'Heroes, top 15', value: num(top15.heroes), wide: true },
-                { label: 'Gear, top 15', value: num(top15.equipment), wide: true },
+                { label: 'Equipment, top 15', value: num(top15.equipment), wide: true },
               ] : []),
             ].map((x) => (
               <div key={x.label} className={`flex flex-col items-center gap-0.5 rounded-xl bg-[#F6EEDC] px-1 py-2 ${'wide' in x ? 'col-span-3' : 'col-span-2'}`}>
@@ -120,29 +132,11 @@ export default function ClanSheet({ clan, roster, wide, onClose }: { clan: ClanN
           </ul>
         </section>
 
-        {group && group.days.length > 0 && (
-          <section aria-label="This CWL" className="flex flex-col gap-1.5">
-            <Eyebrow>This CWL</Eyebrow>
-            <DayRow days={group.days} pick={null} onPick={(d) => { setWarClan(clan); setDayPick(d); go.to('#/war') }} drawnOnly />
-          </section>
-        )}
-
-        {group?.before && (
-          <section aria-label="Before CWL" className="flex flex-col gap-1.5">
-            <Eyebrow>Before CWL</Eyebrow>
-            <button type="button" onClick={() => { setWarClan(clan); setDayPick(0); go.to('#/war') }}
-              className="flex min-h-11 w-full cursor-pointer items-center gap-2 rounded-xl border-0 bg-[#F6EEDC] px-3 text-left text-sm font-semibold text-ink hover:bg-well">
-              <ClanBadge src={group.before.opponent_badge} size={24} />
-              <bdi className="min-w-0 flex-auto truncate">{group.before.opponent}</bdi>
-              <span className={`flex-none text-[13px] font-bold tabular-nums ${dayWon(group.before) === false ? 'text-[#B91C1C]' : dayWon(group.before) ? 'text-[#15803D]' : 'text-ink-2'}`}>
-                {dayWon(group.before) === null ? 'Draw' : dayWon(group.before) ? 'Won' : 'Lost'} {group.before.stars}–{group.before.opponent_stars}
-              </span>
-              <RowChevron />
-            </button>
-          </section>
-        )}
-
-      </section>
-    </div>
+        <button type="button" onClick={() => { setWarClan(clan); go.to('#/war/log') }}
+          className="flex min-h-11 w-full cursor-pointer items-center justify-between gap-2 rounded-xl border-0 bg-[#F6EEDC] px-3 text-left text-sm font-bold text-ink hover:bg-well">
+          War log
+          <RowChevron />
+        </button>
+    </CardSheet>
   )
 }

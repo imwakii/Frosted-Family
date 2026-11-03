@@ -290,7 +290,7 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
             )}
             <Trend p={p} cycles={roster.cycles} />
             {card && card.heroes.length > 0 && (
-              <Section title="Heroes and gear">
+              <Section title="Heroes and equipment">
                 <ul className={LIST}>
                   {card.heroes.map((h, i) => (
                     <li key={h.name} className={`flex items-center gap-2 px-3 py-1.5 ${i ? 'border-t border-hair' : ''}`}>

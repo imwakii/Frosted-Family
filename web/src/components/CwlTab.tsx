@@ -257,8 +257,7 @@ const liveDay = (war: Props['war']) => stateDay(war, 'inWar')
 // Once a day plan is published the page opens on the day being fought, or day 1 before CWL starts.
 function useDay(roster: Roster, war: Props['war']) {
   const planned = roster.players.some((p) => p.days)
-  const picked = useDayPick()
-  const pick = picked === 0 ? null : picked  // the war before CWL has no lineup of its own
+  const pick = useDayPick()
   return { planned, day: (planned ? pick ?? (liveDay(war) || stateDay(war, 'preparation') || 1) : 'all') as DayPick, setDay: setDayPick, live: liveDay(war) }
 }
 

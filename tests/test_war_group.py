@@ -82,7 +82,8 @@ def test_the_collector_keeps_other_clans_scores_and_group_badges(tmp_path):
     assert conn.execute("SELECT COUNT(*) FROM wars").fetchone()[0] == 0  # other clans' full wars are not kept
 
 
-def test_other_clans_wars_are_not_fetched_every_minute_and_ended_ones_never_again(tmp_path):
+def test_other_clans_wars_are_not_fetched_every_minute_and_ended_ones_never_again(tmp_path, monkeypatch):
+    monkeypatch.setattr(collect, "collect_group_profiles", lambda *a: None)
     conn = db.connect(tmp_path / "x.db")
     api = FakeApi({"state": "inWar", "teamSize": 15, "endTime": LATER, "clan": {"tag": "#B"}, "opponent": {"tag": "#C"}})
     collect.collect_league_group(conn, api, group(), FIRE)
@@ -156,3 +157,48 @@ def test_a_day_is_served_only_for_a_war_of_that_clan(tmp_path):
     assert war.cwl_day(conn, "Cake", "#W", NOW) is None
     assert war.cwl_day(conn, "Nope", "#W", NOW) is None
     assert war.cwl_day(conn, "Fire", "#none", NOW) is None
+
+
+def test_each_group_clan_has_its_own_days_and_facts(tmp_path):
+    conn = db.connect(tmp_path / "x.db")
+    setup(conn, [fight(row("#B", 28, 85.0), row(FIRE, 30, 90.0)), fight(row("#C", 20, 70.0), row("#D", 21, 80.0))])
+
+    class Clans:
+        def get(self, path, **_):
+            return None if path.endswith("C") else {"clanLevel": 20, "warWins": 300, "warWinStreak": 4, "warLeague": {"name": "Master League I"}, "members": 41}
+
+    collect.collect_group_profiles(conn, Clans(), {"season": "2026-11-02", "clans": [{"tag": "#B"}, {"tag": "#C"}]})
+    t = {r["tag"]: r for r in table(conn)}
+    assert t["#B"]["profile"] == {"level": 20, "war_wins": 300, "win_streak": 4, "war_league": "Master League I", "members": 41}
+    assert t["#C"]["profile"] is None
+    b = t["#B"]["wars"]
+    assert [(w["opponent_tag"], w["stars"], w["opponent_stars"], w["state"]) for w in b] == [(FIRE, 28, 30, "warEnded")]
+    assert t[FIRE]["wars"][0]["opponent"] == "#B"
+
+
+def test_a_group_is_forgotten_after_a_while_and_our_wars_stay(tmp_path):
+    conn = db.connect(tmp_path / "x.db")
+    setup(conn, [fight(row(FIRE, 30, 90.0), row("#B", 28, 85.0))])
+    conn.execute("INSERT INTO cwl_group_strength VALUES (?,?,?,?,?,?,?)", ("2026-09-01", "#B", 15, 1.0, 1.0, 1.0, "x"))
+    conn.execute("INSERT INTO cwl_group_profile VALUES (?,?,?,?,?,?,?,?)", ("2026-09-01", "#B", 1, 1, 1, "x", 1, "x"))
+    conn.execute("INSERT INTO cwl_group_clans VALUES (?,?,?,?,?)", ("2026-09-01", FIRE, "#B", "#B", "[]"))
+    conn.execute("INSERT INTO wars (war_key, kind, clan_tag, opponent_tag, season, updated_at) VALUES ('w','cwl',?,'#B','2026-09-01','x')", (FIRE,))
+    db.forget_groups(conn, "2026-10-01", "2026-11-02")
+    for name in ("cwl_group_strength", "cwl_group_profile"):
+        assert conn.execute(f"SELECT COUNT(*) FROM {name}").fetchone()[0] == 0
+    assert {r[0] for r in conn.execute("SELECT DISTINCT season FROM cwl_group_clans")} == {"2026-11-02"}
+    assert conn.execute("SELECT COUNT(*) FROM wars WHERE war_key='w'").fetchone()[0] == 1
+    db.forget_groups(conn, "2027-01-01", "2026-11-02")  # what the API is serving now is never dropped
+    assert table(conn)
+
+
+def test_the_war_log_lists_a_clans_finished_wars_newest_first(tmp_path):
+    conn = db.connect(tmp_path / "x.db")
+    for key, a, b, state, end in (("a", FIRE, "#X", "warEnded", "20261001T000000.000Z"), ("b", "#Y", FIRE, "warEnded", "20261020T000000.000Z"),
+                                  ("c", FIRE, "#Z", "preparation", "20261201T000000.000Z"), ("d", FIRE, "#Q", "inWar", LATER), ("e", "#P", "#R", "warEnded", ENDED)):
+        conn.execute("INSERT INTO wars (war_key, kind, clan_tag, clan_name, clan_stars, opponent_tag, opponent_name, opponent_stars, state, end_time, team_size, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,'x')",
+                     (key, "regular", a, a, 10, b, b, 5, state, end, 15))
+    log = war.war_log(conn, "Fire", NOW)["wars"]
+    assert [w["war_key"] for w in log] == ["b", "a"]
+    assert (log[0]["opponent"], log[0]["stars"], log[0]["opponent_stars"], log[0]["day"]) == ("#Y", 5, 10, 0)
+    assert war.war_log(conn, "Nobody", NOW) is None
