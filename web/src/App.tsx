@@ -4,6 +4,7 @@ import CwlTab from './components/CwlTab'
 import ClanSheet from './components/ClanSheet'
 import RivalSheet from './components/RivalSheet'
 import UpgradeSheet from './components/UpgradeSheet'
+import WhatsNew from './components/WhatsNew'
 import CwlGroup from './components/CwlGroup'
 import ExploreTab from './components/ExploreTab'
 import LogTab from './components/LogTab'
@@ -18,7 +19,7 @@ import { decodeTag, go, onDrill, useRoute } from './route'
 import { Clock, SubNav } from './components/ui'
 
 const CWL_SUBS = [{ id: 'lineups', label: 'Lineups', href: '#/cwl' }, { id: 'standings', label: 'Standings', href: '#/cwl/standings' }, { id: 'group', label: 'Group', href: '#/cwl/group' }]
-const WAR_SUBS = [{ id: 'latest', label: 'Latest', href: '#/war' }, { id: 'log', label: 'War log', href: '#/war/log' }]
+const WAR_SUBS = [{ id: 'latest', label: 'Current', href: '#/war' }, { id: 'log', label: 'War log', href: '#/war/log' }]
 
 const TABS = [
   { id: 'war', label: 'War', href: '#/war', icon: <path d="M5 5l14 14M19 5L5 19M4 16l4 4M20 16l-4 4" /> },
@@ -79,10 +80,10 @@ export default function App() {
   const closeSheet = useCallback(() => go.closePlayer(), [])
   // The live clock; on Plan a signed-in account sits beside it, and narrower screens shrink the other two to fit.
   const account = route.tab === 'plan' && auth.me.user ? <Account me={auth.me} onSignOut={auth.signOut} /> : null
-  const you = roster && <YouChip roster={roster} compact={!roomy && !!account} />
+  const you = roster && <YouChip roster={roster} compact={!roomy && !!account} iconOnly={!wide} />
   const corner = wide
-    ? <span className="flex items-center gap-2">{you}<Clock wide />{account}</span>
-    : <span className="flex items-center gap-1.5">{you}{account}<Clock wide={false} /></span>
+    ? <span className="flex items-center gap-2"><WhatsNew wide />{you}<Clock wide />{account}</span>
+    : <span className="flex items-center gap-1"><WhatsNew wide={false} />{you}{account}<Clock wide={false} /></span>
 
   return (
     <div className={`min-h-dvh ${wide ? '' : 'pb-[calc(58px+env(safe-area-inset-bottom))]'}`}>
@@ -102,8 +103,8 @@ export default function App() {
           </div>
         </header>
       ) : (
-        <header className="flex items-center justify-between gap-3 px-4 pb-2.5 pt-[max(16px,env(safe-area-inset-top))]">
-          <span className="font-display min-w-0 truncate text-[21px] text-brand">Frosted Family</span>
+        <header className="flex items-center justify-between gap-2 px-4 pb-2.5 pt-[max(16px,env(safe-area-inset-top))]">
+          <span className="font-display min-w-0 truncate text-[clamp(17px,5vw,21px)] text-brand">Frosted Family</span>
           <div className="flex min-h-11 flex-none items-center">{corner}</div>
         </header>
       )}

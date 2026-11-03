@@ -141,7 +141,7 @@ export function Clock({ wide }: { wide: boolean }) {
   const zone = utc ? 'UTC' : new Intl.DateTimeFormat('en-GB', { timeZoneName: 'short' }).formatToParts(d).find((p) => p.type === 'timeZoneName')?.value
   return (
     <button type="button" onClick={flip} aria-label={`${time} ${zone}. Switch to ${utc ? 'your time' : 'UTC'}`}
-      className="cursor-pointer whitespace-nowrap rounded-full border border-line bg-white px-2.5 py-[5px] text-xs font-bold text-muted tabular-nums hover:bg-page md:px-3 md:py-1.5 md:text-[13px]">
+      className="h-9 flex-none cursor-pointer whitespace-nowrap rounded-full border border-line bg-white px-2 text-xs font-bold text-muted tabular-nums hover:bg-page md:px-3 md:text-[13px]">
       {wide && <span className="font-semibold text-faint max-lg:hidden">{day} · </span>}{time}{(utc || wide) && ` ${zone}`}
     </button>
   )

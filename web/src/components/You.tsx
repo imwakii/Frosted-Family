@@ -113,7 +113,7 @@ export function YouPrompt({ roster, onDone, autoFocus }: { roster: Roster; onDon
 }
 
 /** Your own card from any tab: the first of your accounts; the card switches between them. */
-export function YouChip({ roster, compact }: { roster: Roster; compact?: boolean }) {
+export function YouChip({ roster, compact, iconOnly }: { roster: Roster; compact?: boolean; iconOnly?: boolean }) {
   const { yous } = useYou()
   const [picking, setPicking] = useState(false)
   const p = roster.players.find((x) => yous.includes(x.tag))
@@ -121,7 +121,7 @@ export function YouChip({ roster, compact }: { roster: Roster; compact?: boolean
     return (
       <>
         <button type="button" aria-label="Add me" onClick={() => setPicking(true)}
-          className={`flex min-h-9 flex-none cursor-pointer items-center justify-center gap-1 whitespace-nowrap rounded-full border border-line bg-white text-[13px] font-bold text-ink-2 hover:bg-hover ${compact ? 'w-9' : 'px-3'}`}>
+          className={`flex h-9 flex-none cursor-pointer items-center justify-center gap-1 whitespace-nowrap rounded-full border border-line bg-white text-[13px] font-bold text-ink-2 hover:bg-hover ${compact ? 'w-9' : 'px-2 lg:px-3'}`}>
           <span aria-hidden="true" className="text-base leading-none">+</span>
           {!compact && <><span className="lg:hidden">Add me</span><span className="max-lg:hidden">Add yourself</span></>}
         </button>
@@ -135,9 +135,9 @@ export function YouChip({ roster, compact }: { roster: Roster; compact?: boolean
   }
   return (
     <a href={playerHref(p.tag)} aria-label={`Your card, ${p.name}`}
-      className={`flex min-h-9 max-w-[170px] flex-none items-center gap-1.5 rounded-full border border-line bg-white py-0.5 pl-1 text-ink no-underline hover:bg-page ${compact ? 'pr-1' : 'pr-2.5'}`}>
+      className={`flex h-9 max-w-[170px] flex-none items-center gap-1.5 overflow-hidden rounded-full border border-line bg-white text-ink no-underline hover:bg-page ${iconOnly ? 'w-9 justify-center' : `py-0.5 pl-1 ${compact ? 'pr-1' : 'pr-2.5'}`}`}>
       <Th th={p.th} />
-      {!compact && <span className="truncate text-[13px] font-bold"><span className="lg:hidden">You</span><span className="max-lg:hidden">{p.name}</span></span>}
+      {!compact && !iconOnly && <span className="truncate text-[13px] font-bold"><span className="lg:hidden">You</span><span className="max-lg:hidden">{p.name}</span></span>}
     </a>
   )
 }
