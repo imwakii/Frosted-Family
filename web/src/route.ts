@@ -12,7 +12,7 @@ export type Tab = 'cwl' | 'calendar' | 'explore' | 'log' | 'war' | 'plan'
 export type Route = { tab: Tab; sub: string; kind: string | null; player: string | null; clan: ClanName | null; rival: { clan: ClanName; tag: string } | null; upgrade: { cat: Cat; tag: string; unit: string | null } | null; compare: { a: string; b: string | null } | null; base: string }
 
 export const STATS_SUBS = ['players', 'badges', 'war', 'trends', 'history'] as const
-export const LEADERS_SUBS = ['builder', 'days', 'members'] as const
+export const LEADERS_SUBS = ['builder', 'days', 'members', 'usage'] as const
 
 /** A hand-edited or cut-off link can hold a broken % escape; it opens no player rather than failing the page. */
 export function decodeTag(raw: string) {

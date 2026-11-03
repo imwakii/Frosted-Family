@@ -1,8 +1,15 @@
 import { useEffect, useState } from 'react'
 
-// GET and POST /api/visits. A random id this browser keeps, reported once a UTC day and tied to nothing. Local development
-// only reads, so testing never adds to the count. An older server has no such route, and the line stays hidden.
+// GET and POST /api/visits. A random id this browser keeps, reported once a UTC day with its time zone and tied to nothing.
+// Local development only reads, so testing never adds to the count. An older server has no such route, and the line stays hidden.
 export type Visits = { week: number; total: number }
+export type VisitsDaily = Visits & { days: { day: string; total: number; regions: Record<string, number> }[]; regions: { name: string; total: number }[] }
+
+export async function getVisitsDaily(): Promise<VisitsDaily> {
+  const r = await fetch('/api/visits/daily', { credentials: 'same-origin', headers: { Accept: 'application/json' } })
+  if (!r.ok || !r.headers.get('content-type')?.includes('json')) throw new Error(String(r.status))
+  return r.json()
+}
 
 const read = (k: string) => { try { return localStorage.getItem(k) } catch { return null } }
 const write = (k: string, v: string) => { try { localStorage.setItem(k, v) } catch { /* private mode */ } }
@@ -23,7 +30,7 @@ export function useVisits() {
     const today = new Date().toISOString().slice(0, 10)
     const report = !import.meta.env.DEV && read('ff-visit-day') !== today
     const answer = report
-      ? fetch('/api/visits', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: visitorId() }) })
+      ? fetch('/api/visits', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: visitorId(), tz: Intl.DateTimeFormat().resolvedOptions().timeZone }) })
       : fetch('/api/visits', { headers: { Accept: 'application/json' } })
     answer.then((r) => (r.ok && r.headers.get('content-type')?.includes('json') ? r.json() : null))
       .then((d: Visits | null) => {

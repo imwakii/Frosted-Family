@@ -163,6 +163,7 @@ export const UPDATES: Update[] = [
           'Added Not as planned marks.',
           'Changed Suggest to keep your plan.',
           'Added the swaps to make in the game.',
+          'Added visitors by region under Usage.',
           'Added changes to the Publish check.',
         ],
       },

@@ -9,6 +9,7 @@ import { DRAFT_KEY, lineupDraft } from '../dayplan'
 import DayPlanner from './DayPlanner'
 import { ProposalBar, useProposals } from './Proposals'
 import { Arrow, ClanBadge, ClanSwitch, StatusDot, StatusKey, SubNav, Th } from './ui'
+import Usage from './Usage'
 
 // Allocation rules: docs/specs/02-allocation-rules.md.
 const MAKI = '#CGJ8YR8J'
@@ -401,6 +402,7 @@ type PlanProps = { roster: Roster; me: Me; ready: boolean; wide: boolean; onSign
 const SUBS = [
   { id: 'days', label: 'Plan', href: '#/plan/days' },
   { id: 'members', label: 'Members', href: '#/plan/members' },
+  { id: 'usage', label: 'Usage', href: '#/plan/usage' },
 ]
 
 export default function PlanTab({ sub, roster, onPublished, me, ready, wide, onSignOut }: PlanProps & { sub: string; onPublished: () => Promise<void> }) {
@@ -411,7 +413,7 @@ export default function PlanTab({ sub, roster, onPublished, me, ready, wide, onS
   return (
     <>
       <SubNav items={SUBS} current={sub} wide={wide} />
-      {sub === 'members' ? <LeadersTools wide={wide} /> : sub === 'days' ? <DayPlanner roster={roster} me={me} onPublished={onPublished} /> : <Plan roster={roster} me={me} onPublished={onPublished} />}
+      {sub === 'usage' ? <Usage /> : sub === 'members' ? <LeadersTools wide={wide} /> : sub === 'days' ? <DayPlanner roster={roster} me={me} onPublished={onPublished} /> : <Plan roster={roster} me={me} onPublished={onPublished} />}
     </>
   )
 }

@@ -46,6 +46,7 @@ CREATE TABLE IF NOT EXISTS reactions (
 CREATE TABLE IF NOT EXISTS visits (
     day TEXT NOT NULL,                -- UTC
     visitor TEXT NOT NULL,            -- a random id the browser made up, tied to nothing
+    tz TEXT,                          -- the browser's time zone, such as Asia/Singapore; none before 4 Nov 2026
     PRIMARY KEY (day, visitor)
 );
 CREATE TABLE IF NOT EXISTS leaders (
@@ -62,4 +63,6 @@ def connect() -> sqlite3.Connection:
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     conn.executescript(SCHEMA)
+    if "tz" not in {r["name"] for r in conn.execute("PRAGMA table_info(visits)")}:
+        conn.execute("ALTER TABLE visits ADD COLUMN tz TEXT")
     return conn
