@@ -175,12 +175,14 @@ function Board({ rows, clan }: { rows: CwlRow[]; clan: ClanName }) {
   return (
     <div className="flex min-w-0 flex-col gap-2">
       {startsIn && rows.every((r) => !r.stars) && <div className="rounded-xl bg-[#FFEDD5] px-3 py-1 text-center text-xs font-bold text-[#B4451A]">Day 1 starts in {startsIn}</div>}
-      <div role="group" aria-label="View" className="flex gap-1.5 overflow-x-auto [scrollbar-width:none]">
-        {VIEWS.filter((v) => v.id !== 'strength' || canCompare).map((v) => (
-          <button key={v.id} type="button" aria-pressed={v.id === shown} onClick={() => setView(v.id)} className={chip(v.id === shown)}>{v.label}</button>
-        ))}
+      <div className="flex items-center gap-2">
+        <div role="group" aria-label="View" className="flex min-w-0 flex-auto gap-1.5 overflow-x-auto [scrollbar-width:none]">
+          {VIEWS.filter((v) => v.id !== 'strength' || canCompare).map((v) => (
+            <button key={v.id} type="button" aria-pressed={v.id === shown} onClick={() => setView(v.id)} className={chip(v.id === shown)}>{v.label}</button>
+          ))}
+        </div>
+        {shown === 'strength' && <span className="flex flex-none items-center"><Info topic="strength" /></span>}
       </div>
-      {shown === 'strength' && <span className="flex justify-end px-1"><Info topic="strength" /></span>}
       {shown === 'standings' ? <Standings rows={rows} clan={clan} /> : <GroupTable rows={rows} clan={clan} compare={shown === 'strength'} />}
     </div>
   )
