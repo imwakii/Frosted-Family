@@ -15,7 +15,13 @@ import type { ClanName, Player, Slot } from './types'
 //      competes for days like anyone else, so a TH18 keeps playing until 8 stars. One who misses gets no more days.
 //   5. Weakest of all: consecutive days are easier to remember. Between equal fits, once anyone who needs every day
 //      left for 8 stars is in, a player who played the day before stays in.
+// Between equal fits, core plays before subs.
 // Days whose war is on or over are fixed to the game's lineup; only the days still to come are suggested.
+//
+// With a plan on the board, Suggest repairs it (`repair`) and leaves the leader's choices alone. It changes a day only for:
+// someone who has missed this season, has left the team or is still in New; a day short of or over 15; or a reliable player
+// the plan means to play who can no longer reach 8 stars. That day comes from the latest days first, since members have
+// seen those least, and from someone with days to spare.
 
 /** The lineup you are working on in the builder, kept in this browser: tag to clan and slot. */
 export const DRAFT_KEY = 'ff-plan-draft'
@@ -127,11 +133,57 @@ export function suggest(everyone: Player[], wars: Wars, upcoming: number[] = [])
     const team: Player[] = []
     for (const slot of foe.slice(0, TEAM - trial.length)) {
       const best = ok.filter((p) => !team.includes(p))
-        .sort((a, b) => fit(a, slot) - fit(b, slot) || rank(a) - rank(b) || need[b.tag] - need[a.tag] || byStrength(a, b))[0]
+        .sort((a, b) => fit(a, slot) - fit(b, slot) || rank(a) - rank(b) || Number(b.slot === 'CORE') - Number(a.slot === 'CORE') || need[b.tag] - need[a.tag] || byStrength(a, b))[0]
       if (best) team.push(best)
     }
     out[d] = [...team, ...trial].map((p) => p.tag).sort()
     for (const t of out[d]) if (need[t] > 0) need[t] -= 1
+  }
+  return out
+}
+
+export function repair(everyone: Player[], wars: Wars, current: ClanDays): ClanDays {
+  const pool = new Map(everyone.filter((p) => p.slot !== 'NEW').map((p) => [p.tag, p]))
+  const missed = missedThisSeason(wars)
+  const stars = expected(wars)
+  const open = DAYS.filter((d) => !locked(wars[d]))
+  const out: ClanDays = Object.fromEntries(DAYS.map((d) => [d, [...(current[d] ?? (locked(wars[d]) ? wars[d].lineup : []))]]))
+  for (const d of open) out[d] = out[d].filter((t) => pool.has(t) && !missed.has(t))
+
+  const count = (t: string) => open.filter((d) => out[d].includes(t)).length
+  const need = (t: string) => daysFor(stars[t] ?? 0)
+  const spare = (t: string) => count(t) - need(t)
+  const core = (t: string) => Number(pool.get(t)?.slot === 'CORE')
+  const th = (t: string) => pool.get(t)?.th ?? 0
+  const reliable = [...pool.values()].filter((p) => tier(p, missed, wars) !== null && !onTrial(p, wars))
+    .sort((a, b) => core(b.tag) - core(a.tag) || (b.th ?? 0) - (a.th ?? 0) || (b.score ?? 0) - (a.score ?? 0))
+
+  // Short of 8 stars, among core and those the plan already plays: a free place first, else someone with days to spare.
+  for (const { tag } of reliable) {
+    if (!core(tag) && !count(tag)) continue
+    for (const d of [...open].reverse()) {
+      if (need(tag) <= count(tag)) break
+      if (out[d].includes(tag)) continue
+      if (out[d].length >= TEAM) {
+        const off = out[d].filter((t) => spare(t) > 0).sort((a, b) => core(a) - core(b) || spare(b) - spare(a) || th(a) - th(b))[0]
+        if (!off) continue
+        out[d] = out[d].filter((t) => t !== off)
+      }
+      out[d].push(tag)
+    }
+  }
+  // Each day to exactly 15. The game's lineup is the first choice for a day in preparation.
+  for (const d of open) {
+    const inGame = (t: string) => Number(!!wars[d]?.lineup.includes(t))
+    while (out[d].length > TEAM) {
+      const off = [...out[d]].sort((a, b) => inGame(a) - inGame(b) || core(a) - core(b) || spare(b) - spare(a) || th(a) - th(b))[0]
+      out[d] = out[d].filter((t) => t !== off)
+    }
+    for (const { tag } of [...reliable].sort((a, b) => inGame(b.tag) - inGame(a.tag) || th(b.tag) - th(a.tag) || Number(spare(a.tag) >= 0) - Number(spare(b.tag) >= 0) || core(b.tag) - core(a.tag))) {
+      if (out[d].length >= TEAM) break
+      if (!out[d].includes(tag)) out[d].push(tag)
+    }
+    out[d].sort()
   }
   return out
 }

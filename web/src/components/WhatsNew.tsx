@@ -6,17 +6,17 @@ import { CardSheet } from './ClanSheet'
 import { Eyebrow, RowChevron, UnitIcon } from './ui'
 import { firstVisit } from './Welcome'
 
-// The header's What's new button and its card. A new update opens the card once and lights the button until it is seen;
+// The What's new card, opened from Settings. A new update opens it once and lights the Settings button until it is seen;
 // a link that opens a player or clan keeps its own sheet, and only the button lights. A first visit gets the welcome instead.
 
 const SEEN = 'ff-whats-new'
 const seen = () => { try { return localStorage.getItem(SEEN) === LATEST.id } catch { return true } }
 
-const Sparkle = ({ size }: { size: number }) => (
+export const Sparkle = ({ size }: { size: number }) => (
   <svg aria-hidden="true" width={size} height={size} viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.3 6.7L21 11l-6.7 2.3L12 20l-2.3-6.7L3 11l6.7-2.3L12 2zM19 16l.9 2.1L22 19l-2.1.9L19 22l-.9-2.1L16 19l2.1-.9L19 16z" /></svg>
 )
 
-const Chevron = ({ className }: { className: string }) => (
+export const Chevron = ({ className }: { className: string }) => (
   <svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#A3957C" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" className={`transition-transform ${className}`}><path d="M9 6l6 6-6 6" /></svg>
 )
 
@@ -48,7 +48,7 @@ const Groups = ({ update, quiet }: { update: Update; quiet?: boolean }) => (
   </div>
 )
 
-export default function WhatsNew({ wide }: { wide: boolean }) {
+export function useNews() {
   const [fresh, setFresh] = useState(() => !seen() && !firstVisit)
   const [open, setOpen] = useState(() => !seen() && !firstVisit && !/\/(p|c|e|u)\//.test(window.location.hash))
   const close = useCallback(() => {
@@ -56,14 +56,11 @@ export default function WhatsNew({ wide }: { wide: boolean }) {
     setFresh(false)
     try { localStorage.setItem(SEEN, LATEST.id) } catch { /* private mode */ }
   }, [])
+  return { fresh, open, close, show: useCallback(() => setOpen(true), []) }
+}
+
+export function WhatsNewCard({ wide, onClose: close }: { wide: boolean; onClose: () => void }) {
   return (
-    <>
-      <button type="button" aria-label="What's new" title="What's new" onClick={() => setOpen(true)}
-        className="relative flex size-9 flex-none cursor-pointer items-center justify-center rounded-full border border-line bg-white text-gold hover:bg-page">
-        <Sparkle size={16} />
-        {fresh && <span aria-hidden="true" className="absolute right-0 top-0 size-2.5 rounded-full border-2 border-white bg-[#DC2626]" />}
-      </button>
-      {open && (
         <CardSheet label="What's new" wide={wide} onClose={close} head={
           <div className="flex min-w-0 flex-auto flex-col gap-1">
             <span className="font-display text-[26px] leading-tight text-brand">What's new</span>
@@ -121,7 +118,5 @@ export default function WhatsNew({ wide }: { wide: boolean }) {
             <button type="button" onClick={close} className="min-h-11 w-full cursor-pointer rounded-xl border border-line bg-white text-sm font-bold text-ink-2 hover:bg-page">Got it</button>
           </div>
         </CardSheet>
-      )}
-    </>
   )
 }

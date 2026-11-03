@@ -19,6 +19,7 @@ site through a Vercel rewrite.
     GET /war/cwl/day     one of a clan's wars by its key, for the day row
     GET /war/log         every finished war we hold for a clan, newest first
     /auth/*, /plan/*     Discord sign-in for leaders (server/auth.py) and the Plan tab (server/plan.py)
+    /push/*              phones that asked for alerts (server/push.py)
 
 The CSV is canonical for allocation. The one thing laid over it is the publisher's latest publish, and only while the
 CSV is the one it was published against (server/plan.py). Tag is the join key, never name.
@@ -34,7 +35,7 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException, Request
 
 from frosted.config import CLAN_TAGS, TAG_TO_CLAN
-from server import auth, clanlog, days, db, history, leaders, members, plan, profiles, proposals, stats, visits, war
+from server import auth, clanlog, days, db, history, leaders, members, plan, profiles, proposals, push, stats, visits, war
 
 DEFAULT_DB = "/opt/bots/frosted/data/frosted.db"
 ROSTER_FIELDS = ("tag", "name", "clan", "cwl_slot", "transferred_from", "tier", "final_score", "offense_score",
@@ -273,6 +274,7 @@ app.include_router(days.router)
 app.include_router(proposals.router)
 app.include_router(leaders.router)
 app.include_router(visits.router)
+app.include_router(push.router)
 
 
 @app.middleware("http")
@@ -280,7 +282,7 @@ async def private_responses(request: Request, call_next):
     """Sign-in and plan answers are per leader. Caddy marks the public reads cacheable, so these say no-store, and
     Vary: Cookie keeps any cache from handing one leader's answer to another."""
     resp = await call_next(request)
-    if request.url.path.startswith(("/auth", "/plan", "/allocation", "/leaders", "/visits")):
+    if request.url.path.startswith(("/auth", "/plan", "/allocation", "/leaders", "/visits", "/push")):
         resp.headers["Cache-Control"] = "no-store, private"
     resp.headers["Vary"] = "Cookie"
     return resp

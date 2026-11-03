@@ -1,0 +1,24 @@
+# Member alerts (server/notify.py). Started every minute by frosted-notify.timer. Needs no token: the signing key is in
+# the data folder, made on first use. Its own unit, so a push failing can never stop war collection.
+[Unit]
+Description=Frosted Family alerts
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=frosted
+Group=bots
+Environment=FROSTED_DB=/opt/bots/frosted/data/frosted.db
+Environment=FROSTED_APP_DB=/opt/bots/frosted/data/app.db
+WorkingDirectory=/opt/bots/frosted/repo
+ExecStart=/opt/bots/frosted/venv/bin/python -B -m server.notify
+TimeoutStartSec=50
+Nice=10
+MemoryMax=300M
+NoNewPrivileges=true
+UMask=0077
+ProtectHome=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/opt/bots/frosted/data

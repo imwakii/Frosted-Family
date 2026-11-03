@@ -6,7 +6,7 @@ import CompareSheet from './components/CompareSheet'
 import RivalSheet from './components/RivalSheet'
 import UpgradeSheet from './components/UpgradeSheet'
 import Welcome from './components/Welcome'
-import WhatsNew from './components/WhatsNew'
+import Settings from './components/Settings'
 import CwlGroup from './components/CwlGroup'
 import ExploreTab from './components/ExploreTab'
 import LogTab from './components/LogTab'
@@ -86,8 +86,8 @@ export default function App() {
   const account = route.tab === 'plan' && auth.me.user ? <Account me={auth.me} onSignOut={auth.signOut} /> : null
   const you = roster && <YouChip roster={roster} compact={!roomy && !!account} />
   const corner = wide
-    ? <span className="flex items-center gap-2"><WhatsNew wide />{you}<Clock wide />{account}</span>
-    : <span className="flex min-w-0 items-center gap-2"><WhatsNew wide={false} />{you}{account}<Clock wide={false} /></span>
+    ? <span className="flex items-center gap-2"><Settings wide roster={roster} />{you}<Clock wide />{account}</span>
+    : <span className="flex min-w-0 items-center gap-2"><Settings wide={false} roster={roster} />{you}{account}<Clock wide={false} /></span>
 
   return (
     <div className={`min-h-dvh ${wide ? '' : 'pb-[calc(58px+env(safe-area-inset-bottom))]'}`}>

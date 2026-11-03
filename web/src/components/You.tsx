@@ -1,11 +1,12 @@
 import { useEffect, useId, useSyncExternalStore, useState } from 'react'
+import { syncAccounts } from '../alerts'
 import type { Roster } from '../types'
 import { CLAN, SLOT_TEXT } from '../theme'
 import { playerHref } from '../route'
 import { SearchIcon, Th } from './ui'
 
 // Which accounts are this person's: their main and any alts. Added from the header's Add me, changed from any player's sheet,
-// and shown on every list. Kept in this browser only; the server never knows, and nobody else sees it.
+// and shown on every list. Kept in this browser; the server only hears of them if this phone turns alerts on, and nobody else sees them.
 
 const YOU_KEY = 'ff-you'
 const listeners = new Set<() => void>()
@@ -25,6 +26,7 @@ function save(tags: string[]) {
   current = tags
   write(YOU_KEY, tags.length ? JSON.stringify(tags) : null)
   listeners.forEach((l) => l())
+  void syncAccounts(tags)
 }
 const addYou = (tag: string) => { if (!current.includes(tag)) save([...current, tag]) }
 const removeYou = (tag: string) => save(current.filter((t) => t !== tag))

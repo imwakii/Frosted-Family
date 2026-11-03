@@ -275,7 +275,7 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
             {/* The picker lists your own accounts first, so comparing with yourself stays one tap and anyone else is a search away. */}
             <a href={compareHref(tag)} onClick={() => markFromCard(true)}
               className="flex min-h-11 flex-none items-center justify-center rounded-xl bg-[#F6EEDC] text-sm font-bold text-ink no-underline hover:bg-well">
-              Compare with a player
+              Compare with another player
             </a>
             {card && (
               <Section title="All upgrades">

@@ -7,6 +7,9 @@ clan's live allocation. The leaders' view lays each day's war over the plan once
 game, the opponent's town halls, each attacker's stars, and who missed their attack. For days not yet drawn it gives
 the expected enemy: rank by rank, the mean town hall of the top 15 of each group clan not yet faced. The page's Suggest
 (web/src/dayplan.ts) uses both to match the enemy with reliable players, and the stars to choose between equal fits.
+
+Plans are kept by month. The game's season can be longer (2026-11-02), so wars are matched on the month alone. A day whose
+war has begun is the game's: a publish cannot change it and keeps what was planned, and members see the game's lineup.
 """
 from __future__ import annotations
 
@@ -82,12 +85,14 @@ def write(conn, body: DayPlan, state: str, leader: Leader) -> None:
         (body.season, state, json.dumps(body.clans), db.utcnow(), leader.name))
 
 
-def check(body: DayPlan, rows: list[dict]) -> list[str]:
-    """Exactly 15 on every day of each planned clan, each of them in that clan."""
+def check(body: DayPlan, rows: list[dict], begun: dict | None = None) -> list[str]:
+    """Exactly 15 on every day still to come of each planned clan, each of them in that clan."""
     clan_of = {r["tag"]: r.get("clan") for r in rows if r.get("tag")}
     problems = []
     for clan, days in body.clans.items():
         for d in DAYS:
+            if str(d) in (begun or {}).get(clan, {}):
+                continue
             tags = days.get(str(d), [])
             if len(tags) != plan.STARTERS:
                 problems.append(f"{clan} day {d} has {len(tags)}, needs exactly {plan.STARTERS}")
@@ -104,7 +109,7 @@ def wars(conn, season: str) -> dict:
         return out
     for clan in plan.CWL_CLANS:
         tag = CLAN_TAGS[clan]
-        for w in conn.execute("""SELECT * FROM wars WHERE kind='cwl' AND season=? AND ? IN (clan_tag, opponent_tag)
+        for w in conn.execute("""SELECT * FROM wars WHERE kind='cwl' AND substr(season,1,7)=substr(?,1,7) AND ? IN (clan_tag, opponent_tag)
                                  ORDER BY round""", (season, tag)):
             them = "opponent" if w["clan_tag"] == tag else "clan"
             ms = conn.execute("SELECT * FROM war_members WHERE war_key=?", (w["war_key"],)).fetchall()
@@ -123,11 +128,16 @@ def wars(conn, season: str) -> dict:
     return out
 
 
+def begun(conn, season: str) -> dict:
+    """{clan: {day: the game's lineup}} for each day whose war is on or over."""
+    return {clan: {d: w["lineup"] for d, w in ws.items() if w["state"] != "preparation"} for clan, ws in wars(conn, season).items()}
+
+
 def upcoming(conn, season: str, clan: str, faced: set[str]) -> list[float]:
     """The expected enemy on a day not yet drawn. The top 15 of a signed-up roster stands in for the lineup we will see."""
     tag = CLAN_TAGS[clan]
     try:
-        rows = conn.execute("SELECT clan_tag, town_halls FROM cwl_group_clans WHERE season=? AND our_clan_tag=?",
+        rows = conn.execute("SELECT clan_tag, town_halls FROM cwl_group_clans WHERE substr(season,1,7)=substr(?,1,7) AND our_clan_tag=?",
                             (season, tag)).fetchall()
     except sqlite3.OperationalError:  # the collector has not yet created the table
         return []
@@ -144,7 +154,7 @@ def expected_enemy(conn, season: str) -> dict:
             continue
         tag = CLAN_TAGS[clan]
         faced = {r["opponent_tag"] if r["clan_tag"] == tag else r["clan_tag"] for r in conn.execute(
-            "SELECT clan_tag, opponent_tag FROM wars WHERE kind='cwl' AND season=? AND ? IN (clan_tag, opponent_tag)",
+            "SELECT clan_tag, opponent_tag FROM wars WHERE kind='cwl' AND substr(season,1,7)=substr(?,1,7) AND ? IN (clan_tag, opponent_tag)",
             (season, tag))}
         out[clan] = upcoming(conn, season, clan, faced)
     return out
@@ -152,14 +162,17 @@ def expected_enemy(conn, season: str) -> dict:
 
 def member_days(season: str | None = None) -> dict[str, list[int]]:
     """For /roster: each player of a clan the published plan covers, with the days they play ([] for none)."""
+    from server.api import open_db
+    season = season or current_season()
     with connect() as conn:
-        pub = read(conn, season or current_season(), "published")
+        pub = read(conn, season, "published")
     if not pub:
         return {}
+    fixed = begun(open_db(), season)
     out: dict[str, list[int]] = {}
     for clan, days in pub["clans"].items():
         for d in DAYS:
-            for t in days.get(str(d), []):
+            for t in fixed.get(clan, {}).get(str(d), days.get(str(d), [])):
                 out.setdefault(t, []).append(d)
         for r in plan.live_rows():
             if r.get("clan") == clan and r.get("tag"):
@@ -196,10 +209,17 @@ def publish_days(body: DayPlan, leader: Leader = Depends(require_publisher)):
 
 
 def do_publish(body: DayPlan, leader: Leader) -> dict:
-    problems = check(body, plan.live_rows())
+    from server.api import open_db
+    fixed = begun(open_db(), body.season)
+    problems = check(body, plan.live_rows(), fixed)
     if problems:
         raise HTTPException(422, {"problems": problems})
     with connect() as conn:
+        pub = read(conn, body.season, "published")
+        # Days already begun stay as they were planned, so the page can show where the game differed.
+        for clan, days in body.clans.items():
+            for d, lineup in fixed.get(clan, {}).items():
+                days[d] = (pub["clans"].get(clan, {}).get(d) if pub else None) or lineup
         write(conn, body, "draft", leader)
         write(conn, body, "published", leader)
     return view(body.season)

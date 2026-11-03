@@ -58,10 +58,12 @@ install_app() {
 
   cp "$DEPLOY"/frosted-api.service "$DEPLOY"/frosted-collect.service "$DEPLOY"/frosted-collect.timer \
     "$DEPLOY"/frosted-collect-wars.service "$DEPLOY"/frosted-collect-wars.timer \
-    "$DEPLOY"/frosted-pull.service "$DEPLOY"/frosted-pull.timer /etc/systemd/system/
+    "$DEPLOY"/frosted-pull.service "$DEPLOY"/frosted-pull.timer \
+    "$DEPLOY"/frosted-notify.service "$DEPLOY"/frosted-notify.timer /etc/systemd/system/
   systemctl daemon-reload
   systemctl enable -q frosted-api
   systemctl restart frosted-api
+  systemctl enable -q --now frosted-notify.timer  # member alerts; idle until a phone signs up
   # Brings a pushed roster to /roster within 30 minutes, without touching code. Main only: a branch install
   # (FROSTED_BRANCH=...) leaves the timer off so main's data cannot overwrite the branch's.
   if [ "$BRANCH" = main ]; then systemctl enable -q --now frosted-pull.timer; else systemctl disable -q --now frosted-pull.timer 2>/dev/null || true; fi
@@ -86,7 +88,7 @@ caddy_site() {
 }
 
 status() {
-  systemctl --no-pager --lines=0 status frosted-api frosted-collect.timer frosted-collect-wars.timer frosted-pull.timer || true
+  systemctl --no-pager --lines=0 status frosted-api frosted-collect.timer frosted-collect-wars.timer frosted-pull.timer frosted-notify.timer || true
   echo "checkout: $(as_bot git -C "$BOT_HOME/repo" rev-parse --abbrev-ref HEAD) at $(as_bot git -C "$BOT_HOME/repo" rev-parse --short HEAD)"
   journalctl -u frosted-collect --no-pager -n 5 -o cat || true
   if [ -f "$BOT_HOME/data/frosted.db" ]; then

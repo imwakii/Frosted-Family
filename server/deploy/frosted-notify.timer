@@ -1,0 +1,11 @@
+[Unit]
+Description=Frosted Family alerts (every minute, just after the war check)
+
+[Timer]
+OnCalendar=*-*-* *:*:50
+Persistent=false
+AccuracySec=5s
+Unit=frosted-notify.service
+
+[Install]
+WantedBy=timers.target

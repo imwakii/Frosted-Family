@@ -106,7 +106,7 @@ export const UPDATES: Update[] = [
   },
   {
     // Further ids for the same day: the batch grew after the first, so the card opens once more.
-    id: '2026-11-04-6',
+    id: '2026-11-04-9',
     date: '4 Nov 2026',
     highlights: [
       { title: 'Standings', line: "See who's winning your CWL group.", href: '#/cwl/group', icon: 'league' },
@@ -152,6 +152,17 @@ export const UPDATES: Update[] = [
           'Added an Activity list of plan changes.',
           'Added side-by-side clan comparison.',
           'Changed Publish to send it all at once.',
+          'Locked days once their war has started.',
+          'Added Not as planned marks.',
+          'Changed Suggest to keep your plan.',
+        ],
+      },
+      {
+        title: 'Settings',
+        lines: [
+          'Added a Settings button at the top.',
+          'Added phone alerts you can choose.',
+          "Moved What's new into Settings.",
         ],
       },
       {
