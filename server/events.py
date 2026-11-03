@@ -1,16 +1,16 @@
 """The clan calendar: what Supercell announced, what the game repeats, and the family's own wars.
 
-Supercell's monthly news post is the only list of its events: the API gives just the Gold Pass season's dates and there
-is no feed. So the collector reads the news archive twice a day and keeps each dated line's name and dates, never the
-post's text, with a link back. Each paragraph of that post opens with a bold "November 1-30: November Gold Pass."
+Supercell's monthly news post is the only list of its events: there is no feed. So the collector reads the news archive
+twice a day and keeps each dated line's name and dates, never the post's text, with a link back. Each paragraph of that
+post opens with a bold "November 22-28: November Clan Games." The Gold Pass and cosmetics are left out: nobody plans
+around them.
 
     GET /calendar?month=YYYY-MM
 
 Every event is one of:
     supercell  from the news post, by date
-    api        the Gold Pass season, from the official API, to the second
     war        the family's wars the collector has seen, to the second; CWL days not drawn yet follow from the last drawn
-    pattern    what repeats: Raid Weekend each week, and for a month with no post yet, Clan Games and the Gold Pass
+    pattern    what repeats: Raid Weekend each week, and for a month with no post yet, Clan Games
     plan       the family's habit for a month that has not happened: a friendly on the 1st, CWL drawn on the 2nd
 
 Dates come from start_time and end_time. wars.season holds whatever the API said, which is not the month.
@@ -44,6 +44,7 @@ CLAN_GAMES = (22, 28)
 PLANNED_FRIENDLY = (1, 2)
 PLANNED_CWL = (2, 10)
 CWL_DAYS = 7
+LEFT_OUT = ("season", "cosmetic")
 
 router = APIRouter()
 
@@ -123,11 +124,6 @@ def collect_news(conn: sqlite3.Connection, client: httpx.Client, now: datetime) 
                              [(slug, i, e["name"], e["start"].isoformat(), e["end"].isoformat()) for i, e in enumerate(events)])
         read += 1
     return read
-
-
-def store_gold_pass(conn: sqlite3.Connection, season: dict | None) -> None:
-    if season and season.get("startTime") and season.get("endTime"):
-        conn.execute("INSERT OR REPLACE INTO gold_pass VALUES (?,?)", (season["startTime"], season["endTime"]))
 
 
 def news_due(now: datetime) -> bool:
@@ -263,19 +259,14 @@ def month_events(conn, first: date, today: date) -> dict:
                            WHERE e.start_date <= ? AND e.end_date >= ? ORDER BY e.start_date, e.line""", b, a)
     # A post's events that start in another month do not make this month announced: November's last one runs to 1 December.
     announced = any(r["start_date"][:7] == a[:7] for r in posted)
-    gold = [g for g in rows(conn, "SELECT * FROM gold_pass ORDER BY start_time") if iso(g["start_time"])[:10] <= b and iso(g["end_time"])[:10] >= a]
-    for g in gold:
-        events.append(event(f"gold-{g['start_time']}", "Gold Pass", "season", "api", iso(g["start_time"]), iso(g["end_time"]), timed=True))
     for r in posted:
         k = kind_of(r["name"])
-        # The family's own CWL says more than Supercell's window for it, and the API's Gold Pass more than the post's.
-        if (k == "cwl_window" and has_cwl) or (k == "season" and gold):
+        # The family's own CWL says more than Supercell's window for it.
+        if k in LEFT_OUT or (k == "cwl_window" and has_cwl):
             continue
         events.append(event(f"post-{r['slug']}-{r['line']}", r["name"], k, "supercell", r["start_date"], r["end_date"],
                             url=f"{SITE}{ARCHIVE}news/{r['slug']}/", post=r["post_title"]))
     if not announced and first >= today.replace(day=1):
-        if not gold:
-            events.append(event(f"pattern-gold-{a[:7]}", "Gold Pass", "season", "pattern", a, b, expected=True))
         events.append(event(f"pattern-games-{a[:7]}", "Clan Games", "clan_games", "pattern", first.replace(day=CLAN_GAMES[0]).isoformat(),
                             first.replace(day=CLAN_GAMES[1]).isoformat(), expected=True))
     events += raid_weekends(first, last)

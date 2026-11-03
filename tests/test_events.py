@@ -162,7 +162,8 @@ def test_supercell_events_show_and_our_cwl_replaces_its_window(tmp_path):
     cal = events.month_events(november(tmp_path), date(2026, 11, 1), date(2026, 11, 4))
     names = {e["title"]: e for e in cal["events"] if e["source"] == "supercell"}
     assert "November Clan War League" not in names
-    assert names["November Clan Games"]["kind"] == "clan_games" and names["Titan King (Barbarian King)"]["kind"] == "cosmetic"
+    assert names["November Clan Games"]["kind"] == "clan_games"
+    assert "November Gold Pass" not in names and "Titan King (Barbarian King)" not in names  # nobody plans around these
     assert names["November Clan Games"]["url"].endswith("/blog/news/titans/")
     assert cal["news_checked"] == "2026-11-04T08:00:00Z"
 
@@ -172,7 +173,7 @@ def test_a_month_with_no_post_expects_the_patterns_and_the_familys_plan(tmp_path
     assert by_id(cal, "post-titans-6")[0]["title"] == "Fully Forged Challenge"  # November's last runs into December, and does not announce it
     games = by_id(cal, "pattern-games")[0]
     assert (games["start"], games["end"], games["expected"]) == ("2026-12-22", "2026-12-28", True)
-    assert by_id(cal, "pattern-gold")[0]["end"] == "2026-12-31"
+    assert not by_id(cal, "pattern-gold")
     fire = by_id(cal, "plan-friendly-Fire")[0]
     assert (fire["start"], fire["end"], fire["expected"]) == ("2026-12-01", "2026-12-02", True)
     assert (by_id(cal, "plan-cwl-Cake")[0]["start"], by_id(cal, "plan-cwl-Cake")[0]["end"]) == ("2026-12-02", "2026-12-10")
@@ -184,14 +185,6 @@ def test_a_plan_that_never_happened_goes_once_its_day_has_passed(tmp_path):
     assert not by_id(events.month_events(conn, date(2026, 12, 1), date(2026, 12, 3)), "plan-")
     cal = events.month_events(conn, date(2026, 12, 1), date(2026, 12, 2))
     assert by_id(cal, "plan-cwl-Fire") and not by_id(cal, "plan-friendly-Fire")
-
-
-def test_the_apis_gold_pass_replaces_the_posts(tmp_path):
-    conn = november(tmp_path)
-    with conn:
-        events.store_gold_pass(conn, {"startTime": "20261101T080000.000Z", "endTime": "20261201T080000.000Z"})
-    cal = events.month_events(conn, date(2026, 11, 1), date(2026, 11, 4))
-    assert [(e["source"], e["end"]) for e in cal["events"] if e["kind"] == "season"] == [("api", "2026-12-01T08:00:00Z")]
 
 
 def test_raid_weekends_run_friday_to_monday_at_seven(tmp_path):
@@ -212,17 +205,15 @@ def test_the_endpoint_answers_before_the_first_poll_and_refuses_a_bad_month(monk
 def test_a_database_from_before_the_calendar_still_answers(monkeypatch, tmp_path):
     path = tmp_path / "old.db"
     conn = db.connect(path)
-    conn.executescript("DROP TABLE game_events; DROP TABLE game_posts; DROP TABLE gold_pass;")
+    conn.executescript("DROP TABLE game_events; DROP TABLE game_posts;")
     conn.close()
     monkeypatch.setenv("FROSTED_DB", str(path))
     assert TestClient(api.app).get("/calendar?month=2026-11").status_code == 200
 
 
-def test_a_failed_news_read_keeps_the_gold_pass_and_does_not_raise(tmp_path, monkeypatch):
+def test_a_failed_news_read_does_not_raise(tmp_path, monkeypatch):
     conn = db.connect(tmp_path / "x.db")
-    coc = httpx.Client(base_url=collect.API, transport=httpx.MockTransport(
-        lambda r: httpx.Response(200, json={"startTime": "20261101T080000.000Z", "endTime": "20261201T080000.000Z"})))
     site = httpx.Client(base_url=events.SITE, transport=httpx.MockTransport(lambda r: httpx.Response(500)))
     monkeypatch.setattr(collect.httpx, "Client", lambda **k: site)
-    collect.collect_calendar(conn, collect.Api(coc))
-    assert conn.execute("SELECT end_time FROM gold_pass").fetchone()[0] == "20261201T080000.000Z"
+    collect.collect_calendar(conn)
+    assert conn.execute("SELECT COUNT(*) FROM game_posts").fetchone()[0] == 0

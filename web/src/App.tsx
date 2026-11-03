@@ -129,7 +129,7 @@ export default function App() {
       ) : route.tab === 'plan' ? (
         <PlanTab sub={route.sub} roster={roster} onPublished={reload} me={auth.me} ready={auth.status === 'ready'} wide={wide} onSignOut={auth.signOut} />
       ) : route.tab === 'calendar' ? (
-        <CalendarTab wide={wide} />
+        <CalendarTab />
       ) : route.tab === 'log' ? (
         <LogTab roster={roster} q={q} setQ={setQ} wide={wide} />
       ) : route.tab === 'explore' ? (

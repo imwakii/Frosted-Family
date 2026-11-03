@@ -7,7 +7,7 @@ pass moves on. The token comes from COC_API_TOKEN and is never printed.
 
     python -m server.collect                 # uses FROSTED_DB, default /opt/bots/frosted/data/frosted.db
     python -m server.collect --profiles      # also fetch every member's profile now (otherwise every hour)
-    python -m server.collect --news          # also read Supercell's news and the Gold Pass now (otherwise twice a day)
+    python -m server.collect --news          # also read Supercell's news now (otherwise twice a day)
 """
 from __future__ import annotations
 
@@ -196,11 +196,8 @@ def collect_profiles(conn, api: Api, tags: list[str], now: str) -> None:
         conn.execute("INSERT OR REPLACE INTO profile_runs VALUES (?,?)", (now, stored))
 
 
-def collect_calendar(conn, api: Api) -> None:
-    """The Gold Pass season from the API, and Supercell's dated events from its news. Never stops war collection."""
-    season = api.get("/goldpass/seasons/current", quiet=(404,))
-    with conn:
-        events.store_gold_pass(conn, season)
+def collect_calendar(conn) -> None:
+    """Supercell's dated events from its news. Never stops war collection."""
     try:
         with httpx.Client(base_url=events.SITE, headers={"User-Agent": NEWS_AGENT}, follow_redirects=True, timeout=20) as site:
             events.collect_news(conn, site, datetime.now(timezone.utc))
@@ -231,7 +228,7 @@ def run(conn, client: httpx.Client, force_profiles: bool = False, force_news: bo
                 with conn:
                     profiles.upsert_profile(conn, p, started)
     if force_news or events.news_due(datetime.now(timezone.utc)):
-        collect_calendar(conn, api)
+        collect_calendar(conn)
     with conn:
         stats.record_day(conn, started)  # today's clan_daily rows for /stats/clans
         conn.execute("INSERT OR REPLACE INTO polls VALUES (?,?,?,?)", (started, db.utcnow(), api.calls, api.errors))

@@ -293,7 +293,7 @@ CREATE TABLE IF NOT EXISTS profile_runs (
     players INTEGER
 );
 
--- The clan calendar (server/events.py): dated lines from Supercell's news posts, and the API's Gold Pass season.
+-- The clan calendar (server/events.py): dated lines from Supercell's news posts.
 CREATE TABLE IF NOT EXISTS game_posts (
     slug TEXT PRIMARY KEY,
     title TEXT,
@@ -307,10 +307,6 @@ CREATE TABLE IF NOT EXISTS game_events (
     start_date TEXT NOT NULL,             -- YYYY-MM-DD, as the post dates it
     end_date TEXT NOT NULL,
     PRIMARY KEY (slug, line)
-);
-CREATE TABLE IF NOT EXISTS gold_pass (
-    start_time TEXT PRIMARY KEY,          -- the API's format
-    end_time TEXT NOT NULL
 );
 
 -- A missed attack is an attack slot left unused once the war has ended. Wars still running are not counted.

@@ -4,8 +4,8 @@ War collector and read API for the Frosted Family site, on the bots droplet unde
 
 - `collect.py` polls the official Clash of Clans API every 10 minutes (`frosted-collect.timer`) and stores member
   snapshots, wars, war members and every attack in `/opt/bots/frosted/data/frosted.db`. The API only shows the
-  current war, so a war that is not polled while live is lost. At 08:00 and 20:00 UTC it also reads the Gold Pass season
-  and Supercell's news archive for the clan calendar (`events.py`); `--news` does that now.
+  current war, so a war that is not polled while live is lost. At 08:00 and 20:00 UTC it also reads Supercell's news
+  archive for the clan calendar (`events.py`); `--news` does that now.
 - `api.py` serves `/roster`, `/war/live` and `/player/{tag}` on 127.0.0.1:8090. Caddy publishes it at
   `FROSTED_API_HOST`, set once in `deploy/setup.sh` (provisionally `frostedcwl.duckdns.org`). The site reaches it
   through a Vercel rewrite.
