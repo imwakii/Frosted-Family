@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { type MouseEvent, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent, type ReactNode } from 'react'
 import { leagueIcon, thIcon, unitIcon, useClans } from '../clash'
 import { CLAN, CLANS, STATUS } from '../theme'
 import type { ClanName, Status } from '../types'
@@ -172,33 +172,103 @@ type DayFacts = { day: number; state: string; stars: number; opponent_stars: num
 
 export const dayWon = (d: DayFacts) => (d.stars !== d.opponent_stars ? d.stars > d.opponent_stars : d.destruction !== d.opponent_destruction ? d.destruction > d.opponent_destruction : null)
 
+/** A row of buttons with one highlight that slides to the picked one, and can be held and slid across. It only moves once
+ * placed, so it does not fly in when a page opens. The buttons must be in the same order as `items`. */
+function useSlidePick<T>(value: T, items: readonly T[], onPick: (v: T) => void) {
+  const nav = useRef<HTMLElement>(null)
+  const [slide, setSlide] = useState<{ left: number; width: number; moves: boolean } | null>(null)
+  useLayoutEffect(() => {
+    const place = (moves: boolean) => {
+      const on = nav.current?.querySelector<HTMLElement>('[aria-pressed="true"]')
+      setSlide(on ? { left: on.offsetLeft, width: on.offsetWidth, moves } : null)
+    }
+    place(slide !== null)
+    // A resize places it again without the slide.
+    const seen = new ResizeObserver(() => place(false))
+    if (nav.current) seen.observe(nav.current)
+    return () => seen.disconnect()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value])
+
+  // The highlight can also be held and slid across; letting go picks the clan nearest its middle. A tap still just picks.
+  const grab = useRef<{ x: number; left: number; moved: boolean } | null>(null)
+  const swallowClick = useRef(false)
+  const [dragLeft, setDragLeft] = useState<number | null>(null)
+  const buttons = () => [...(nav.current?.querySelectorAll<HTMLButtonElement>('button') ?? [])]
+  const onPointerDown = (e: PointerEvent) => {
+    swallowClick.current = false
+    const on = (e.target as HTMLElement).closest('button')?.getAttribute('aria-pressed') === 'true'
+    grab.current = on && slide ? { x: e.clientX, left: slide.left, moved: false } : null
+  }
+  const onPointerMove = (e: PointerEvent) => {
+    const g = grab.current
+    if (!g || !slide) return
+    const dx = e.clientX - g.x
+    if (!g.moved) {
+      if (Math.abs(dx) < 5) return
+      g.moved = true
+      nav.current?.setPointerCapture(e.pointerId)
+    }
+    const all = buttons()
+    const last = all[all.length - 1]
+    setDragLeft(Math.min(Math.max(g.left + dx, all[0].offsetLeft), last.offsetLeft + last.offsetWidth - slide.width))
+  }
+  const onPointerUp = () => {
+    const g = grab.current
+    grab.current = null
+    if (!g?.moved || !slide || dragLeft === null) return
+    swallowClick.current = true
+    const middle = dragLeft + slide.width / 2
+    const distance = (b: HTMLButtonElement) => Math.abs(b.offsetLeft + b.offsetWidth / 2 - middle)
+    const nearest = buttons().filter((b) => !b.disabled).sort((a, b) => distance(a) - distance(b))[0]
+    setDragLeft(null)
+    setSlide({ ...slide, moves: true })
+    const picked = nearest && items[buttons().indexOf(nearest)]
+    if (picked !== undefined && picked !== value) onPick(picked)
+  }
+  const onPointerCancel = () => { grab.current = null; setDragLeft(null) }
+  return {
+    navProps: {
+      ref: nav, onPointerDown, onPointerMove, onPointerUp, onPointerCancel,
+      onClickCapture: (e: MouseEvent) => { if (swallowClick.current) { swallowClick.current = false; e.preventDefault(); e.stopPropagation() } },
+    },
+    slideStyle: slide && { width: slide.width, transform: `translateX(${dragLeft ?? slide.left}px)` },
+    slideMotion: slide?.moves && dragLeft === null ? 'transition-[transform,width] duration-200 ease-out motion-reduce:transition-none' : '',
+    grabbing: dragLeft !== null,
+  }
+}
+
 /** The seven CWL days, the same row on War and Lineups: each day's result once it has one. */
 export function DayRow({ days = [], pick, onPick, live = 0, roster, drawnOnly }: {
   days?: DayFacts[]; pick: number | 'all' | null; onPick: (d: number | 'all') => void; live?: number; roster?: boolean; drawnOnly?: boolean
 }) {
-  const cell = 'relative flex min-h-[46px] min-w-0 cursor-pointer flex-col items-center justify-center rounded-[9px] border-0 tabular-nums disabled:cursor-default disabled:opacity-40'
-  const ring = 'shadow-[inset_0_0_0_2px_var(--color-ink)]'
+  const cell = 'relative flex min-h-[42px] min-w-0 cursor-pointer flex-col items-center justify-center rounded-[9px] border-0 tabular-nums disabled:cursor-default disabled:opacity-40'
+  const items = useMemo<(number | 'all')[]>(() => [...(roster ? ['all' as const] : []), 1, 2, 3, 4, 5, 6, 7], [roster])
+  const { navProps, slideStyle, slideMotion, grabbing } = useSlidePick<number | 'all' | null>(pick, items, (d) => { if (d !== null) onPick(d) })
+  const grab = (on: boolean) => (on ? (grabbing ? 'cursor-grabbing' : 'cursor-grab') : '')
   return (
-    <nav aria-label="CWL day" className={`grid w-full max-w-[480px] gap-1 rounded-xl bg-well p-1 ${roster ? 'grid-cols-[1.7fr_repeat(7,1fr)]' : 'grid-cols-7'}`}>
+    <nav {...navProps} aria-label="CWL day" className={`relative grid w-full max-w-[480px] touch-pan-y select-none gap-1 rounded-xl bg-well p-1 ${roster ? 'grid-cols-[1.7fr_repeat(7,1fr)]' : 'grid-cols-7'}`}>
       {roster && (
         <button type="button" aria-pressed={pick === 'all'} onClick={() => onPick('all')}
-          className={`${cell} text-[13px] font-bold ${pick === 'all' ? `bg-white text-ink ${ring}` : 'bg-transparent text-muted'}`}>Roster</button>
+          className={`${cell} ${grab(pick === 'all')} bg-transparent text-[13px] font-bold transition-colors duration-200 motion-reduce:transition-none ${pick === 'all' ? 'text-ink' : 'text-muted'}`}>Roster</button>
       )}
       {[1, 2, 3, 4, 5, 6, 7].map((n) => {
         const d = days.find((x) => x.day === n)
-        const over = d?.state === 'warEnded', fighting = d?.state === 'inWar' || (!d && n === live)
+        const over = d?.state === 'warEnded', fighting = d?.state === 'inWar' || (!d && n === live), prep = d?.state === 'preparation'
         const won = d && over ? dayWon(d) : null
-        const background = over ? (won === true ? '#DCEFD5' : won === false ? '#F8D5CF' : '#EFE6D2') : pick === n || fighting ? '#FFFBF1' : 'transparent'
+        // A day in preparation wears the peach of the War tab's Preparation pill.
+        const background = over ? (won === true ? '#DCEFD5' : won === false ? '#F8D5CF' : '#EFE6D2') : prep ? '#FFEDD5' : pick === n || fighting ? '#FFFBF1' : 'transparent'
         return (
-          <button key={n} type="button" aria-pressed={pick === n} aria-label={`Day ${n}`} disabled={drawnOnly && !d} onClick={() => onPick(n)}
-            className={`${cell} ${pick === n ? ring : ''}`} style={{ background }}>
-            <span className={`text-sm font-bold leading-tight ${pick === n ? 'text-ink' : 'text-muted'}`}>{n}</span>
+          <button key={n} type="button" aria-pressed={pick === n} aria-label={`Day ${n}${prep ? ', preparation' : ''}`} disabled={drawnOnly && !d} onClick={() => onPick(n)}
+            className={`${cell} ${grab(pick === n)}`} style={{ background }}>
+            <span className={`text-sm font-bold leading-tight ${prep ? 'text-[#B4451A]' : pick === n ? 'text-ink' : 'text-muted'}`}>{n}</span>
             {d && (over || fighting) && <span className={`text-[10px] font-bold leading-tight ${fighting ? 'text-[#15803D]' : 'text-ink-2'}`}>{d.stars}–{d.opponent_stars}</span>}
-            {d?.state === 'preparation' && <span className="text-[10px] font-bold leading-tight text-[#B4451A]">Prep</span>}
             {fighting && <span className="ff-live absolute right-1 top-1 size-1.5 rounded bg-[#16A34A]" />}
           </button>
         )
       })}
+      {/* The ring rides over the days, so a day's result colour still shows under it. */}
+      {slideStyle && <span aria-hidden="true" className={`pointer-events-none absolute inset-y-1 left-0 rounded-[9px] shadow-[inset_0_0_0_2px_var(--color-ink)] ${slideMotion}`} style={slideStyle} />}
     </nav>
   )
 }
@@ -212,15 +282,17 @@ export function ClanSwitch<T extends ClanName | 'All'>({ value, onPick, options,
 }) {
   const clans = useClans()
   const list = (options ?? CLANS) as readonly T[]
+  const { navProps, slideStyle, slideMotion, grabbing } = useSlidePick(value, list, onPick)
   return (
-    <nav aria-label="Clan" className="grid w-full max-w-[480px] gap-1 rounded-xl bg-well p-1"
+    <nav {...navProps} aria-label="Clan" className="relative grid w-full max-w-[480px] touch-pan-y select-none gap-1 rounded-xl bg-well p-1"
       style={{ gridTemplateColumns: list.map((k) => (k === 'All' ? '.6fr' : '1fr')).join(' ') }}>
+      {slideStyle && <span aria-hidden="true" className={`absolute inset-y-1 left-0 rounded-[9px] bg-white shadow-[0_1px_3px_rgba(43,33,20,.12)] ${slideMotion}`} style={slideStyle} />}
       {list.map((k) => {
         const on = k === value
         const clan = k === 'All' ? null : (k as ClanName)
         return (
           <button key={k} type="button" aria-pressed={on} disabled={!!clan && off.includes(clan)} onClick={() => onPick(k)}
-            className={`flex min-h-[42px] min-w-0 cursor-pointer items-center justify-center gap-1 rounded-[9px] border-0 px-1 text-[15px] font-bold disabled:cursor-default disabled:opacity-40 ${on ? 'bg-white shadow-[0_1px_3px_rgba(43,33,20,.12)]' : 'bg-transparent text-muted'}`}
+            className={`relative flex min-h-[42px] min-w-0 cursor-pointer items-center justify-center gap-1 rounded-[9px] border-0 bg-transparent px-1 text-[15px] font-bold transition-colors duration-200 disabled:cursor-default disabled:opacity-40 motion-reduce:transition-none ${on ? (grabbing ? 'cursor-grabbing' : 'cursor-grab') : 'text-muted'}`}
             style={on && clan ? { color: CLAN[clan].deep } : undefined}>
             {clan && <ClanBadge src={clans[clan]?.badge} size={20} />}
             {k}
