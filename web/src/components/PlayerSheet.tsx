@@ -272,6 +272,20 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
             ) : (
             <div className="ff-fade flex flex-none flex-col gap-4">
             {card?.badges?.length ? <Badges badges={card.badges} /> : null}
+            {card && (
+              <Section title="All upgrades">
+                <ul className="m-0 grid list-none grid-cols-3 gap-1.5 p-0">
+                  {CATS.map((c) => (
+                    <li key={c.id}>
+                      <a href={upgradeHref(c.id, p.tag)} onClick={() => markFromCard(true)} className="flex min-h-11 items-center gap-1 rounded-xl border border-line bg-white px-1.5 py-1 text-xs font-bold text-ink no-underline hover:bg-hover">
+                        <UnitIcon name={c.icon} size={22} />
+                        <span className="min-w-0 truncate">{c.label}</span>
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </Section>
+            )}
             {/* The monthly figures stand in only if the live ones fail, so the numbers do not change under the reader. */}
             <Section title="War record" note={rec?.from ? `Since ${dayMonth(rec.from)}` : fmtWindow(roster.window)}>
               <div className="grid grid-cols-3 gap-2">
@@ -307,20 +321,6 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
                           </button>
                         ))}
                       </span>
-                    </li>
-                  ))}
-                </ul>
-              </Section>
-            )}
-            {card && (
-              <Section title="All upgrades">
-                <ul className="m-0 grid list-none grid-cols-3 gap-1.5 p-0">
-                  {CATS.map((c) => (
-                    <li key={c.id}>
-                      <a href={upgradeHref(c.id, p.tag)} onClick={() => markFromCard(true)} className="flex min-h-11 items-center gap-1 rounded-xl border border-line bg-white px-1.5 py-1 text-xs font-bold text-ink no-underline hover:bg-hover">
-                        <UnitIcon name={c.icon} size={22} />
-                        <span className="min-w-0 truncate">{c.label}</span>
-                      </a>
                     </li>
                   ))}
                 </ul>

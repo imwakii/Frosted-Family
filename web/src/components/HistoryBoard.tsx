@@ -68,8 +68,8 @@ export default function HistoryBoard({ q, setQ, wide }: { q: string; setQ: (v: s
   const enter = () => { if (longest[0]) go.to(playerHref(longest[0].r.tag)) }
 
   const body = !data ? <Empty loading={loading} /> : (
-    <div className="grid w-full items-start gap-5 lg:grid-cols-2 lg:items-stretch">
-      {!nq && <div className="flex flex-col gap-5">
+    <div className="grid w-full items-start gap-3.5 lg:grid-cols-2 lg:items-stretch">
+      {!nq && <div className="flex flex-col gap-3.5">
         <Section title="How it began">
           <ol className="m-0 flex list-none flex-col rounded-2xl border border-line bg-white p-3">
             {data.clans.map((c, i) => (
@@ -78,7 +78,7 @@ export default function HistoryBoard({ q, setQ, wide }: { q: string; setQ: (v: s
                   <ClanBadge src={clans[c.clan]?.badge} size={34} />
                   {i < data.clans.length - 1 && <span className="my-1 w-0.5 flex-auto rounded bg-line" />}
                 </span>
-                <span className={`flex min-w-0 flex-col ${i < data.clans.length - 1 ? 'pb-4' : ''}`}>
+                <span className={`flex min-w-0 flex-col ${i < data.clans.length - 1 ? 'pb-2' : ''}`}>
                   <span className="text-[15px] font-bold" style={{ color: CLAN[c.clan].deep }}>{clans[c.clan]?.name ?? `Frosted ${c.clan}`}</span>
                   <span className="text-[13px] text-muted">Founded on {fullDate(c.first)}</span>
                   <span className="text-xs text-faint">{c.players.toLocaleString('en-GB')} players since</span>

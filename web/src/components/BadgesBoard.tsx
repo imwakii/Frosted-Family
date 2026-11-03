@@ -78,7 +78,7 @@ export default function BadgesBoard({ q, setQ, wide }: { q: string; setQ: (v: st
                     <span className="truncate text-[15px] font-semibold"><YouTag tag={x.r.tag} />{x.r.name}</span>
                     {clan === 'All' && <span className="flex-none text-[11px] font-bold" style={{ color: CLAN[x.r.clan].deep }}>{x.r.clan}</span>}
                   </span>
-                  {x.held ? <span className="truncate text-xs text-muted">{x.held.detail}</span> : (
+                  {x.held ? <span className="truncate text-xs text-muted">{x.held.detail}</span> : wide && (
                     <span className="truncate text-xs text-muted">
                       {[...x.r.badges].sort((a, b) => TIERS.indexOf(b.tier) - TIERS.indexOf(a.tier)).map((b) => BADGES[b.id]?.label ?? b.label).join(' · ')}
                     </span>

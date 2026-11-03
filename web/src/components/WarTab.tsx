@@ -52,24 +52,18 @@ function Swords({ live, sway, color }: { live: boolean; sway: boolean; color: st
 }
 
 // Preparation: a clock to the first attack, and a bar that fills as it nears. Each digit keeps its width, so the clock holds still.
-function Countdown({ to, from, color }: { to: number; from: number | null; color: string }) {
+function Countdown({ to, color }: { to: number; color: string }) {
   const now = useNow(1000)
   const ms = Math.max(0, to - now)
   const s = Math.floor(ms / 1000)
   const clock = [Math.floor(s / 3600), Math.floor(s / 60) % 60, s % 60].map((n) => String(n).padStart(2, '0')).join(':')
-  const share = from && to > from ? Math.min(100, (100 * (now - from)) / (to - from)) : 0
   return (
-    <div className="flex flex-col gap-2">
       <div role="timer" aria-label={ms ? `War starts in ${left(ms)}` : 'War starting'} className="flex flex-col items-center gap-0.5">
         <span className="text-[11px] font-bold uppercase tracking-[0.06em] text-faint">{ms ? 'War starts in' : 'War starting'}</span>
-        <span aria-hidden="true" className="font-display flex text-[34px] leading-none" style={{ color }}>
+        <span aria-hidden="true" className="font-display flex text-[26px] leading-none" style={{ color }}>
           {[...clock].map((c, i) => <span key={i} className={`text-center ${c === ':' ? 'w-[.36em]' : 'w-[.6em]'}`}>{c}</span>)}
         </span>
       </div>
-      <div aria-hidden="true" className="flex h-2 overflow-hidden rounded-full" style={{ background: ENEMY }}>
-        <span className="h-full rounded-r-full transition-[width] duration-1000 ease-linear" style={{ width: `${share}%`, background: color }} />
-      </div>
-    </div>
   )
 }
 
@@ -199,7 +193,7 @@ export function WarBoard({ clan, war, now, roster }: { clan: ClanName; war: Clan
   const gaps = lineupGaps(war, clan, roster)
   const opponent = <>
     <span className={`h-11 ${live ? 'ff-recoil-r' : ''}`}><ClanBadge src={war.opponent_badge} size={44} /></span>
-    <span className="font-display max-w-full truncate text-[17px] leading-tight text-ink-2">{war.opponent}</span>
+    <span className="font-display max-w-full truncate text-[clamp(19px,5.4vw,20px)] leading-tight text-ink-2">{war.opponent}</span>
   </>
   const score = (stars: number, pct: number, used: number, deep: string) => !prep && (
     <span className="flex flex-col items-center gap-0.5">
@@ -216,11 +210,11 @@ export function WarBoard({ clan, war, now, roster }: { clan: ClanName; war: Clan
               {live ? (end ? `${left(end - now)} left` : 'Live') : over ? (draw ? 'Draw' : won ? 'Won' : 'Lost') : 'Preparation'}
             </span>
           </div>
-          <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-2">
+          <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-1">
             <div className="flex min-w-0 flex-col items-center gap-1.5">
               <a href={clanHref(clan)} className="flex max-w-full flex-col items-center gap-1.5 no-underline">
                 <span className={`h-11 ${live ? 'ff-recoil-l' : ''}`}><ClanBadge src={war.badge ?? clans[clan]?.badge} size={44} /></span>
-                <span className="font-display max-w-full truncate text-[17px] leading-tight" style={{ color: t.deep }}>{clans[clan]?.name ?? `Frosted ${clan}`}</span>
+                <span className="font-display max-w-full truncate text-[clamp(19px,5.4vw,20px)] leading-tight" style={{ color: t.deep }}>{clans[clan]?.name ?? `Frosted ${clan}`}</span>
               </a>
               {score(war.stars, war.destruction, war.attacks_used, t.deep)}
             </div>
@@ -233,11 +227,13 @@ export function WarBoard({ clan, war, now, roster }: { clan: ClanName; war: Clan
               {score(war.opponent_stars, war.opponent_destruction, war.opponent_attacks_used, '#5E5240')}
             </div>
           </div>
-          {prep && start ? <Countdown to={start} from={at(war.preparation_start ?? null)} color={t.deep} /> : <TugBar us={war.stars} them={war.opponent_stars} color={t.deep} />}
-          <span className="text-center text-xs font-bold" style={{ color: !live ? '#7A6C55' : toAttack ? '#B45309' : '#15803D' }}>
-            {live ? (toAttack ? `${toAttack} yet to attack` : 'All attacked') : over ? `Ended ${end ? ago(new Date(end).toISOString(), now) : ''}` : `${war.team_size} v ${war.team_size}`}
+          {prep && start ? <Countdown to={start} color={t.deep} /> : <TugBar us={war.stars} them={war.opponent_stars} color={t.deep} />}
+          <span className="text-center text-xs font-semibold text-faint">
+            <span className={live ? 'font-bold' : ''} style={live ? { color: toAttack ? '#B45309' : '#15803D' } : undefined}>
+              {live ? (toAttack ? `${toAttack} yet to attack` : 'All attacked') : over ? `Ended ${end ? ago(new Date(end).toISOString(), now) : ''}` : `${war.team_size} v ${war.team_size}`}
+            </span>
+            {' · '}Updated {ago(war.updated_at, now)}
           </span>
-          <span className="text-center text-[11px] font-semibold text-faint">Updated {ago(war.updated_at, now)}</span>
         </div>
         {over && war.recap && <WarRecap clan={clan} war={war} result={draw ? 'Draw' : won ? 'Won' : 'Lost'} recap={war.recap} />}
         {!prep && <div className="flex min-h-[53px] items-center gap-2 border-b border-hair px-3 py-2">
@@ -282,7 +278,8 @@ export function WarBoard({ clan, war, now, roster }: { clan: ClanName; war: Clan
         <ol className="m-0 list-none px-1.5 py-1">
           {rows.map((p, i) => (
             <Fragment key={p.position}>
-              <li className={`grid grid-cols-[minmax(0,1fr)_18px_minmax(0,1fr)] items-center gap-0.5 ${i ? 'border-t border-hair' : ''} ${prep ? 'ff-rise' : ''}`} style={prep ? { animationDelay: `${i * 30}ms` } : undefined}>
+              <li className={`grid grid-cols-[minmax(0,1fr)_18px_minmax(0,1fr)] items-center gap-0.5 ${i ? 'border-t border-hair' : ''} ${prep ? 'ff-rise' : ''}`}
+                style={{ ...(prep ? { animationDelay: `${i * 30}ms` } : {}), ...(p.us && yous.includes(p.us.tag) ? { background: t.tint } : {}) }}>
                 <Base b={p.us} live={live} prep={prep} swapOut={!!p.us && gaps.out.has(p.us.tag)} picked={!!p.us && p.us.tag === picked} onPick={() => toggle(p.us?.tag)} />
                 <span className="text-center text-[11px] font-bold tabular-nums text-faint">{p.position}</span>
                 <Base b={p.them} right live={live} prep={prep} picked={!!p.them && p.them.tag === picked} onPick={() => toggle(p.them?.tag)} />

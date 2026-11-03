@@ -113,7 +113,6 @@ export default function OverallBoard({ q, setQ, wide }: { q: string; setQ: (v: s
 
   const legend = (
     <div aria-label="Key" className={KEY_ROW}>
-      <span>% of max levels</span>
       {CLANS.map((k) => <span key={k} className="flex items-center gap-1"><span className="h-[3px] w-3 rounded-full" style={{ background: COLOR[k] }} />{k}</span>)}
     </div>
   )
@@ -137,7 +136,7 @@ export default function OverallBoard({ q, setQ, wide }: { q: string; setQ: (v: s
             </>
           )}
         </div>
-        {legend}
+        {clan === 'All' && legend}
         {board}
       </main>
     )
@@ -146,7 +145,7 @@ export default function OverallBoard({ q, setQ, wide }: { q: string; setQ: (v: s
     <div className="flex flex-col gap-2.5 pb-6">
       <PhoneSearch q={q} setQ={setQ} onEnter={enter}><ClanFilter clan={clan} setClan={setClan} /></PhoneSearch>
       <CategoryNav current="overall" wide={false} />
-      <div className="px-4">{legend}</div>
+      {clan === 'All' && <div className="px-4">{legend}</div>}
       <div className="px-4">{board}</div>
     </div>
   )

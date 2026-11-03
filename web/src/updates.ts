@@ -1,9 +1,11 @@
 // What changed, for the What's new card. To add an update, append an entry to the END of UPDATES with a new id: the card
-// opens for everyone once, shows the last entry on top, and keeps the others below it, newest first.
+// opens for everyone once, shows the last entry on top, and keeps the others below it, newest first. Up to three
+// highlights lead it, each a short benefit that links to the place; the full notes fold away under them.
 // Lines sit under the tab they changed, such as "War tab", or "Player cards" or "General". Each is one patch note naming the specific feature and
 // starting with a past-tense verb such as Added, Changed, Moved, Fixed or Removed. Keep each under 40 characters, so it stays on one line on a phone.
 
-export type Update = { id: string; date: string; groups: { title: string; lines: string[] }[] }
+export type Highlight = { title: string; line: string; href: string; icon: 'league' | 'swords' | 'hero' }
+export type Update = { id: string; date: string; highlights?: Highlight[]; groups: { title: string; lines: string[] }[] }
 
 export const UPDATES: Update[] = [
   {
@@ -105,11 +107,16 @@ export const UPDATES: Update[] = [
     // A second id for the same day: the batch grew after the first, so the card opens once more.
     id: '2026-11-04-2',
     date: '4 Nov 2026',
+    highlights: [
+      { title: 'Standings', line: "See who's winning your CWL group.", href: '#/cwl/group', icon: 'league' },
+      { title: 'Enemy clan cards', line: 'Compare any enemy clan with yours.', href: '#/cwl/group', icon: 'swords' },
+      { title: 'Who plays when', line: "See every player's days on Lineups.", href: '#/cwl', icon: 'hero' },
+    ],
     groups: [
       {
         title: 'CWL tab',
         lines: [
-          'Added Standings for the CWL group.',
+          'Added Standings to the Group sub-tab.',
           'Added enemy clan comparison cards.',
           'Added play days to the Lineups roster.',
           'Changed Lineups to open on the roster.',
@@ -151,6 +158,7 @@ export const UPDATES: Update[] = [
           'Added a search icon on phones.',
           'Added a first-visit welcome.',
           'Changed clan selector to stay pinned.',
+          'Moved leader sign-in to the footer.',
           'Removed reactions and emojis.',
         ],
       },

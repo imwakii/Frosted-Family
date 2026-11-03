@@ -4,7 +4,7 @@ import { clanHref, playerHref } from '../route'
 import type { ClanName, LiveWar, Player, Roster } from '../types'
 import { useClans, type ClanMeta } from '../clash'
 import { setDayPick, useCwlGroups, useDayPick } from '../leaders'
-import { YouTag } from './You'
+import { jumpToYou, useYou, YouTag } from './You'
 import { ClanBadge, ClanSwitch, DayRow, Eyebrow, LeaguePill, PlayDays, SearchIcon, StatusDot, StatusKey, Th, useNow, RowChevron } from './ui'
 
 type Props = {
@@ -64,11 +64,11 @@ function ClanCard({ roster, clan, meta, compact, below }: { roster: Roster; clan
   const f = clanFacts(roster, clan, meta)
   const c = CLAN[clan]
   return (
-    <div className={`flex flex-col gap-1.5 ${compact ? 'px-4 py-2.5' : 'rounded-2xl px-3.5 py-2.5'}`} style={{ background: c.tint }}>
+    <div className={`flex flex-col gap-1.5 ${compact ? 'px-4 py-2' : 'rounded-2xl px-3 py-1.5'}`} style={{ background: c.tint }}>
       <a href={clanHref(clan)} aria-label={`${f.name} card`} className="flex min-w-0 items-center gap-2.5 no-underline">
-        <ClanBadge src={f.badge} size={40} className="drop-shadow-[0_2px_4px_rgba(43,33,20,.18)]" />
+        <ClanBadge src={f.badge} size={34} className="drop-shadow-[0_2px_4px_rgba(43,33,20,.18)]" />
         <span className="flex min-w-0 flex-auto flex-col gap-0.5">
-          <span className="font-display truncate text-[19px] leading-none" style={{ color: c.deep }}>{f.name}</span>
+          <span className="font-display truncate text-[17px] leading-none" style={{ color: c.deep }}>{f.name}</span>
           <LeaguePill league={f.league} text={f.format.replace('League ', '')} />
         </span>
         <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#A3957C" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" className="flex-none"><path d="M9 6l6 6-6 6" /></svg>
@@ -97,6 +97,7 @@ export function SearchBox({ q, setQ, tall, onEnter, autoFocus }: { q: string; se
 export function PhoneSearch({ q, setQ, onEnter, className = '', children }: { q: string; setQ: (v: string) => void; onEnter?: () => void; className?: string; children: ReactNode }) {
   const [searching, setSearching] = useState(false)
   const open = searching || !!q
+  const { yous } = useYou()
   return (
     <div className={`sticky top-0 z-10 flex flex-col gap-2 bg-page px-4 pb-2 pt-1 ${className}`}>
       <div className="flex items-center gap-2">
@@ -109,7 +110,12 @@ export function PhoneSearch({ q, setQ, onEnter, className = '', children }: { q:
             : <SearchIcon />}
         </button>
       </div>
-      {open && <SearchBox q={q} setQ={setQ} autoFocus={searching} onEnter={onEnter} />}
+      {open && (
+        <div className="flex items-center gap-2">
+          <div className="min-w-0 flex-auto"><SearchBox q={q} setQ={setQ} autoFocus={searching} onEnter={onEnter} /></div>
+          {yous.length > 0 && !q && <button type="button" onClick={jumpToYou} className="h-[50px] flex-none cursor-pointer rounded-[14px] border-0 bg-ink px-3 text-sm font-bold text-white">Find me</button>}
+        </div>
+      )}
     </div>
   )
 }
@@ -149,7 +155,7 @@ function Row({ p, n, hit, dense, showDays }: { p: Player; n: number; hit?: boole
   return (
     <li>
       <a href={href(p)} data-tag={p.tag}
-        className={`flex items-center gap-3 text-ink no-underline ${showDays ? 'py-1.5' : ''} ${dense ? 'min-h-[42px] px-2.5' : 'min-h-[46px] px-3.5'} ${first ? '' : 'border-t border-hair'} ${hit ? 'bg-hit' : 'hover:bg-hover'}`}>
+        className={`flex items-center gap-3 text-ink no-underline ${showDays ? 'py-1.5' : ''} ${dense ? 'min-h-[42px] px-2.5' : 'min-h-[52px] px-3.5'} ${first ? '' : 'border-t border-hair'} ${hit ? 'bg-hit' : 'hover:bg-hover'}`}>
         <span className="w-5 flex-none text-right text-xs font-bold tabular-nums text-faint">{n}</span>
         <Th th={p.th} />
         <span className="flex min-w-0 flex-auto flex-col">
@@ -181,6 +187,7 @@ function Groups({ roster, clan, q, dense, day }: { roster: Roster; clan: ClanNam
           {g.label !== 'Members' || dense ? (
             <div className={`flex justify-between ${dense ? 'px-2.5 pt-3' : 'px-1'}`}>
               <Eyebrow className={dense ? 'text-[11px]' : ''}>{g.label}</Eyebrow>
+              {!showDays && <Eyebrow className={dense ? 'text-[11px]' : ''}>Score</Eyebrow>}
             </div>
           ) : null}
           {g.rows.length ? (
@@ -279,8 +286,8 @@ function Phone({ roster, war, q, setQ, lock }: Omit<Props, 'wide'>) {
           <>
             {planned && inCwl && <DayRow days={days} pick={day} onPick={setDay} live={live} roster />}
             <ClanCard roster={roster} clan={clan} meta={clans[clan]} below={inCwl ? <Countdown roster={roster} war={war} slim /> : undefined} />
-            <StatusKey className="px-1" />
             <Groups roster={roster} clan={clan} day={day} />
+            <StatusKey className="px-1" />
           </>
         )}
       </div>
@@ -311,7 +318,6 @@ function Desktop({ roster, war, q, setQ, lock }: Omit<Props, 'wide'>) {
         </div>
       </div>
       {planned && <DayRow pick={day} onPick={setDay} live={live} roster />}
-      <StatusKey />
       <div ref={grid} className="grid items-start gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr))]">
         {(lock?.options ?? CLANS).map((clan) => {
           return (
@@ -322,6 +328,7 @@ function Desktop({ roster, war, q, setQ, lock }: Omit<Props, 'wide'>) {
           )
         })}
       </div>
+      <StatusKey />
     </main>
   )
 }

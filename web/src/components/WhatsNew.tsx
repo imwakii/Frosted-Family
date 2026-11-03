@@ -1,7 +1,9 @@
 import { useCallback, useState } from 'react'
-import { EARLIER, LATEST, type Update } from '../updates'
+import { leagueIcon } from '../clash'
+import { go } from '../route'
+import { EARLIER, type Highlight, LATEST, type Update } from '../updates'
 import { CardSheet } from './ClanSheet'
-import { Eyebrow } from './ui'
+import { Eyebrow, RowChevron, UnitIcon } from './ui'
 import { firstVisit } from './Welcome'
 
 // The header's What's new button and its card. A new update opens the card once and lights the button until it is seen;
@@ -17,6 +19,16 @@ const Sparkle = ({ size }: { size: number }) => (
 const Chevron = ({ className }: { className: string }) => (
   <svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#A3957C" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" className={`transition-transform ${className}`}><path d="M9 6l6 6-6 6" /></svg>
 )
+
+const HighlightIcon = ({ icon }: { icon: Highlight['icon'] }) => {
+  if (icon === 'league') return <img src={leagueIcon('Champion League III') ?? undefined} alt="" width={36} height={36} className="size-9 flex-none object-contain" />
+  if (icon === 'hero') return <span className="flex-none"><UnitIcon name="Barbarian King" size={36} /></span>
+  return (
+    <span className="flex size-9 flex-none items-center justify-center text-brand">
+      <svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M5 5l14 14M19 5L5 19M4 16l4 4M20 16l-4 4" /></svg>
+    </span>
+  )
+}
 
 const Groups = ({ update, quiet }: { update: Update; quiet?: boolean }) => (
   <div className={`flex flex-col ${quiet ? 'gap-1.5' : 'gap-2.5'}`}>
@@ -58,11 +70,36 @@ export default function WhatsNew({ wide }: { wide: boolean }) {
             <span className="flex items-center gap-1 text-xs font-normal text-muted"><span className="text-gold"><Sparkle size={12} /></span>Updated {LATEST.date}</span>
           </div>
         }>
-          <Groups update={LATEST} />
+          {LATEST.highlights ? (
+            <>
+              <ul className="m-0 flex list-none flex-col gap-2 p-0">
+                {LATEST.highlights.map((h) => (
+                  <li key={h.title}>
+                    <button type="button" onClick={() => { close(); go.to(h.href) }}
+                      className="flex min-h-[60px] w-full cursor-pointer items-center gap-3 rounded-xl border-0 bg-[#F6EEDC] px-3 py-2 text-left hover:bg-well">
+                      <HighlightIcon icon={h.icon} />
+                      <span className="flex min-w-0 flex-auto flex-col">
+                        <span className="truncate text-[15px] font-bold text-ink">{h.title}</span>
+                        <span className="truncate text-[13px] text-muted">{h.line}</span>
+                      </span>
+                      <RowChevron />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              <details className="group/notes">
+                <summary className="flex min-h-11 cursor-pointer list-none items-center gap-1 text-sm font-normal text-ink-2 [&::-webkit-details-marker]:hidden">
+                  All patch notes
+                  <Chevron className="group-open/notes:rotate-90" />
+                </summary>
+                <div className="pb-2 pt-1"><Groups update={LATEST} /></div>
+              </details>
+            </>
+          ) : <Groups update={LATEST} />}
           {/* One quiet row until asked for, so the newest update is what the card is about. */}
           {EARLIER.length > 0 && (
-            <details className="group/all -mt-1">
-              <summary className="flex min-h-9 cursor-pointer list-none items-center gap-1 text-xs font-normal text-faint [&::-webkit-details-marker]:hidden">
+            <details className="group/all -mt-4">
+              <summary className="flex min-h-11 cursor-pointer list-none items-center gap-1 text-sm font-normal text-ink-2 [&::-webkit-details-marker]:hidden">
                 Earlier updates
                 <Chevron className="group-open/all:rotate-90" />
               </summary>
@@ -81,7 +118,7 @@ export default function WhatsNew({ wide }: { wide: boolean }) {
           )}
           {/* Stays in reach however many earlier updates are open. */}
           <div className="sticky -bottom-px flex-none bg-white pt-2">
-            <button type="button" onClick={close} className="min-h-11 w-full cursor-pointer rounded-xl border-0 bg-ink text-sm font-bold text-white hover:opacity-90">Got it</button>
+            <button type="button" onClick={close} className="min-h-11 w-full cursor-pointer rounded-xl border border-line bg-white text-sm font-bold text-ink-2 hover:bg-page">Got it</button>
           </div>
         </CardSheet>
       )}

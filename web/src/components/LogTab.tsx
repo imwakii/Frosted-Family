@@ -70,12 +70,13 @@ const change = (u: Upgrade) => (u.change === 'unlock'
   ? <b className="font-bold text-ink">unlocked</b>
   : <>{u.from} → <b className="font-bold text-ink">{u.to}</b></>)
 
-const ROW = 'flex min-h-[58px] w-full items-center gap-3 px-3.5 py-1.5 text-left text-ink no-underline'
+const ROW = 'flex min-h-[52px] w-full items-center gap-3 px-3.5 py-1.5 text-left text-ink no-underline'
 
 function EventRow({ e, onRoster }: { e: LogEvent; onRoster: boolean }) {
   const m = MARK[e.kind]
   const cls = `flex min-h-10 w-full items-center gap-2 text-[13px] text-ink no-underline ${m.point?.cls ?? 'px-3'}`
-  const style = { ...m.point?.style, background: m.bg }
+  // The word says what happened in its colour; only a new town hall gets a band.
+  const style = { ...m.point?.style, background: '#FFFBF1' }
   const body = (
     <>
       {e.th != null && <span className="flex-none text-[11px] font-bold tabular-nums text-faint">TH{e.th}</span>}
@@ -208,7 +209,6 @@ function UpgradeRow({ ups, showClan, open, onToggle }: { ups: Upgrade[]; showCla
   const who = (
     <span className="flex min-w-0 items-center gap-1.5">
       <span className="truncate text-[15px] font-semibold"><YouTag tag={u.tag} />{u.name}</span>
-      {u.th && u.category !== 'town_hall' && <span className="flex-none text-[11px] font-bold text-faint">TH{u.th}</span>}
       {showClan && <span className="flex-none text-[11px] font-bold" style={{ color: CLAN[u.clan].deep }}>{u.clan}</span>}
     </span>
   )
@@ -236,7 +236,7 @@ function UpgradeRow({ ups, showClan, open, onToggle }: { ups: Upgrade[]; showCla
           <span className="truncate text-[13px] text-muted">{ups.length} upgrades</span>
         </span>
         {when}
-        <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#A3957C" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" className={`flex-none transition-transform ${open ? 'rotate-180' : ''}`}><path d="M6 9l6 6 6-6" /></svg>
+        <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#A3957C" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" className={`flex-none transition-transform ${open ? 'rotate-90' : ''}`}><path d="M9 6l6 6-6 6" /></svg>
       </button>
       {open && (
         <div className="flex flex-col gap-1 px-3.5 pb-3">

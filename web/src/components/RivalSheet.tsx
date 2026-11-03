@@ -39,7 +39,7 @@ export default function RivalSheet({ clan, tag, wide, onClose }: { clan: ClanNam
     <CardSheet label={row.name} wide={wide} onClose={onClose} head={<>
       <ClanBadge src={row.badge} size={60} />
       <div className="flex min-w-0 flex-auto flex-col gap-1">
-        <bdi className="font-display truncate text-[26px] leading-tight text-ink-2">{row.name}</bdi>
+        <bdi className="text-left font-display truncate text-[26px] leading-tight text-ink-2">{row.name}</bdi>
         {p?.war_league && <LeaguePill league={p.war_league} text={p.war_league.replace('League ', '')} />}
       </div>
     </>}>
@@ -57,8 +57,8 @@ export default function RivalSheet({ clan, tag, wide, onClose }: { clan: ClanNam
         <div className="overflow-hidden rounded-xl border border-hair">
           <div className={`${COMPARE} border-b border-hair py-1.5`}>
             <span />
-            <span className="flex justify-center"><ClanBadge src={row.badge} size={24} /></span>
-            <span className="flex justify-center"><ClanBadge src={ours?.badge ?? null} size={24} /></span>
+            <span className="flex flex-col items-center gap-0.5 text-[10px] font-bold text-muted"><ClanBadge src={row.badge} size={24} />Them</span>
+            <span className="flex flex-col items-center gap-0.5 text-[10px] font-bold" style={{ color: c.deep }}><ClanBadge src={ours?.badge ?? null} size={24} />Us</span>
           </div>
           {POWER.map((m, i) => {
             const them = row.strength?.[m.k], us = ours?.strength?.[m.k]
@@ -76,6 +76,8 @@ export default function RivalSheet({ clan, tag, wide, onClose }: { clan: ClanNam
           })}
         </div>
       </section>
+
+      <p className="m-0 -mt-2 text-[11px] text-faint"><span className="font-bold text-[#15803D]">Green</span>: we're ahead. <span className="font-bold text-[#B91C1C]">Red</span>: they're ahead.</p>
 
       <section aria-label="Town halls" className="flex flex-col gap-1.5">
         <Eyebrow>Town halls</Eyebrow>
@@ -100,7 +102,7 @@ export default function RivalSheet({ clan, tag, wide, onClose }: { clan: ClanNam
                 <li key={w.day} className="flex min-h-10 items-center gap-2 rounded-xl px-3 text-sm font-semibold text-ink" style={{ background: w.opponent_tag === ours?.tag ? c.tint : '#F6EEDC' }}>
                   <span className="w-3 flex-none text-center text-xs font-bold tabular-nums text-faint">{w.day}</span>
                   <ClanBadge src={w.opponent_badge} size={22} />
-                  <bdi className="min-w-0 flex-auto truncate">{w.opponent}</bdi>
+                  <bdi className="text-left min-w-0 flex-auto truncate">{w.opponent}</bdi>
                   <span className={`flex-none text-[13px] font-bold tabular-nums ${!over ? 'text-ink-2' : won === false ? 'text-[#B91C1C]' : won ? 'text-[#15803D]' : 'text-ink-2'}`}>
                     {!over ? 'Live' : won === null ? 'Draw' : won ? 'Won' : 'Lost'} {w.stars}–{w.opponent_stars}
                   </span>

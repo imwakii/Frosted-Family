@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useSyncExternalStore, useState } from 'react'
+import { useEffect, useId, useSyncExternalStore, useState } from 'react'
 import type { Roster } from '../types'
 import { CLAN, SLOT_TEXT } from '../theme'
 import { playerHref } from '../route'
@@ -42,11 +42,17 @@ export function YouTag({ tag }: { tag: string }) {
   return <span data-you className="mr-1.5 inline-block flex-none rounded-md bg-ink px-1 py-px align-[1px] text-[9px] font-extrabold uppercase tracking-[0.05em] text-white">You</span>
 }
 
-/** Takes you to your row on a long list, then your next account's; hidden when there is nowhere further to go. */
+let nextYou = 0
+/** Takes you to your row on a long list, then your next account's. */
+export const jumpToYou = () => {
+  const all = document.querySelectorAll('[data-you]')
+  all[nextYou++ % all.length]?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+}
+
+/** The floating button for wide screens, where it clears the list; hidden when there is nowhere further to go. */
 export function JumpToYou({ wide }: { wide: boolean }) {
   const { yous } = useYou()
   const [show, setShow] = useState(false)
-  const next = useRef(0)
   useEffect(() => {
     if (!yous.length) { setShow(false); return }
     const check = () => {
@@ -61,12 +67,8 @@ export function JumpToYou({ wide }: { wide: boolean }) {
     return () => window.clearInterval(id)
   }, [yous])
   if (!show) return null
-  const jump = () => {
-    const all = document.querySelectorAll('[data-you]')
-    all[next.current++ % all.length]?.scrollIntoView({ block: 'center', behavior: 'smooth' })
-  }
   return (
-    <button type="button" onClick={jump}
+    <button type="button" onClick={jumpToYou}
       className={`fixed right-4 z-20 min-h-10 cursor-pointer rounded-full border-0 bg-ink px-4 text-sm font-bold text-white shadow-[0_4px_14px_rgba(43,33,20,.3)] ${wide ? 'bottom-6' : 'bottom-[72px]'}`}>
       Find me
     </button>

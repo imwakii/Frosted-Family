@@ -78,10 +78,10 @@ export default function UpgradeSheet({ cat, tag, unit, wide, onClose }: {
         </section>
       ))}
 
-      <a href={playerHref(p.tag)} className="flex min-h-11 flex-none items-center justify-between gap-2 rounded-xl bg-[#F6EEDC] px-3 text-sm font-bold text-ink no-underline hover:bg-well">
+      {!fromCard && <a href={playerHref(p.tag)} className="flex min-h-11 flex-none items-center justify-between gap-2 rounded-xl bg-[#F6EEDC] px-3 text-sm font-bold text-ink no-underline hover:bg-well">
         Full card
         <RowChevron />
-      </a>
+      </a>}
     </CardSheet>
   )
 }

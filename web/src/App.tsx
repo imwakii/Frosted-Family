@@ -19,7 +19,7 @@ import { useVisits } from './visits'
 import { decodeTag, go, onDrill, useRoute } from './route'
 import { Clock, SubNav } from './components/ui'
 
-const CWL_SUBS = [{ id: 'lineups', label: 'Lineups', href: '#/cwl' }, { id: 'standings', label: 'Standings', href: '#/cwl/standings' }, { id: 'group', label: 'Group', href: '#/cwl/group' }]
+const CWL_SUBS = [{ id: 'lineups', label: 'Lineups', href: '#/cwl' }, { id: 'group', label: 'Group', href: '#/cwl/group' }]
 const WAR_SUBS = [{ id: 'latest', label: 'Current', href: '#/war' }, { id: 'log', label: 'War log', href: '#/war/log' }]
 
 const TABS = [
@@ -79,6 +79,8 @@ export default function App() {
   }, [])
   onDrill(useCallback(() => setQ(''), []))
   const closeSheet = useCallback(() => go.closePlayer(), [])
+  // Plan is for leaders: a member reaches sign-in from the footer's link, and sees the tab only while on it.
+  const tabs = TABS.filter((t) => t.id !== 'plan' || !!auth.me.user || route.tab === 'plan')
   // The live clock; on Plan a signed-in account sits beside it, and narrower screens shrink the other two to fit.
   const account = route.tab === 'plan' && auth.me.user ? <Account me={auth.me} onSignOut={auth.signOut} /> : null
   const you = roster && <YouChip roster={roster} compact={!roomy && !!account} />
@@ -93,7 +95,7 @@ export default function App() {
           <div className="mx-auto flex max-w-[1360px] flex-wrap items-center gap-x-4 gap-y-3 lg:gap-x-6 px-[clamp(16px,3vw,32px)] py-3">
             <span className="font-display text-2xl text-brand">Frosted Family</span>
             <nav aria-label="Sections" className="flex gap-1 rounded-xl bg-[#EFE6D2] p-1">
-              {TABS.map((t) => (
+              {tabs.map((t) => (
                 <a key={t.id} href={t.href} aria-current={route.tab === t.id ? 'page' : undefined}
                   className={`flex min-h-[38px] items-center rounded-[9px] px-3 font-bold lg:px-[18px] no-underline ${route.tab === t.id ? 'bg-white text-ink shadow-[0_1px_3px_rgba(43,33,20,.12),inset_0_-2px_0_var(--color-gold)]' : 'text-muted hover:text-ink'}`}>
                   {t.label}
@@ -130,21 +132,22 @@ export default function App() {
       ) : (
         <>
           <SubNav items={CWL_SUBS} current={route.sub} wide={wide} />
-          {route.sub !== 'lineups' ? <CwlGroup wide={wide} view={route.sub === 'group' ? 'group' : 'standings'} /> : <CwlTab roster={roster} war={war} wide={wide} q={q} setQ={setQ} />}
+          {route.sub !== 'lineups' ? <CwlGroup wide={wide} /> : <CwlTab roster={roster} war={war} wide={wide} q={q} setQ={setQ} />}
         </>
       )}
 
-      {!!visits?.total && (
+      {!!auth.me.user && !!visits?.total && (
         <p className="m-0 px-4 pb-1 pt-3 text-center text-xs font-semibold text-muted">
           {visits.total.toLocaleString('en-GB')} {visits.total === 1 ? 'visitor' : 'visitors'} so far · {visits.week.toLocaleString('en-GB')} this week
         </p>
       )}
       <footer className="mx-auto max-w-[1320px] px-4 pb-4 pt-1 text-center text-[10px] text-faint opacity-70">
+        {!auth.me.user && <><a href="#/plan" className="text-faint underline hover:text-muted">Leader sign-in</a>{' · '}</>}
         Unofficial, not endorsed by Supercell.{' '}
         <a href="https://supercell.com/en/fan-content-policy/" target="_blank" rel="noopener noreferrer" className="text-faint underline hover:text-muted">Fan Content Policy</a>
       </footer>
 
-      {!route.player && (install.show ? <InstallHint onDismiss={install.dismiss} /> : route.tab !== 'plan' && <JumpToYou wide={wide} />)}
+      {!route.player && (install.show ? <InstallHint onDismiss={install.dismiss} /> : wide && route.tab !== 'plan' && <JumpToYou wide={wide} />)}
 
       {roster && <Welcome roster={roster} wide={wide} />}
       {roster && route.player &&<PlayerSheet tag={route.player} roster={roster} wide={wide} onClose={closeSheet} />}
@@ -153,8 +156,8 @@ export default function App() {
       {route.rival && !route.player && <RivalSheet clan={route.rival.clan} tag={route.rival.tag} wide={wide} onClose={closeSheet} />}
 
       {!wide && (
-        <nav aria-label="Sections" className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-gold-line bg-white pb-[env(safe-area-inset-bottom)]">
-          {TABS.map((t) => (
+        <nav aria-label="Sections" className="fixed inset-x-0 bottom-0 z-30 grid border-t border-gold-line bg-white pb-[env(safe-area-inset-bottom)]" style={{ gridTemplateColumns: `repeat(${tabs.length}, 1fr)` }}>
+          {tabs.map((t) => (
             <a key={t.id} href={t.href} aria-current={route.tab === t.id ? 'page' : undefined}
               className={`flex min-h-[58px] flex-col items-center justify-center gap-[3px] text-xs font-bold no-underline ${route.tab === t.id ? 'text-ink shadow-[inset_0_2px_0_var(--color-gold)]' : 'text-faint'}`}>
               <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">{t.icon}</svg>

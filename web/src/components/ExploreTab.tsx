@@ -256,8 +256,8 @@ function MatrixBoard({ cat, q, setQ, wide }: BoardProps & { cat: Cat }) {
                   : <span aria-hidden="true" className="w-px flex-none self-stretch bg-line" />)}
                 {g.idx.map((i) => { const x = units[i]; return (
                   <button key={x.name} type="button" role="option" aria-selected={i === ui} aria-label={x.name} onClick={() => setUnit(i)}
-                    className={`flex size-[60px] flex-none cursor-pointer items-center justify-center rounded-2xl p-0 ${i === ui ? 'border-2 border-action bg-[#F6EEDC] shadow-[0_2px_8px_rgba(51,39,26,.2)]' : 'border border-line bg-white'}`}>
-                    <UnitIcon name={x.name} size={44} />
+                    className={`flex size-[50px] flex-none cursor-pointer items-center justify-center rounded-2xl p-0 ${i === ui ? 'border-2 border-action bg-[#F6EEDC] shadow-[0_2px_8px_rgba(51,39,26,.2)]' : 'border border-line bg-white'}`}>
+                    <UnitIcon name={x.name} size={36} />
                   </button>
                 ) })}
               </Fragment>
@@ -272,7 +272,7 @@ function MatrixBoard({ cat, q, setQ, wide }: BoardProps & { cat: Cat }) {
               const maxed = l >= u.max
               return (
                 <li key={p.tag} data-tag={p.tag}>
-                  <a href={upgradeHref(cat, p.tag, u.name)} className={`flex min-h-[54px] items-center gap-2.5 px-3.5 py-1.5 text-ink no-underline hover:bg-hover ${i ? 'border-t border-hair' : ''}`}>
+                  <a href={upgradeHref(cat, p.tag, u.name)} className={`flex min-h-[52px] items-center gap-2.5 px-3.5 py-1.5 text-ink no-underline hover:bg-hover ${i ? 'border-t border-hair' : ''}`}>
                     <span className="w-6 flex-none text-right text-xs tabular-nums text-faint">{rank ?? '—'}</span>
                     <Th th={p.th} />
                     <span className="flex min-w-0 flex-auto flex-col gap-1">
@@ -493,18 +493,13 @@ function WarBoardView({ q, setQ, wide }: BoardProps) {
               </button>
             ))}
           </div>
-          <div aria-label={`${who} summary`} className="mx-4 grid grid-cols-3 gap-2">
-            {[['3★ rate', summary.triple === null ? '—' : pct(summary.triple)], ['Avg ★', summary.avgStars === null ? '—' : summary.avgStars.toFixed(2)], ['Attacks', String(summary.attacks)]].map(([k, v]) => (
-              <div key={k} className="flex flex-col gap-0.5 rounded-xl border border-line bg-white px-3 py-2">
-                <span className="truncate text-[11px] text-faint">{k}</span>
-                <span className="font-display text-xl leading-none tabular-nums">{v}</span>
-              </div>
-            ))}
-          </div>
+          <p aria-label={`${who} summary`} className="m-0 mx-4 text-xs font-semibold tabular-nums text-muted">
+            {summary.triple === null ? '—' : pct(summary.triple)} 3★ rate · {summary.avgStars === null ? '—' : summary.avgStars.toFixed(2)} avg ★ · {summary.attacks} attacks
+          </p>
           <ol className="m-0 mx-4 list-none rounded-2xl border border-line bg-white py-1">
             {shown.map(({ r, v }, i) => (
               <li key={r.tag} data-tag={r.tag}>
-                <a href={playerHref(r.tag)} className={`flex min-h-[56px] items-center gap-2.5 px-3.5 py-1.5 text-ink no-underline hover:bg-hover ${i ? 'border-t border-hair' : ''}`}>
+                <a href={playerHref(r.tag)} className={`flex min-h-[52px] items-center gap-2.5 px-3.5 py-1.5 text-ink no-underline hover:bg-hover ${i ? 'border-t border-hair' : ''}`}>
                   <span className="w-6 flex-none text-right text-xs tabular-nums text-faint">{place.get(r) ?? '—'}</span>
                   <Th th={r.th} />
                   <span className="flex min-w-0 flex-auto flex-col gap-0.5">

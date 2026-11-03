@@ -7,7 +7,7 @@ import { RowChevron } from './ui'
 // When a war ends: who was best, any big upset, and an image of it to post in Discord. The score is on the board above.
 
 const starText = (stars: number[]) => stars.map((n) => '★'.repeat(n) + '☆'.repeat(3 - n)).join(' ')
-const why = (r: Recap) => (r.mvp.tied > 1 ? `Fastest of ${r.mvp.tied} tied` : `${Math.round(r.mvp.destruction)}% average`)
+const why = (r: Recap) => (r.mvp.tied > 1 ? `Fastest of ${r.mvp.tied} with this score` : `${Math.round(r.mvp.destruction)}% average`)
 const upsetText = (u: Recap['upsets'][number]) => `TH${u.attacker.th} on TH${u.defender.th} ${u.defender.name}`
 
 function fit(ctx: CanvasRenderingContext2D, text: string, width: number) {

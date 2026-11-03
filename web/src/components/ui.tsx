@@ -154,7 +154,7 @@ export function PlayDays({ days, clan, size = 15 }: { days: number[]; clan: Clan
     <span aria-label={days.length ? `Plays day ${days.join(', ')}` : 'No days planned'} className="flex gap-[3px]">
       {[1, 2, 3, 4, 5, 6, 7].map((d) => (
         <span key={d} className="flex items-center justify-center rounded-full font-extrabold"
-          style={{ width: size, height: size, fontSize: Math.round(size * 0.6), ...(days.includes(d) ? { background: CLAN[clan].accent, color: '#FFFBF1' } : { boxShadow: 'inset 0 0 0 1.5px #E3D8BF', color: '#A3957C' }) }}>{d}</span>
+          style={{ width: size, height: size, fontSize: Math.round(size * 0.6), ...(days.includes(d) ? { background: CLAN[clan].accent, color: '#FFFBF1' } : { boxShadow: 'inset 0 0 0 1px #EFE6D2', color: '#C9BCA0' }) }}>{d}</span>
       ))}
     </span>
   )

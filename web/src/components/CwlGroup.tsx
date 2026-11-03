@@ -1,14 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
-import { thIcon } from '../clash'
-import { type CwlRow, type EightRow, useCwlGroups } from '../leaders'
+import { useClans, thIcon } from '../clash'
+import { type CwlRow, type EightRow, useCwlGroups, useWarBoard } from '../leaders'
 import { clanHref, playerHref, rivalHref } from '../route'
 import { CLAN, CLANS } from '../theme'
 import type { ClanName } from '../types'
 import { readClan } from './CwlTab'
-import { chip, ClanBadge, ClanSwitch, dayWon, RowChevron, STICKY_SWITCH, Th } from './ui'
+import { chip, ClanBadge, ClanSwitch, dayWon, LeaguePill, RowChevron, STICKY_SWITCH, Th, useNow } from './ui'
 
-// A clan's league group. Standings: who is winning, ranked as the game ranks it, with each clan's days. Group: how the
-// clans compare, by signed-up town halls or strength, then who has the 8 stars for the bonus. Each day's war is on the War tab.
+// A clan's league group, ranked as the game ranks it, three ways: who is winning, with each clan's days; signed-up town
+// halls; strength. Then who has the 8 stars for the bonus. Each day's war is on the War tab.
 
 const EIGHT = 8
 const EIGHT_SHOWN = 5
@@ -24,20 +24,32 @@ function ClanLink({ r, clan }: { r: CwlRow; clan: ClanName }) {
       <span className="flex size-[22px] flex-none items-center justify-center"><ClanBadge src={r.badge} size={22} /></span>
       {r.ours
         ? <span className="min-w-0 truncate text-[13px] font-bold group-hover:underline md:text-[15px]" style={{ color: CLAN[clan].deep }}>{clan}</span>
-        : <bdi className="min-w-0 truncate text-[13px] font-semibold text-ink-2 group-hover:underline md:text-[15px]">{r.name}</bdi>}
-      <span className="ml-auto flex flex-none"><RowChevron /></span>
+        : <bdi className="text-left min-w-0 truncate text-[13px] font-semibold text-ink-2 group-hover:underline md:text-[15px]">{r.name}</bdi>}
+      <span className="flex flex-none"><RowChevron /></span>
     </a>
   )
 }
 
+// Before the first war ends every row reads zero, so the table says when it starts.
+function useStartsIn(clan: ClanName) {
+  const now = useNow(30_000)
+  const war = useWarBoard().data?.clans.find((c) => c.clan === clan)?.war
+  const m = war?.state === 'preparation' && war.day === 1 ? war.start_time?.match(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})/) : null
+  if (!m) return null
+  const mins = Math.round((Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]) - now) / 60000)
+  if (mins <= 0) return null
+  return mins < 60 ? `${mins}m` : `${Math.floor(mins / 60)}h ${mins % 60}m`
+}
+
 function Standings({ rows, clan }: { rows: CwlRow[]; clan: ClanName }) {
   const { tint } = CLAN[clan]
+  const league = useClans()[clan]?.league
   const head = 'text-center text-[10px] font-bold leading-tight text-muted md:text-xs'
   return (
     <section aria-label="Standings" className="overflow-hidden rounded-2xl border border-line bg-white">
-      <div className={`grid items-center gap-x-1 border-b border-hair px-2.5 py-1.5 md:gap-x-1.5 md:px-3.5 ${STANDING_COLS}`}>
+      <div className={`grid h-11 items-center gap-x-1 border-b border-hair px-2.5 md:gap-x-1.5 md:px-3.5 ${STANDING_COLS}`}>
         <span />
-        <span className="text-[11px] font-bold uppercase tracking-[0.06em] text-faint">Clan</span>
+        <span className="min-w-0 whitespace-nowrap">{league ? <LeaguePill league={league} text={league.replace('League ', '')} /> : null}</span>
         {DAYS.map((d) => <span key={d} className={`${head} max-md:hidden`}>Day {d}</span>)}
         <span className={head}>Won</span>
         <span className="text-center text-gold" aria-label="Stars">★</span>
@@ -45,7 +57,7 @@ function Standings({ rows, clan }: { rows: CwlRow[]; clan: ClanName }) {
       </div>
       <ol className="m-0 list-none">
         {rows.map((r, n) => (
-          <li key={r.tag} className={`grid min-h-[46px] items-center gap-x-1 px-2.5 md:gap-x-1.5 md:px-3.5 ${STANDING_COLS} ${n ? 'border-t border-hair' : ''}`} style={r.ours ? { background: tint } : undefined}>
+          <li key={r.tag} className={`grid h-[52px] items-center gap-x-1 px-2.5 md:gap-x-1.5 md:px-3.5 ${STANDING_COLS} ${n ? 'border-t border-hair' : ''}`} style={r.ours ? { background: tint } : undefined}>
             <span className="text-right text-xs font-bold tabular-nums text-faint">{n + 1}</span>
             <ClanLink r={r} clan={clan} />
             {DAYS.map((d) => {
@@ -68,27 +80,18 @@ function Standings({ rows, clan }: { rows: CwlRow[]; clan: ClanName }) {
   )
 }
 
-function GroupTable({ rows, clan }: { rows: CwlRow[]; clan: ClanName }) {
+function GroupTable({ rows, clan, compare }: { rows: CwlRow[]; clan: ClanName; compare: boolean }) {
   const { tint } = CLAN[clan]
   const top = Math.max(...rows.flatMap((r) => r.town_halls), 0)
   // The four highest town halls in the group, then everything under them.
   const heads = [top, top - 1, top - 2, top - 3, top - 4]
   const count = (r: CwlRow, i: number) => r.town_halls.filter((t) => (i < 4 ? t === heads[i] : t <= heads[4])).length
   const most = Math.max(...rows.flatMap((r) => heads.map((_, i) => count(r, i))), 1)
-  const [power, setPower] = useState(false)
   const ours = rows.find((r) => r.ours)?.strength
-  const canCompare = !!ours && rows.some((r) => !r.ours && r.strength)
-  const compare = power && canCompare
   const cols = compare ? POWER_COLS : COLS
   return (
     <section aria-label="Group table" className="overflow-hidden rounded-2xl border border-line bg-white">
-      {canCompare && (
-        <div role="group" aria-label="Compare by" className="flex gap-1.5 border-b border-hair px-2.5 py-2 md:px-3.5">
-          <button type="button" aria-pressed={!compare} onClick={() => setPower(false)} className={chip(!compare)}>Town halls</button>
-          <button type="button" aria-pressed={compare} onClick={() => setPower(true)} className={chip(compare)}>Strength</button>
-        </div>
-      )}
-      <div className={`grid items-center gap-x-1 border-b border-hair px-2.5 py-1.5 md:gap-x-1.5 md:px-3.5 ${cols}`}>
+      <div className={`grid h-11 items-center gap-x-1 border-b border-hair px-2.5 md:gap-x-1.5 md:px-3.5 ${cols}`}>
         <span />
         <span className="text-[11px] font-bold uppercase tracking-[0.06em] text-faint">{compare ? 'Top 15 avg' : 'Signed up'}</span>
         {compare ? POWER.map((p) => <span key={p.k} className="text-center text-[10px] font-bold leading-tight text-muted md:text-xs">{p.label}</span>) : heads.map((h, i) => (
@@ -101,7 +104,7 @@ function GroupTable({ rows, clan }: { rows: CwlRow[]; clan: ClanName }) {
       </div>
       <ol className="m-0 list-none">
         {rows.map((r, n) => (
-          <li key={r.tag} className={`grid min-h-[46px] items-center gap-x-1 px-2.5 md:gap-x-1.5 md:px-3.5 ${cols} ${n ? 'border-t border-hair' : ''}`} style={r.ours ? { background: tint } : undefined}>
+          <li key={r.tag} className={`grid h-[52px] items-center gap-x-1 px-2.5 md:gap-x-1.5 md:px-3.5 ${cols} ${n ? 'border-t border-hair' : ''}`} style={r.ours ? { background: tint } : undefined}>
             <span className="text-right text-xs font-bold tabular-nums text-faint">{n + 1}</span>
             <ClanLink r={r} clan={clan} />
             {compare ? POWER.map((p) => {
@@ -161,7 +164,28 @@ function Eight({ rows }: { rows: EightRow[] }) {
   )
 }
 
-export default function CwlGroup({ wide, view }: { wide: boolean; view: 'group' | 'standings' }) {
+const VIEWS = [{ id: 'standings', label: 'Standings' }, { id: 'halls', label: 'Town halls' }, { id: 'strength', label: 'Strength' }] as const
+
+function Board({ rows, clan }: { rows: CwlRow[]; clan: ClanName }) {
+  const [view, setView] = useState<(typeof VIEWS)[number]['id']>('standings')
+  const canCompare = rows.some((r) => r.ours && r.strength) && rows.some((r) => !r.ours && r.strength)
+  const shown = view === 'strength' && !canCompare ? 'standings' : view
+  const startsIn = useStartsIn(clan)
+  // The rows sit in the same place in all three views: one header height, one row height, and this line in each.
+  return (
+    <div className="flex min-w-0 flex-col gap-2">
+      {startsIn && rows.every((r) => !r.stars) && <div className="rounded-xl bg-[#FFEDD5] px-3 py-1 text-center text-xs font-bold text-[#B4451A]">Day 1 starts in {startsIn}</div>}
+      <div role="group" aria-label="View" className="flex gap-1.5 overflow-x-auto [scrollbar-width:none]">
+        {VIEWS.filter((v) => v.id !== 'strength' || canCompare).map((v) => (
+          <button key={v.id} type="button" aria-pressed={v.id === shown} onClick={() => setView(v.id)} className={chip(v.id === shown)}>{v.label}</button>
+        ))}
+      </div>
+      {shown === 'standings' ? <Standings rows={rows} clan={clan} /> : <GroupTable rows={rows} clan={clan} compare={shown === 'strength'} />}
+    </div>
+  )
+}
+
+export default function CwlGroup({ wide }: { wide: boolean }) {
   const { data, loading } = useCwlGroups()
   const [own, setOwn] = useState<ClanName>(readClan)
   useEffect(() => { try { sessionStorage.setItem('ff-clan', own) } catch { /* private mode */ } }, [own])
@@ -174,11 +198,9 @@ export default function CwlGroup({ wide, view }: { wide: boolean; view: 'group' 
         loading ? <div aria-busy="true" className="h-64 animate-pulse rounded-2xl bg-well" /> : <div className="rounded-2xl border border-line bg-white p-5 text-sm text-faint">Unavailable right now</div>
       ) : !shown?.group ? (
         <div className="rounded-2xl border border-line bg-white px-6 py-14 text-center text-sm font-semibold text-faint">No CWL group yet</div>
-      ) : view === 'standings' ? (
-        <Standings rows={shown.group.table} clan={shown.clan} />
       ) : (
         <div className="grid items-start gap-3 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] lg:gap-4">
-          <GroupTable rows={shown.group.table} clan={shown.clan} />
+          <Board rows={shown.group.table} clan={shown.clan} />
           {shown.group.eight.length > 0 && <Eight rows={shown.group.eight} />}
         </div>
       )}
