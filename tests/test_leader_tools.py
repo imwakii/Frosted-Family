@@ -23,6 +23,7 @@ def fixture(name):
 @pytest.fixture
 def timeline(env, monkeypatch):
     monkeypatch.setattr(leaders, "now", lambda: NOW)
+    monkeypatch.setattr(leaders, "DONATIONS_SETTLE_DAY", 0)
     conn = db.connect(env / "frosted.db")
     with conn:
         for clan, f in ((FIRE, "members_fire.json"), (CAKE, "members_cake.json"), (FLAKES, "members_flakes.json")):
@@ -190,6 +191,7 @@ def hero_player(tag, name, th, levels, donations=10, wins=5):
 def fire_four(env, monkeypatch):
     """Four TH18s in Fire. D is idle 20 days with the strongest heroes; A and C tie on heroes, C gives nothing."""
     monkeypatch.setattr(leaders, "now", lambda: NOW)
+    monkeypatch.setattr(leaders, "DONATIONS_SETTLE_DAY", 0)
     monkeypatch.setenv("LEADERS_PUBLIC", "true")
     players = {"#2A": ("A", [75, 75], 10), "#2B": ("B", [100, 100], 10), "#2C": ("C", [75, 75], 0),
                "#2D": ("D", [110, 110], 10)}
@@ -237,7 +239,9 @@ def test_thin_cohort_scales_by_unlocked_heroes(env):
     assert (s["#3A"]["hero_pct"], s["#3A"]["cohort"], s["#3A"]["cohort_n"]) == (100.0, "same_th", 3)
 
 
-def test_reason_codes_from_the_roster():
+def test_reason_codes_from_the_roster(monkeypatch):
+    monkeypatch.setattr(leaders, "now", lambda: NOW)
+    monkeypatch.setattr(leaders, "DONATIONS_SETTLE_DAY", 0)
     m = {"fetched_at": T1, "donations": 0, "town_hall": 15, "snap_th": 15}
     alloc = {"flag_high_miss": "True", "miss_pct": "31.5", "cwl_slot": "Sitting Out", "tier": "NO DATA"}
     codes = {r["code"]: r["value"] for r in leaders.reasons_for(m, "Cake", {"days_inactive": 2}, alloc, 0)}
@@ -257,3 +261,19 @@ def test_what_counts_as_activity():
     assert leaders.was_active(base, {**base, "donations_received": 21})
     for k in ("town_hall", "exp_level", "attack_wins", "war_stars", "capital_contributions", "unit_levels"):
         assert leaders.was_active(base, {**base, k: base[k] + 1})
+
+
+def test_donations_say_nothing_early_in_a_month_and_upgrades_break_ties(fire_four, monkeypatch):
+    monkeypatch.setattr(leaders, "DONATIONS_SETTLE_DAY", 14)
+    players = client().get("/leaders/make-room", params={"clan": "Fire"}).json()["players"]
+    assert not any(r["code"] == "no_donations" for p in players for r in p["reasons"])
+    assert all("last_upgrade" in p and "upgrades_30d" in p for p in players)
+    # Equal activity and heroes: whoever has upgraded goes below whoever has not.
+    tagged = {p["tag"]: p for p in players}
+    a, b = list(tagged)[:2]
+    monkeypatch.setattr(leaders, "upgrade_board", lambda conn: [{"tag": a, "last": "2026-11-09T00:00:00Z", "month": 2}])
+    monkeypatch.setattr(leaders, "hero_strength", lambda conn: {})
+    monkeypatch.setattr(leaders, "activity", lambda conn: {})
+    order = [p["tag"] for p in client().get("/leaders/make-room", params={"clan": "Fire"}).json()["players"]]
+    assert order[-1] == a
+    assert next(p for p in client().get("/leaders/make-room", params={"clan": "Fire"}).json()["players"] if p["tag"] == a)["upgrades_30d"] == 2

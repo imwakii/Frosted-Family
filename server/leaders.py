@@ -22,6 +22,7 @@ from server.auth import Leader, current_leader
 INACTIVE_DAYS = 7          # make-room flags a member idle this long
 MISSED_RECENT_DAYS = 14    # missed attacks in wars that ended this recently
 MIN_TH = {"Fire": 18, "Cake": 16}
+DONATIONS_SETTLE_DAY = 14  # before this day of the month, season donations have only just restarted and say little
 UNPROVEN_TIERS = ("NO DATA", "THIN RECORD")
 CATEGORY = {"hero": "hero", "equipment": "equipment", "troop": "troop", "spell": "spell", "pet": "pet",
             "siege": "siege"}  # super troops are boosted copies and are left out
@@ -115,6 +116,23 @@ def upgrades(conn, days: int = 7, clan: str | None = None) -> dict:
     return {"days": days, "clan": clan, "as_of": as_of, "upgrades": out}
 
 
+def upgrade_board(conn) -> list[dict]:
+    """Current members with an upgrade in the last 30 days, most first: for Log's leaderboard and Who could go."""
+    t = now()
+    week, month = [(t - timedelta(days=n)).strftime("%Y-%m-%dT%H:%M:%SZ") for n in (7, 30)]
+    tally: dict[str, dict] = {}
+    for tag, _unit, _cat, _frm, _to, at, _change in upgrade_events(conn):
+        if at < month:
+            continue
+        r = tally.setdefault(tag, {"week": 0, "month": 0, "last": at})
+        r["month"] += 1
+        r["week"] += at >= week
+        r["last"] = max(r["last"], at)
+    ms = members_by_tag(conn)
+    out = [{**profiles.row(ms[tag]), **r} for tag, r in tally.items() if tag in ms]
+    return sorted(out, key=lambda r: (-r["month"], r["name"] or ""))
+
+
 # ─── inactivity ───────────────────────────────────────────────────────────────
 
 ACTIVE_IF_CHANGED = ("town_hall", "exp_level", "attack_wins", "war_stars", "capital_contributions", "unit_levels")
@@ -193,7 +211,7 @@ def reasons_for(m: dict, clan: str, act: dict, alloc: dict | None, missed_recent
         rs.append({"code": "missed_recent", "value": missed_recent})
     if alloc and clan in MIN_TH and alloc.get("cwl_slot") == "Sitting Out":
         rs.append({"code": "sitting_out", "value": None})
-    if m["fetched_at"] is not None and m["donations"] == 0:
+    if m["fetched_at"] is not None and m["donations"] == 0 and now().day > DONATIONS_SETTLE_DAY:
         rs.append({"code": "no_donations", "value": 0})
     th = m["town_hall"] or m["snap_th"]
     if clan in MIN_TH and th and th < MIN_TH[clan]:
@@ -206,7 +224,7 @@ def reasons_for(m: dict, clan: str, act: dict, alloc: dict | None, missed_recent
 
 
 # Ka Wai's rule, 1 Nov 2026 (docs/specs/02-allocation-rules.md, "Removing members"): activity first, then hero
-# strength for the town hall, weakest first. The other reasons only break ties, in TIE_BREAKS order.
+# strength for the town hall, weakest first. Ties then go to no upgrades in 30 days, then to the others in TIE_BREAKS order.
 BUCKETS = ((14, "inactive_14_plus"), (7, "inactive_7_to_13"), (3, "inactive_3_to_6"), (0, "active"))
 TIE_BREAKS = ("missed_recent", "high_miss", "no_donations", "sitting_out", "new_and_unproven", "low_th_for_clan")
 MIN_COHORT = 3
@@ -263,6 +281,7 @@ def make_room(conn, clan: str) -> dict:
     rows, _ = plan.effective_roster()
     alloc = {r["tag"]: r for r in rows if r.get("tag")}
     act, heroes = activity(conn), hero_strength(conn)
+    ups = {r["tag"]: r for r in upgrade_board(conn)}
     recent = missed_since(conn, (now() - timedelta(days=MISSED_RECENT_DAYS)).strftime("%Y%m%dT%H%M%S"))
     here = [m for m in profiles.current_members(conn) if TAG_TO_CLAN.get(m["clan_tag"]) == clan]
     out = []
@@ -275,8 +294,9 @@ def make_room(conn, clan: str) -> dict:
         codes = {r["code"] for r in rs}
         out.append({**profiles.row(m), "cwl_slot": a.get("cwl_slot") if a else None,
                     "days_inactive": act_m.get("days_inactive"), "inactive_at_least": act_m.get("inactive_at_least"),
-                    "activity": b_name, **h, "reasons": rs,
-                    "_key": (b_idx, h["hero_pct"] is None, h["hero_pct"] or 0,
+                    "tracking_since": act_m.get("tracking_since"), "activity": b_name, **h, "reasons": rs,
+                    "last_upgrade": ups.get(m["tag"], {}).get("last"), "upgrades_30d": ups.get(m["tag"], {}).get("month", 0),
+                    "_key": (b_idx, h["hero_pct"] is None, h["hero_pct"] or 0, m["tag"] in ups,
                              *(code not in codes for code in TIE_BREAKS), (m["name"] or m["snap_name"] or "").lower())})
     out.sort(key=lambda r: r["_key"])
     for i, r in enumerate(out, start=1):

@@ -8,11 +8,6 @@ export type Upgrade = {
   tag: string; name: string; clan: ClanName; th: number | null
   unit: string; category: UpgradeCategory; change: 'level_up' | 'unlock'; from: number; to: number; at: string
 }
-export type Inactive = {
-  tag: string; name: string; clan: ClanName; th: number | null
-  last_active: string | null; days_inactive: number | null; inactive_at_least: boolean; tracking_since: string | null
-  last_war_attack: string | null; donations: number | null; missed_attacks_recorded: number | null
-}
 export type Reason = { code: string; value: number | string | null }
 export type Activity = 'inactive_14_plus' | 'inactive_7_to_13' | 'inactive_3_to_6' | 'active'
 /** Make room, already in Ka Wai's removal order: activity bucket, then weakest heroes for the TH. */
@@ -20,21 +15,13 @@ export type Candidate = {
   tag: string; name: string; clan: ClanName; th: number | null; cwl_slot: string | null; reasons: Reason[]
   position?: number; activity?: Activity; days_inactive?: number | null; inactive_at_least?: boolean
   hero_levels?: number | null; hero_pct?: number | null; cohort_th?: number | null; cohort_n?: number | null; cohort?: 'same_th' | 'thin' | null
+  tracking_since?: string | null; last_upgrade?: string | null; upgrades_30d?: number
 }
 
 export const ACTIVITY_LABEL: Record<Activity, string> = {
   inactive_14_plus: 'Inactive 14+ days', inactive_7_to_13: 'Inactive 7–13 days', inactive_3_to_6: 'Inactive 3–6 days', active: 'Active',
 }
 
-const HERO_LOW = 85
-
-/** Heroes as a share of the same-TH median; a thin cohort compares TH-1 to TH+1. */
-export function heroChip(c: Candidate): { text: string; tone: 'amber' | 'grey' | 'plain' } | null {
-  if (c.hero_pct === null || c.hero_pct === undefined || !c.cohort_th) return null
-  const thin = c.cohort === 'thin'
-  const of = thin ? `TH${c.cohort_th - 1}–${c.cohort_th + 1}` : `TH${c.cohort_th}`
-  return { text: `Heroes ${Math.round(c.hero_pct)}% of ${of}`, tone: thin ? 'grey' : c.hero_pct < HERO_LOW ? 'amber' : 'plain' }
-}
 export type MakeRoom = { clan: ClanName; members: number; cap: number; as_of: string | null; players: Candidate[] }
 
 const mock = () => import.meta.env.DEV && new URLSearchParams(window.location.search).has('mock')
@@ -68,7 +55,8 @@ export type LogEvent = {
   tag: string; name: string | null; th: number | null; clan: ClanName; from_clan?: ClanName; role?: string; at: string; approx: boolean
 }
 export type UpgradeCount = { day: string; clan: ClanName; category: UpgradeCategory; n: number }
-export type ClanLog = { since: string | null; upgrade_days: number; events: LogEvent[]; upgrades: Upgrade[]; upgrade_counts?: UpgradeCount[] }
+export type UpgradeLeader = { tag: string; name: string | null; clan: ClanName; th: number | null; week: number; month: number; last: string }
+export type ClanLog = { since: string | null; upgrade_days: number; events: LogEvent[]; upgrades: Upgrade[]; upgrade_counts?: UpgradeCount[]; upgrade_board?: UpgradeLeader[] }
 
 const loadClanLog = (): Promise<ClanLog | null> => (mock()
   ? import('./devMock').then((m) => m.mockUpgrades()).then((d) => ({ since: null, upgrade_days: 14, events: [], upgrades: (d as { upgrades: Upgrade[] }).upgrades }))
@@ -88,11 +76,6 @@ export function useClanLog() {
   }, [])
   return state
 }
-
-export const useInactivity = (enabled: boolean) =>
-  useLoad<{ players: Inactive[]; as_of: string | null }>(enabled ? 'inactivity' : null, () => (mock()
-    ? import('./devMock').then((m) => m.mockInactivity())
-    : getJson<{ players: Inactive[]; as_of: string | null }>('/api/leaders/inactivity')))
 
 export const useMakeRoom = (clan: ClanName, enabled: boolean) =>
   useLoad<MakeRoom>(enabled ? `make-room-${clan}` : null, () => (mock()

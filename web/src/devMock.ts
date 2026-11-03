@@ -69,20 +69,6 @@ export async function mockUpgrades() {
   return { as_of: new Date().toISOString(), upgrades }
 }
 
-export async function mockInactivity() {
-  const roster: Roster = await fetch('/roster.json').then((r) => r.json())
-  const r = rnd('inactive')
-  return {
-    as_of: new Date().toISOString(),
-    players: roster.players.map((p) => {
-      const d = Math.floor(r() * r() * 30)
-      return { tag: p.tag, name: p.name, clan: p.clan, th: p.th, last_active: new Date(Date.now() - d * 24 * HOURS).toISOString(),
-        days_inactive: d, inactive_at_least: r() < 0.1, tracking_since: '2026-10-30', last_war_attack: r() < 0.3 ? null : new Date(Date.now() - r() * 20 * 24 * HOURS).toISOString(),
-        donations: Math.floor(r() * 1500), missed_attacks_recorded: Math.floor(r() * 3) }
-    }).sort((a, b) => b.days_inactive - a.days_inactive),
-  }
-}
-
 export async function mockMakeRoom(clan: 'Fire' | 'Cake' | 'Flakes') {
   const roster: Roster = await fetch('/roster.json').then((r) => r.json())
   const r = rnd('room' + clan)

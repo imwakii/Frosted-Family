@@ -1,7 +1,7 @@
 import { YouTag } from './You'
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { groupUnits } from '../equipment'
-import OverallBoard, { Bar } from './OverallBoard'
+import { Bar } from './OverallBoard'
 import RankBoard, { type RankCol } from './RankBoard'
 import { CATS, type Cat, competitionRanks, HIGH_MISS, isMaxed, type MatrixPlayer, missRate, progress, useMatrix, useWarBoard, type WarRow, type WarScope } from '../explore'
 import { go, onDrill, playerHref, upgradeHref, useDrill } from '../route'
@@ -16,9 +16,9 @@ import { ClanSwitch, Star, StatusKey, SubNav, Th, UnitIcon, RowChevron, chip } f
 export type ClanPick = ClanName | 'All'
 type BoardProps = { q: string; setQ: (v: string) => void; wide: boolean }
 
-// Players: all upgrades together, one unit matrix per category, then past a divider the two rankings that are not upgrades.
+// Players: one unit matrix per category, then past a divider the two rankings that are not upgrades. The upgrade rankings are in Log.
 const NAV: { id: string; label: string; icon: string | null }[] = [
-  { id: 'overall', label: 'Upgrades', icon: null }, ...CATS, { id: 'donations', label: 'Donations', icon: null }, { id: 'capital', label: 'Capital', icon: null },
+  ...CATS, { id: 'donations', label: 'Donations', icon: null }, { id: 'capital', label: 'Capital', icon: null },
 ]
 
 const SUBS = [
@@ -88,14 +88,13 @@ const cellTone = (l: number | null, max: number) =>
   l === null || l === 0 ? 'text-[#D5C8AC]' : l >= max ? 'font-extrabold text-ink' : l < max * 0.6 ? 'font-semibold text-[#A3957C]' : 'font-semibold text-ink-2'
 
 export default function ExploreTab({ sub, kind, ...rest }: BoardProps & { sub: string; kind: string | null }) {
-  const id = NAV.find((c) => c.id === kind)?.id ?? 'overall'
+  const id = NAV.find((c) => c.id === kind)?.id ?? NAV[0].id
   const board = sub === 'badges' ? <BadgesBoard {...rest} />
     : sub === 'history' ? <HistoryBoard {...rest} />
     : sub === 'war' ? <WarBoardView {...rest} />
     : sub === 'trends' ? (
       <main className={rest.wide ? 'mx-auto max-w-[1360px] px-[clamp(16px,3vw,32px)] pb-12 pt-5' : 'pb-6 pt-3'}><ClansBoard wide={rest.wide} /></main>
     )
-    : id === 'overall' ? <OverallBoard {...rest} />
     : id === 'donations' ? <RankBoard key="donations" kind="donations" cols={DONATION_COLS} note="This season" {...rest} />
     : id === 'capital' ? <RankBoard key="capital" kind="capital" cols={CAPITAL_COLS} {...rest} />
     : <MatrixBoard cat={id as Cat} {...rest} />

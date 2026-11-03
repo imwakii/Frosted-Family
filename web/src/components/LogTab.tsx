@@ -1,19 +1,22 @@
 import { type PointerEvent, useMemo, useState } from 'react'
 import { thIcon } from '../clash'
-import { ago, type LogEvent, type Upgrade, type UpgradeCategory, type UpgradeCount, useClanLog } from '../leaders'
+import { ago, type LogEvent, type Upgrade, type UpgradeCategory, type UpgradeCount, type UpgradeLeader, useClanLog } from '../leaders'
 import { go, playerHref, useDrill } from '../route'
 import { CLAN, CLANS } from '../theme'
 import type { ClanName, Roster } from '../types'
 import { Card, COLOR, Dot, ticks, useWidth } from './ClansBoard'
 import { norm, PhoneSearch, SearchBox } from './CwlTab'
 import { ClanFilter, Empty, useClanPick } from './ExploreTab'
-import { chip, POINT, Th, UnitIcon } from './ui'
+import OverallBoard from './OverallBoard'
+import { chip, Eyebrow, POINT, RowChevron, Th, UnitIcon } from './ui'
+import { Chevron } from './WhatsNew'
 import { YouTag } from './You'
 
 // GET /api/log: what has happened in the family, newest day first. Each day opens with who came, went or changed role,
 // so a busy day of upgrades does not bury them; a player's upgrades that day share one row, a new town hall has its own.
 // A member's row points the way they went: towards the clan on the way in, away from it on the way out.
 // A new town hall is a milestone: a gold row at the top of its day, or an ordinary row in the Upgrades view.
+// The Upgrades view leads with who: the rankings, then the chart folded away, then the feed.
 
 type View = 'all' | 'members' | 'upgrades'
 const DAYS_SHOWN = 2
@@ -22,6 +25,7 @@ const KINDS: { id: UpgradeCategory | 'all'; label: string }[] = [
   { id: 'all', label: 'All' }, { id: 'hero', label: 'Heroes' }, { id: 'equipment', label: 'Equipment' }, { id: 'troop', label: 'Troops' },
   { id: 'spell', label: 'Spells' }, { id: 'pet', label: 'Pets' }, { id: 'siege', label: 'Sieges' }, { id: 'town_hall', label: 'Town hall' },
 ]
+const TOP = 10
 const ROLE: Record<string, string> = { member: 'Member', admin: 'Elder', coLeader: 'Co-leader', leader: 'Leader' }
 const MARK: Record<LogEvent['kind'], { point: typeof POINT.right | null; bg: string; fg: string }> = {
   joined: { point: POINT.right, bg: '#E7EFD6', fg: '#2F6B2A' },
@@ -256,6 +260,45 @@ function UpgradeRow({ ups, showClan, open, onToggle }: { ups: Upgrade[]; showCla
   )
 }
 
+/** Most upgrades in the last 7 or 30 days. Clan and search come from the page. */
+function MostUpgrades({ board, clan, nq }: { board: UpgradeLeader[]; clan: ClanName | 'All'; nq: string }) {
+  const [days, setDays] = useState<7 | 30>(7)
+  const [everyone, setEveryone] = useState(false)
+  const n = (r: UpgradeLeader) => (days === 7 ? r.week : r.month)
+  const ranked = board.filter((r) => (clan === 'All' || r.clan === clan) && n(r) > 0
+    && (!nq || norm(r.name ?? '').includes(nq) || r.tag.toLowerCase().includes(nq))).sort((a, b) => n(b) - n(a) || b.last.localeCompare(a.last))
+  const shown = everyone || nq ? ranked : ranked.slice(0, TOP)
+  return (
+    <div className="flex flex-col gap-2">
+      <div role="group" aria-label="Range" className="flex gap-1.5">
+        {([7, 30] as const).map((d) => <button key={d} type="button" aria-pressed={d === days} onClick={() => setDays(d)} className={chip(d === days)}>{d} days</button>)}
+      </div>
+      {!shown.length ? <div className="rounded-2xl border border-line bg-white p-5 text-sm text-faint">{nq ? 'No one by that name' : 'No upgrades yet'}</div> : (
+        <ol className="m-0 list-none rounded-2xl border border-line bg-white py-1">
+          {shown.map((r, i) => (
+            <li key={r.tag}>
+              <a href={playerHref(r.tag)} data-tag={r.tag} className={`flex min-h-[56px] items-center gap-3 px-3.5 py-1.5 text-ink no-underline hover:bg-hover ${i ? 'border-t border-hair' : ''}`}>
+                <span className="w-6 flex-none text-right text-xs font-bold tabular-nums text-faint">{ranked.findIndex((x) => n(x) === n(r)) + 1}</span>
+                <Th th={r.th} />
+                <span className="flex min-w-0 flex-auto flex-col">
+                  <span className="flex min-w-0 items-baseline gap-1.5">
+                    <span className="truncate text-[15px] font-semibold"><YouTag tag={r.tag} />{r.name}</span>
+                    {clan === 'All' && <span className="flex-none text-[11px] font-bold" style={{ color: CLAN[r.clan].deep }}>{r.clan}</span>}
+                  </span>
+                  <span className="text-[13px] text-muted">Last {ago(r.last)}</span>
+                </span>
+                <span className="flex-none text-sm font-extrabold tabular-nums">{n(r)}</span>
+                <RowChevron />
+              </a>
+            </li>
+          ))}
+        </ol>
+      )}
+      {shown.length < ranked.length && <button type="button" onClick={() => setEveryone(true)} className="min-h-11 w-full cursor-pointer rounded-2xl border border-line bg-white text-[13px] font-bold text-action hover:bg-page">Show all {ranked.length}</button>}
+    </div>
+  )
+}
+
 export default function LogTab({ roster, q, setQ, wide }: { roster: Roster; q: string; setQ: (v: string) => void; wide: boolean }) {
   const { data, loading } = useClanLog()
   const [clan, setClan] = useClanPick()
@@ -263,6 +306,8 @@ export default function LogTab({ roster, q, setQ, wide }: { roster: Roster; q: s
   const [kind, setKind] = useState<UpgradeCategory | 'all'>('all')
   const [open, setOpen] = useState<string | null>(null)
   const [allDays, setAllDays] = useState(false)
+  const [ranking, setRanking] = useState<'most' | 'furthest'>('most')
+  const [chartOpen, setChartOpen] = useState(false)
   useDrill((d) => !!data && d.unit === 'Town Hall', () => { setView('all'); setAllDays(true) })
   const nq = norm(q.trim())
   const here = useMemo(() => new Set(roster.players.map((p) => p.tag)), [roster])
@@ -298,18 +343,41 @@ export default function LogTab({ roster, q, setQ, wide }: { roster: Roster; q: s
       <div role="group" aria-label="Show" className="flex gap-1.5">
         {VIEWS.map((v) => <button key={v.id} type="button" aria-pressed={v.id === view} onClick={() => setView(v.id)} className={chip(v.id === view)}>{v.label}</button>)}
       </div>
-      {view === 'upgrades' && (
-        <div role="group" aria-label="Kind" className={`flex gap-1.5 overflow-x-auto [scrollbar-width:none] ${wide ? 'flex-wrap' : ''}`}>
-          {KINDS.map((k) => <button key={k.id} type="button" aria-pressed={k.id === kind} onClick={() => setKind(k.id)} className={chip(k.id === kind)}>{k.label}</button>)}
-        </div>
-      )}
     </div>
+  )
+  const kinds = view === 'upgrades' && (
+    <section aria-label="Upgrades by day" className="flex flex-col gap-1.5">
+      <Eyebrow>Every upgrade</Eyebrow>
+      <div role="group" aria-label="Kind" className={`flex gap-1.5 overflow-x-auto [scrollbar-width:none] ${wide ? 'flex-wrap' : ''}`}>
+        {KINDS.map((k) => <button key={k.id} type="button" aria-pressed={k.id === kind} onClick={() => setKind(k.id)} className={chip(k.id === kind)}>{k.label}</button>)}
+      </div>
+    </section>
+  )
+  const rankings = view === 'upgrades' && !!data && (
+    <section aria-label="Rankings" className="flex flex-col gap-2">
+      <div role="group" aria-label="Ranking" className="flex gap-1.5">
+        {([['most', 'Most upgrades'], ['furthest', 'Furthest along']] as const).map(([id, text]) => (
+          <button key={id} type="button" aria-pressed={id === ranking} onClick={() => setRanking(id)} className={chip(id === ranking)}>{text}</button>
+        ))}
+      </div>
+      {ranking === 'most' ? <MostUpgrades board={data.upgrade_board ?? []} clan={clan} nq={nq} /> : <OverallBoard q={q} clan={clan} wide={wide} />}
+    </section>
   )
   const first = events.find((e) => here.has(e.tag))?.tag ?? halls[0]?.tag ?? ups[0]?.tag
   const enter = () => { if (first) go.to(playerHref(first)) }
   const started = data?.since && new Date(`${data.since}T00:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' })
 
-  const chart = view === 'upgrades' && !!data?.upgrade_counts?.length && <UpgradeChart counts={data.upgrade_counts} clan={clan} kind={kind} />
+  // Mounted only once open, so it measures its width when there is one to measure.
+  const chart = view === 'upgrades' && !!data?.upgrade_counts?.length && (
+    <div className="flex flex-col gap-2">
+      <button type="button" aria-expanded={chartOpen} onClick={() => setChartOpen((o) => !o)}
+        className="flex min-h-11 cursor-pointer items-center gap-1 self-start border-0 bg-transparent p-0 text-sm font-normal text-ink-2">
+        Upgrades per day
+        <Chevron className={chartOpen ? 'rotate-90' : ''} />
+      </button>
+      {chartOpen && <UpgradeChart counts={data.upgrade_counts} clan={clan} kind={kind} />}
+    </div>
+  )
   const feed = !data ? <Empty loading={loading} /> : !order.length
     ? <div className="rounded-2xl border border-line bg-white p-5 text-sm text-faint">{nq ? 'No one by that name' : 'Nothing here yet'}</div>
     : (
@@ -352,7 +420,7 @@ export default function LogTab({ roster, q, setQ, wide }: { roster: Roster; q: s
           <div className="w-[clamp(220px,28vw,340px)] flex-none"><SearchBox q={q} setQ={setQ} onEnter={enter} /></div>
         </div>
         {filters}
-        <div className="flex w-full flex-col gap-3">{chart}{feed}</div>
+        <div className="flex w-full flex-col gap-3">{rankings}{chart}{kinds}{feed}</div>
       </main>
     )
   }
@@ -360,7 +428,7 @@ export default function LogTab({ roster, q, setQ, wide }: { roster: Roster; q: s
     <div className="flex flex-col gap-2.5 pb-6">
       <PhoneSearch q={q} setQ={setQ} onEnter={enter}><ClanFilter clan={clan} setClan={setClan} /></PhoneSearch>
       {filters}
-      <div className="flex flex-col gap-3 px-4">{chart}{feed}</div>
+      <div className="flex flex-col gap-3 px-4">{rankings}{chart}{kinds}{feed}</div>
     </div>
   )
 }

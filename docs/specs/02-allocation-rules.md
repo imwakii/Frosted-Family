@@ -104,7 +104,8 @@ that rule. **It lists candidates and never removes anyone.** Who leaves is still
    sum among all current members of the three clans at the same town hall. With fewer than 3 members at
    that town hall, the comparison widens to TH-1 to TH+1, and its median is scaled by the ratio of summed
    hero max levels. The list marks these comparisons `thin`.
-3. **Other reasons only break ties**, in this order: missed attacks in the last 14 days, a high miss rate,
+3. **Other reasons only break ties.** First, no upgrades in the last 30 days (set by Ka Wai on 4 November 2026),
+   then in this order: missed attacks in the last 14 days, a high miss rate,
    no donations this season, sitting out, new or unproven, below the clan's TH floor (TH18 in Fire, TH16 in
    Cake). They show as reasons beside each name.
 

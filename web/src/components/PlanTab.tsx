@@ -401,7 +401,7 @@ type PlanProps = { roster: Roster; me: Me; ready: boolean; wide: boolean; onSign
 
 const SUBS = [
   { id: 'days', label: 'Plan', href: '#/plan/days' },
-  { id: 'members', label: 'Members', href: '#/plan/members' },
+  { id: 'members', label: 'Who could go', href: '#/plan/members' },
   { id: 'usage', label: 'Usage', href: '#/plan/usage' },
 ]
 

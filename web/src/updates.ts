@@ -148,6 +148,8 @@ export const UPDATES: Update[] = [
       {
         title: 'Log tab',
         lines: [
+          'Added rankings to Upgrades.',
+          'Folded Upgrades per day away.',
           'Changed Log to open on recent days.',
         ],
       },
@@ -164,6 +166,7 @@ export const UPDATES: Update[] = [
           'Changed Suggest to keep your plan.',
           'Added the swaps to make in the game.',
           'Added visitors by region under Usage.',
+          'Merged Make room and Inactivity.',
           'Added changes to the Publish check.',
         ],
       },
