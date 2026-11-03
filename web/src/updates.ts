@@ -107,12 +107,12 @@ export const UPDATES: Update[] = [
   },
   {
     // Further ids for the same day: the batch grew after the first, so the card opens once more.
-    id: '2026-11-04-12',
+    id: '2026-11-04-13',
     date: '4 Nov 2026',
     highlights: [
       { title: 'Phone alerts', line: 'Choose what your phone tells you.', icon: 'bell' },
       { title: 'Calendar', line: "See what's coming up.", href: '#/calendar', icon: 'calendar' },
-      { title: 'Standings', line: "See who's winning your CWL group.", href: '#/cwl/group', icon: 'league' },
+      { title: 'Most upgrades', line: "See who's upgrading the most.", href: '#/log', icon: 'hero' },
     ],
     groups: [
       {
@@ -187,6 +187,9 @@ export const UPDATES: Update[] = [
       {
         title: 'Player cards',
         lines: [
+          'Changed the card's order and header.',
+          'Added each player\'s attack history.',
+          'Added a way back to the card.',
           'Added your stars toward 8.',
           'Added the next badge you could earn.',
           'Fixed move notes after sign-up closes.',

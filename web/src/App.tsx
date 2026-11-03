@@ -3,6 +3,7 @@ import { useAuth, type Me } from './auth'
 import CalendarTab from './components/CalendarTab'
 import CwlTab from './components/CwlTab'
 import ClanSheet from './components/ClanSheet'
+import AttackHistory from './components/AttackHistory'
 import CompareSheet from './components/CompareSheet'
 import RivalSheet from './components/RivalSheet'
 import UpgradeHistory from './components/UpgradeHistory'
@@ -19,7 +20,7 @@ import { InstallHint, useInstallHint } from './components/InstallHint'
 import { JumpToYou, YouChip } from './components/You'
 import { fetchPlayer, useRoster, useWar, useWide } from './data'
 import { useVisits } from './visits'
-import { decodeTag, go, onDrill, useRoute } from './route'
+import { cardToReturnTo, returnToCard, decodeTag, go, onDrill, useRoute } from './route'
 import { CalendarButton, SubNav } from './components/ui'
 
 const CWL_SUBS = [{ id: 'lineups', label: 'Lineups', href: '#/cwl' }, { id: 'group', label: 'Group', href: '#/cwl/group' }]
@@ -63,6 +64,7 @@ export default function App() {
   const wide = useWide()
   const roomy = useWide('(min-width: 1024px)')
   const route = useRoute()
+  const back = cardToReturnTo(route.tab)
   const auth = useAuth()
   const install = useInstallHint(wide)
   const [q, setQ] = useState('')
@@ -153,6 +155,13 @@ export default function App() {
         <a href="https://supercell.com/en/fan-content-policy/" target="_blank" rel="noopener noreferrer" className="text-faint underline hover:text-muted">Fan Content Policy</a>
       </footer>
 
+      {roster && back && !route.player && !route.upgrade && !route.compare && !route.history && !route.attacks && (
+        <button type="button" onClick={returnToCard}
+          className={`ff-rise fixed left-4 z-20 flex min-h-10 max-w-[60vw] cursor-pointer items-center gap-1.5 rounded-full border-0 bg-ink px-3.5 text-sm font-bold text-white shadow-[0_4px_14px_rgba(43,33,20,.3)] ${wide ? 'bottom-6' : 'bottom-[72px]'}`}>
+          <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" className="flex-none"><path d="M15 6l-6 6 6 6" /></svg>
+          <span className="truncate">{roster.players.find((p) => p.tag === back.tag)?.name ?? 'Back'}'s card</span>
+        </button>
+      )}
       {!route.player && (install.show ? <InstallHint onDismiss={install.dismiss} /> : wide && route.tab !== 'plan' && route.tab !== 'calendar' && <JumpToYou wide={wide} />)}
 
       {roster && <Welcome roster={roster} wide={wide} />}
@@ -160,6 +169,7 @@ export default function App() {
       {roster && route.clan && !route.player && <ClanSheet clan={route.clan} roster={roster} wide={wide} onClose={closeSheet} />}
       {roster && route.compare && !route.player && <CompareSheet roster={roster} {...route.compare} wide={wide} onClose={closeSheet} />}
       {route.upgrade && !route.player && <UpgradeSheet {...route.upgrade} wide={wide} onClose={closeSheet} />}
+      {roster && route.attacks && !route.player && <AttackHistory key={route.attacks.tag} {...route.attacks} roster={roster} wide={wide} onClose={closeSheet} />}
       {roster && route.history && !route.player && <UpgradeHistory key={route.history.tag} {...route.history} roster={roster} wide={wide} onClose={closeSheet} />}
       {route.rival && !route.player && <RivalSheet clan={route.rival.clan} tag={route.rival.tag} wide={wide} onClose={closeSheet} />}
 

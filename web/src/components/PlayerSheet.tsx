@@ -3,7 +3,7 @@ import { loadPlayerAll, type PlayerCard, playerNow, stillToMove } from '../data'
 import { BADGES, TIER_LOOK, TIERS } from '../badges'
 import { ago } from '../leaders'
 import { CATS } from '../explore'
-import { compareHref, go, historyHref, markFromCard, playerHref, upgradeHref } from '../route'
+import { attacksHref, compareHref, go, historyHref, markFromCard, playerHref, upgradeHref } from '../route'
 import Info from './Info'
 import { StarBurst, useCountUp, useNewIds, useOnce } from './Motion'
 import { Bar } from './OverallBoard'
@@ -377,14 +377,18 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
               <Section title="Latest attacks">
                 <ul className={LIST}>
                   {card.attacks.slice(0, 5).map((a, i) => (
-                    <li key={i} className={`flex items-center gap-2 px-3 py-1.5 ${i ? 'border-t border-hair' : ''}`}>
-                      <Th th={a.target_th} />
-                      <span className="flex min-w-0 flex-auto flex-col">
-                        <span className="truncate text-[13px] font-semibold text-ink">{a.target ?? 'Unknown'}</span>
-                        <span className="truncate text-[11px] text-faint">{a.kind === 'cwl' ? `CWL day ${a.day ?? '?'} · ` : ''}{a.opponent}</span>
-                      </span>
-                      <Stars n={a.stars} />
-                      <span className="w-9 flex-none text-right text-xs font-bold tabular-nums text-ink-2">{Math.round(a.destruction)}%</span>
+                    <li key={i} className={i ? 'border-t border-hair' : ''}>
+                      <button type="button" onClick={() => { markFromCard(true); go.to(attacksHref(tag, 30)) }}
+                        className="flex w-full cursor-pointer items-center gap-2 border-0 bg-transparent px-3 py-1.5 text-left hover:bg-hover">
+                        <Th th={a.target_th} />
+                        <span className="flex min-w-0 flex-auto flex-col">
+                          <span className="truncate text-[13px] font-semibold text-ink">{a.target ?? 'Unknown'}</span>
+                          <span className="truncate text-[11px] text-faint">{a.kind === 'cwl' ? `CWL day ${a.day ?? '?'} · ` : ''}{a.opponent}</span>
+                        </span>
+                        <Stars n={a.stars} />
+                        <span className="w-9 flex-none text-right text-xs font-bold tabular-nums text-ink-2">{Math.round(a.destruction)}%</span>
+                        <RowChevron />
+                      </button>
                     </li>
                   ))}
                 </ul>

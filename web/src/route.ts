@@ -9,7 +9,7 @@ import type { ClanName } from './types'
 // and two players side by side with /v/<tag>[/<other tag>], tags without #.
 // Old links (#/explore/<kind>, #/leaders/<sub>) are rewritten to their new place.
 export type Tab = 'cwl' | 'calendar' | 'explore' | 'log' | 'war' | 'plan'
-export type Route = { tab: Tab; sub: string; kind: string | null; player: string | null; clan: ClanName | null; rival: { clan: ClanName; tag: string } | null; upgrade: { cat: Cat; tag: string; unit: string | null } | null; compare: { a: string; b: string | null } | null; history: { tag: string; days: 7 | 30 } | null; base: string }
+export type Route = { tab: Tab; sub: string; kind: string | null; player: string | null; clan: ClanName | null; rival: { clan: ClanName; tag: string } | null; upgrade: { cat: Cat; tag: string; unit: string | null } | null; compare: { a: string; b: string | null } | null; history: { tag: string; days: 7 | 30 } | null; attacks: { tag: string; days: 7 | 30 } | null; base: string }
 
 export const STATS_SUBS = ['players', 'badges', 'war', 'trends', 'history'] as const
 export const LEADERS_SUBS = ['builder', 'days', 'members', 'usage'] as const
@@ -26,6 +26,7 @@ const comparePath = (a: string, b?: string | null) =>
   `/v/${encodeURIComponent(a.replace(/^#/, ''))}${b ? `/${encodeURIComponent(b.replace(/^#/, ''))}` : ''}`
 
 const historyPath = (tag: string, days: number) => `/l/${encodeURIComponent(tag.replace(/^#/, ''))}/${days}`
+const attacksPath = (tag: string, days: number) => `/a/${encodeURIComponent(tag.replace(/^#/, ''))}/${days}`
 
 function parse(): Route {
   const h = window.location.hash.replace(/^#\/?/, '')
@@ -42,18 +43,21 @@ function parse(): Route {
   const versusB = versus?.[2] ? decodeTag(versus[2]) : null
   const log = head.match(/(?:^|\/)l\/([^/]+)\/(7|30)$/)
   const logTag = log ? decodeTag(log[1]) : null
-  const cut = enemy ?? card ?? stat ?? versus ?? log
+  const fights = head.match(/(?:^|\/)a\/([^/]+)\/(7|30)$/)
+  const fightsTag = fights ? decodeTag(fights[1]) : null
+  const cut = enemy ?? card ?? stat ?? versus ?? log ?? fights
   return {
     ...place(cut ? head.slice(0, cut.index) : head, player),
     clan: card ? (card[1] as ClanName) : null,
     rival: enemy && rivalTag ? { clan: enemy[1] as ClanName, tag: '#' + rivalTag } : null,
     compare: versusA ? { a: '#' + versusA, b: versusB ? '#' + versusB : null } : null,
     history: log && logTag ? { tag: '#' + logTag, days: Number(log[2]) as 7 | 30 } : null,
+    attacks: fights && fightsTag ? { tag: '#' + fightsTag, days: Number(fights[2]) as 7 | 30 } : null,
     upgrade: stat && statTag ? { cat: stat[1] as Cat, tag: '#' + statTag, unit: stat[3] ? decodeTag(stat[3]) : null } : null,
   }
 }
 
-function place(path: string, player: string | null): Omit<Route, 'clan' | 'rival' | 'upgrade' | 'compare' | 'history'> {
+function place(path: string, player: string | null): Omit<Route, 'clan' | 'rival' | 'upgrade' | 'compare' | 'history' | 'attacks'> {
   let parts = path.split('/').filter(Boolean)
   if (parts[0] === 'explore') parts = parts[1] === 'war' || parts[1] === 'upgrades' ? ['stats', parts[1]] : ['stats', 'players', ...parts.slice(1, 2)]
   if ((parts[0] === 'plan' || parts[0] === 'leaders') && parts[1] === 'attacks') parts = ['war']  // moved 2 Nov 2026
@@ -88,7 +92,7 @@ export function useRoute() {
     const on = () => {
       const r = parse()
       // Rewrite an old link in place, so the address bar shows the new route.
-      const want = r.base + (r.clan ? `/c/${r.clan}` : '') + (r.rival ? `/e/${r.rival.clan}/${encodeURIComponent(r.rival.tag.slice(1))}` : '') + (r.history ? historyPath(r.history.tag, r.history.days) : '') + (r.upgrade ? upgradePath(r.upgrade.cat, r.upgrade.tag, r.upgrade.unit) : '') + (r.compare ? comparePath(r.compare.a, r.compare.b) : '') + (r.player ? `/p/${encodeURIComponent(r.player.slice(1))}` : '')
+      const want = r.base + (r.clan ? `/c/${r.clan}` : '') + (r.rival ? `/e/${r.rival.clan}/${encodeURIComponent(r.rival.tag.slice(1))}` : '') + (r.history ? historyPath(r.history.tag, r.history.days) : '') + (r.attacks ? attacksPath(r.attacks.tag, r.attacks.days) : '') + (r.upgrade ? upgradePath(r.upgrade.cat, r.upgrade.tag, r.upgrade.unit) : '') + (r.compare ? comparePath(r.compare.a, r.compare.b) : '') + (r.player ? `/p/${encodeURIComponent(r.player.slice(1))}` : '')
       if (want && window.location.hash !== want) history.replaceState(null, '', want)
       setRoute(r)
     }
@@ -119,6 +123,9 @@ export const compareHref = (a: string, b?: string | null) => `${parse().base}${c
 /** Link to one player's upgrades over the last 7 or 30 days, over the current view. */
 export const historyHref = (tag: string, days: 7 | 30) => `${parse().base}${historyPath(tag, days)}`
 
+/** Link to one player's attacks over the last 7 or 30 days, over the current view. */
+export const attacksHref = (tag: string, days: 7 | 30) => `${parse().base}${attacksPath(tag, days)}`
+
 /** Link to one player in one upgrade category, over the current view. */
 export const upgradeHref = (cat: Cat, tag: string, unit?: string | null) => `${parse().base}${upgradePath(cat, tag, unit)}`
 
@@ -130,11 +137,26 @@ export const rivalHref = (clan: ClanName, tag: string) => `${parse().base}/e/${c
 export type Drill = { tag: string; unit?: string; col?: string }
 let drill: Drill | null = null
 
+// The card a ranking was opened from, so the page can offer the quick way back. It lasts while the person stays on that tab.
+let cameFrom: { hash: string; tag: string; tab: Tab } | null = null
+export function cardToReturnTo(tab: Tab) {
+  if (cameFrom && cameFrom.tab !== tab) cameFrom = null
+  return cameFrom
+}
+export function returnToCard() {
+  if (!cameFrom) return
+  const { hash } = cameFrom
+  cameFrom = null
+  window.location.hash = hash
+}
+
 export const go = {
   to: (hash: string) => { window.location.hash = hash },
   closePlayer: () => { window.location.hash = parse().base },
   drill: (hash: string, d: Drill) => {
     drill = d
+    const parts = hash.replace(/^#\/?/, '')
+    cameFrom = window.location.hash.includes('/p/') ? { hash: window.location.hash, tag: d.tag, tab: place(parts, null).tab } : null
     try { sessionStorage.setItem('ff-x-clan', 'All') } catch { /* private mode */ }
     window.location.hash = hash
     window.dispatchEvent(new Event('ff-drill'))

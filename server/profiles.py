@@ -477,6 +477,20 @@ def eight_for(conn, tag: str, now: datetime | None = None) -> dict | None:
     return {"season": last["season"], "stars": me["stars"], "played": me["played"], "begun": begun or 0}
 
 
+def attack_history(conn, tag: str, now: datetime | None = None) -> list[dict]:
+    """Every attack this player made in the last 30 days, newest war first, for the card that opens from Latest attacks."""
+    since = ((now or datetime.now(timezone.utc)) - timedelta(days=CARD_UPGRADE_DAYS)).strftime("%Y%m%dT%H%M%S")
+    return [{"war_key": a["war_key"], "date": api_day(a["start_time"]), "stars": a["stars"], "destruction": a["destruction"], "kind": a["kind"], "day": a["round"],
+             "opponent": a["opponent_name"] if a["attacker_clan_tag"] == a["clan_tag"] else a["clan_name"],
+             "target": a["target"], "target_th": a["target_th"], "target_position": a["target_position"]}
+            for a in conn.execute(
+                """SELECT a.war_key, a.stars, a.destruction, a.attacker_clan_tag, w.start_time, w.kind, w.round, w.clan_tag, w.clan_name, w.opponent_name,
+                          d.name AS target, d.town_hall AS target_th, d.map_position AS target_position
+                   FROM attacks a JOIN wars w USING (war_key)
+                   LEFT JOIN war_members d ON d.war_key = a.war_key AND d.player_tag = a.defender_tag
+                   WHERE a.attacker_tag=? AND w.start_time >= ? ORDER BY w.start_time DESC, a.attack_order DESC""", (tag, since))]
+
+
 def player_card(conn, tag: str) -> dict:
     """What the player sheet adds to the roster row: heroes and their gear, badges, streaks, season totals, latest
     attacks and upgrades. Each block says what period it covers: the war record runs from the export's window to now,
@@ -507,7 +521,7 @@ def player_card(conn, tag: str) -> dict:
     ctx = badge_context(conn, record)
     return {
         "heroes": heroes, "attacks": attacks, "upgrades": mine, "upgrade_history": history_30d, "badges": badges_for(conn, tag, heroes, ctx),
-        "next_badge": next_badge(tag, heroes, ctx), "eight": eight_for(conn, tag),
+        "next_badge": next_badge(tag, heroes, ctx), "eight": eight_for(conn, tag), "attack_history": attack_history(conn, tag),
         "record": own and {"from": record["window_from"], "attacks": own["attacks"], "missed": own["missed"],
                            "three_star_rate": own["three_star_rate"]},
         "tracked_from": api_day(first),

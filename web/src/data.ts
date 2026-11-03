@@ -128,6 +128,7 @@ export type PlayerCard = {
   attacks: { stars: number; destruction: number; kind: string; day: number | null; opponent: string | null; target: string | null; target_th: number | null; target_position: number | null }[]
   upgrades: { unit: string; category?: string; from: number; to: number; at: string }[]
   upgrade_history?: { unit: string; category?: string; from: number; to: number; at: string }[]
+  attack_history?: { war_key: string; date: string; stars: number; destruction: number; kind: string; day: number | null; opponent: string | null; target: string | null; target_th: number | null; target_position: number | null }[]
   war_stars: number | null; donations: number | null; donations_received: number | null; capital: number | null
 }
 

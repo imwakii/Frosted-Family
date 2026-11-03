@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { thIcon } from '../clash'
 import { loadPlayerAll, type PlayerCard, playerNow } from '../data'
 import { ago } from '../leaders'
-import { openedFromCard, playerHref } from '../route'
+import { markFromCard, openedFromCard, playerHref } from '../route'
 import type { Roster } from '../types'
 import { CardSheet } from './ClanSheet'
 import { dayLabel, feedDay } from './LogTab'
@@ -17,6 +17,7 @@ export default function UpgradeHistory({ tag, days: start, roster, wide, onClose
   const [card, setCard] = useState<PlayerCard | null>(() => playerNow(tag)?.card ?? null)
   const [days, setDays] = useState<Range>(start)
   const [fromCard] = useState(openedFromCard)
+  useEffect(() => () => markFromCard(false), [])
   useEffect(() => {
     let live = true
     if (!playerNow(tag)) loadPlayerAll(tag).then((x) => { if (live) setCard(x.card) })

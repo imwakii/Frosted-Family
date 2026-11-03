@@ -76,3 +76,18 @@ def test_heroes_count_levels_still_to_go():
     heroes = [{"name": "King", "level": 90, "max": 100}, {"name": "Queen", "level": 90, "max": 100}]
     got = profiles.next_badge(ME, heroes, ctx())
     assert (got["id"], got["tier"], got["text"]) == ("maxed_heroes", "bronze", "10 more hero levels")
+
+
+def test_attack_history_is_the_last_30_days_newest_war_first(tmp_path):
+    conn = db.connect(tmp_path / "game.db")
+    war(conn, "old", 1, "warEnded", NOW - timedelta(days=40), season="2026-09-02")
+    attack(conn, "old", 3)
+    war(conn, "d1", 1, "warEnded", NOW - timedelta(days=9))
+    attack(conn, "d1", 2)
+    war(conn, "d2", 2, "inWar", NOW + timedelta(hours=5))
+    attack(conn, "d2", 3)
+    conn.commit()
+    got = profiles.attack_history(conn, ME, NOW)
+    assert [(a["war_key"], a["stars"], a["kind"], a["day"], a["opponent"]) for a in got] == [("d2", 3, "cwl", 2, "Rivals"), ("d1", 2, "cwl", 1, "Rivals")]
+    assert got[0]["date"] == "2026-11-03"
+    assert profiles.attack_history(conn, "#NOBODY", NOW) == []

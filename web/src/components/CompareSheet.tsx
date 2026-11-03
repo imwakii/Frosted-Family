@@ -53,19 +53,25 @@ export function Row({ line, a, b }: { line: Line; a: string; b: string }) {
   )
 }
 
-function Picker({ roster, first, wide, onClose }: { roster: Roster; first: Player; wide: boolean; onClose: () => void }) {
+function Picker({ roster, first, wide, onClose, onBack }: { roster: Roster; first: Player; wide: boolean; onClose: () => void; onBack?: () => void }) {
   const { yous } = useYou()
   const [q, setQ] = useState('')
   const n = q.trim().toLowerCase()
   const mine = roster.players.filter((p) => yous.includes(p.tag) && p.tag !== first.tag)
   const hits = n ? roster.players.filter((p) => p.tag !== first.tag && p.name.toLowerCase().includes(n)).slice(0, 6) : mine
   return (
-    <CardSheet label={`Compare ${first.name}`} wide={wide} onClose={onClose} head={
+    <CardSheet label={`Compare ${first.name}`} wide={wide} onClose={onClose} head={<>
+      {onBack && (
+        <button type="button" aria-label="Back to the player card" onClick={onBack}
+          className="-ml-1 flex size-11 flex-none cursor-pointer items-center justify-center rounded-full border-0 bg-[#F6EEDC] text-muted hover:bg-well">
+          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M15 6l-6 6 6 6" /></svg>
+        </button>
+      )}
       <div className="flex min-w-0 flex-auto flex-col gap-0.5">
         <span className="font-display truncate text-[22px] leading-tight text-ink">Compare {first.name}</span>
         <span className="text-sm text-muted">With which player?</span>
       </div>
-    }>
+    </>}>
       <div className="relative min-w-0">
         <label htmlFor="compare-with" className="sr-only">Player's name</label>
         <SearchIcon />
@@ -96,6 +102,9 @@ export default function CompareSheet({ roster, a: aTag, b: bTag, wide, onClose }
   const cardA = usePlayerCard(aTag)
   const cardB = usePlayerCard(bTag ?? aTag)
   const [fromCard] = useState(openedFromCard)
+  // Straight to the card it opened from, past any choosing and changing on the way here.
+  const [home] = useState(aTag)
+  const toCard = () => go.to(`${window.location.hash.split('/v/')[0]}/p/${encodeURIComponent(home.replace(/^#/, ''))}`)
   const clans = useClans()
   useEffect(() => () => markFromCard(false), [])
   // One fixed call per category, so the hooks keep their order; each is the list Stats already shares.
@@ -136,7 +145,7 @@ export default function CompareSheet({ roster, a: aTag, b: bTag, wide, onClose }
   }, [a, b, cardA, cardB, matrices])
 
   if (!a) return null
-  if (!b) return <Picker roster={roster} first={a} wide={wide} onClose={onClose} />
+  if (!b) return <Picker roster={roster} first={a} wide={wide} onClose={onClose} onBack={fromCard ? toCard : undefined} />
 
   const all = sections.flatMap((s) => s.lines)
   const leadA = all.filter((l) => ahead(l) === -1).length, leadB = all.filter((l) => ahead(l) === 1).length
@@ -155,7 +164,7 @@ export default function CompareSheet({ roster, a: aTag, b: bTag, wide, onClose }
   return (
     <CardSheet label={`${a.name} and ${b.name}`} wide={wide} onClose={onClose} head={<>
       {fromCard && (
-        <button type="button" aria-label="Back to the player card" onClick={() => window.history.back()}
+        <button type="button" aria-label="Back to the player card" onClick={toCard}
           className="-ml-1 flex size-11 flex-none cursor-pointer items-center justify-center rounded-full border-0 bg-[#F6EEDC] text-muted hover:bg-well">
           <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M15 6l-6 6 6 6" /></svg>
         </button>

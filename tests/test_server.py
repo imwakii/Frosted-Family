@@ -336,7 +336,7 @@ def test_the_player_card_has_heroes_totals_attacks_and_upgrades(conn):
     del nobody["family_since"]
     del nobody["eight"]
     assert nobody == {
-        "heroes": [], "attacks": [], "upgrades": [], "upgrade_history": [], "badges": [], "next_badge": None, "record": None, "war_stars": None, "donations": None,
+        "heroes": [], "attacks": [], "upgrades": [], "upgrade_history": [], "attack_history": [], "badges": [], "next_badge": None, "record": None, "war_stars": None, "donations": None,
         "donations_received": None, "capital": None,
         "streaks": {"three_stars": 0, "three_stars_best": 0, "clean_wars": 0}}
 
