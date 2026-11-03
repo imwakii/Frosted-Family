@@ -1,7 +1,7 @@
 import { YouTag } from './You'
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { groupUnits } from '../equipment'
-import { Bar } from './OverallBoard'
+import OverallBoard, { Bar } from './OverallBoard'
 import RankBoard, { type RankCol } from './RankBoard'
 import { CATS, type Cat, competitionRanks, HIGH_MISS, isMaxed, type MatrixPlayer, missRate, progress, useMatrix, useWarBoard, type WarRow, type WarScope } from '../explore'
 import { go, onDrill, playerHref, upgradeHref, useDrill } from '../route'
@@ -11,14 +11,16 @@ import { norm, PhoneSearch, SearchBox } from './CwlTab'
 import BadgesBoard from './BadgesBoard'
 import ClansBoard, { COLOR } from './ClansBoard'
 import HistoryBoard from './HistoryBoard'
-import { ClanSwitch, Star, StatusKey, SubNav, Th, UnitIcon, RowChevron, chip } from './ui'
+import Info from './Info'
+import { ShowAll, topRows, useShowAll } from './Top'
+import { ClanSwitch, Picker, Star, StatusKey, SubNav, Th, UnitIcon, RowChevron, chip } from './ui'
 
 export type ClanPick = ClanName | 'All'
 type BoardProps = { q: string; setQ: (v: string) => void; wide: boolean }
 
-// Players: one unit matrix per category, then past a divider the two rankings that are not upgrades. The upgrade rankings are in Log.
+// Players: all upgrades together, one unit matrix per category, then past a divider the two rankings that are not upgrades.
 const NAV: { id: string; label: string; icon: string | null }[] = [
-  ...CATS, { id: 'donations', label: 'Donations', icon: null }, { id: 'capital', label: 'Capital', icon: null },
+  { id: 'overall', label: 'Upgrades', icon: null }, ...CATS, { id: 'donations', label: 'Donations', icon: null }, { id: 'capital', label: 'Capital', icon: null },
 ]
 
 const SUBS = [
@@ -48,9 +50,17 @@ export function useClanPick() {
   return [clan, (c: ClanPick) => { setClanState(c); write('ff-x-clan', c) }] as const
 }
 
-export function CategoryNav({ current, wide }: { current: string; wide: boolean }) {
+export function CategoryNav({ current, wide, children }: { current: string; wide: boolean; children?: ReactNode }) {
   const navRef = useRef<HTMLElement>(null)
   useEffect(() => { navRef.current?.querySelector('[aria-pressed="true"]')?.scrollIntoView({ inline: 'center', block: 'nearest' }) }, [current])
+  if (!wide) {
+    return (
+      <div className="flex flex-wrap items-center gap-2 px-4">
+        <Picker label="Category" value={current} options={NAV} onPick={(id) => go.to(`#/stats/players/${id}`)} />
+        {children}
+      </div>
+    )
+  }
   return (
     <nav ref={navRef} aria-label="Category" className={`flex flex-none gap-1.5 overflow-x-auto [scrollbar-width:none] ${wide ? 'max-w-full flex-wrap' : 'px-4'}`}>
       {NAV.map((c) => (
@@ -88,13 +98,14 @@ const cellTone = (l: number | null, max: number) =>
   l === null || l === 0 ? 'text-[#D5C8AC]' : l >= max ? 'font-extrabold text-ink' : l < max * 0.6 ? 'font-semibold text-[#A3957C]' : 'font-semibold text-ink-2'
 
 export default function ExploreTab({ sub, kind, ...rest }: BoardProps & { sub: string; kind: string | null }) {
-  const id = NAV.find((c) => c.id === kind)?.id ?? NAV[0].id
+  const id = NAV.find((c) => c.id === kind)?.id ?? 'overall'
   const board = sub === 'badges' ? <BadgesBoard {...rest} />
     : sub === 'history' ? <HistoryBoard {...rest} />
     : sub === 'war' ? <WarBoardView {...rest} />
     : sub === 'trends' ? (
       <main className={rest.wide ? 'mx-auto max-w-[1360px] px-[clamp(16px,3vw,32px)] pb-12 pt-5' : 'pb-6 pt-3'}><ClansBoard wide={rest.wide} /></main>
     )
+    : id === 'overall' ? <OverallBoard {...rest} />
     : id === 'donations' ? <RankBoard key="donations" kind="donations" cols={DONATION_COLS} note="This season" {...rest} />
     : id === 'capital' ? <RankBoard key="capital" kind="capital" cols={CAPITAL_COLS} {...rest} />
     : <MatrixBoard cat={id as Cat} {...rest} />
@@ -107,6 +118,7 @@ function MatrixBoard({ cat, q, setQ, wide }: BoardProps & { cat: Cat }) {
   const [sort, setSort] = useState<{ col: number; asc: boolean }>({ col: -1, asc: false })
   const [unit, setUnit] = useState<number | null>(null)
   useEffect(() => { setSort({ col: -1, asc: false }); setUnit(null) }, [cat])
+  const top = useShowAll(`${cat}-${unit}-${clan}`)
 
   const units = useMemo(() => data?.units ?? [], [data])
   // Equipment groups by hero; other categories are one group in the API's order.
@@ -240,6 +252,7 @@ function MatrixBoard({ cat, q, setQ, wide }: BoardProps & { cat: Cat }) {
   const ranked = sorted.map((x) => ({ ...x, rank: unitPlace.get(x) ?? null }))
   const maxedN = u ? ranked.filter((r) => r.l >= u.max).length : 0
   const shown = ranked.filter((r) => matchQ(r.p))
+  const listed = topRows(shown, (r) => r.p.tag, top.yous, top.all || !!nq)
 
   return (
     <div className="flex flex-col gap-2.5 pb-6">
@@ -267,7 +280,7 @@ function MatrixBoard({ cat, q, setQ, wide }: BoardProps & { cat: Cat }) {
             <span className="flex-none text-[13px] font-semibold text-muted"><Star /> {maxedN} of {ranked.length} maxed</span>
           </div>
           <ol className="m-0 mx-4 list-none rounded-2xl border border-line bg-white py-1">
-            {shown.map(({ p, l, rank }, i) => {
+            {listed.map(({ p, l, rank }, i) => {
               const maxed = l >= u.max
               return (
                 <li key={p.tag} data-tag={p.tag}>
@@ -291,6 +304,7 @@ function MatrixBoard({ cat, q, setQ, wide }: BoardProps & { cat: Cat }) {
             })}
             {!shown.length && <li className="p-4 text-sm text-faint">No one by that name</li>}
           </ol>
+          {listed.length < shown.length && <ShowAll total={shown.length} onClick={() => top.setAll(true)} className="mx-4" />}
         </>
       )}
     </div>
@@ -306,7 +320,7 @@ const WAR_COLS: WarCol[] = [
   { key: 'missed', label: 'Missed', value: (r) => (r.war ? r.war.missed : null), fmt: String, low: true },
   { key: 'triple', label: '3★ rate', value: (r) => (r.war?.attacks ? (100 * r.war.three_stars) / r.war.attacks : null), fmt: pct },
   { key: 'avg', label: 'Avg ★', value: (r) => (r.war?.attacks ? r.war.stars / r.war.attacks : null), fmt: (v) => v.toFixed(1) },
-  { key: 'dest', label: 'Avg dest.', value: (r) => r.war?.avg_destruction ?? null, fmt: pct, recordedOnly: true },
+  { key: 'dest', label: 'Avg destruction', value: (r) => r.war?.avg_destruction ?? null, fmt: pct, recordedOnly: true },
 ]
 
 // Green once a member has attacked with misses at or under the line, amber above it.
@@ -327,6 +341,7 @@ function WarBoardView({ q, setQ, wide }: BoardProps) {
   const scoped = allBoard?.scope != null && !!allBoard.season
   const { data, loading } = useWarBoard(scoped ? scope : 'all')
   const [clan, setClan] = useClanPick()
+  const top = useShowAll(`${scope}-${clan}`)
   const cols = useMemo(() => WAR_COLS.filter((c) => !data || data.players.some((r) => c.value(r) !== null)), [data])
   const [sortKey, setSortKey] = useState<{ key: string; asc: boolean } | null>(null)
   const sort = sortKey && cols.some((c) => c.key === sortKey.key) ? sortKey : { key: cols[0]?.key ?? 'attacks', asc: !!cols[0]?.low }
@@ -478,25 +493,22 @@ function WarBoardView({ q, setQ, wide }: BoardProps) {
   }
 
   const rest = col ? cols.filter((c) => c.key !== col.key).slice(0, 2) : []
+  const listed = topRows(shown, (x) => x.r.tag, top.yous, top.all || !!nq)
   return (
     <div className="flex flex-col gap-2.5 pb-6">
       <PhoneSearch q={q} setQ={setQ} onEnter={enter}><ClanFilter clan={clan} setClan={setClan} /></PhoneSearch>
-      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-4">{scopeToggle}{sinceChip}{key}</div>
+      <div className="flex flex-wrap items-center gap-2 px-4">
+        {scoped && <Picker<WarScope> label="Wars" value={scope} options={[{ id: 'all', label: 'All wars' }, { id: 'cwl', label: 'CWL season' }]} onPick={pickScope} />}
+        {col && <Picker label="Sort by" value={sort.key} options={cols.map((c) => ({ id: c.key, label: c.label }))} onPick={(k) => pick(cols.find((c) => c.key === k)!)} />}
+        <span className="ml-auto flex items-center gap-2">{sinceChip}<Info topic="warBoard" /></span>
+      </div>
       {!data || !col ? <div className="px-4"><Empty loading={loading} /></div> : (
         <>
-          <div role="group" aria-label="Sort by" className="-mb-1 flex gap-1 overflow-x-auto px-4 [scrollbar-width:none]">
-            {cols.map((c) => (
-              <button key={c.key} type="button" aria-pressed={c.key === sort.key} onClick={() => pick(c)} title={c.recordedOnly ? recordedTip : undefined}
-                className={chip(c.key === sort.key)}>
-                {c.label}{c.key === sort.key ? (sort.asc ? ' ↑' : ' ↓') : ''}
-              </button>
-            ))}
-          </div>
           <p aria-label={`${who} summary`} className="m-0 mx-4 text-xs font-semibold tabular-nums text-muted">
             {summary.triple === null ? '—' : pct(summary.triple)} 3★ rate · {summary.avgStars === null ? '—' : summary.avgStars.toFixed(2)} avg ★ · {summary.attacks} attacks
           </p>
           <ol className="m-0 mx-4 list-none rounded-2xl border border-line bg-white py-1">
-            {shown.map(({ r, v }, i) => (
+            {listed.map(({ r, v }, i) => (
               <li key={r.tag} data-tag={r.tag}>
                 <a href={playerHref(r.tag)} className={`flex min-h-[52px] items-center gap-2.5 px-3.5 py-1.5 text-ink no-underline hover:bg-hover ${i ? 'border-t border-hair' : ''}`}>
                   <span className="w-6 flex-none text-right text-xs tabular-nums text-faint">{place.get(r) ?? '—'}</span>
@@ -520,6 +532,7 @@ function WarBoardView({ q, setQ, wide }: BoardProps) {
             ))}
             {!shown.length && <li className="p-4 text-sm text-faint">No one by that name</li>}
           </ol>
+          {listed.length < shown.length && <ShowAll total={shown.length} onClick={() => top.setAll(true)} className="mx-4" />}
         </>
       )}
     </div>

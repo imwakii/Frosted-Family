@@ -6,7 +6,8 @@ import { CLAN } from '../theme'
 import type { ClanName } from '../types'
 import { norm, PhoneSearch, SearchBox } from './CwlTab'
 import { CategoryNav, ClanFilter, Empty, useClanPick } from './ExploreTab'
-import { chip, Th, RowChevron } from './ui'
+import { ShowAll, topRows, useShowAll } from './Top'
+import { Picker, Th, RowChevron } from './ui'
 
 // GET /api/explore/{donations|capital}: one row per current member from their latest profile.
 type Row = { tag: string; name: string; clan: ClanName; th: number | null; [k: string]: unknown }
@@ -41,6 +42,7 @@ export default function RankBoard({ kind, cols, note, q, setQ, wide }: {
   const { data, loading } = useBoard(kind)
   const [clan, setClan] = useClanPick()
   const [sortKey, setSortKey] = useState(cols[0].key)
+  const top = useShowAll(`${kind}-${sortKey}-${clan}`)
   const col = cols.find((c) => c.key === sortKey) ?? cols[0]
   useDrill((d) => !!data && cols.some((c) => c.key === d.col), (d) => setSortKey(d.col!))
   const nq = norm(q.trim())
@@ -50,6 +52,7 @@ export default function RankBoard({ kind, cols, note, q, setQ, wide }: {
     .sort((a, b) => (a.v === null ? (b.v === null ? 0 : 1) : b.v === null ? -1 : b.v - a.v) || a.r.name.localeCompare(b.r.name))
   const place = competitionRanks(ranked, (x) => x.v)
   const shown = ranked.filter(({ r }) => !nq || norm(r.name).includes(nq) || r.tag.toLowerCase().includes(nq))
+  const listed = wide ? shown : topRows(shown, (x) => x.r.tag, top.yous, top.all || !!nq)
   const enter = () => { if (shown[0]) go.to(playerHref(shown[0].r.tag)) }
   const fmt = (c: RankCol, v: number | null) => (v === null ? '—' : (c.fmt ?? num)(v))
   const stamp = data?.updated_at ? `${new Date(data.updated_at).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'UTC' })} UTC` : null
@@ -99,7 +102,7 @@ export default function RankBoard({ kind, cols, note, q, setQ, wide }: {
     </section>
   ) : (
     <ol className="m-0 list-none rounded-2xl border border-line bg-white py-1">
-      {shown.map((x, i) => (
+      {listed.map((x, i) => (
         <li key={x.r.tag} data-tag={x.r.tag}>
           <a href={playerHref(x.r.tag)} className={`flex min-h-[52px] items-center gap-3 px-3.5 py-1.5 text-ink no-underline hover:bg-hover ${i ? 'border-t border-hair' : ''}`}>
             <span className="w-6 flex-none text-right text-xs font-bold tabular-nums text-faint">{place.get(x) ?? '—'}</span>
@@ -136,17 +139,14 @@ export default function RankBoard({ kind, cols, note, q, setQ, wide }: {
   return (
     <div className="flex flex-col gap-2.5 pb-6">
       <PhoneSearch q={q} setQ={setQ} onEnter={enter}><ClanFilter clan={clan} setClan={setClan} /></PhoneSearch>
-      <CategoryNav current={kind} wide={false} />
-      <div role="group" aria-label="Rank by" className="flex gap-1.5 overflow-x-auto px-4 [scrollbar-width:none]">
-        {cols.map((c) => (
-          <button key={c.key} type="button" aria-pressed={c.key === col.key} onClick={() => setSortKey(c.key)}
-            className={chip(c.key === col.key)}>
-            {c.chip ?? c.label}
-          </button>
-        ))}
+      <CategoryNav current={kind} wide={false}>
+        <Picker label="Rank by" value={col.key} options={cols.map((c) => ({ id: c.key, label: c.chip ?? c.label }))} onPick={setSortKey} />
+        {note && <span className="ml-auto text-xs font-semibold text-faint">{note}</span>}
+      </CategoryNav>
+      <div className="flex flex-col gap-2 px-4">
+        {board}
+        {listed.length < shown.length && <ShowAll total={shown.length} onClick={() => top.setAll(true)} />}
       </div>
-      {note && <span className="px-4 text-xs font-semibold text-faint">{note}</span>}
-      <div className="px-4">{board}</div>
     </div>
   )
 }

@@ -16,10 +16,10 @@ export default function PlanActivity({ days, lineup, published }: ActivityInput)
   const [all, setAll] = useState(false)
   const from = (list: ActivityInput['days'], name: string) => [
     ...list.open.map((p) => ({ key: `o${p.id}`, who: p.author, what: `proposed a ${name}`, at: p.updated_at })),
-    ...list.decided.map((p) => ({ key: `d${p.id}`, who: p.decided_by ?? 'The publisher', what: `${p.status === 'accepted' ? 'accepted' : 'rejected'} ${p.author}'s ${name}`, at: p.decided_at ?? p.updated_at })),
+    ...list.decided.map((p) => ({ key: `d${p.id}`, who: p.decided_by ?? 'A leader', what: `${p.status === 'accepted' ? 'accepted' : 'rejected'} ${p.author}'s ${name}`, at: p.decided_at ?? p.updated_at })),
   ]
   const items = [...from(days, 'day plan'), ...from(lineup, 'lineup'),
-    ...(published ? [{ key: 'pub', who: published.updated_by ?? 'The publisher', what: 'published the day plan', at: published.updated_at }] : [])]
+    ...(published ? [{ key: 'pub', who: published.updated_by ?? 'A leader', what: 'published the day plan', at: published.updated_at }] : [])]
     .sort((a, b) => b.at.localeCompare(a.at))
   if (!items.length) return null
   return (

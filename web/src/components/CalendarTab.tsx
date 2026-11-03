@@ -54,7 +54,7 @@ function FamilyDay({ item, now, utc }: { item: Item; now: number; utc: boolean }
                 <span className="min-w-0 text-[13px] font-bold text-ink">
                   <span style={{ color: CLAN[clan].deep }}>{clan}</span>
                   {day.opponent && <> v <bdi>{day.opponent}</bdi></>}
-                  {day.state === 'notDrawn' && <span className="ml-1.5 rounded-full bg-well px-1.5 py-px text-[11px] text-ink-2">Not drawn</span>}
+                  {day.state === 'notDrawn' && <span className="ml-1.5 rounded-full bg-well px-1.5 py-px text-[11px] text-ink-2">Opponent not set</span>}
                 </span>
                 <span className="text-xs font-semibold text-muted">{Date.parse(day.start) <= now ? `Until ${fmtWhen(day.end, utc)}` : fmtWhen(day.start, utc)}</span>
               </span>
@@ -75,7 +75,7 @@ function Row({ item, now, utc }: { item: Item; now: number; utc: boolean }) {
   const today = dayOf(now, utc)
   const state = day ? day.state : e.state
   const stars = day ? day.stars : e.stars, against = day ? day.opponent_stars : e.opponent_stars
-  const tag = e.source === 'plan' ? 'Planned' : e.expected ? 'Expected' : day?.state === 'notDrawn' ? 'Not drawn' : null
+  const tag = e.source === 'plan' ? 'Planned' : e.expected ? 'Expected' : day?.state === 'notDrawn' ? 'Opponent not set' : null
   // The family's days end at different times for each clan, so that row gives the date alone.
   const when = rest
     ? `Until ${family ? fmtDate(dayOf(Date.parse(item.end), utc)) : fmtWhen(item.end, utc)}`

@@ -86,8 +86,8 @@ export default function App() {
   const account = route.tab === 'plan' && auth.me.user ? <Account me={auth.me} onSignOut={auth.signOut} /> : null
   const you = roster && <YouChip roster={roster} compact={!roomy && !!account} />
   const corner = wide
-    ? <span className="flex items-center gap-2">{you}{account}<CalendarButton current={route.tab === 'calendar'} /><Settings wide roster={roster} /></span>
-    : <span className="flex min-w-0 items-center gap-2">{you}{account}<CalendarButton current={route.tab === 'calendar'} /><Settings wide={false} roster={roster} /></span>
+    ? <span className="flex items-center gap-2">{you}{account}<CalendarButton current={route.tab === 'calendar'} /><Settings wide roster={roster} leader={!!auth.me.role} /></span>
+    : <span className="flex min-w-0 items-center gap-2">{you}{account}<CalendarButton current={route.tab === 'calendar'} /><Settings wide={false} roster={roster} leader={!!auth.me.role} /></span>
 
   return (
     <div className={`min-h-dvh ${wide ? '' : 'pb-[calc(58px+env(safe-area-inset-bottom))]'}`}>

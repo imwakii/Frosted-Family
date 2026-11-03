@@ -156,6 +156,20 @@ export function SwitchRow({ label, line, on, disabled, onFlip }: { label: string
   )
 }
 
+/** A compact choice for a phone: looks like a chip, opens the phone's own list. */
+export function Picker<T extends string>({ label, value, options, onPick }: { label: string; value: T; options: { id: T; label: string }[]; onPick: (v: T) => void }) {
+  return (
+    <label className="relative flex min-h-10 min-w-0 cursor-pointer items-center gap-1.5 rounded-full border border-line bg-white px-3.5 text-sm font-semibold text-ink-2">
+      <span className="sr-only">{label}</span>
+      <span className="truncate">{options.find((o) => o.id === value)?.label ?? value}</span>
+      <svg aria-hidden="true" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="flex-none"><path d="M6 9l6 6 6-6" /></svg>
+      <select value={value} onChange={(e) => onPick(e.target.value as T)} className="absolute inset-0 cursor-pointer opacity-0">
+        {options.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
+      </select>
+    </label>
+  )
+}
+
 /** The header's way to the calendar. */
 export function CalendarButton({ current }: { current: boolean }) {
   return (

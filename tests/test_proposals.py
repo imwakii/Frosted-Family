@@ -78,7 +78,7 @@ def test_a_lineup_proposal_needs_the_valve_override_to_accept(env):
     pid = co.put("/plan/proposals", json={"kind": "lineup", "body": {"moves": moves}}, headers=co_csrf).json()["id"]
     assert listed(boss, "lineup")["open"][0]["body"]["moves"] == moves
     r = boss.post(f"/plan/proposals/{pid}/accept", headers=boss_csrf)
-    assert r.status_code == 422 and "one-way valve" in r.json()["detail"]["problems"][0]
+    assert r.status_code == 422 and "Fire to Cake is blocked" in r.json()["detail"]["problems"][0]
     assert boss.post(f"/plan/proposals/{pid}/accept", json={"override_valve": True}, headers=boss_csrf).status_code == 200
     placed = {p["tag"]: p for p in client().get("/roster").json()["players"]}[fire_sub]
     assert (placed["clan"], placed["cwl_slot"]) == ("Cake", "SUB")

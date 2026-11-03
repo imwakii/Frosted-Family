@@ -57,7 +57,7 @@ export function ProposalBar<B>({ proposals, me, viewing, setViewing, dirty, line
     }
   }
   const accept = (override: boolean) => viewing && act(() => acceptProposal(viewing.id, override, me.csrf), () => { setViewing(null); onAccepted(viewing) })
-  const valve = problems.some((x) => x.startsWith('one-way valve'))
+  const valve = problems.some((x) => x.startsWith('Fire to Cake') || x.startsWith('one-way valve'))
   const canDecide = me.role === 'publisher'
   const btn = 'min-h-9 cursor-pointer rounded-full border border-[#D5C8AC] bg-white px-3 text-[13px] font-semibold text-ink-2 hover:bg-page disabled:opacity-60'
   const go = 'min-h-9 cursor-pointer rounded-full border-0 bg-action px-3 text-[13px] font-bold text-white hover:bg-action-deep disabled:opacity-60'
@@ -100,7 +100,7 @@ export function ProposalBar<B>({ proposals, me, viewing, setViewing, dirty, line
             {canDecide && <>
               <button type="button" className={btn} disabled={busy} onClick={() => act(() => rejectProposal(viewing.id, me.csrf), () => setViewing(null))}>Reject</button>
               {valve
-                ? <button type="button" className={go} disabled={busy} onClick={() => accept(true)}>Accept, override valve</button>
+                ? <button type="button" className={go} disabled={busy} onClick={() => accept(true)}>Accept, allow Fire to Cake</button>
                 : <button type="button" className={go} disabled={busy} onClick={() => accept(false)}>Accept and publish</button>}
             </>}
           </div>

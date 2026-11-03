@@ -4,6 +4,7 @@ import { ACTIVITY_LABEL, type Activity, ago, type Candidate, reasonLabel, useMak
 import { playerHref } from '../route'
 import type { ClanName } from '../types'
 import { Empty } from './ExploreTab'
+import Info from './Info'
 import { ClanSwitch, Th, RowChevron } from './ui'
 import { YouTag } from './You'
 
@@ -39,8 +40,11 @@ function WhoCouldGo() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <ClanSwitch value={clan} onPick={setClan} />
         {data && (
-          <span className={`rounded-full px-3 py-1.5 text-[13px] font-bold tabular-nums ${full ? 'bg-[#FEF3C7] text-[#92400E]' : 'bg-[#EFE6D2] text-ink-2'}`}>
-            {data.members}/{data.cap} members
+          <span className="flex items-center gap-2.5">
+            <span className={`rounded-full px-3 py-1.5 text-[13px] font-bold tabular-nums ${full ? 'bg-[#FEF3C7] text-[#92400E]' : 'bg-[#EFE6D2] text-ink-2'}`}>
+              {data.members}/{data.cap} members
+            </span>
+            <Info topic="who" />
           </span>
         )}
       </div>

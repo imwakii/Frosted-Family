@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type PointerEvent, type ReactNode } from '
 import { leagueIcon } from '../clash'
 import { type ClansStats, type Point, type StatClan, type StatsWar, type TrendPoint, useClanStats } from '../clanStats'
 import { CLANS, cycleShort } from '../theme'
+import Info from './Info'
 import { chip } from './ui'
 
 type Range = '30d' | 'all'
@@ -170,66 +171,44 @@ function LineChart({ lines, xs, xLabel, fmt, dots = false }: { lines: Line[]; xs
   )
 }
 
-function SeriesCard({ title, data, metric, keys, fmt, range, since, aside }: {
-  title: string; data: ClansStats; metric: 'members' | 'avg_th' | 'hero_progress'; keys: StatClan[]; fmt: (v: number) => string; range: Range; since: string; aside?: ReactNode
-}) {
-  const cut = range === '30d' ? ms(data.as_of) - 30 * DAY : -Infinity
-  const lines: Line[] = keys.map((k) => ({ k, pts: (data.clans[k]?.[metric] ?? []).filter((p: Point) => ms(p.date) >= cut).map((p) => ({ x: ms(p.date), y: p.value })) }))
-  const xs = [...new Set(lines.flatMap((l) => l.pts.map((p) => p.x)))].sort((a, b) => a - b)
-  return (
-    <Card title={title} aside={aside}>
-      {Math.max(0, ...lines.map((l) => l.pts.length)) < 2
-        ? <Latest rows={lines.map((l) => ({ k: l.k, v: l.pts.length ? last(l.pts).y : null }))} fmt={fmt} since={since} />
-        : <LineChart lines={lines} xs={xs} xLabel={dayText} fmt={fmt} />}
-    </Card>
-  )
-}
-
 type TrendKey = 'members' | 'avg_th' | 'score' | 'three_star_rate' | 'miss_rate'
 
-// Monthly export points (hollow) up to the first daily reading, then the daily line.
-function stitched(data: ClansStats, k: StatClan, key: TrendKey, cut: number) {
-  const t = data.clans[k]?.trend
-  const daily: { x: number; y: number }[] = key === 'members' || key === 'avg_th'
-    ? (data.clans[k]?.[key] ?? []).map((p: Point) => ({ x: ms(p.date), y: p.value }))
-    : (t?.daily ?? []).filter((p) => p[key] != null).map((p) => ({ x: ms(p.date), y: p[key] as number }))
-  const start = daily.length ? daily[0].x : Infinity
-  const monthly = (t?.monthly ?? []).filter((p: TrendPoint) => p[key] != null && ms(p.date) < start).map((p) => ({ x: ms(p.date), y: p[key] as number, m: true }))
-  return [...monthly, ...daily].filter((p) => p.x >= cut)
-}
+// One point a month, so the day-to-day noise stays out: each cycle's reading from its export, on an even month scale.
+const cyclesOf = (data: ClansStats) => [...new Set(SERIES.flatMap((k) => (data.clans[k]?.trend?.monthly ?? []).map((p) => p.cycle)))].sort()
 
-function TrendCard({ title, data, metric, keys, fmt, range, since, aside }: {
-  title: string; data: ClansStats; metric: TrendKey; keys: StatClan[]; fmt: (v: number) => string; range: Range; since: string; aside?: ReactNode
-}) {
-  const cut = range === '30d' ? ms(data.as_of) - 30 * DAY : -Infinity
-  const lines: Line[] = keys.map((k) => ({ k, pts: stitched(data, k, metric, cut) }))
+function MonthCard({ title, lines, cycles, fmt, since, aside }: { title: string; lines: Line[]; cycles: string[]; fmt: (v: number) => string; since: string; aside?: ReactNode }) {
   const xs = [...new Set(lines.flatMap((l) => l.pts.map((p) => p.x)))].sort((a, b) => a - b)
-  // A monthly point is named by its cycle (the November roster's export was pulled on 30 Oct).
-  const cycleAt = new Map(keys.flatMap((k) => (data.clans[k]?.trend?.monthly ?? []).map((p) => [ms(p.date), p.cycle] as const)))
-  const xLabel = (x: number) => (cycleAt.has(x) ? cycleShort(cycleAt.get(x)!) : dayText(x))
   return (
     <Card title={title} aside={aside}>
       {xs.length < 2
         ? <Latest rows={lines.map((l) => ({ k: l.k, v: l.pts.length ? last(l.pts).y : null }))} fmt={fmt} since={since} />
-        : <LineChart lines={lines} xs={xs} xLabel={xLabel} fmt={fmt} />}
+        : <LineChart lines={lines} xs={xs} xLabel={(i) => cycleShort(cycles[i])} fmt={fmt} dots />}
     </Card>
   )
 }
 
-function ScoreCard({ data, since }: { data: ClansStats; since: string }) {
-  const cycles = [...new Set(SERIES.flatMap((k) => (data.clans[k]?.score_by_cycle ?? []).map((c) => c.cycle)))].sort()
-  const lines: Line[] = SERIES.map((k) => ({
-    k,
-    pts: (data.clans[k]?.score_by_cycle ?? []).filter((c) => c.avg_score !== null).map((c) => ({ x: cycles.indexOf(c.cycle), y: c.avg_score as number })).sort((a, b) => a.x - b.x),
-  }))
-  const fmt = (v: number) => `${Math.round(v)}`
-  return (
-    <Card title="Average score by cycle">
-      {cycles.length < 2
-        ? <Latest rows={lines.map((l) => ({ k: l.k, v: l.pts.length ? last(l.pts).y : null }))} fmt={fmt} since={since} />
-        : <LineChart lines={lines} xs={cycles.map((_, i) => i)} xLabel={(i) => cycleShort(cycles[i])} fmt={fmt} dots />}
-    </Card>
-  )
+function TrendCard({ title, data, metric, keys, fmt, since, aside }: {
+  title: string; data: ClansStats; metric: TrendKey; keys: StatClan[]; fmt: (v: number) => string; since: string; aside?: ReactNode
+}) {
+  const cycles = cyclesOf(data)
+  const lines: Line[] = keys.map((k) => ({ k, pts: (data.clans[k]?.trend?.monthly ?? []).filter((p: TrendPoint) => p[metric] != null).map((p) => ({ x: cycles.indexOf(p.cycle), y: p[metric] as number })) }))
+  return <MonthCard title={title} lines={lines} cycles={cycles} fmt={fmt} since={since} aside={aside} />
+}
+
+// Exports have no hero levels, so each cycle takes the collector's first reading on or after its pull day.
+function HeroCard({ data, since }: { data: ClansStats; since: string }) {
+  const cycles = cyclesOf(data)
+  const lines: Line[] = SERIES.map((k) => {
+    const readings = data.clans[k]?.hero_progress ?? []
+    const monthly = data.clans[k]?.trend?.monthly ?? []
+    const pts = monthly.flatMap((p: TrendPoint, i) => {
+      const next = monthly[i + 1]?.date
+      const hit = readings.find((r: Point) => r.date >= p.date && (!next || r.date < next))
+      return hit ? [{ x: cycles.indexOf(p.cycle), y: hit.value }] : []
+    })
+    return { k, pts }
+  })
+  return <MonthCard title="Hero progress" lines={lines} cycles={cycles} fmt={pct} since={since} />
 }
 
 function warsIn(data: ClansStats, range: Range) {
@@ -299,18 +278,6 @@ function StarsCard({ wars }: { wars: ReturnType<typeof warsIn> }) {
           </div>
         </>
       )}
-    </Card>
-  )
-}
-
-function ThreeStarCard({ wars, since }: { wars: ReturnType<typeof warsIn>; since: string }) {
-  const lines: Line[] = CLANS.map((k) => ({ k, pts: wars[k].filter((w) => w.three_star_rate !== null).map((w) => ({ x: ms(w.date), y: w.three_star_rate as number })) }))
-  const xs = [...new Set(lines.flatMap((l) => l.pts.map((p) => p.x)))].sort((a, b) => a - b)
-  return (
-    <Card title="3★ rate per war">
-      {!xs.length ? <NoWars /> : Math.max(...lines.map((l) => l.pts.length)) < 2
-        ? <Latest rows={lines.map((l) => ({ k: l.k, v: l.pts.length ? last(l.pts).y : null }))} fmt={pct} since={since} />
-        : <LineChart lines={lines} xs={xs} xLabel={dayText} fmt={pct} dots />}
     </Card>
   )
 }
@@ -429,56 +396,33 @@ export default function ClansBoard({ wide }: { wide: boolean }) {
   const since = dayText(ms(data.since))
   const wars = warsIn(data, range)
   const fam = (m: 'members') => last(data.clans.Family?.[m] ?? [])?.value
-  // Older API answers have no trend; their cards stay as they were.
-  const trended = !!data.clans.Fire?.trend
 
   return (
     <div className={`flex flex-col gap-3 ${pad}`}>
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-        <div role="group" aria-label="Range" className="flex gap-1.5">
-          {([['30d', '30 days'], ['all', 'All']] as const).map(([id, text]) => (
-            <button key={id} type="button" aria-pressed={range === id} onClick={() => setRange(id)}
-              className={chip(range === id)}>
-              {text}
-            </button>
-          ))}
-        </div>
-        <div className="flex flex-wrap gap-3">
-          {SERIES.map((k) => <Key key={k} k={k} />)}
-          {trended && (
-            <span className="flex items-center gap-1.5 text-xs font-semibold text-ink-2">
-              <svg aria-hidden="true" width="10" height="10"><circle cx="5" cy="5" r="3.5" fill="#FFFBF1" stroke="#A3957C" strokeWidth="2" /></svg>Monthly export
-            </span>
-          )}
-        </div>
+      <div className="flex flex-wrap items-center gap-3">
+        {SERIES.map((k) => <Key key={k} k={k} />)}
+        <span className="ml-auto flex items-center"><Info topic="trends" /></span>
       </div>
       <div className={GRID}>
-        {trended ? (
-          <>
-            <TrendCard title="Average score" data={data} metric="score" keys={SERIES} fmt={(v) => `${Math.round(v)}`} range={range} since={since} />
-            <TrendCard title="Members" data={data} metric="members" keys={[...CLANS]} fmt={(v) => `${Math.round(v)}`} range={range} since={since}
-              aside={fam('members') !== undefined ? `Family ${fam('members')}` : undefined} />
-            <TrendCard title="Average town hall" data={data} metric="avg_th" keys={SERIES} fmt={(v) => v.toFixed(1)} range={range} since={since} />
-            <TrendCard title="3★ rate" data={data} metric="three_star_rate" keys={SERIES} fmt={pct} range={range} since={since} />
-            <TrendCard title="Miss rate" data={data} metric="miss_rate" keys={SERIES} fmt={pct} range={range} since={since} />
-            <SeriesCard title="Hero progress" data={data} metric="hero_progress" keys={SERIES} fmt={pct} range={range} since={since} />
-            <ResultsCard wars={wars} />
-            <StarsCard wars={wars} />
-          </>
-        ) : (
-          <>
-            <SeriesCard title="Members" data={data} metric="members" keys={[...CLANS]} fmt={(v) => `${Math.round(v)}`} range={range} since={since}
-              aside={fam('members') !== undefined ? `Family ${fam('members')}` : undefined} />
-            <SeriesCard title="Average town hall" data={data} metric="avg_th" keys={SERIES} fmt={(v) => v.toFixed(1)} range={range} since={since} />
-            <SeriesCard title="Hero progress" data={data} metric="hero_progress" keys={SERIES} fmt={pct} range={range} since={since} />
-            <ScoreCard data={data} since={since} />
-            <ResultsCard wars={wars} />
-            <StarsCard wars={wars} />
-            <ThreeStarCard wars={wars} since={since} />
-          </>
-        )}
+        <TrendCard title="Average score" data={data} metric="score" keys={SERIES} fmt={(v) => `${Math.round(v)}`} since={since} />
+        <TrendCard title="Members" data={data} metric="members" keys={[...CLANS]} fmt={(v) => `${Math.round(v)}`} since={since}
+          aside={fam('members') !== undefined ? `Family ${fam('members')}` : undefined} />
+        <TrendCard title="Average town hall" data={data} metric="avg_th" keys={SERIES} fmt={(v) => v.toFixed(1)} since={since} />
+        <TrendCard title="3★ rate" data={data} metric="three_star_rate" keys={SERIES} fmt={pct} since={since} />
+        <TrendCard title="Miss rate" data={data} metric="miss_rate" keys={SERIES} fmt={pct} since={since} />
+        <HeroCard data={data} since={since} />
         <DonationsCard data={data} since={since} />
         <LeagueCard data={data} />
+        <div className="flex flex-wrap items-center gap-3 md:col-span-2 xl:col-span-3">
+          <h3 className="m-0 text-[15px] font-bold text-ink">Wars</h3>
+          <div role="group" aria-label="Range" className="flex gap-1.5">
+            {([['30d', '30 days'], ['all', 'All']] as const).map(([id, text]) => (
+              <button key={id} type="button" aria-pressed={range === id} onClick={() => setRange(id)} className={chip(range === id)}>{text}</button>
+            ))}
+          </div>
+        </div>
+        <ResultsCard wars={wars} />
+        <StarsCard wars={wars} />
       </div>
     </div>
   )

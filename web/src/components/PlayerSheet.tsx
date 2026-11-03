@@ -4,6 +4,7 @@ import { BADGES, TIER_LOOK, TIERS } from '../badges'
 import { ago } from '../leaders'
 import { CATS } from '../explore'
 import { compareHref, go, markFromCard, playerHref, upgradeHref } from '../route'
+import Info from './Info'
 import { useYou } from './You'
 import { CLAN, cycleLong, cycleShort, fmtScore, fmtWindow } from '../theme'
 import type { Player, Roster } from '../types'
@@ -119,8 +120,8 @@ function Trend({ p, cycles }: { p: Player; cycles: string[] }) {
   const label = pts.map((pt) => `${cycleLong(pt.c)} ${fmtScore(pt.s)}`).join(', ')
 
   return (
-    <Section title="Score by cycle" note="Monthly">
-      <svg role="img" aria-label={`Score by cycle: ${label}`} viewBox="-8 -12 366 130" className="h-auto w-full overflow-visible">
+    <Section title="Score by month">
+      <svg role="img" aria-label={`Score by month: ${label}`} viewBox="-8 -12 366 130" className="h-auto w-full overflow-visible">
         <line x1="0" y1={H} x2={W} y2={H} stroke="#EFE6D2" />
         {runs.map((r) => <polyline key={r} points={r} fill="none" stroke={accent} strokeWidth="3" strokeLinejoin="round" strokeLinecap="round" />)}
         {pts.map((pt, i) => pt.s === null ? null : (
@@ -235,7 +236,7 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
             <div className="flex flex-col gap-3 rounded-2xl p-4" style={{ background: c.tint }}>
               <div className="flex items-end justify-between gap-3">
                 <div className="flex flex-col">
-                  <span className="text-xs font-bold uppercase tracking-[0.06em]" style={{ color: c.label }}>Score{cycle ? ` · ${cycleShort(cycle)}` : ''}</span>
+                  <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.06em]" style={{ color: c.label }}>Score{cycle ? ` · ${cycleShort(cycle)}` : ''}<Info topic="score" /></span>
                   <span className="font-display text-5xl leading-none tabular-nums" style={{ color: c.deep }}>{fmtScore(p.score)}</span>
                 </div>
                 <div className="flex flex-col items-end gap-1">

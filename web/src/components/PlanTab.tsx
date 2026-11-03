@@ -98,7 +98,7 @@ export function lineupBoard(roster: Roster, moves: Moves) {
     return { clan, inCwl, count: here.length, core: core.length, avg, delta: avg !== null && was !== null ? avg - was : 0, groups }
   })
   const valve = P.filter((p) => p.clan === 'Fire' && where(p).clan === 'Cake').length
-  checks.push({ key: 'valve', label: valve ? `${valve} Fire → Cake` : 'Valve', tip: 'One-way valve', tone: valve ? 'bad' : 'ok' })
+  checks.push({ key: 'valve', label: valve ? `${valve} Fire → Cake` : 'Fire → Cake', tip: 'Fire members do not move to Cake', tone: valve ? 'bad' : 'ok' })
   const maki = P.find((p) => p.tag === MAKI)
   if (maki) {
     const w = where(maki)
@@ -337,7 +337,7 @@ function Plan({ roster, me, onPublished }: { roster: Roster; me: Me; onPublished
             {valveHit && (
               <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-[10px] bg-[#FEE2E2] px-3 text-sm font-bold text-[#B91C1C]">
                 <input type="checkbox" checked={override} onChange={(e) => setOverride(e.target.checked)} className="size-4 accent-[#B91C1C]" />
-                Override the one-way valve
+                Allow Fire to Cake this once
               </label>
             )}
             {serverProblems.length > 0 && (

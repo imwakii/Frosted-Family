@@ -129,13 +129,13 @@ def check_rules(before: dict, after: dict, override_valve: bool) -> list[str]:
         if clan in CWL_CLANS:
             core = sum(after[t]["cwl_slot"] == "CORE" for t in members)
             if core != STARTERS:
-                problems.append(f"{clan} has {core} CORE, needs exactly {STARTERS}")
+                problems.append(f"{clan} has {core} in core, needs exactly {STARTERS}")
     valve = sorted(t for t in after if before[t]["clan"] == "Fire" and after[t]["clan"] == "Cake")
     if valve and not override_valve:
-        problems.append(f"one-way valve: {len(valve)} Fire to Cake ({', '.join(valve)}); set override_valve to allow")
+        problems.append(f"Fire to Cake is blocked for {len(valve)} {'player' if len(valve) == 1 else 'players'}")
     maki = after.get(MAKI)
     if maki and (maki["clan"], maki["cwl_slot"]) != ("Cake", "CORE"):
-        problems.append("Maki is locked to Cake CORE")
+        problems.append("Maki stays in Cake core")
     return problems
 
 

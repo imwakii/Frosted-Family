@@ -7,7 +7,7 @@ import type { ClanName, Roster } from '../types'
 import { Card, COLOR, Dot, ticks, useWidth } from './ClansBoard'
 import { norm, PhoneSearch, SearchBox } from './CwlTab'
 import { ClanFilter, Empty, useClanPick } from './ExploreTab'
-import OverallBoard from './OverallBoard'
+import { Bar } from './OverallBoard'
 import { chip, Eyebrow, POINT, RowChevron, Th, UnitIcon } from './ui'
 import { Chevron } from './WhatsNew'
 import { YouTag } from './You'
@@ -16,7 +16,7 @@ import { YouTag } from './You'
 // so a busy day of upgrades does not bury them; a player's upgrades that day share one row, a new town hall has its own.
 // A member's row points the way they went: towards the clan on the way in, away from it on the way out.
 // A new town hall is a milestone: a gold row at the top of its day, or an ordinary row in the Upgrades view.
-// The Upgrades view leads with who: the rankings, then the chart folded away, then the feed.
+// The Upgrades view: the chart, who has made the most, then the feed. In All, a day's upgrades fold into one row under its member news.
 
 type View = 'all' | 'members' | 'upgrades'
 const DAYS_SHOWN = 2
@@ -268,6 +268,7 @@ function MostUpgrades({ board, clan, nq }: { board: UpgradeLeader[]; clan: ClanN
   const ranked = board.filter((r) => (clan === 'All' || r.clan === clan) && n(r) > 0
     && (!nq || norm(r.name ?? '').includes(nq) || r.tag.toLowerCase().includes(nq))).sort((a, b) => n(b) - n(a) || b.last.localeCompare(a.last))
   const shown = everyone || nq ? ranked : ranked.slice(0, TOP)
+  const most = ranked.length ? n(ranked[0]) : 1
   return (
     <div className="flex flex-col gap-2">
       <div role="group" aria-label="Range" className="flex gap-1.5">
@@ -280,12 +281,13 @@ function MostUpgrades({ board, clan, nq }: { board: UpgradeLeader[]; clan: ClanN
               <a href={playerHref(r.tag)} data-tag={r.tag} className={`flex min-h-[56px] items-center gap-3 px-3.5 py-1.5 text-ink no-underline hover:bg-hover ${i ? 'border-t border-hair' : ''}`}>
                 <span className="w-6 flex-none text-right text-xs font-bold tabular-nums text-faint">{ranked.findIndex((x) => n(x) === n(r)) + 1}</span>
                 <Th th={r.th} />
-                <span className="flex min-w-0 flex-auto flex-col">
+                <span className="flex min-w-0 flex-auto flex-col gap-1">
                   <span className="flex min-w-0 items-baseline gap-1.5">
                     <span className="truncate text-[15px] font-semibold"><YouTag tag={r.tag} />{r.name}</span>
                     {clan === 'All' && <span className="flex-none text-[11px] font-bold" style={{ color: CLAN[r.clan].deep }}>{r.clan}</span>}
+                    <span className="ml-auto flex-none text-xs text-faint">{ago(r.last)}</span>
                   </span>
-                  <span className="text-[13px] text-muted">Last {ago(r.last)}</span>
+                  <Bar v={(n(r) / most) * 100} color={COLOR[r.clan]} />
                 </span>
                 <span className="flex-none text-sm font-extrabold tabular-nums">{n(r)}</span>
                 <RowChevron />
@@ -306,8 +308,7 @@ export default function LogTab({ roster, q, setQ, wide }: { roster: Roster; q: s
   const [kind, setKind] = useState<UpgradeCategory | 'all'>('all')
   const [open, setOpen] = useState<string | null>(null)
   const [allDays, setAllDays] = useState(false)
-  const [ranking, setRanking] = useState<'most' | 'furthest'>('most')
-  const [chartOpen, setChartOpen] = useState(false)
+  const [openDays, setOpenDays] = useState<string[]>([])
   useDrill((d) => !!data && d.unit === 'Town Hall', () => { setView('all'); setAllDays(true) })
   const nq = norm(q.trim())
   const here = useMemo(() => new Set(roster.players.map((p) => p.tag)), [roster])
@@ -353,31 +354,17 @@ export default function LogTab({ roster, q, setQ, wide }: { roster: Roster; q: s
       </div>
     </section>
   )
-  const rankings = view === 'upgrades' && !!data && (
-    <section aria-label="Rankings" className="flex flex-col gap-2">
-      <div role="group" aria-label="Ranking" className="flex gap-1.5">
-        {([['most', 'Most upgrades'], ['furthest', 'Furthest along']] as const).map(([id, text]) => (
-          <button key={id} type="button" aria-pressed={id === ranking} onClick={() => setRanking(id)} className={chip(id === ranking)}>{text}</button>
-        ))}
-      </div>
-      {ranking === 'most' ? <MostUpgrades board={data.upgrade_board ?? []} clan={clan} nq={nq} /> : <OverallBoard q={q} clan={clan} wide={wide} />}
+  const leaders = view === 'upgrades' && !!data && (
+    <section aria-label="Most upgrades" className="flex flex-col gap-1.5">
+      <Eyebrow>Most upgrades</Eyebrow>
+      <MostUpgrades board={data.upgrade_board ?? []} clan={clan} nq={nq} />
     </section>
   )
   const first = events.find((e) => here.has(e.tag))?.tag ?? halls[0]?.tag ?? ups[0]?.tag
   const enter = () => { if (first) go.to(playerHref(first)) }
   const started = data?.since && new Date(`${data.since}T00:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' })
 
-  // Mounted only once open, so it measures its width when there is one to measure.
-  const chart = view === 'upgrades' && !!data?.upgrade_counts?.length && (
-    <div className="flex flex-col gap-2">
-      <button type="button" aria-expanded={chartOpen} onClick={() => setChartOpen((o) => !o)}
-        className="flex min-h-11 cursor-pointer items-center gap-1 self-start border-0 bg-transparent p-0 text-sm font-normal text-ink-2">
-        Upgrades per day
-        <Chevron className={chartOpen ? 'rotate-90' : ''} />
-      </button>
-      {chartOpen && <UpgradeChart counts={data.upgrade_counts} clan={clan} kind={kind} />}
-    </div>
-  )
+  const chart = view === 'upgrades' && !!data?.upgrade_counts?.length && <UpgradeChart counts={data.upgrade_counts} clan={clan} kind={kind} />
   const feed = !data ? <Empty loading={loading} /> : !order.length
     ? <div className="rounded-2xl border border-line bg-white p-5 text-sm text-faint">{nq ? 'No one by that name' : 'Nothing here yet'}</div>
     : (
@@ -394,7 +381,14 @@ export default function LogTab({ roster, q, setQ, wide }: { roster: Roster; q: s
                   {day.events.map((e) => <li key={`${e.kind}-${e.tag}-${e.at}`} className="min-w-0"><EventRow e={e} onRoster={here.has(e.tag)} /></li>)}
                 </ol>
               )}
-              {!!groups.length && (
+              {!!groups.length && view === 'all' && !nq && (
+                <button type="button" aria-expanded={openDays.includes(d)} onClick={() => setOpenDays((o) => (o.includes(d) ? o.filter((x) => x !== d) : [...o, d]))}
+                  className="flex min-h-11 w-full cursor-pointer items-center justify-between gap-2 rounded-2xl border border-line bg-white px-3.5 text-left text-sm font-semibold text-ink-2 hover:bg-page">
+                  {(() => { const n = groups.reduce((s, [, r]) => s + r.length, 0); return `${n} ${n === 1 ? 'upgrade' : 'upgrades'} by ${groups.length} ${groups.length === 1 ? 'player' : 'players'}` })()}
+                  <Chevron className={openDays.includes(d) ? 'rotate-90' : ''} />
+                </button>
+              )}
+              {!!groups.length && (view !== 'all' || !!nq || openDays.includes(d)) && (
                 <ol className="m-0 list-none divide-y divide-hair rounded-2xl border border-line bg-white py-1">
                   {groups.map(([key, rows]) => {
                     const id = `${d}-${key}`
@@ -420,7 +414,7 @@ export default function LogTab({ roster, q, setQ, wide }: { roster: Roster; q: s
           <div className="w-[clamp(220px,28vw,340px)] flex-none"><SearchBox q={q} setQ={setQ} onEnter={enter} /></div>
         </div>
         {filters}
-        <div className="flex w-full flex-col gap-3">{rankings}{chart}{kinds}{feed}</div>
+        <div className="flex w-full flex-col gap-3">{chart}{leaders}{kinds}{feed}</div>
       </main>
     )
   }
@@ -428,7 +422,7 @@ export default function LogTab({ roster, q, setQ, wide }: { roster: Roster; q: s
     <div className="flex flex-col gap-2.5 pb-6">
       <PhoneSearch q={q} setQ={setQ} onEnter={enter}><ClanFilter clan={clan} setClan={setClan} /></PhoneSearch>
       {filters}
-      <div className="flex flex-col gap-3 px-4">{rankings}{chart}{kinds}{feed}</div>
+      <div className="flex flex-col gap-3 px-4">{chart}{leaders}{kinds}{feed}</div>
     </div>
   )
 }

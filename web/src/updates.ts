@@ -1,4 +1,5 @@
-// What changed, for the What's new card. A later update on the same date merges into that date's entry, keeping its highlights, and takes a new id.
+// What changed, for the What's new card. A later update on the same date merges into that date's entry and keeps its highlights.
+// A new id opens the card for everyone, so it takes a new id only when members will notice the change. Plan tab notes show to leaders only.
 // To add an update on a new date, append an entry to the END of UPDATES with a new id: the card
 // opens for everyone once, shows the last entry on top, and keeps the others below it, newest first. Up to three
 // highlights lead it, each a short benefit that links to the place; the full notes fold away under them.
@@ -25,7 +26,7 @@ export const UPDATES: Update[] = [
       {
         title: 'CWL tab',
         lines: [
-          'Added pending clan moves to Lineups.',
+          'Added clan moves still to make.',
         ],
       },
     ],
@@ -45,7 +46,7 @@ export const UPDATES: Update[] = [
       {
         title: 'Log tab (new)',
         lines: [
-          'Added member and upgrade activity.',
+          'Added joins, leaves and upgrades.',
         ],
       },
       {
@@ -57,14 +58,14 @@ export const UPDATES: Update[] = [
       {
         title: 'Stats tab',
         lines: [
-          'Added family membership history.',
+          'Added member history.',
           'Added a Badges leaderboard.',
         ],
       },
       {
         title: 'Player cards',
         lines: [
-          'Added account tagging with Add me.',
+          'Added Add me to mark your account.',
           'Added bronze, silver and gold badges.',
           'Added streaks, heroes and equipment.',
         ],
@@ -72,7 +73,7 @@ export const UPDATES: Update[] = [
       {
         title: 'General',
         lines: [
-          'Added home screen installation.',
+          'Added Add to home screen.',
         ],
       },
     ],
@@ -86,20 +87,20 @@ export const UPDATES: Update[] = [
         lines: [
           'Added a Group table with town halls.',
           'Added clan cards for our three clans.',
-          'Added a seven-day selector.',
+          'Added a button for each CWL day.',
         ],
       },
       {
         title: 'War tab',
         lines: [
-          'Added lineup mismatch alerts.',
+          'Added warnings for wrong lineups.',
           "Added each clan's most recent war.",
         ],
       },
       {
         title: 'Plan tab',
         lines: [
-          'Improved newcomer placement in Suggest.',
+          'Changed Suggest to place new members.',
         ],
       },
     ],
@@ -110,7 +111,7 @@ export const UPDATES: Update[] = [
     date: '4 Nov 2026',
     highlights: [
       { title: 'Phone alerts', line: 'Choose what your phone tells you.', icon: 'bell' },
-      { title: 'Calendar', line: "See what's on next in the family.", href: '#/calendar', icon: 'calendar' },
+      { title: 'Calendar', line: "See what's coming up.", href: '#/calendar', icon: 'calendar' },
       { title: 'Standings', line: "See who's winning your CWL group.", href: '#/cwl/group', icon: 'league' },
     ],
     groups: [
@@ -128,7 +129,7 @@ export const UPDATES: Update[] = [
           'Added enemy clan comparison cards.',
           'Added play days to the Lineups roster.',
           'Changed Lineups to open on the roster.',
-          'Removed the personal status row.',
+          'Removed your status row.',
         ],
       },
       {
@@ -140,23 +141,26 @@ export const UPDATES: Update[] = [
       {
         title: 'Stats tab',
         lines: [
+          'Changed Trends to monthly points.',
+          'Changed rankings to the top 10 and you.',
+          'Added i buttons to explain the numbers.',
           'Added upgrade cards by category.',
           'Moved Donations and Capital to Players.',
-          'Reorganised sub-tabs for easier access.',
+          'Moved the tabs around in Stats.',
         ],
       },
       {
         title: 'Log tab',
         lines: [
-          'Added rankings to Upgrades.',
-          'Folded Upgrades per day away.',
+          'Folded each day\'s upgrades into a row.',
+          'Added Most upgrades to Upgrades.',
           'Changed Log to open on recent days.',
         ],
       },
       {
         title: 'Plan tab',
         lines: [
-          'Merged the lineup and day builders.',
+          'Merged lineups and days into one page.',
           'Added a place picker under each name.',
           'Added an Activity list of plan changes.',
           'Added side-by-side clan comparison.',
@@ -167,7 +171,7 @@ export const UPDATES: Update[] = [
           'Added the swaps to make in the game.',
           'Added visitors by region under Usage.',
           'Merged Make room and Inactivity.',
-          'Added changes to the Publish check.',
+          'Added the day changes to Publish.',
         ],
       },
       {
@@ -192,11 +196,10 @@ export const UPDATES: Update[] = [
       {
         title: 'General',
         lines: [
-          'Added support for local time toggle.',
-          'Added draggable clan and day selectors.',
+          'Added swiping between clans and days.',
           'Added a search icon on phones.',
           'Added a first-visit welcome.',
-          'Changed clan selector to stay pinned.',
+          'Changed clan buttons to stay on screen.',
           'Moved leader sign-in to the footer.',
           'Removed reactions and emojis.',
         ],

@@ -21,7 +21,7 @@ export default function RivalSheet({ clan, tag, wide, onClose }: { clan: ClanNam
   if (!row) {
     return (
       <CardSheet label="Clan" wide={wide} onClose={onClose} head={<span className="font-display truncate text-[26px] leading-tight text-ink-2">Clan</span>}>
-        <p className="m-0 text-sm text-faint">No longer stored</p>
+        <p className="m-0 text-sm text-faint">Clan details are gone</p>
       </CardSheet>
     )
   }

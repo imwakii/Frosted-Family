@@ -1,3 +1,4 @@
+import Info from './Info'
 import { useEffect, useMemo, useState } from 'react'
 import { useClans, thIcon } from '../clash'
 import { type CwlRow, type EightRow, useCwlGroups, useWarBoard } from '../leaders'
@@ -179,6 +180,7 @@ function Board({ rows, clan }: { rows: CwlRow[]; clan: ClanName }) {
           <button key={v.id} type="button" aria-pressed={v.id === shown} onClick={() => setView(v.id)} className={chip(v.id === shown)}>{v.label}</button>
         ))}
       </div>
+      {shown === 'strength' && <span className="flex justify-end px-1"><Info topic="strength" /></span>}
       {shown === 'standings' ? <Standings rows={rows} clan={clan} /> : <GroupTable rows={rows} clan={clan} compare={shown === 'strength'} />}
     </div>
   )

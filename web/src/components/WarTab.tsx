@@ -8,6 +8,7 @@ import { ago, type ClanWar, setDayPick, setWarClan, useCwlDay, useCwlGroups, use
 import { clanHref, go, playerHref, rivalHref } from '../route'
 import { CLAN, CLANS } from '../theme'
 import type { ClanName, Roster } from '../types'
+import Info from './Info'
 import { ClanBadge, ClanSwitch, DayRow, KEY_ROW, POINT, STICKY_SWITCH, Stars, Th, useNow } from './ui'
 
 // Each clan's war, side by side: our bases and badge on the left, the enemy's on the right, facing by map position.
@@ -274,6 +275,7 @@ export function WarBoard({ clan, war, now, roster }: { clan: ClanName; war: Clan
             <span className="flex items-center gap-1.5"><span className="size-2 rounded-full bg-[#16A34A]" />Used</span>
           </>}
           <span className="flex items-center gap-1.5"><span className="text-gold">★</span>Best on this base</span>
+          <span className="ml-auto flex flex-none items-center pl-2"><Info topic="war" /></span>
         </div>}
         <ol className="m-0 list-none px-1.5 py-1">
           {rows.map((p, i) => (

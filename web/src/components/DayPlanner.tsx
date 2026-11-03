@@ -5,6 +5,7 @@ import { type ClanDays, DAYS, DRAFT_KEY, earned, enemy, locked, missedThisSeason
 import { CLAN, CLANS } from '../theme'
 import type { ClanName, Player, Roster, Slot } from '../types'
 import ClanCompare from './ClanCompare'
+import Info from './Info'
 import CwlTab from './CwlTab'
 import PlanActivity from './PlanActivity'
 import { lineupBoard, type Moves, type Place, PlaceSelect, placeLabel, PlanRow, readDraft, toList } from './PlanTab'
@@ -286,6 +287,7 @@ export default function DayPlanner({ roster: base, me, onPublished }: { roster: 
       <div className="flex items-center gap-1.5">
         <button type="button" aria-pressed={preview} className={btn} onClick={() => setPreview((v) => !v)}>{preview ? 'Grid' : 'Preview'}</button>
         <span className="flex-auto" />
+        {!preview && !viewing && view !== 'Flakes' && <Info topic="suggest" />}
         {!preview && !viewing && view !== 'Flakes' && <button type="button" className={btn} onClick={() => offer(sorted(repair(pools[clan], w, plans[clan])), false)}>Suggest</button>}
         {!viewing && <button type="button" className={btn} disabled={readOnly || busy || (!dirty && !nMoves)} onClick={propose}>
           {dirty || nMoves || !saved ? 'Propose' : 'Proposed'}
@@ -469,7 +471,7 @@ export default function DayPlanner({ roster: base, me, onPublished }: { roster: 
           {valveHit && (
             <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-[10px] bg-[#FEE2E2] px-3 text-sm font-bold text-[#B91C1C]">
               <input type="checkbox" checked={override} onChange={(e) => setOverride(e.target.checked)} className="size-4 accent-[#B91C1C]" />
-              Override the one-way valve
+              Allow Fire to Cake this once
             </label>
           )}
           {problems.length > 0 && (

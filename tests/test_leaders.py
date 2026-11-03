@@ -207,18 +207,18 @@ def test_rule_checks(env):
     assert problems(c, csrf, [{"tag": fire_core, "clan": "Fire", "slot": "SUB"},
                               {"tag": fire_sub, "clan": "Fire", "slot": "CORE"}]) == []
     assert problems(c, csrf, [{"tag": fire_core, "clan": "Fire", "slot": "SUB"}]) == \
-        ["Fire has 14 CORE, needs exactly 15"]
+        ["Fire has 14 in core, needs exactly 15"]
     # Enough Flakes moved in to take Cake one past the cap, whatever the roster holds.
     cake_n = sum(r["clan"] == "Cake" for r in rows if r["tag"])
     flakes = [r["tag"] for r in rows if r["tag"] and r["clan"] == "Flakes"][:plan.CAP + 1 - cake_n]
     assert problems(c, csrf, [{"tag": t, "clan": "Cake", "slot": "OUT"} for t in flakes]) == \
         ["Cake has 51 members, above the 50 cap"]
     valve = [{"tag": fire_sub, "clan": "Cake", "slot": "SUB"}, {"tag": cake_out, "clan": "Flakes", "slot": "OUT"}]
-    assert [p.split(":")[0] for p in problems(c, csrf, valve)] == ["one-way valve"]
+    assert problems(c, csrf, valve) == ["Fire to Cake is blocked for 1 player"]
     assert problems(c, csrf, valve, override_valve=True) == []
     assert problems(c, csrf, [{"tag": plan.MAKI, "clan": "Cake", "slot": "SUB"},
                               {"tag": pick(rows, "Cake", "SUB"), "clan": "Cake", "slot": "CORE"}]) == \
-        ["Maki is locked to Cake CORE"]
+        ["Maki stays in Cake core"]
     assert problems(c, csrf, [{"tag": "#NOTREAL", "clan": "Fire", "slot": "SUB"}]) == ["not on the roster: #NOTREAL"]
 
 

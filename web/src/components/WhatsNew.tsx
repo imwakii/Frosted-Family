@@ -39,9 +39,10 @@ const HighlightIcon = ({ icon }: { icon: Highlight['icon'] }) => {
   )
 }
 
-const Groups = ({ update, quiet }: { update: Update; quiet?: boolean }) => (
+// Notes about Plan are for the leaders who can use it.
+const Groups = ({ update, quiet, leader }: { update: Update; quiet?: boolean; leader: boolean }) => (
   <div className={`flex flex-col ${quiet ? 'gap-1.5' : 'gap-2.5'}`}>
-    {update.groups.map((g) => (
+    {update.groups.filter((g) => leader || g.title !== 'Plan tab').map((g) => (
       <section key={g.title} aria-label={g.title} className="flex flex-col gap-0.5">
         <Eyebrow>{g.title}</Eyebrow>
         <ul className="m-0 flex list-none flex-col p-0">
@@ -68,7 +69,7 @@ export function useNews() {
   return { fresh, open, close, show: useCallback(() => setOpen(true), []) }
 }
 
-export function WhatsNewCard({ wide, onClose: close, onSettings }: { wide: boolean; onClose: () => void; onSettings: () => void }) {
+export function WhatsNewCard({ wide, leader, onClose: close, onSettings }: { wide: boolean; leader: boolean; onClose: () => void; onSettings: () => void }) {
   return (
         <CardSheet label="What's new" wide={wide} onClose={close} head={
           <div className="flex min-w-0 flex-auto flex-col gap-1">
@@ -98,10 +99,10 @@ export function WhatsNewCard({ wide, onClose: close, onSettings }: { wide: boole
                   All patch notes
                   <Chevron className="group-open/notes:rotate-90" />
                 </summary>
-                <div className="pb-2 pt-1"><Groups update={LATEST} /></div>
+                <div className="pb-2 pt-1"><Groups update={LATEST} leader={leader} /></div>
               </details>
             </>
-          ) : <Groups update={LATEST} />}
+          ) : <Groups update={LATEST} leader={leader} />}
           {/* One quiet row until asked for, so the newest update is what the card is about. */}
           {EARLIER.length > 0 && (
             <details className="group/all -mt-4">
@@ -116,7 +117,7 @@ export function WhatsNewCard({ wide, onClose: close, onSettings }: { wide: boole
                       {u.date}
                       <Chevron className="group-open/one:rotate-90" />
                     </summary>
-                    <div className="pb-2 pt-1"><Groups update={u} quiet /></div>
+                    <div className="pb-2 pt-1"><Groups update={u} quiet leader={leader} /></div>
                   </details>
                 ))}
               </div>

@@ -37,7 +37,7 @@ export default function Welcome({ roster, wide }: { roster: Roster; wide: boolea
       <CardSheet label="Get alerts" wide={wide} onClose={done} head={
         <div className="flex min-w-0 flex-auto flex-col gap-1">
           <span className="font-display text-[24px] leading-tight text-brand">Get alerts</span>
-          <span className="text-sm text-muted">Hear when your attack or CWL day is close.</span>
+          <span className="text-sm text-muted">Get told when your attack or CWL day is close.</span>
         </div>
       }>
         <Alerts />
@@ -49,7 +49,7 @@ export default function Welcome({ roster, wide }: { roster: Roster; wide: boolea
     <CardSheet label="Welcome" wide={wide} onClose={done} head={
       <div className="flex min-w-0 flex-auto flex-col gap-1">
         <span className="font-display text-[24px] leading-tight text-brand">Welcome</span>
-        <span className="text-sm text-muted">Find your name to see which CWL days you're allocated, our stats and war log.</span>
+        <span className="text-sm text-muted">Find your name to see your CWL days, stats and wars.</span>
       </div>
     }>
       <YouPrompt roster={roster} onDone={found} bare />

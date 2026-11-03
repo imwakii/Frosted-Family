@@ -53,7 +53,7 @@ function Accounts({ roster }: { roster: Roster }) {
   )
 }
 
-export default function Settings({ wide, roster }: { wide: boolean; roster: Roster | null }) {
+export default function Settings({ wide, roster, leader }: { wide: boolean; roster: Roster | null; leader: boolean }) {
   const news = useNews()
   const { yous } = useYou()
   const utc = useUtc()
@@ -90,12 +90,12 @@ export default function Settings({ wide, roster }: { wide: boolean; roster: Rost
           <section aria-label="Time" className="flex flex-col gap-1.5">
             <Eyebrow>Time</Eyebrow>
             <div className="rounded-xl border border-line bg-white">
-              <SwitchRow label="Show UTC" line="Calendar times in UTC, not yours" on={utc} onFlip={() => setUtc(!utc)} />
+              <SwitchRow label="Show UTC" line="Show calendar times in UTC" on={utc} onFlip={() => setUtc(!utc)} />
             </div>
           </section>
         </CardSheet>
       )}
-      {news.open && <WhatsNewCard wide={wide} onClose={news.close} onSettings={openSheet} />}
+      {news.open && <WhatsNewCard wide={wide} leader={leader} onClose={news.close} onSettings={openSheet} />}
     </>
   )
 }
