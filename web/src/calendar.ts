@@ -11,10 +11,16 @@ export type CalEvent = {
   start: string; end: string; timed: boolean; expected: boolean
   days?: CalDay[]; war_key?: string; state?: string; opponent?: string | null; stars?: number; opponent_stars?: number
   url?: string; post?: string | null
-  members?: CalEvent[]  // the family's one CWL entry holds each clan's
 }
 
 export type CalMonth = { month: string; events: CalEvent[]; news_checked: string | null }
+
+/** One row of the list: an event, or one CWL day of it, or the CWL days after the next one. A family row is one CWL entry
+ * for Fire and Cake together, and `clans` holds each clan's own war that day. */
+export type Item = {
+  key: string; e: CalEvent; start: string; end: string; day?: CalDay; rest?: [number, number]
+  family?: boolean; clans?: { e: CalEvent; day: CalDay }[]
+}
 
 const pad = (n: number) => String(n).padStart(2, '0')
 
@@ -26,77 +32,89 @@ export function dayOf(ms: number, utc: boolean) {
     : `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 }
 
-/** The first and last day an event shows on. A timed event ending at midnight does not touch the day it ends on. */
-export function span(e: CalEvent, utc: boolean): [string, string] {
-  if (!e.timed) return [e.start, e.end]
-  return [dayOf(Date.parse(e.start), utc), dayOf(Date.parse(e.end) - 1000, utc)]
-}
-
-/** Fire and Cake fight CWL together, minutes apart and against different clans, so the grid shows one entry. It runs from
- * the earlier start to the later end, and keeps each clan's own times and opponents for the day's list. */
-export function oneCwl(events: CalEvent[]): CalEvent[] {
-  const cwl = events.filter((e) => e.kind === 'cwl')
-  if (cwl.length < 2 || cwl.some((e) => e.timed !== cwl[0].timed)) return events
-  const start = cwl.map((e) => e.start).sort()[0], end = cwl.map((e) => e.end).sort().at(-1) as string
-  return [...events.filter((e) => e.kind !== 'cwl'), { ...cwl[0], id: 'cwl-family', title: 'CWL', clan: null, start, end, days: undefined, members: cwl }]
-}
-
 export const shiftMonth = (month: string, by: number) => {
   const d = new Date(Date.UTC(+month.slice(0, 4), +month.slice(5, 7) - 1 + by, 1))
   return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}`
 }
 
-/** The month's weeks, Monday first, each seven days long with null outside the month. */
-export function weeksOf(month: string): (string | null)[][] {
-  const y = +month.slice(0, 4), m = +month.slice(5, 7)
-  const last = new Date(Date.UTC(y, m, 0)).getUTCDate()
-  const lead = (new Date(Date.UTC(y, m - 1, 1)).getUTCDay() + 6) % 7
-  const cells: (string | null)[] = [...Array(lead).fill(null), ...Array.from({ length: last }, (_, i) => `${month}-${pad(i + 1)}`)]
-  while (cells.length % 7) cells.push(null)
-  return Array.from({ length: cells.length / 7 }, (_, i) => cells.slice(i * 7, i * 7 + 7))
+const timedOver = (end: string, now: number) => Date.parse(end) <= now
+
+/** Whether an item is under way. A date-only event runs the whole of its first and last days. */
+export const isOn = (i: Item, now: number, utc: boolean) => (i.e.timed
+  ? Date.parse(i.start) <= now
+  : i.start <= dayOf(now, utc))
+
+const earliest = (times: string[]) => [...times].sort()[0]
+const latest = (times: string[]) => [...times].sort()[times.length - 1]
+
+/** Fire and Cake fight CWL together, minutes apart and against different clans: one row per CWL day. */
+function familyCwl(cwl: CalEvent[], now: number): Item[] {
+  const left = cwl.flatMap((e) => (e.days ?? []).filter((d) => !timedOver(d.end, now)).map((day) => ({ e, day })))
+  const numbers = [...new Set(left.map((c) => c.day.day))].sort((a, b) => a - b)
+  const row = (key: string, days: typeof left, rest?: [number, number]): Item => ({
+    key, e: days[0].e, family: true, rest, clans: rest ? undefined : days,
+    start: earliest(days.map((c) => c.day.start)), end: latest(days.map((c) => c.day.end)),
+  })
+  const items = numbers.slice(0, 2).map((n) => row(`cwl-${n}`, left.filter((c) => c.day.day === n)))
+  const later = numbers.slice(2)
+  if (later.length) items.push(row('cwl-rest', left.filter((c) => c.day.day >= later[0]), [later[0], later[later.length - 1]]))
+  return items
 }
 
-// Which comes first when a week has more than it can show.
-const ORDER: Record<CalEvent['kind'], number> = { cwl: 0, friendly: 1, war: 2, clan_games: 3, cwl_window: 3, raid: 4, game: 5 }
-export const byWeight = (a: CalEvent, b: CalEvent) => ORDER[a.kind] - ORDER[b.kind] || a.start.localeCompare(b.start)
-
-export type Band = { e: CalEvent; col: number; len: number; lane: number; opensBefore: boolean; runsOn: boolean }
-
-/** One week's events laid in lanes, longest-standing first. What does not fit is counted per day. */
-export function layWeek(week: (string | null)[], events: CalEvent[], utc: boolean, lanes: number): { bands: Band[]; hidden: Record<string, number> } {
-  const days = week.flatMap((d) => (d ? [d] : []))
-  const from = days[0], to = days[days.length - 1]
-  const taken: boolean[][] = Array.from({ length: lanes }, () => Array(7).fill(false))
-  const bands: Band[] = []
-  const hidden: Record<string, number> = {}
-  for (const e of [...events].sort(byWeight)) {
-    const [a, b] = span(e, utc)
-    if (b < from || a > to) continue
-    const col = week.indexOf(a < from ? from : a)
-    const end = week.indexOf(b > to ? to : b)
-    const lane = taken.findIndex((row) => row.slice(col, end + 1).every((t) => !t))
-    if (lane < 0) {
-      for (let i = col; i <= end; i++) { const d = week[i]; if (d) hidden[d] = (hidden[d] ?? 0) + 1 }
-      continue
+/** Each clan's war now and its next, with later CWL days folded into one row. The family's wars lead the page. */
+export function familyItems(events: CalEvent[], now: number, utc: boolean): Item[] {
+  const cwl = events.filter((e) => e.days)
+  const planned = events.filter((e) => e.kind === 'cwl' && !e.days && e.end >= dayOf(now, utc))
+  const together = cwl.length > 1, plannedTogether = planned.length > 1
+  const items: Item[] = together ? familyCwl(cwl, now) : []
+  if (plannedTogether) items.push({ key: 'cwl-planned', e: planned[0], family: true, start: planned[0].start, end: planned[0].end })
+  for (const e of events) {
+    if (!e.clan || (together && e.days) || (plannedTogether && planned.includes(e))) continue
+    if (e.days) {
+      const left = e.days.filter((d) => !timedOver(d.end, now))
+      left.slice(0, 2).forEach((d) => items.push({ key: `${e.id}-${d.day}`, e, start: d.start, end: d.end, day: d }))
+      const later = left.slice(2)
+      if (later.length) items.push({ key: `${e.id}-rest`, e, start: later[0].start, end: later[later.length - 1].end, rest: [later[0].day, later[later.length - 1].day] })
+    } else if (e.timed ? !timedOver(e.end, now) : e.end >= dayOf(now, utc)) {
+      items.push({ key: e.id, e, start: e.start, end: e.end })
     }
-    for (let i = col; i <= end; i++) taken[lane][i] = true
-    bands.push({ e, col, len: end - col + 1, lane, opensBefore: a < from, runsOn: b > to })
   }
-  return { bands, hidden }
+  return items.sort((a, b) => a.start.localeCompare(b.start))
+}
+
+/** Supercell's events and Clan Games still to come, soonest first. Raid Weekend repeats, so only its next one shows. */
+export function gameItems(events: CalEvent[], now: number, utc: boolean): Item[] {
+  const left = events
+    .filter((e) => !e.clan && (e.timed ? !timedOver(e.end, now) : e.end >= dayOf(now, utc)))
+    .sort((a, b) => a.start.localeCompare(b.start))
+  const raid = left.find((e) => e.kind === 'raid')
+  return left.filter((e) => e.kind !== 'raid' || e === raid).map((e) => ({ key: e.id, e, start: e.start, end: e.end }))
 }
 
 const fmt = (ms: number, utc: boolean, opts: Intl.DateTimeFormatOptions) => new Date(ms).toLocaleString('en-GB', { ...opts, timeZone: utc ? 'UTC' : undefined })
 
-export const fmtTime = (iso: string, utc: boolean) => fmt(Date.parse(iso), utc, { hour: '2-digit', minute: '2-digit', hour12: false })
 export const fmtWhen = (iso: string, utc: boolean) => fmt(Date.parse(iso), utc, { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false })
 
 const plain = (d: string, opts: Intl.DateTimeFormatOptions) => new Date(`${d}T12:00:00Z`).toLocaleDateString('en-GB', { ...opts, timeZone: 'UTC' })
-export const fmtDay = (d: string) => plain(d, { weekday: 'long', day: 'numeric', month: 'long' })
-export const fmtMonth = (month: string) => plain(`${month}-01`, { month: 'long', year: 'numeric' })
+export const fmtDate = (d: string) => plain(d, { weekday: 'short', day: 'numeric', month: 'short' })
 
-/** A date-only event's dates: 1 to 30 Nov, or one day. */
+/** A date-only event's dates: 22 to 28 Nov, or one day. */
 export function fmtRange(start: string, end: string) {
   const short = { day: 'numeric', month: 'short' } as const
   if (start === end) return plain(start, short)
   return `${start.slice(0, 7) === end.slice(0, 7) ? plain(start, { day: 'numeric' }) : plain(start, short)} to ${plain(end, short)}`
+}
+
+/** How long until a moment: in 40m, in 21h, in 6 days. */
+export function fmtIn(iso: string, now: number) {
+  const mins = Math.max(1, Math.round((Date.parse(iso) - now) / 60000))
+  if (mins < 60) return `in ${mins}m`
+  if (mins < 36 * 60) return `in ${Math.round(mins / 60)}h`
+  return `in ${Math.round(mins / 1440)} days`
+}
+
+/** How long until a date: Tomorrow, in 6 days. */
+export function fmtInDays(day: string, today: string) {
+  const n = Math.round((Date.parse(`${day}T00:00:00Z`) - Date.parse(`${today}T00:00:00Z`)) / 86400000)
+  return n <= 1 ? 'Tomorrow' : `in ${n} days`
 }
