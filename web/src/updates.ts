@@ -1,7 +1,7 @@
 // What changed, for the What's new card. To add an update, append an entry to the END of UPDATES with a new id: the card
 // opens for everyone once, shows the last entry on top, and keeps the others below it, newest first.
-// Lines sit under the tab they changed, such as "War tab", or "Player cards" or "General". Each is one short, professional release note naming the
-// specific feature and starting with a past-tense verb, such as "Added support for local time toggle". Keep each under 40 characters, so it stays on one line on a phone.
+// Lines sit under the tab they changed, such as "War tab", or "Player cards" or "General". Each is one patch note naming the specific feature and
+// starting with a past-tense verb such as Added, Changed, Moved, Fixed or Removed. Keep each under 40 characters, so it stays on one line on a phone.
 
 export type Update = { id: string; date: string; groups: { title: string; lines: string[] }[] }
 
@@ -102,7 +102,8 @@ export const UPDATES: Update[] = [
     ],
   },
   {
-    id: '2026-11-04',
+    // A second id for the same day: the batch grew after the first, so the card opens once more.
+    id: '2026-11-04-2',
     date: '4 Nov 2026',
     groups: [
       {
@@ -110,6 +111,9 @@ export const UPDATES: Update[] = [
         lines: [
           'Added Standings for the CWL group.',
           'Added enemy clan comparison cards.',
+          'Added play days to the Lineups roster.',
+          'Changed Lineups to open on the roster.',
+          'Removed the personal status row.',
         ],
       },
       {
@@ -122,19 +126,32 @@ export const UPDATES: Update[] = [
         title: 'Stats tab',
         lines: [
           'Added upgrade cards by category.',
+          'Moved Donations and Capital to Players.',
           'Reorganised sub-tabs for easier access.',
+        ],
+      },
+      {
+        title: 'Log tab',
+        lines: [
+          'Changed Log to open on recent days.',
         ],
       },
       {
         title: 'Player cards',
         lines: [
           'Added links to all upgrade categories.',
+          'Added a back arrow on upgrade cards.',
         ],
       },
       {
         title: 'General',
         lines: [
           'Added support for local time toggle.',
+          'Added draggable clan and day selectors.',
+          'Added a search icon on phones.',
+          'Added a first-visit welcome.',
+          'Changed clan selector to stay pinned.',
+          'Removed reactions and emojis.',
         ],
       },
     ],

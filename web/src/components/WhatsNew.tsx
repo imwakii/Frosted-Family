@@ -19,13 +19,13 @@ const Chevron = ({ className }: { className: string }) => (
 )
 
 const Groups = ({ update, quiet }: { update: Update; quiet?: boolean }) => (
-  <div className={`flex flex-col ${quiet ? 'gap-2' : 'gap-3.5'}`}>
+  <div className={`flex flex-col ${quiet ? 'gap-1.5' : 'gap-2.5'}`}>
     {update.groups.map((g) => (
-      <section key={g.title} aria-label={g.title} className="flex flex-col gap-1.5">
+      <section key={g.title} aria-label={g.title} className="flex flex-col gap-0.5">
         <Eyebrow>{g.title}</Eyebrow>
-        <ul className="m-0 flex list-none flex-col gap-1.5 p-0">
+        <ul className="m-0 flex list-none flex-col p-0">
           {g.lines.map((l) => (
-            <li key={l} className={`flex gap-2 font-normal leading-snug ${quiet ? 'text-xs text-muted' : 'text-sm text-ink-2'}`}>
+            <li key={l} className={`flex gap-2 font-normal leading-[1.3] ${quiet ? 'text-xs text-muted' : 'text-sm text-ink-2'}`}>
               <span aria-hidden="true" className="mt-[7px] size-1 flex-none rounded-full bg-[#A3957C]" />
               {l}
             </li>

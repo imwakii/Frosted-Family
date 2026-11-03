@@ -3,8 +3,8 @@ import { CLAN, CLANS, GROUPS, SLOT_TEXT, coreAvg, fmtScore, fmtStart } from '../
 import { clanHref, playerHref } from '../route'
 import type { ClanName, LiveWar, Player, Roster } from '../types'
 import { useClans, type ClanMeta } from '../clash'
-import { setDayPick, useCwlGroups, useDayPick, useWarBoard } from '../leaders'
-import { useYou, YouPrompt, YouTag } from './You'
+import { setDayPick, useCwlGroups, useDayPick } from '../leaders'
+import { YouTag } from './You'
 import { ClanBadge, ClanSwitch, DayRow, Eyebrow, LeaguePill, PlayDays, SearchIcon, StatusDot, StatusKey, Th, useNow, RowChevron } from './ui'
 
 type Props = {
@@ -141,15 +141,15 @@ function NewLine({ p }: { p: Player }) {
   const at = p.joinedAt ? new Date(p.joinedAt.length === 10 ? p.joinedAt + 'T00:00:00Z' : p.joinedAt) : null
   const joined = at && !Number.isNaN(at.getTime()) ? at.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' }) : null
   if (!joined) return null
-  return <span className="text-[11px] text-faint">Joined {joined}</span>
+  return <span className="flex-none whitespace-nowrap text-[11px] text-faint">Joined {joined}</span>
 }
 
-function Row({ p, n, hit, dense }: { p: Player; n: number; hit?: boolean; dense?: boolean }) {
+function Row({ p, n, hit, dense, showDays }: { p: Player; n: number; hit?: boolean; dense?: boolean; showDays?: boolean }) {
   const first = n === 1
   return (
     <li>
       <a href={href(p)} data-tag={p.tag}
-        className={`flex items-center gap-3 text-ink no-underline ${dense ? 'min-h-[42px] px-2.5' : 'min-h-[46px] px-3.5'} ${first ? '' : 'border-t border-hair'} ${hit ? 'bg-hit' : 'hover:bg-hover'}`}>
+        className={`flex items-center gap-3 text-ink no-underline ${showDays ? 'py-1.5' : ''} ${dense ? 'min-h-[42px] px-2.5' : 'min-h-[46px] px-3.5'} ${first ? '' : 'border-t border-hair'} ${hit ? 'bg-hit' : 'hover:bg-hover'}`}>
         <span className="w-5 flex-none text-right text-xs font-bold tabular-nums text-faint">{n}</span>
         <Th th={p.th} />
         <span className="flex min-w-0 flex-auto flex-col">
@@ -158,10 +158,12 @@ function Row({ p, n, hit, dense }: { p: Player; n: number; hit?: boolean; dense?
             <FromPill p={p} />
             {p.rejoined && <span title="Rejoined, back in their slot" className="flex-none rounded-full bg-[#DCFCE7] px-1.5 py-px text-[10px] font-extrabold uppercase tracking-[0.04em] text-[#166534]">Back</span>}
           </span>
-          {p.slot === 'NEW' && <NewLine p={p} />}
+          {/* Under the name, which keeps the whole row for the name on a phone. */}
+          {showDays && <span className="mt-0.5"><PlayDays days={p.days ?? []} clan={p.clan} /></span>}
         </span>
+        {p.slot === 'NEW' && <NewLine p={p} />}
         <StatusDot status={p.status} />
-        <span className="w-10 flex-none text-right text-sm font-bold tabular-nums text-muted">{fmtScore(p.score)}</span>
+        {!showDays && <span className="w-10 flex-none text-right text-sm font-bold tabular-nums text-muted">{fmtScore(p.score)}</span>}
         <RowChevron />
       </a>
     </li>
@@ -169,6 +171,8 @@ function Row({ p, n, hit, dense }: { p: Player; n: number; hit?: boolean; dense?
 }
 
 function Groups({ roster, clan, q, dense, day }: { roster: Roster; clan: ClanName; q?: string; dense?: boolean; day?: DayPick }) {
+  // With a published plan, the roster answers who plays when; the score is for leaders, on the player's card and in Plan.
+  const showDays = day === 'all' && !!roster.clans[clan]?.inCwl && roster.players.some((p) => p.days)
   return (
     <>
       {groupsFor(roster, clan, day).map((g) => (
@@ -181,49 +185,12 @@ function Groups({ roster, clan, q, dense, day }: { roster: Roster; clan: ClanNam
           ) : null}
           {g.rows.length ? (
             <ol className={`m-0 list-none ${dense ? '' : 'rounded-2xl border border-line bg-white py-1'} ${g.dim ? 'opacity-[.85]' : ''}`}>
-              {g.rows.map((p, i) => <Row key={p.tag} p={p} n={i + 1} dense={dense} hit={!!q && matches(p, q)} />)}
+              {g.rows.map((p, i) => <Row key={p.tag} p={p} n={i + 1} dense={dense} hit={!!q && matches(p, q)} showDays={showDays} />)}
             </ol>
           ) : null}
         </section>
       ))}
     </>
-  )
-}
-
-// One line per account on this device, above the lineups: its name, where it plays, its days and any attacks left.
-function YouPanel({ roster }: { roster: Roster }) {
-  const { yous, removeYou } = useYou()
-  const [adding, setAdding] = useState(false)
-  const mine = yous.map((t) => roster.players.find((p) => p.tag === t)).filter((p): p is Player => !!p)
-  if (!mine.length) return null
-  return (
-    <div className="flex w-full flex-col gap-1">
-      {mine.map((p) => <YouLine key={p.tag} roster={roster} p={p} onClear={() => removeYou(p.tag)} />)}
-      <button type="button" aria-expanded={adding} onClick={() => setAdding((v) => !v)}
-        className="min-h-8 cursor-pointer self-start border-0 bg-transparent px-1.5 text-xs font-bold text-action">+ Add an alt</button>
-      {adding && <YouPrompt roster={roster} onDone={() => setAdding(false)} />}
-    </div>
-  )
-}
-
-function YouLine({ roster, p, onClear }: { roster: Roster; p: Player; onClear: () => void }) {
-  const board = useWarBoard().data
-  const base = board?.clans.flatMap((c) => (c.war?.state === 'inWar' ? c.war.pairs : [])).find((x) => x.us?.tag === p.tag)?.us
-  const left = base ? base.allowed - base.used : 0
-  const place = `${p.clan} · ${roster.clans[p.clan]?.inCwl ? SLOT_TEXT[p.slot] : 'Not in'}`
-  return (
-    <div className="flex min-h-[50px] items-center gap-2 rounded-xl bg-white pl-3 pr-1" style={{ boxShadow: `inset 0 0 0 1.5px ${CLAN[p.clan].tint}` }}>
-      <a href={href(p)} className="flex min-w-0 flex-auto items-center gap-2 no-underline">
-        <span className="flex min-w-0 flex-auto flex-col text-[13px] font-bold leading-tight" style={{ color: CLAN[p.clan].deep }}>
-          <span className="truncate text-ink">{p.name}</span>
-          <span className="truncate">{place}</span>
-        </span>
-        {p.days && <PlayDays days={p.days} clan={p.clan} />}
-        {left > 0 && <span className="flex-none whitespace-nowrap text-[11px] font-bold text-[#B45309]">{left} {left === 1 ? 'attack' : 'attacks'} left</span>}
-      </a>
-      <button type="button" aria-label="Not you" onClick={onClear}
-        className="flex size-8 flex-none cursor-pointer items-center justify-center rounded-full border-0 bg-transparent text-base leading-none text-faint hover:bg-page hover:text-ink">×</button>
-    </div>
   )
 }
 
@@ -255,11 +222,11 @@ const stateDay = (war: Props['war'], state: string) =>
   Math.max(0, ...Object.values(war).map((w) => (w?.kind === 'cwl' && w.state === state ? w.day ?? 0 : 0)))
 const liveDay = (war: Props['war']) => stateDay(war, 'inWar')
 
-// Once a day plan is published the page opens on the day being fought, or day 1 before CWL starts.
+// The page opens on the roster, which shows who plays when; a day picked here or on War stays picked.
 function useDay(roster: Roster, war: Props['war']) {
   const planned = roster.players.some((p) => p.days)
   const pick = useDayPick()
-  return { planned, day: (planned ? pick ?? (liveDay(war) || stateDay(war, 'preparation') || 1) : 'all') as DayPick, setDay: setDayPick, live: liveDay(war) }
+  return { planned, day: (planned ? pick ?? 'all' : 'all') as DayPick, setDay: setDayPick, live: liveDay(war) }
 }
 
 export function readClan(): ClanName {
@@ -310,7 +277,6 @@ function Phone({ roster, war, q, setQ, lock }: Omit<Props, 'wide'>) {
           </ul>
         ) : (
           <>
-            <YouPanel roster={roster} />
             {planned && inCwl && <DayRow days={days} pick={day} onPick={setDay} live={live} roster />}
             <ClanCard roster={roster} clan={clan} meta={clans[clan]} below={inCwl ? <Countdown roster={roster} war={war} slim /> : undefined} />
             <StatusKey className="px-1" />
@@ -338,11 +304,8 @@ function Desktop({ roster, war, q, setQ, lock }: Omit<Props, 'wide'>) {
   return (
     <main className="mx-auto flex max-w-[1360px] flex-col gap-4 px-[clamp(16px,3vw,32px)] pb-12 pt-5">
       <div className="flex items-start justify-between gap-4">
-        <div className="flex w-full max-w-[480px] flex-col gap-3">
-          <div className="empty:hidden"><YouPanel roster={roster} /></div>
-          <div className="empty:hidden"><Countdown roster={roster} war={war} /></div>
-        </div>
-        <div className="flex w-[clamp(220px,28vw,340px)] flex-none flex-col gap-1">
+        <div className="flex w-full max-w-[480px] flex-col gap-3 empty:hidden"><Countdown roster={roster} war={war} /></div>
+        <div className="ml-auto flex w-[clamp(220px,28vw,340px)] flex-none flex-col gap-1">
           <SearchBox q={q} setQ={setQ} onEnter={() => { if (hits[0]) window.location.hash = href(hits[0]) }} />
           {nq && !hits.length && <span className="px-1 text-sm text-faint">No one by that name</span>}
         </div>
