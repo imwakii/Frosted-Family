@@ -48,8 +48,7 @@ function Standings({ rows, clan }: { rows: CwlRow[]; clan: ClanName }) {
   return (
     <section aria-label="Standings" className="overflow-hidden rounded-2xl border border-line bg-white">
       <div className={`grid h-11 items-center gap-x-1 border-b border-hair px-2.5 md:gap-x-1.5 md:px-3.5 ${STANDING_COLS}`}>
-        <span />
-        <span className="min-w-0 whitespace-nowrap">{league ? <LeaguePill league={league} text={league.replace('League ', '')} /> : null}</span>
+        <span className="col-span-2 min-w-0 whitespace-nowrap">{league ? <LeaguePill league={league} text={league.replace('League ', '')} /> : null}</span>
         {DAYS.map((d) => <span key={d} className={`${head} max-md:hidden`}>Day {d}</span>)}
         <span className={head}>Won</span>
         <span className="text-center text-gold" aria-label="Stars">★</span>
