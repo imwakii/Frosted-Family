@@ -5,7 +5,7 @@ import { go, playerHref, useDrill } from '../route'
 import { CLAN } from '../theme'
 import type { ClanName } from '../types'
 import { norm, SearchBox } from './CwlTab'
-import { ClanFilter, Empty, useClanPick } from './ExploreTab'
+import { CategoryNav, ClanFilter, Empty, useClanPick } from './ExploreTab'
 import { chip, Th, RowChevron } from './ui'
 
 // GET /api/explore/{donations|capital}: one row per current member from their latest profile.
@@ -121,8 +121,11 @@ export default function RankBoard({ kind, cols, note, q, setQ, wide }: {
   if (wide) {
     return (
       <main className="mx-auto flex max-w-[1360px] flex-col gap-3.5 px-[clamp(16px,3vw,32px)] pb-12 pt-5">
-        <ClanFilter clan={clan} setClan={setClan} />
-        <div className="w-full max-w-[400px]"><SearchBox q={q} setQ={setQ} onEnter={enter} /></div>
+        <div className="flex items-center justify-between gap-4">
+          <ClanFilter clan={clan} setClan={setClan} />
+          <div className="w-[clamp(220px,28vw,340px)] flex-none"><SearchBox q={q} setQ={setQ} onEnter={enter} /></div>
+        </div>
+        <div className="flex flex-wrap items-center gap-2.5"><CategoryNav current={kind} wide /></div>
         <div className="flex flex-wrap items-center gap-2 text-sm text-muted">
           {all.length > 0 && chips}
         </div>
@@ -134,6 +137,7 @@ export default function RankBoard({ kind, cols, note, q, setQ, wide }: {
     <div className="flex flex-col gap-2.5 pb-6">
       <div className="px-4 pt-1"><ClanFilter clan={clan} setClan={setClan} /></div>
       <div className="sticky top-0 z-10 bg-page px-4 pb-2 pt-1"><SearchBox q={q} setQ={setQ} onEnter={enter} /></div>
+      <CategoryNav current={kind} wide={false} />
       <div role="group" aria-label="Rank by" className="flex gap-1.5 overflow-x-auto px-4 [scrollbar-width:none]">
         {cols.map((c) => (
           <button key={c.key} type="button" aria-pressed={c.key === col.key} onClick={() => setSortKey(c.key)}

@@ -2,7 +2,8 @@ import { type ReactNode, useEffect, useRef, useState } from 'react'
 import { loadPlayerAll, type PlayerCard, playerNow } from '../data'
 import { BADGES, TIER_LOOK, TIERS } from '../badges'
 import { ago } from '../leaders'
-import { go, playerHref } from '../route'
+import { CATS } from '../explore'
+import { go, playerHref, upgradeHref } from '../route'
 import { useYou } from './You'
 import { CLAN, cycleLong, cycleShort, fmtScore, fmtWindow } from '../theme'
 import type { Player, Roster } from '../types'
@@ -306,6 +307,20 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
                           </button>
                         ))}
                       </span>
+                    </li>
+                  ))}
+                </ul>
+              </Section>
+            )}
+            {card && (
+              <Section title="All upgrades">
+                <ul className="m-0 grid list-none grid-cols-3 gap-1.5 p-0">
+                  {CATS.map((c) => (
+                    <li key={c.id}>
+                      <a href={upgradeHref(c.id, p.tag)} className="flex min-h-11 items-center gap-1 rounded-xl border border-line bg-white px-1.5 py-1 text-xs font-bold text-ink no-underline hover:bg-hover">
+                        <UnitIcon name={c.icon} size={22} />
+                        <span className="min-w-0 truncate">{c.label}</span>
+                      </a>
                     </li>
                   ))}
                 </ul>

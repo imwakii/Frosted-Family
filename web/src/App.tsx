@@ -3,6 +3,7 @@ import { useAuth, type Me } from './auth'
 import CwlTab from './components/CwlTab'
 import ClanSheet from './components/ClanSheet'
 import RivalSheet from './components/RivalSheet'
+import UpgradeSheet from './components/UpgradeSheet'
 import CwlGroup from './components/CwlGroup'
 import ExploreTab from './components/ExploreTab'
 import LogTab from './components/LogTab'
@@ -145,6 +146,7 @@ export default function App() {
 
       {roster && route.player &&<PlayerSheet tag={route.player} roster={roster} wide={wide} onClose={closeSheet} />}
       {roster && route.clan && !route.player && <ClanSheet clan={route.clan} roster={roster} wide={wide} onClose={closeSheet} />}
+      {route.upgrade && !route.player && <UpgradeSheet {...route.upgrade} wide={wide} onClose={closeSheet} />}
       {route.rival && !route.player && <RivalSheet clan={route.rival.clan} tag={route.rival.tag} wide={wide} onClose={closeSheet} />}
 
       {!wide && (

@@ -169,59 +169,44 @@ function Groups({ roster, clan, q, dense, day }: { roster: Roster; clan: ClanNam
   )
 }
 
-// The member this device last searched for, pinned above the lineups.
-// Your account, or a switcher across them if you have alts, and a way to add another.
-function YouPanel({ roster, day }: { roster: Roster; day: number }) {
+// One line per account on this device, above the lineups: where it plays and what it has to do now. The name only once there are alts.
+function YouPanel({ roster, day, next }: { roster: Roster; day: number; next: number }) {
   const { yous, removeYou } = useYou()
-  const [pick, setPick] = useState<string | null>(null)
   const [adding, setAdding] = useState(false)
   const mine = yous.map((t) => roster.players.find((p) => p.tag === t)).filter((p): p is Player => !!p)
   if (!mine.length) return null
-  const open = mine.find((p) => p.tag === pick) ?? mine[0]
   return (
-    <div className="flex w-full flex-col gap-1.5">
-      <YouCard roster={roster} tag={open.tag} day={day} onClear={() => removeYou(open.tag)} />
-      <div className="flex items-center gap-1.5 overflow-x-auto [scrollbar-width:none]">
-        {mine.length > 1 && mine.map((p) => (
-          <button key={p.tag} type="button" aria-pressed={p === open} onClick={() => setPick(p.tag)}
-            className={`min-h-8 flex-none cursor-pointer rounded-full border px-2.5 text-xs font-bold ${p === open ? 'border-ink bg-ink text-white' : 'border-line bg-white text-ink-2 hover:bg-page'}`}>{p.name}</button>
-        ))}
-        <button type="button" aria-expanded={adding} onClick={() => setAdding((v) => !v)}
-          className="min-h-8 flex-none cursor-pointer border-0 bg-transparent px-1.5 text-xs font-bold text-action">+ Add an alt</button>
-      </div>
+    <div className="flex w-full flex-col gap-1">
+      {mine.map((p) => <YouLine key={p.tag} roster={roster} p={p} day={day} next={next} named={mine.length > 1} onClear={() => removeYou(p.tag)} />)}
+      <button type="button" aria-expanded={adding} onClick={() => setAdding((v) => !v)}
+        className="min-h-8 cursor-pointer self-start border-0 bg-transparent px-1.5 text-xs font-bold text-action">+ Add an alt</button>
       {adding && <YouPrompt roster={roster} onDone={() => setAdding(false)} />}
     </div>
   )
 }
 
-function YouCard({ roster, tag, day, onClear }: { roster: Roster; tag: string; day: number; onClear: () => void }) {
-  const p = roster.players.find((x) => x.tag === tag)
+function YouLine({ roster, p, day, next, named, onClear }: { roster: Roster; p: Player; day: number; next: number; named: boolean; onClear: () => void }) {
   const board = useWarBoard().data
-  if (!p) return null
-  const base = board?.clans.flatMap((c) => (c.war?.state === 'inWar' ? c.war.pairs : [])).find((x) => x.us?.tag === tag)?.us
+  const base = board?.clans.flatMap((c) => (c.war?.state === 'inWar' ? c.war.pairs : [])).find((x) => x.us?.tag === p.tag)?.us
   const left = base ? base.allowed - base.used : 0
-  const today = p.days && day ? (p.days.includes(day) ? 'Playing today' : 'Resting today') : null
+  // Today once a war is on; before the first one, the day being prepared.
+  const playing = !!p.days?.includes(day || next)
+  const when = day ? 'today' : `Day ${next}`
+  const place = `${p.clan} · ${roster.clans[p.clan]?.inCwl ? SLOT_TEXT[p.slot] : 'Not in'}`
   return (
-    <div className="flex min-h-[60px] items-center gap-3 rounded-2xl border-2 bg-white py-1.5 pl-3.5 pr-1.5" style={{ borderColor: CLAN[p.clan].tint }}>
-      <a href={href(p)} className="flex min-w-0 flex-auto items-center gap-2.5 text-ink no-underline">
-        <Th th={p.th} />
-        <span className="flex min-w-0 flex-auto flex-col">
-          <span className="truncate text-[15px] font-semibold">{p.name}</span>
-          <span className="truncate text-xs font-bold" style={{ color: CLAN[p.clan].deep }}>{p.clan} · {roster.clans[p.clan]?.inCwl ? SLOT_TEXT[p.slot] : 'Not in'}</span>
+    <div className="flex min-h-11 items-center gap-2 rounded-xl bg-white pl-3 pr-1" style={{ boxShadow: `inset 0 0 0 1.5px ${CLAN[p.clan].tint}` }}>
+      <a href={href(p)} className="flex min-w-0 flex-auto items-center gap-2 no-underline">
+        <span className="flex min-w-0 flex-auto flex-col text-[13px] font-bold leading-tight" style={{ color: CLAN[p.clan].deep }}>
+          {named && <span className="truncate text-ink">{p.name}</span>}
+          <span className="truncate">{place}</span>
         </span>
-        <span className="flex flex-none flex-col items-end gap-0.5">
-          {p.days && <PlayDays days={p.days} clan={p.clan} />}
-          {(today || left > 0) && (
-            <span className="whitespace-nowrap text-[11px] font-bold">
-              {today && <span className={p.days?.includes(day) ? 'text-[#15803D]' : 'text-muted'}>{today}</span>}
-              {today && left > 0 && <span className="text-faint"> · </span>}
-              {left > 0 && <span className="text-[#B45309]">{left} {left === 1 ? 'attack' : 'attacks'} left</span>}
-            </span>
-          )}
-        </span>
+        {p.days && <PlayDays days={p.days} clan={p.clan} />}
+        {left > 0
+          ? <span className="flex-none whitespace-nowrap text-[11px] font-bold text-[#B45309]">{left} {left === 1 ? 'attack' : 'attacks'} left</span>
+          : p.days && (day || next) > 0 && <span className={`flex-none whitespace-nowrap text-[11px] font-bold ${playing ? 'text-[#15803D]' : 'text-muted'}`}>{playing ? 'Playing' : 'Resting'} {when}</span>}
       </a>
       <button type="button" aria-label="Not you" onClick={onClear}
-        className="flex size-9 flex-none cursor-pointer items-center justify-center rounded-full border-0 bg-transparent text-lg leading-none text-faint hover:bg-page hover:text-ink">×</button>
+        className="flex size-8 flex-none cursor-pointer items-center justify-center rounded-full border-0 bg-transparent text-base leading-none text-faint hover:bg-page hover:text-ink">×</button>
     </div>
   )
 }
@@ -281,7 +266,7 @@ function Phone({ roster, war, q, setQ, lock }: Omit<Props, 'wide'>) {
 
   return (
     <>
-      <div className="px-4 pb-2.5 pt-3"><ClanSwitch<ClanName> value={clan} onPick={lock?.onPick ?? setOwn} options={lock?.options} /></div>
+      <div className="px-4 pb-2.5 pt-1"><ClanSwitch<ClanName> value={clan} onPick={lock?.onPick ?? setOwn} options={lock?.options} /></div>
       <div className="sticky top-0 z-10 bg-page px-4 pb-3 pt-1">
         <SearchBox q={q} setQ={setQ} onEnter={() => { if (results[0]) window.location.hash = href(results[0]) }} />
       </div>
@@ -311,7 +296,7 @@ function Phone({ roster, war, q, setQ, lock }: Omit<Props, 'wide'>) {
           </ul>
         ) : (
           <>
-            <YouPanel roster={roster} day={live} />
+            <YouPanel roster={roster} day={live} next={stateDay(war, 'preparation')} />
             {planned && inCwl && <DayRow days={days} pick={day} onPick={setDay} live={live} roster />}
             <ClanCard roster={roster} clan={clan} meta={clans[clan]} below={inCwl ? <Countdown roster={roster} war={war} slim /> : undefined} />
             <StatusKey className="px-1" />
@@ -338,13 +323,15 @@ function Desktop({ roster, war, q, setQ, lock }: Omit<Props, 'wide'>) {
 
   return (
     <main className="mx-auto flex max-w-[1360px] flex-col gap-4 px-[clamp(16px,3vw,32px)] pb-12 pt-5">
-      <div className="flex flex-wrap items-start gap-3">
-        <div className="flex w-full max-w-[400px] flex-col gap-1">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex w-full max-w-[480px] flex-col gap-3">
+          <div className="empty:hidden"><YouPanel roster={roster} day={live} next={stateDay(war, 'preparation')} /></div>
+          <div className="empty:hidden"><Countdown roster={roster} war={war} /></div>
+        </div>
+        <div className="flex w-[clamp(220px,28vw,340px)] flex-none flex-col gap-1">
           <SearchBox q={q} setQ={setQ} onEnter={() => { if (hits[0]) window.location.hash = href(hits[0]) }} />
           {nq && !hits.length && <span className="px-1 text-sm text-faint">No one by that name</span>}
         </div>
-        <div className="w-full max-w-[480px] empty:hidden"><YouPanel roster={roster} day={live} /></div>
-        <div className="w-full max-w-[480px]"><Countdown roster={roster} war={war} /></div>
       </div>
       {planned && <DayRow pick={day} onPick={setDay} live={live} roster />}
       <StatusKey />

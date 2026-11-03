@@ -308,7 +308,8 @@ export function WarBoard({ clan, war, now, roster }: { clan: ClanName; war: Clan
       {(!prep || sideBySide) && (
         <div className="relative min-w-0">
         <section aria-label="Attacks" className="overflow-hidden rounded-2xl border border-line bg-white lg:absolute lg:inset-x-0 lg:top-0 lg:flex lg:max-h-full lg:flex-col">
-          <div className="flex flex-none items-center justify-between gap-2 px-3.5 py-2.5">
+          {/* Always the height the picked player's buttons need, so picking one does not move the list. */}
+          <div className="flex min-h-[52px] flex-none items-center justify-between gap-2 px-3.5 py-2.5">
             <span className="min-w-0 truncate text-sm font-bold text-ink">{(sideBySide && pickedName) || 'Attacks'}</span>
             {picked && sideBySide ? pickedActions : (
               <span className="flex flex-none items-center gap-3 text-xs font-semibold text-muted">
@@ -361,7 +362,7 @@ export default function WarTab({ wide, roster, sub, opened }: { wide: boolean; r
     const [linkClan, linkKey] = opened?.split('/') ?? []
     const logClan = (linkClan as ClanName) ?? clan?.clan ?? pick ?? 'Fire'
     return (
-      <main className={wide ? 'mx-auto flex max-w-[1360px] flex-col gap-4 px-[clamp(16px,3vw,32px)] pb-12 pt-5' : 'flex flex-col gap-3 px-4 pb-6 pt-3'}>
+      <main className={wide ? 'mx-auto flex max-w-[1360px] flex-col gap-4 px-[clamp(16px,3vw,32px)] pb-12 pt-5' : 'flex flex-col gap-3 px-4 pb-6 pt-1'}>
         <ClanSwitch value={logClan} onPick={(c) => { setWarClan(c); go.to('#/war/log') }} />
         {linkKey ? (
           <>

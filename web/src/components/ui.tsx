@@ -107,12 +107,11 @@ export function SubNav({ items, current, wide }: { items: { id: string; label: s
   useEffect(() => { ref.current?.querySelector('[aria-current="page"]')?.scrollIntoView({ inline: 'center', block: 'nearest' }) }, [current])
   return (
     <div className={wide ? 'border-b border-line bg-white' : 'px-4'}>
-      {/* On phones the row is tighter, and fades at the right edge when it runs past it, so it reads as scrollable. */}
-      <nav ref={ref} aria-label="Section" className={`flex overflow-x-auto [scrollbar-width:none] ${wide ? 'mx-auto max-w-[1360px] gap-5 px-[clamp(16px,3vw,32px)]' : 'gap-4 border-b border-line [mask-image:linear-gradient(to_right,black_88%,transparent)] pr-6'}`}>
+      {/* A soft gold pill marks the open section, so this row reads apart from the clan switch and chips below it. Its padding closes up so Stats' five fit from 360px wide. */}
+      <nav ref={ref} aria-label="Section" className={`flex overflow-x-auto [scrollbar-width:none] ${wide ? 'mx-auto max-w-[1360px] gap-1.5 px-[clamp(16px,3vw,32px)]' : 'gap-1'}`}>
         {items.map((s) => (
-          <a key={s.id} href={s.href} aria-current={s.id === current ? 'page' : undefined}
-            className={`-mb-px flex min-h-11 flex-none items-center whitespace-nowrap border-b-2 text-[15px] font-bold no-underline ${s.id === current ? 'border-gold text-ink' : 'border-transparent text-faint hover:text-ink'}`}>
-            {s.label}
+          <a key={s.id} href={s.href} aria-current={s.id === current ? 'page' : undefined} className="flex min-h-11 flex-none items-center no-underline">
+            <span className={`whitespace-nowrap rounded-full px-[clamp(8px,calc((100vw-271px)/10),12px)] py-1 text-[14px] font-bold ${s.id === current ? 'bg-[#F3E3B3] text-ink' : 'text-muted hover:text-ink'}`}>{s.label}</span>
           </a>
         ))}
       </nav>

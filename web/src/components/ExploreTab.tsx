@@ -4,7 +4,7 @@ import { groupUnits } from '../equipment'
 import OverallBoard, { Bar } from './OverallBoard'
 import RankBoard, { type RankCol } from './RankBoard'
 import { CATS, type Cat, competitionRanks, HIGH_MISS, isMaxed, type MatrixPlayer, missRate, progress, useMatrix, useWarBoard, type WarRow, type WarScope } from '../explore'
-import { go, onDrill, playerHref, useDrill } from '../route'
+import { go, onDrill, playerHref, upgradeHref, useDrill } from '../route'
 import { CLAN, CLANS } from '../theme'
 import type { ClanName } from '../types'
 import { norm, SearchBox } from './CwlTab'
@@ -16,15 +16,15 @@ import { ClanSwitch, Star, StatusKey, SubNav, Th, UnitIcon, RowChevron, chip } f
 export type ClanPick = ClanName | 'All'
 type BoardProps = { q: string; setQ: (v: string) => void; wide: boolean }
 
-// Players: the overall ranking, then one unit matrix per category.
-const NAV: { id: string; label: string; icon: string | null }[] = [{ id: 'overall', label: 'Overall', icon: null }, ...CATS]
+// Players: all upgrades together, one unit matrix per category, then past a divider the two rankings that are not upgrades.
+const NAV: { id: string; label: string; icon: string | null }[] = [
+  { id: 'overall', label: 'Upgrades', icon: null }, ...CATS, { id: 'donations', label: 'Donations', icon: null }, { id: 'capital', label: 'Capital', icon: null },
+]
 
 const SUBS = [
   { id: 'players', label: 'Players', href: '#/stats/players' },
   { id: 'badges', label: 'Badges', href: '#/stats/badges' },
-  { id: 'war', label: 'War record', href: '#/stats/war' },
-  { id: 'donations', label: 'Donations', href: '#/stats/donations' },
-  { id: 'capital', label: 'Capital', href: '#/stats/capital' },
+  { id: 'war', label: 'War', href: '#/stats/war' },
   { id: 'trends', label: 'Trends', href: '#/stats/trends' },
   { id: 'history', label: 'History', href: '#/stats/history' },
 ]
@@ -54,9 +54,12 @@ export function CategoryNav({ current, wide }: { current: string; wide: boolean 
   return (
     <nav ref={navRef} aria-label="Category" className={`flex flex-none gap-1.5 overflow-x-auto [scrollbar-width:none] ${wide ? 'max-w-full flex-wrap' : 'px-4'}`}>
       {NAV.map((c) => (
-        <button key={c.id} type="button" aria-pressed={c.id === current} onClick={() => go.to(`#/stats/players/${c.id}`)} className={chip(c.id === current)}>
-          {wide && c.icon && <UnitIcon name={c.icon} size={22} />}{c.label}
-        </button>
+        <Fragment key={c.id}>
+          {c.id === 'donations' && <span aria-hidden="true" className="mx-1 my-1.5 w-px flex-none bg-line" />}
+          <button type="button" aria-pressed={c.id === current} onClick={() => go.to(`#/stats/players/${c.id}`)} className={chip(c.id === current)}>
+            {wide && c.icon && <UnitIcon name={c.icon} size={22} />}{c.label}
+          </button>
+        </Fragment>
       ))}
     </nav>
   )
@@ -89,12 +92,13 @@ export default function ExploreTab({ sub, kind, ...rest }: BoardProps & { sub: s
   const board = sub === 'badges' ? <BadgesBoard {...rest} />
     : sub === 'history' ? <HistoryBoard {...rest} />
     : sub === 'war' ? <WarBoardView {...rest} />
-    : sub === 'donations' ? <RankBoard key="donations" kind="donations" cols={DONATION_COLS} note="This season" {...rest} />
-    : sub === 'capital' ? <RankBoard key="capital" kind="capital" cols={CAPITAL_COLS} {...rest} />
     : sub === 'trends' ? (
       <main className={rest.wide ? 'mx-auto max-w-[1360px] px-[clamp(16px,3vw,32px)] pb-12 pt-5' : 'pb-6 pt-3'}><ClansBoard wide={rest.wide} /></main>
     )
-    : id === 'overall' ? <OverallBoard {...rest} /> : <MatrixBoard cat={id as Cat} {...rest} />
+    : id === 'overall' ? <OverallBoard {...rest} />
+    : id === 'donations' ? <RankBoard key="donations" kind="donations" cols={DONATION_COLS} note="This season" {...rest} />
+    : id === 'capital' ? <RankBoard key="capital" kind="capital" cols={CAPITAL_COLS} {...rest} />
+    : <MatrixBoard cat={id as Cat} {...rest} />
   return <><SubNav items={SUBS} current={sub} wide={rest.wide} />{board}</>
 }
 
@@ -139,8 +143,10 @@ function MatrixBoard({ cat, q, setQ, wide }: BoardProps & { cat: Cat }) {
 
     return (
       <main className="mx-auto flex max-w-[1360px] flex-col gap-3.5 px-[clamp(16px,3vw,32px)] pb-12 pt-5">
-        <ClanFilter clan={clan} setClan={setClan} />
-        <div className="w-full max-w-[400px]"><SearchBox q={q} setQ={setQ} onEnter={() => { if (shown[0]) go.to(playerHref(shown[0].p.tag)) }} /></div>
+        <div className="flex items-center justify-between gap-4">
+          <ClanFilter clan={clan} setClan={setClan} />
+          <div className="w-[clamp(220px,28vw,340px)] flex-none"><SearchBox q={q} setQ={setQ} onEnter={() => { if (shown[0]) go.to(upgradeHref(cat, shown[0].p.tag)) }} /></div>
+        </div>
         <div className="flex flex-wrap items-center gap-2.5">
           <CategoryNav current={cat} wide />
         </div>
@@ -189,12 +195,12 @@ function MatrixBoard({ cat, q, setQ, wide }: BoardProps & { cat: Cat }) {
                 </thead>
                 <tbody>
                   {shown.map((r) => { const { p, pct } = r; return (
-                    <tr key={p.tag} data-tag={p.tag} onClick={() => go.to(playerHref(p.tag))} className="group cursor-pointer">
+                    <tr key={p.tag} data-tag={p.tag} onClick={() => go.to(upgradeHref(cat, p.tag, units[sort.col]?.name))} className="group cursor-pointer">
                       <td className="sticky left-0 z-[1] w-12 min-w-12 border-b border-hair bg-white py-1.5 pl-4 pr-1 font-bold tabular-nums text-faint group-hover:bg-hover">{place.get(r) ?? '—'}</td>
                       <td className="sticky left-12 z-[1] whitespace-nowrap border-b border-hair bg-white px-3 py-1.5 group-hover:bg-hover">
                         <span className="flex items-center gap-2.5">
                           <Th th={p.th} />
-                          <a href={playerHref(p.tag)} onClick={(e) => e.stopPropagation()} className="font-semibold text-ink no-underline"><YouTag tag={p.tag} />{p.name}</a>
+                          <a href={upgradeHref(cat, p.tag, units[sort.col]?.name)} onClick={(e) => e.stopPropagation()} className="font-semibold text-ink no-underline"><YouTag tag={p.tag} />{p.name}</a>
                           {clan === 'All' && <span className="text-[11px] font-bold" style={{ color: CLAN[p.clan].deep }}>{p.clan}</span>}
                         </span>
                       </td>
@@ -240,7 +246,7 @@ function MatrixBoard({ cat, q, setQ, wide }: BoardProps & { cat: Cat }) {
     <div className="flex flex-col gap-2.5 pb-6">
       <div className="px-4 pt-1"><ClanFilter clan={clan} setClan={setClan} /></div>
       <div className="sticky top-0 z-10 bg-page px-4 pb-2 pt-1">
-        <SearchBox q={q} setQ={setQ} onEnter={() => { if (shown[0]) go.to(playerHref(shown[0].p.tag)) }} />
+        <SearchBox q={q} setQ={setQ} onEnter={() => { if (shown[0]) go.to(upgradeHref(cat, shown[0].p.tag)) }} />
       </div>
       <CategoryNav current={cat} wide={false} />
       {!data || !u ? <div className="px-4"><Empty loading={loading} /></div> : (
@@ -269,7 +275,7 @@ function MatrixBoard({ cat, q, setQ, wide }: BoardProps & { cat: Cat }) {
               const maxed = l >= u.max
               return (
                 <li key={p.tag} data-tag={p.tag}>
-                  <a href={playerHref(p.tag)} className={`flex min-h-[54px] items-center gap-2.5 px-3.5 py-1.5 text-ink no-underline hover:bg-hover ${i ? 'border-t border-hair' : ''}`}>
+                  <a href={upgradeHref(cat, p.tag, u.name)} className={`flex min-h-[54px] items-center gap-2.5 px-3.5 py-1.5 text-ink no-underline hover:bg-hover ${i ? 'border-t border-hair' : ''}`}>
                     <span className="w-6 flex-none text-right text-xs tabular-nums text-faint">{rank ?? '—'}</span>
                     <Th th={p.th} />
                     <span className="flex min-w-0 flex-auto flex-col gap-1">
@@ -401,8 +407,10 @@ function WarBoardView({ q, setQ, wide }: BoardProps) {
   if (wide) {
     return (
       <main className="mx-auto flex max-w-[1360px] flex-col gap-3.5 px-[clamp(16px,3vw,32px)] pb-12 pt-5">
-        <ClanFilter clan={clan} setClan={setClan} />
-        <div className="w-full max-w-[400px]"><SearchBox q={q} setQ={setQ} onEnter={enter} /></div>
+        <div className="flex items-center justify-between gap-4">
+          <ClanFilter clan={clan} setClan={setClan} />
+          <div className="w-[clamp(220px,28vw,340px)] flex-none"><SearchBox q={q} setQ={setQ} onEnter={enter} /></div>
+        </div>
         <div className="flex flex-wrap items-center gap-3">
           {scopeToggle}{sinceChip}{key}
         </div>

@@ -47,12 +47,16 @@ function says(e: LogEvent) {
   }
 }
 
+// The feed's days are the viewer's own, as the clock is. A bare date has no time to place, so it stays as it is.
+const localDay = (x: Date) => `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`
+const feedDay = (at: string) => (at.length === 10 ? at : localDay(new Date(at)))
+
 function dayLabel(day: string, now = new Date()) {
-  // Days are UTC days, matching every other time on the site.
-  const key = (x: Date) => x.toISOString().slice(0, 10)
-  if (day === key(now)) return 'Today (UTC)'
-  if (day === key(new Date(now.getTime() - 86_400_000))) return 'Yesterday (UTC)'
-  return new Date(`${day}T00:00:00Z`).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' })
+  const yesterday = new Date(now)
+  yesterday.setDate(now.getDate() - 1)
+  if (day === localDay(now)) return 'Today'
+  if (day === localDay(yesterday)) return 'Yesterday'
+  return new Date(`${day}T00:00:00`).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
 }
 
 function UpgradeIcon({ u }: { u: Upgrade }) {
@@ -274,7 +278,7 @@ export default function LogTab({ roster, q, setQ, wide }: { roster: Roster; q: s
   // One day: its member events, then a row for each player's upgrades, most recent first.
   const days = new Map<string, { halls: Upgrade[]; events: LogEvent[]; groups: Map<string, Upgrade[]> }>()
   const dayOf = (at: string) => {
-    const d = at.slice(0, 10)
+    const d = feedDay(at)
     if (!days.has(d)) days.set(d, { halls: [], events: [], groups: new Map() })
     return days.get(d)!
   }
@@ -344,10 +348,12 @@ export default function LogTab({ roster, q, setQ, wide }: { roster: Roster; q: s
   if (wide) {
     return (
       <main className="mx-auto flex max-w-[1360px] flex-col gap-3.5 px-[clamp(16px,3vw,32px)] pb-12 pt-5">
-        <ClanFilter clan={clan} setClan={setClan} />
-        <div className="w-full max-w-[400px]"><SearchBox q={q} setQ={setQ} onEnter={enter} /></div>
+        <div className="flex items-center justify-between gap-4">
+          <ClanFilter clan={clan} setClan={setClan} />
+          <div className="w-[clamp(220px,28vw,340px)] flex-none"><SearchBox q={q} setQ={setQ} onEnter={enter} /></div>
+        </div>
         {filters}
-        <div className="flex w-full max-w-[860px] flex-col gap-3">{chart}{feed}</div>
+        <div className="flex w-full flex-col gap-3">{chart}{feed}</div>
       </main>
     )
   }

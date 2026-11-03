@@ -5,7 +5,7 @@ import { clanHref, playerHref, rivalHref } from '../route'
 import { CLAN, CLANS } from '../theme'
 import type { ClanName } from '../types'
 import { readClan } from './CwlTab'
-import { chip, ClanBadge, ClanSwitch, dayWon, Th } from './ui'
+import { chip, ClanBadge, ClanSwitch, dayWon, RowChevron, Th } from './ui'
 
 // A clan's league group. Standings: who is winning, ranked as the game ranks it, with each clan's days. Group: how the
 // clans compare, by signed-up town halls or strength, then who has the 8 stars for the bonus. Each day's war is on the War tab.
@@ -14,17 +14,18 @@ const EIGHT = 8
 const EIGHT_SHOWN = 5
 const COLS = 'grid-cols-[14px_minmax(0,1fr)_repeat(5,30px)] md:grid-cols-[18px_minmax(0,1fr)_repeat(5,44px)]'
 const POWER_COLS = 'grid-cols-[14px_minmax(0,1fr)_repeat(3,58px)] md:grid-cols-[18px_minmax(0,1fr)_repeat(3,76px)]'
-const STANDING_COLS = 'grid-cols-[14px_minmax(0,1fr)_42px_34px_52px] md:grid-cols-[18px_minmax(0,1fr)_repeat(7,38px)_52px_44px_72px]'
+const STANDING_COLS = 'grid-cols-[14px_minmax(0,1fr)_34px_30px_58px] md:grid-cols-[18px_minmax(0,1fr)_repeat(7,38px)_52px_44px_72px]'
 const DAYS = [1, 2, 3, 4, 5, 6, 7]
 const POWER = [{ k: 'war_stars', label: 'War stars' }, { k: 'heroes', label: 'Heroes' }, { k: 'equipment', label: 'Equipment' }] as const
 
 function ClanLink({ r, clan }: { r: CwlRow; clan: ClanName }) {
   return (
-    <a href={r.ours ? clanHref(clan) : rivalHref(clan, r.tag)} className="flex min-h-11 min-w-0 items-center gap-1.5 no-underline">
+    <a href={r.ours ? clanHref(clan) : rivalHref(clan, r.tag)} className="group flex min-h-11 min-w-0 items-center gap-1.5 no-underline">
       <span className="flex size-[22px] flex-none items-center justify-center"><ClanBadge src={r.badge} size={22} /></span>
       {r.ours
-        ? <span className="min-w-0 truncate text-[13px] font-bold md:text-[15px]" style={{ color: CLAN[clan].deep }}>{clan}</span>
-        : <bdi className="min-w-0 truncate text-[13px] font-semibold text-ink-2 md:text-[15px]">{r.name}</bdi>}
+        ? <span className="min-w-0 truncate text-[13px] font-bold group-hover:underline md:text-[15px]" style={{ color: CLAN[clan].deep }}>{clan}</span>
+        : <bdi className="min-w-0 truncate text-[13px] font-semibold text-ink-2 group-hover:underline md:text-[15px]">{r.name}</bdi>}
+      <span className="ml-auto flex flex-none"><RowChevron /></span>
     </a>
   )
 }
@@ -36,11 +37,11 @@ function Standings({ rows, clan }: { rows: CwlRow[]; clan: ClanName }) {
     <section aria-label="Standings" className="overflow-hidden rounded-2xl border border-line bg-white">
       <div className={`grid items-center gap-x-1 border-b border-hair px-2.5 py-1.5 md:gap-x-1.5 md:px-3.5 ${STANDING_COLS}`}>
         <span />
-        <span />
+        <span className="text-[11px] font-bold uppercase tracking-[0.06em] text-faint">Clan</span>
         {DAYS.map((d) => <span key={d} className={`${head} max-md:hidden`}>Day {d}</span>)}
         <span className={head}>Won</span>
         <span className="text-center text-gold" aria-label="Stars">★</span>
-        <span className={head}>Damage</span>
+        <span className={head}>Destruction</span>
       </div>
       <ol className="m-0 list-none">
         {rows.map((r, n) => (
@@ -167,7 +168,7 @@ export default function CwlGroup({ wide, view }: { wide: boolean; view: 'group' 
   const groups = useMemo(() => (data?.clans ?? []).filter((c) => c.group), [data])
   const shown = groups.find((c) => c.clan === own) ?? groups[0]
   return (
-    <main className={wide ? 'mx-auto flex max-w-[1360px] flex-col gap-4 px-[clamp(16px,3vw,32px)] pb-12 pt-5' : 'flex flex-col gap-3 px-4 pb-6 pt-3'}>
+    <main className={wide ? 'mx-auto flex max-w-[1360px] flex-col gap-4 px-[clamp(16px,3vw,32px)] pb-12 pt-5' : 'flex flex-col gap-3 px-4 pb-6 pt-1'}>
       <ClanSwitch<ClanName> value={shown?.clan ?? own} onPick={setOwn} off={data ? CLANS.filter((k) => !groups.some((c) => c.clan === k)) : []} />
       {!data ? (
         loading ? <div aria-busy="true" className="h-64 animate-pulse rounded-2xl bg-well" /> : <div className="rounded-2xl border border-line bg-white p-5 text-sm text-faint">Unavailable right now</div>

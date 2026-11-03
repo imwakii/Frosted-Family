@@ -121,8 +121,10 @@ export default function OverallBoard({ q, setQ, wide }: { q: string; setQ: (v: s
   if (wide) {
     return (
       <main className="mx-auto flex max-w-[1360px] flex-col gap-3.5 px-[clamp(16px,3vw,32px)] pb-12 pt-5">
-        <ClanFilter clan={clan} setClan={setClan} />
-        <div className="w-full max-w-[400px]"><SearchBox q={q} setQ={setQ} onEnter={enter} /></div>
+        <div className="flex items-center justify-between gap-4">
+          <ClanFilter clan={clan} setClan={setClan} />
+          <div className="w-[clamp(220px,28vw,340px)] flex-none"><SearchBox q={q} setQ={setQ} onEnter={enter} /></div>
+        </div>
         <div className="flex flex-wrap items-center gap-2.5">
           <CategoryNav current="overall" wide />
         </div>
