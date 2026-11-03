@@ -24,7 +24,7 @@ export type Item = {
 
 const pad = (n: number) => String(n).padStart(2, '0')
 
-/** The day a moment falls on, in the zone the Clock shows. */
+/** The day a moment falls on, in the zone chosen in Settings. */
 export function dayOf(ms: number, utc: boolean) {
   const d = new Date(ms)
   return utc

@@ -2,7 +2,7 @@
 can never stop war collection. Reads the collector's database and writes only app.db.
 
     attacks   a member of a war has an attack left with two hours or less to go
-    days      the round in preparation, for a member the published day plan has on that day
+    days      the round in preparation, for a member the published day plan has on that day, and again if the plan then drops them
     war       a war has just started, for a clan one of the member's accounts is in. Off unless asked for.
     hello     once, when a phone signs up, so its owner knows alerts reach them
 
@@ -69,7 +69,7 @@ def published_days(app, season: str | None) -> dict:
     return json.loads(row["body"]) if row else {}
 
 
-def alerts_for(sub: dict, wars: list, members: dict, game, app, now: datetime) -> list[dict]:
+def alerts_for(sub: dict, wars: list, members: dict, game, app, now: datetime, have: set[str] = frozenset()) -> list[dict]:
     """Every alert this phone should have now, whether or not it has gone; the caller skips what has."""
     out = [{"key": "hello", "title": "Alerts are on", "body": "Frosted will tell you here.", "url": "#/war"}]
     tags, want = sub["tags"], sub["alerts"]
@@ -90,10 +90,14 @@ def alerts_for(sub: dict, wars: list, members: dict, game, app, now: datetime) -
         if want.get("days") and w["kind"] == "cwl" and w["state"] == "preparation" and start and start > now:
             day = published_days(app, w["season"]).get(clan, {}).get(str(w["round"]), [])
             for tag in tags:
+                name = members.get(tag, {}).get("name")
+                told = f"days|{w['war_key']}|{tag}"
                 if tag in day:
-                    name = members.get(tag, {}).get("name")
-                    out.append({"key": f"days|{w['war_key']}|{tag}", "title": f"Day {w['round']}: {name} is in" if name else f"Day {w['round']}: you're in",
+                    out.append({"key": told, "title": f"Day {w['round']}: {name} is in" if name else f"Day {w['round']}: you're in",
                                 "body": f"{clan} v {rival} starts in {span(start - now)}.", "url": "#/cwl"})
+                elif day and told in have:
+                    out.append({"key": f"daysout|{w['war_key']}|{tag}", "title": f"Day {w['round']}: {name} is out" if name else f"Day {w['round']}: you're out",
+                                "body": f"The plan changed for {clan} v {rival}.", "url": "#/cwl"})
         if want.get("war") and w["state"] == "inWar" and start and now - STARTED_WINDOW <= start <= now:
             if any(TAG_TO_CLAN.get(members.get(t, {}).get("clan_tag")) == clan for t in tags):
                 out.append({"key": f"war|{w['war_key']}", "title": f"{clan} war started", "body": f"{clan} v {rival} is on.", "url": "#/war"})
@@ -124,7 +128,7 @@ def run(game, app, send: Callable[[dict, dict], None] = web_push, now: datetime 
     sent = 0
     for sub in subs:
         have = {r["key"] for r in app.execute("SELECT key FROM push_sent WHERE endpoint=?", (sub["endpoint"],))}
-        for message in alerts_for(sub, wars, members, game, app, now):
+        for message in alerts_for(sub, wars, members, game, app, now, have):
             if message["key"] in have:
                 continue
             try:

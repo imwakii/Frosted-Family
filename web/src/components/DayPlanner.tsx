@@ -82,7 +82,7 @@ export default function DayPlanner({ roster: base, me, onPublished }: { roster: 
   const [plans, setPlans] = useState<Plans | null>(null)
   const [busy, setBusy] = useState(false)
   const [confirming, setConfirming] = useState(false)
-  const [note, setNote] = useState<{ ok: boolean; text: string; undo?: Plans; rebuild?: boolean } | null>(null)
+  const [note, setNote] = useState<{ ok: boolean; text: string; lines?: string[]; undo?: Plans; rebuild?: boolean } | null>(null)
   const [preview, setPreview] = useState(false)
   const [q, setQ] = useState('')
   // A history entry of its own, so the phone's back button closes it and keeps the plan on screen.
@@ -101,6 +101,11 @@ export default function DayPlanner({ roster: base, me, onPublished }: { roster: 
   const pools = useMemo(() => Object.fromEntries(CWL.map((c) => [c,
     roster.players.filter((p) => p.clan === c && p.slot !== 'OUT')])) as Record<CwlClan, Player[]>, [roster])
   const wars = (c: CwlClan): Wars => server?.wars?.[c] ?? {}
+  // Someone in New the plan gives days to, as a move to Sub.
+  const promoted = (ps: Plans, s: DayPlans | null): Moves => {
+    const planned = new Set(CWL.flatMap((c) => DAYS.filter((d) => !locked(s?.wars?.[c]?.[d])).flatMap((d) => ps[c][d] ?? [])))
+    return Object.fromEntries(base.players.filter((x) => x.slot === 'NEW' && planned.has(x.tag)).map((x) => [x.tag, { clan: x.clan, slot: 'SUB' as Slot }]))
+  }
   const fresh = (c: CwlClan, s: DayPlans | null) => sorted(suggest(pools[c], s?.wars?.[c] ?? {}, s?.upcoming?.[c] ?? []))
   const start = (s: DayPlans | null, mine?: DayBody['clans']): Plans => {
     const from = mine ?? s?.published?.clans
@@ -117,10 +122,7 @@ export default function DayPlanner({ roster: base, me, onPublished }: { roster: 
         const ps = start(s, p?.open.find((x) => x.mine)?.body.clans)
         setServer(s)
         setPlans(ps)
-        // A plan that already gives days to someone in New: the same move as giving them one now.
-        const planned = new Set(CWL.flatMap((c) => DAYS.filter((d) => !locked(s?.wars?.[c]?.[d])).flatMap((d) => ps[c][d] ?? [])))
-        setMoves((m) => Object.fromEntries([...Object.entries(m), ...base.players
-          .filter((x) => x.slot === 'NEW' && planned.has(x.tag) && !m[x.tag]).map((x) => [x.tag, { clan: x.clan, slot: 'SUB' as Slot }] as const)]))
+        setMoves((m) => ({ ...promoted(ps, s), ...m }))  // a plan that already gives days to someone in New
       },
       () => { setFailed(true); setPlans(start(null)) })
     // Only when the published roster changes: moving a player must not throw away the days on the board.
@@ -166,11 +168,24 @@ export default function DayPlanner({ roster: base, me, onPublished }: { roster: 
   const firstOpen = DAYS.find((d) => !locked(w[d]))
   const anyLocked = firstOpen !== 1
   const anyDiffers = DAYS.some((d) => w[d] && [...w[d].lineup].sort().join() !== (plan[d] ?? []).join())
+  // The day that can still change in the game: what to swap there for it to match the plan.
+  const prep = DAYS.find((d) => w[d]?.state === 'preparation')
+  const swapOut = prep ? w[prep].lineup.filter((t) => !plan[prep]?.includes(t)).map(nameOf) : []
+  const swapIn = prep ? (plan[prep] ?? []).filter((t) => !w[prep].lineup.includes(t)).map(nameOf) : []
+  const thOf = (tag: string) => roster.players.find((p) => p.tag === tag)?.th ?? 0
+  const belowOn = (d: number) => {
+    const ths = enemy(w[d], server?.upcoming?.[clan] ?? [])
+    return ths.length && !locked(w[d]) ? slotsBelow((plan[d] ?? []).map(thOf), ths) : 0
+  }
   // Days already begun stay as planned, so the board can show where the game differed.
   const offer = (next: ClanDays, rebuilt: boolean) => {
     const kept = Object.fromEntries(DAYS.map((d) => [d, locked(w[d]) ? plans[clan][d] ?? [] : next[d]]))
     const swaps = DAYS.filter((d) => !locked(w[d])).reduce((n, d) => n + Math.max(kept[d].filter((t) => !plans[clan][d]?.includes(t)).length, (plans[clan][d] ?? []).filter((t) => !kept[d].includes(t)).length), 0)
-    setNote({ ok: true, text: swaps ? `${rebuilt ? 'Rebuilt' : 'Fixed'}: ${swaps} ${swaps === 1 ? 'change' : 'changes'}` : 'Nothing to fix', undo: swaps ? plans : undefined, rebuild: !rebuilt })
+    const lines = rebuilt ? [] : DAYS.filter((d) => !locked(w[d])).flatMap((d) => {
+      const added = kept[d].filter((t) => !plans[clan][d]?.includes(t)).map(nameOf), gone = (plans[clan][d] ?? []).filter((t) => !kept[d].includes(t)).map(nameOf)
+      return added.length || gone.length ? [`Day ${d}: ${[added.length ? `${added.join(', ')} in` : '', gone.length ? `${gone.join(', ')} out` : ''].filter(Boolean).join(', ')}`] : []
+    })
+    setNote({ ok: true, text: swaps ? `${rebuilt ? 'Rebuilt' : 'Fixed'}: ${swaps} ${swaps === 1 ? 'change' : 'changes'}` : 'Nothing to fix', lines, undo: swaps ? plans : undefined, rebuild: !rebuilt })
     setPlans({ ...plans, [clan]: kept })
   }
   const t = CLAN[clan]
@@ -181,7 +196,7 @@ export default function DayPlanner({ roster: base, me, onPublished }: { roster: 
   const core = rows.filter((p) => p.slot === 'CORE')
 
   const toggle = (tag: string, d: number) => {
-    setNote(null)
+    setNote((n) => (n?.undo ? n : null))
     const day = plans[clan][d] ?? []
     const next = day.includes(tag) ? day.filter((x) => x !== tag) : [...day, tag].sort()
     setPlans((ps) => ({ ...ps!, [clan]: { ...ps![clan], [d]: next } }))
@@ -194,7 +209,7 @@ export default function DayPlanner({ roster: base, me, onPublished }: { roster: 
   }
   const placeOf = (tag: string): Place => { const p = baseOf.get(tag)!; return moves[tag] ?? { clan: p.clan, slot: p.slot } }
   const place = (p: Player, v: Place) => {
-    setNote(null)
+    setNote((n) => (n?.undo ? n : null))
     setMoves((m) => {
       const next = { ...m }
       if (v.clan === p.clan && v.slot === p.slot) delete next[p.tag]
@@ -210,6 +225,7 @@ export default function DayPlanner({ roster: base, me, onPublished }: { roster: 
   const { cols, checks } = lineupBoard(base, moves)
   const col = cols.find((c) => c.clan === view)!
   const changes = base.players.filter((p) => moves[p.tag])
+  const auto = promoted(plans, server)
   const nMoves = changes.length
   const list = (): PlanMove[] => changes.map((p) => ({ tag: p.tag, ...moves[p.tag] }))
   const valveHit = checks.some((k) => k.key === 'valve' && k.tone === 'bad')
@@ -289,12 +305,15 @@ export default function DayPlanner({ roster: base, me, onPublished }: { roster: 
       </div>
 
       {note && (
-        <div role="status" className={`flex min-h-11 items-center justify-between gap-3 rounded-[14px] px-4 text-sm font-bold ${note.ok ? 'bg-[#DCFCE7] text-[#166534]' : 'bg-[#FEF3C7] text-[#92400E]'}`}>
+        <div role="status" className={`flex flex-col justify-center rounded-[14px] px-4 py-1 text-sm font-bold ${note.ok ? 'bg-[#DCFCE7] text-[#166534]' : 'bg-[#FEF3C7] text-[#92400E]'}`}>
+          <span className="flex min-h-9 items-center justify-between gap-3">
           {note.text}
           <span className="flex gap-3">
             {note.undo && <button type="button" onClick={() => { setPlans(note.undo!); setNote(null) }} className="min-h-8 cursor-pointer border-0 bg-transparent p-0 font-bold underline">Undo</button>}
             {note.rebuild && <button type="button" onClick={() => offer(fresh(clan, server), true)} className="min-h-8 cursor-pointer border-0 bg-transparent p-0 font-bold underline">Rebuild</button>}
           </span>
+          </span>
+          {!!note.lines?.length && <ul className="m-0 flex list-none flex-col gap-0.5 p-0 pb-1.5 text-[13px] font-semibold">{note.lines.map((l) => <li key={l}>{l}</li>)}</ul>}
         </div>
       )}
 
@@ -316,7 +335,13 @@ export default function DayPlanner({ roster: base, me, onPublished }: { roster: 
           {col.inCwl && <span className={col.core === 15 ? '' : 'font-bold text-[#B45309]'}>{col.core}/15 core</span>}
           <span className={col.count > 50 ? 'font-bold text-[#B91C1C]' : ''}>{col.count}/50 members</span>
           {col.inCwl && col.avg !== null && <span>Core avg {col.avg.toFixed(1)}{Math.abs(col.delta) >= 0.05 && ` (${col.delta > 0 ? '+' : '−'}${Math.abs(col.delta).toFixed(1)})`}</span>}
-          {nMoves > 0 && <button type="button" onClick={() => setMoves({})} className="min-h-6 cursor-pointer border-0 bg-transparent p-0 font-bold text-action">{nMoves} {nMoves === 1 ? 'move' : 'moves'} · Reset</button>}
+          {nMoves > 0 && (
+            <span className="font-bold text-action">
+              {nMoves === 1 ? `${changes[0].name} to ${placeLabel(moves[changes[0].tag])}` : `${nMoves} moves: ${changes.slice(0, 2).map((p) => p.name).join(', ')}${nMoves > 2 ? '…' : ''}`}
+              {/* Someone in New with days stays a Sub while they have them, so there is nothing of theirs to reset. */}
+              {changes.some((p) => !auto[p.tag]) && <button type="button" onClick={() => setMoves(auto)} className="ml-1 min-h-6 cursor-pointer border-0 bg-transparent p-0 font-bold text-action underline">Reset</button>}
+            </span>
+          )}
           <button type="button" onClick={() => { history.pushState(null, ''); setComparing(true) }} className="ml-auto min-h-8 cursor-pointer border-0 bg-transparent p-0 font-bold text-action">Compare</button>
         </p>
       )}
@@ -328,16 +353,22 @@ export default function DayPlanner({ roster: base, me, onPublished }: { roster: 
       )}
 
       {!preview && view !== 'Flakes' && <>
-      <div aria-label="Key" className={KEY_ROW}>
+      {(swapOut.length > 0 || swapIn.length > 0) && (
+        <p role="status" className="m-0 w-full max-w-[900px] rounded-[14px] bg-[#FEF3C7] px-4 py-2.5 text-sm font-bold text-[#92400E]">
+          Day {prep} in game: {swapOut.length > 0 && swapIn.length > 0 ? `swap ${swapOut.join(', ')} for ${swapIn.join(', ')}` : swapIn.length > 0 ? `add ${swapIn.join(', ')}` : `take out ${swapOut.join(', ')}`}
+        </p>
+      )}
+      <div aria-label="Key" className={`${KEY_ROW} max-md:flex-wrap max-md:overflow-x-visible`}>
         {anyLocked && <span className="flex items-center gap-1"><span style={LOCKED} className="flex h-3.5 items-center rounded-[3px] px-1"><Lock /></span>War started, locked</span>}
-        <span className="flex items-center gap-1"><span className="size-2.5 rounded-full bg-[#DC2626]" />Missed</span>
+        {missed.size > 0 && <span className="flex items-center gap-1"><span className="size-2.5 rounded-full bg-[#DC2626]" />Missed</span>}
         {anyDiffers && <span className="flex items-center gap-1"><span className="size-2.5 rounded-full border-2 border-[#F59E0B] bg-[#FEF3C7]" />Not as planned</span>}
-        <span className="flex items-center gap-1"><span className="rounded-full bg-[#FEF3C7] px-1 text-[11px] font-extrabold tabular-nums text-[#92400E]">−3</span>Under TH</span>
-        <span className="flex items-center gap-1"><span className="font-bold tabular-nums text-[#B45309]">5!</span>Under {TARGET}★</span>
-        {live && <span className="flex items-center gap-1"><span className="h-2.5 w-3.5 rounded-[3px] bg-moved" />Changed</span>}
+        {DAYS.some((d) => belowOn(d) > 0) && <span className="flex items-center gap-1"><span className="rounded-full bg-[#FEF3C7] px-1 text-[11px] font-extrabold tabular-nums text-[#92400E]">−3</span>Under TH</span>}
+        {rows.some((p) => tier(p, missed, w) !== null && !onTrial(p, w) && !onTrack(p.tag, plan, w)) && <span className="flex items-center gap-1"><span className="font-bold tabular-nums text-[#B45309]">5!</span>Under {TARGET}★</span>}
+        {!!live && DAYS.some((d) => !locked(w[d]) && (live[clan][d] ?? []).join() !== (plan[d] ?? []).join()) && <span className="flex items-center gap-1"><span className="h-2.5 w-3.5 rounded-[3px] bg-moved" />Changed</span>}
       </div>
 
-      <section className="max-h-[calc(100dvh-230px)] w-full max-w-[900px] overflow-auto rounded-2xl border border-line bg-white">
+      {/* Clipped, not scrolled, so the page is the one scroll and the day row sticks to the top of the screen. Only the narrowest phones need to scroll across. */}
+      <section className="w-full max-w-[900px] overflow-clip max-[359px]:overflow-x-auto rounded-2xl border border-line bg-white">
         <table className="w-full border-separate border-spacing-0 text-sm">
           <thead className="sticky top-0 z-[3] bg-white">
             <tr>
@@ -347,9 +378,8 @@ export default function DayPlanner({ roster: base, me, onPublished }: { roster: 
                 const n = plan[d]?.length ?? 0
                 const ths = enemy(war, server?.upcoming?.[clan] ?? [])
                 const drawn = !!war?.opponent_th.length
-                const thOf = (tag: string) => roster.players.find((p) => p.tag === tag)?.th ?? 0
                 const fixed = locked(war)
-                const below = ths.length && !fixed ? slotsBelow((plan[d] ?? []).map(thOf), ths) : 0
+                const below = belowOn(d)
                 const avg = ths.length ? ths.reduce((s, x) => s + x, 0) / ths.length : null
                 return (
                   <th key={d} title={drawn ? `${war?.opponent} · TH ${ths.join(' ')}` : ths.length ? `Expected: TH ${ths.map((x) => Math.round(x)).join(' ')}` : undefined}
@@ -375,7 +405,7 @@ export default function DayPlanner({ roster: base, me, onPublished }: { roster: 
               const short = !unreliable && !onTrial(p, w) && !onTrack(p.tag, plan, w)
               return (
                 <tr key={p.tag} className={unreliable ? 'opacity-60' : ''}>
-                  <td className={`sticky left-0 z-[1] max-w-[153px] border-b border-hair bg-white py-1 pl-2.5 pr-1 md:max-w-[170px] md:pl-3 md:pr-1.5 ${i === core.length && core.length ? 'border-t-2 border-t-line' : ''}`}>
+                  <td className={`sticky left-0 z-[1] max-w-[max(96px,min(153px,calc(100vw-256px)))] border-b border-hair bg-white py-1 pl-2.5 pr-1 md:max-w-[170px] md:pl-3 md:pr-1.5 ${i === core.length && core.length ? 'border-t-2 border-t-line' : ''}`}>
                     <span className="flex min-w-0 items-center gap-2">
                       {/* On a phone the status sits on the town hall, so the name keeps the room. */}
                       <span className="relative flex-none">
@@ -388,7 +418,7 @@ export default function DayPlanner({ roster: base, me, onPublished }: { roster: 
                           <span className="flex max-md:hidden"><StatusDot status={p.status} /></span>
                         </span>
                         <PlaceSelect p={baseOf.get(p.tag)!} at={placeOf(p.tag)} onPlace={(v) => place(baseOf.get(p.tag)!, v)} locked={!!viewing}
-                          className={`-ml-1 max-w-full rounded border-0 bg-transparent p-0 text-[11px] font-semibold ${moves[p.tag] ? 'text-action' : 'text-muted'}`} />
+                          className={`-my-1.5 -ml-1 h-7 w-full max-w-full rounded border-0 bg-transparent p-0 text-[11px] font-semibold ${moves[p.tag] ? 'text-action' : 'text-muted'}`} />
                       </span>
                     </span>
                   </td>
@@ -438,7 +468,12 @@ export default function DayPlanner({ roster: base, me, onPublished }: { roster: 
               ))}
             </ul>
           )}
-          <p className="m-0 text-sm text-ink-2">{live ? `${countOf(plans)} day ${countOf(plans) === 1 ? 'change' : 'changes'} against what is published.` : 'The first day plan for this CWL.'}</p>
+          {!live && <p className="m-0 text-sm text-ink-2">The first day plan for this CWL.</p>}
+          {!!live && diff(plans).length > 0 && (
+            <ul className="m-0 flex list-none flex-col gap-1 rounded-[10px] bg-page p-3 text-[13px] font-semibold text-ink-2">
+              {diff(plans).map((x) => <li key={`${x.c}${x.d}`}>{lineOf(x)}</li>)}
+            </ul>
+          )}
           {valveHit && (
             <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-[10px] bg-[#FEE2E2] px-3 text-sm font-bold text-[#B91C1C]">
               <input type="checkbox" checked={override} onChange={(e) => setOverride(e.target.checked)} className="size-4 accent-[#B91C1C]" />

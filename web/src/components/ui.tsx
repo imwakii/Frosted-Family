@@ -1,4 +1,4 @@
-import { type MouseEvent, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent, type ReactNode } from 'react'
+import { type MouseEvent, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent, type ReactNode, useSyncExternalStore } from 'react'
 import { leagueIcon, thIcon, unitIcon, useClans } from '../clash'
 import { CLAN, CLANS, STATUS } from '../theme'
 import type { ClanName, Status } from '../types'
@@ -127,24 +127,42 @@ export function useNow(ms = 15_000) {
 }
 
 /** The time now: in the viewer's own zone, as their device reports it, or in UTC after a tap. The choice is remembered. */
-export function Clock({ wide }: { wide: boolean }) {
-  const now = useNow()
-  const [utc, setUtc] = useState(() => { try { return localStorage.getItem('ff-clock') === 'utc' } catch { return false } })
-  const flip = () => {
-    setUtc(!utc)
-    try { localStorage.setItem('ff-clock', utc ? 'local' : 'utc') } catch { /* private mode */ }
-  }
-  const d = new Date(now)
-  const timeZone = utc ? 'UTC' : undefined
-  const time = d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone })
-  const day = d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone })
-  const zone = utc ? 'UTC' : new Intl.DateTimeFormat('en-GB', { timeZoneName: 'short' }).formatToParts(d).find((p) => p.type === 'timeZoneName')?.value
+// Whether times read as UTC or the phone's own, chosen in Settings.
+const UTC_KEY = 'ff-clock'
+let utcNow = (() => { try { return localStorage.getItem(UTC_KEY) === 'utc' } catch { return false } })()
+const utcListeners = new Set<() => void>()
+export function useUtc() {
+  return useSyncExternalStore((l) => { utcListeners.add(l); return () => { utcListeners.delete(l) } }, () => utcNow)
+}
+export function setUtc(v: boolean) {
+  utcNow = v
+  try { localStorage.setItem(UTC_KEY, v ? 'utc' : 'local') } catch { /* private mode */ }
+  utcListeners.forEach((l) => l())
+}
+
+/** One row of a settings list: what it does, and a switch. */
+export function SwitchRow({ label, line, on, disabled, onFlip }: { label: string; line: string; on: boolean; disabled?: boolean; onFlip: () => void }) {
   return (
-    <button type="button" onClick={flip} aria-label={`${time} ${zone}. Switch to ${utc ? 'your time' : 'UTC'}`}
-      className="h-9 flex-none cursor-pointer whitespace-nowrap rounded-full border border-line bg-white px-1.5 text-xs font-bold text-muted tabular-nums hover:bg-page md:px-3 md:text-[13px]">
-      {wide && <span className="font-semibold text-faint max-lg:hidden">{day} · </span>}{/* On a phone UTC sits under the time, which leaves the app's name its room. */}
-      {!wide && utc ? <span className="flex flex-col leading-none">{time}<span className="mt-px text-[9px]">UTC</span></span> : <>{time}{wide && ` ${zone}`}</>}
+    <button type="button" role="switch" aria-checked={on} aria-label={label} disabled={disabled} onClick={onFlip}
+      className="flex min-h-[60px] w-full cursor-pointer items-center gap-3 border-0 bg-transparent px-3 py-2 text-left disabled:cursor-default">
+      <span className="flex min-w-0 flex-auto flex-col">
+        <span className="text-[15px] font-bold text-ink">{label}</span>
+        <span className="truncate text-[13px] leading-[1.3] text-muted">{line}</span>
+      </span>
+      <span aria-hidden="true" className={`relative h-[31px] w-[51px] flex-none rounded-full transition-colors ${on ? 'bg-ink' : 'bg-[#E3D8BF]'}`}>
+        <span className={`absolute left-0.5 top-0.5 size-[27px] rounded-full bg-white shadow-[0_2px_5px_rgba(43,33,20,.25)] transition-transform ${on ? 'translate-x-5' : ''}`} />
+      </span>
     </button>
+  )
+}
+
+/** The header's way to the calendar. */
+export function CalendarButton({ current }: { current: boolean }) {
+  return (
+    <a href="#/calendar" aria-label="Calendar" title="Calendar" aria-current={current ? 'page' : undefined}
+      className={`flex size-9 flex-none items-center justify-center rounded-full border no-underline ${current ? 'border-gold bg-[#F6EEDC] text-ink' : 'border-line bg-white text-ink-2 hover:bg-page'}`}>
+      <svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M7 3v4M17 3v4M4 10h16M6 5h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z" /></svg>
+    </a>
   )
 }
 

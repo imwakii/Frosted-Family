@@ -98,6 +98,10 @@ function mergeRoster(api: { players: ApiPlayer[] }, base: Roster | null): Roster
   }
 }
 
+/** A player's clan in the game and on the allocation differ. It only asks for a move until CWL starts: a sub who has signed up may go home. */
+export const stillToMove = (p: Player, roster: Roster) =>
+  !!p.inClan && p.inClan !== p.clan && !(roster.cwlStart && Date.parse(roster.cwlStart) <= Date.now())
+
 export async function loadRoster(fresh = false): Promise<{ roster: Roster; live: boolean }> {
   try {
     const api = import.meta.env.DEV && new URLSearchParams(window.location.search).get('mock') === 'new'

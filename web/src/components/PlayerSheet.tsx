@@ -1,5 +1,5 @@
 import { type ReactNode, useEffect, useRef, useState } from 'react'
-import { loadPlayerAll, type PlayerCard, playerNow } from '../data'
+import { loadPlayerAll, type PlayerCard, playerNow, stillToMove } from '../data'
 import { BADGES, TIER_LOOK, TIERS } from '../badges'
 import { ago } from '../leaders'
 import { CATS } from '../explore'
@@ -224,7 +224,7 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
                 ))}
               </nav>
             )}
-            {p.inClan && p.inClan !== p.clan && (
+            {p.inClan && stillToMove(p, roster) && (
               <div className="flex min-h-12 items-center gap-2 rounded-[14px] bg-[#F6EEDC] px-4 text-sm font-semibold text-action-deep">
                 <span className="flex-auto">Move before sign-up</span>
                 <span className="font-bold" style={{ color: CLAN[p.inClan].deep }}>{p.inClan}</span>

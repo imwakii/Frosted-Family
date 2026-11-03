@@ -23,6 +23,15 @@ export const Chevron = ({ className }: { className: string }) => (
 const HighlightIcon = ({ icon }: { icon: Highlight['icon'] }) => {
   if (icon === 'league') return <img src={leagueIcon('Champion League III') ?? undefined} alt="" width={36} height={36} className="size-9 flex-none object-contain" />
   if (icon === 'hero') return <span className="flex-none"><UnitIcon name="Barbarian King" size={36} /></span>
+  if (icon === 'bell' || icon === 'calendar') {
+    return (
+      <span className="flex size-9 flex-none items-center justify-center text-brand">
+        <svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <path d={icon === 'bell' ? 'M6 9a6 6 0 0 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9zM10 20a2.2 2.2 0 0 0 4 0' : 'M7 3v4M17 3v4M4 10h16M6 5h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z'} />
+        </svg>
+      </span>
+    )
+  }
   return (
     <span className="flex size-9 flex-none items-center justify-center text-brand">
       <svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M5 5l14 14M19 5L5 19M4 16l4 4M20 16l-4 4" /></svg>
@@ -59,7 +68,7 @@ export function useNews() {
   return { fresh, open, close, show: useCallback(() => setOpen(true), []) }
 }
 
-export function WhatsNewCard({ wide, onClose: close }: { wide: boolean; onClose: () => void }) {
+export function WhatsNewCard({ wide, onClose: close, onSettings }: { wide: boolean; onClose: () => void; onSettings: () => void }) {
   return (
         <CardSheet label="What's new" wide={wide} onClose={close} head={
           <div className="flex min-w-0 flex-auto flex-col gap-1">
@@ -72,7 +81,7 @@ export function WhatsNewCard({ wide, onClose: close }: { wide: boolean; onClose:
               <ul className="m-0 flex list-none flex-col gap-2 p-0">
                 {LATEST.highlights.map((h) => (
                   <li key={h.title}>
-                    <button type="button" onClick={() => { close(); go.to(h.href) }}
+                    <button type="button" onClick={() => { close(); if (h.href) go.to(h.href); else onSettings() }}
                       className="flex min-h-[60px] w-full cursor-pointer items-center gap-3 rounded-xl border-0 bg-[#F6EEDC] px-3 py-2 text-left hover:bg-well">
                       <HighlightIcon icon={h.icon} />
                       <span className="flex min-w-0 flex-auto flex-col">

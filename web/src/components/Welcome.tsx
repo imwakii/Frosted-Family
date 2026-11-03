@@ -28,9 +28,9 @@ export default function Welcome({ roster, wide }: { roster: Roster; wide: boolea
     } catch { /* private mode */ }
   }
   return (
-    <CardSheet label="Welcome to the Frosted Family" wide={wide} onClose={done} head={
+    <CardSheet label="Welcome" wide={wide} onClose={done} head={
       <div className="flex min-w-0 flex-auto flex-col gap-1">
-        <span className="font-display text-[24px] leading-tight text-brand">Welcome to the Frosted Family</span>
+        <span className="font-display text-[24px] leading-tight text-brand">Welcome</span>
         <span className="text-sm text-muted">Find your name to see which CWL days you're allocated, our stats and war log.</span>
       </div>
     }>

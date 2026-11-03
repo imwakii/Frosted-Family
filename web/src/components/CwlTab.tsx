@@ -3,6 +3,7 @@ import { CLAN, CLANS, GROUPS, SLOT_TEXT, coreAvg, fmtScore, fmtStart } from '../
 import { clanHref, playerHref } from '../route'
 import type { ClanName, LiveWar, Player, Roster } from '../types'
 import { useClans, type ClanMeta } from '../clash'
+import { stillToMove } from '../data'
 import { setDayPick, useCwlGroups, useDayPick } from '../leaders'
 import { jumpToYou, useYou, YouTag } from './You'
 import { ClanBadge, ClanSwitch, DayRow, Eyebrow, LeaguePill, PlayDays, SearchIcon, StatusDot, StatusKey, Th, useNow, RowChevron } from './ui'
@@ -122,9 +123,8 @@ export function PhoneSearch({ q, setQ, onEnter, className = '', children }: { q:
 
 // A move into this clan before sign-up, shown after the name as on the poster,
 // tinted with the clan the player comes from.
-function FromPill({ p }: { p: Player }) {
-  const pending = p.inClan && p.inClan !== p.clan
-  if (pending) {
+function FromPill({ p, roster }: { p: Player; roster: Roster }) {
+  if (stillToMove(p, roster)) {
     return (
       <span title={`Still in ${p.inClan}: move to ${p.clan}`}
         className="flex-none whitespace-nowrap rounded-full bg-[#FEF3C7] px-1.5 py-px text-[10px] font-extrabold uppercase tracking-[0.04em] text-[#92400E]">
@@ -150,7 +150,7 @@ function NewLine({ p }: { p: Player }) {
   return <span className="flex-none whitespace-nowrap text-[11px] text-faint">Joined {joined}</span>
 }
 
-function Row({ p, n, hit, dense, showDays }: { p: Player; n: number; hit?: boolean; dense?: boolean; showDays?: boolean }) {
+function Row({ p, roster, n, hit, dense, showDays }: { p: Player; roster: Roster; n: number; hit?: boolean; dense?: boolean; showDays?: boolean }) {
   const first = n === 1
   return (
     <li>
@@ -161,7 +161,7 @@ function Row({ p, n, hit, dense, showDays }: { p: Player; n: number; hit?: boole
         <span className="flex min-w-0 flex-auto flex-col">
           <span className="flex min-w-0 items-center gap-1.5">
             <span className={`min-w-0 truncate font-semibold ${dense ? 'text-sm' : 'text-[15px]'}`}><YouTag tag={p.tag} />{p.name}</span>
-            <FromPill p={p} />
+            <FromPill p={p} roster={roster} />
             {p.rejoined && <span title="Rejoined, back in their slot" className="flex-none rounded-full bg-[#DCFCE7] px-1.5 py-px text-[10px] font-extrabold uppercase tracking-[0.04em] text-[#166534]">Back</span>}
           </span>
           {/* Under the name, which keeps the whole row for the name on a phone. */}
@@ -192,7 +192,7 @@ function Groups({ roster, clan, q, dense, day }: { roster: Roster; clan: ClanNam
           ) : null}
           {g.rows.length ? (
             <ol className={`m-0 list-none ${dense ? '' : 'rounded-2xl border border-line bg-white py-1'} ${g.dim ? 'opacity-[.85]' : ''}`}>
-              {g.rows.map((p, i) => <Row key={p.tag} p={p} n={i + 1} dense={dense} hit={!!q && matches(p, q)} showDays={showDays} />)}
+              {g.rows.map((p, i) => <Row key={p.tag} p={p} roster={roster} n={i + 1} dense={dense} hit={!!q && matches(p, q)} showDays={showDays} />)}
             </ol>
           ) : null}
         </section>
@@ -268,7 +268,7 @@ function Phone({ roster, war, q, setQ, lock }: Omit<Props, 'wide'>) {
                   <Th th={p.th} />
                   <span className="flex min-w-0 flex-auto items-center gap-1.5">
                     <span className="min-w-0 truncate text-[15px] font-semibold">{p.name}</span>
-                    <FromPill p={p} />
+                    <FromPill p={p} roster={roster} />
                   </span>
                   <span className="flex flex-none flex-col items-end gap-0.5">
                     <span className="whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-bold" style={{ background: CLAN[p.clan].tint, color: CLAN[p.clan].deep }}>

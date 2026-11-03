@@ -5,7 +5,7 @@
 // Lines sit under the tab they changed, such as "War tab", or "Player cards" or "General". Each is one patch note naming the specific feature and
 // starting with a past-tense verb such as Added, Changed, Moved, Fixed or Removed. Keep each under 40 characters, so it stays on one line on a phone.
 
-export type Highlight = { title: string; line: string; href: string; icon: 'league' | 'swords' | 'hero' }
+export type Highlight = { title: string; line: string; href?: string; icon: 'league' | 'swords' | 'hero' | 'bell' | 'calendar' }  // no href opens Settings
 export type Update = { id: string; date: string; highlights?: Highlight[]; groups: { title: string; lines: string[] }[] }
 
 export const UPDATES: Update[] = [
@@ -106,18 +106,18 @@ export const UPDATES: Update[] = [
   },
   {
     // Further ids for the same day: the batch grew after the first, so the card opens once more.
-    id: '2026-11-04-10',
+    id: '2026-11-04-11',
     date: '4 Nov 2026',
     highlights: [
+      { title: 'Phone alerts', line: 'Choose what your phone tells you.', icon: 'bell' },
+      { title: 'Calendar', line: "See what's on next in the family.", href: '#/calendar', icon: 'calendar' },
       { title: 'Standings', line: "See who's winning your CWL group.", href: '#/cwl/group', icon: 'league' },
-      { title: 'Enemy clan cards', line: 'Compare any enemy clan with yours.', href: '#/cwl/group', icon: 'swords' },
-      { title: 'Who plays when', line: "See every player's days on Lineups.", href: '#/cwl', icon: 'hero' },
     ],
     groups: [
       {
-        title: 'Calendar tab (new)',
+        title: 'Calendar',
         lines: [
-          'Added a clan and game events calendar.',
+          'Added a calendar icon at the top.',
           'Added planned CWL and friendly dates.',
         ],
       },
@@ -162,12 +162,15 @@ export const UPDATES: Update[] = [
           'Locked days once their war has started.',
           'Added Not as planned marks.',
           'Changed Suggest to keep your plan.',
+          'Added the swaps to make in the game.',
+          'Added changes to the Publish check.',
         ],
       },
       {
         title: 'Settings',
         lines: [
           'Added a Settings button at the top.',
+          'Removed the clock from the top.',
           'Added phone alerts you can choose.',
           "Moved What's new into Settings.",
         ],
@@ -175,6 +178,7 @@ export const UPDATES: Update[] = [
       {
         title: 'Player cards',
         lines: [
+          'Fixed move notes after sign-up closes.',
           'Added side-by-side player comparison.',
           'Added Change on both compared players.',
           'Added links to all upgrade categories.',

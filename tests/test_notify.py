@@ -113,6 +113,24 @@ def test_day_alert_follows_the_published_plan(conns):
     assert run(game, app) == []
 
 
+def test_someone_told_they_play_hears_when_the_plan_drops_them(conns):
+    game, app = conns
+    phone(app)
+    war(game, state="preparation", ends_in=timedelta(hours=30), starts_ago=timedelta(hours=-6), round_no=3)
+    app.execute("CREATE TABLE day_plans (season TEXT, state TEXT, body TEXT, updated_at TEXT, updated_by TEXT)")
+    app.execute("INSERT INTO day_plans VALUES ('2026-11','published',?,'x','x')", (json.dumps({"Fire": {"3": [OTHER]}}),))
+    app.commit()
+    assert run(game, app) == []  # never told they play, so nothing to take back
+    app.execute("UPDATE day_plans SET body=?", (json.dumps({"Fire": {"3": [ME]}}),))
+    app.commit()
+    assert [m["title"] for m in run(game, app)] == ["Day 3: you're in"]
+    app.execute("UPDATE day_plans SET body=?", (json.dumps({"Fire": {"3": [OTHER]}}),))
+    app.commit()
+    got = run(game, app)
+    assert [m["title"] for m in got] == ["Day 3: you're out"] and "plan changed" in got[0]["body"]
+    assert run(game, app) == []
+
+
 def test_war_started_is_off_unless_asked_and_only_when_recent(conns):
     game, app = conns
     phone(app, attacks=False, days=False)

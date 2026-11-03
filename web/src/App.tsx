@@ -19,7 +19,7 @@ import { JumpToYou, YouChip } from './components/You'
 import { fetchPlayer, useRoster, useWar, useWide } from './data'
 import { useVisits } from './visits'
 import { decodeTag, go, onDrill, useRoute } from './route'
-import { Clock, SubNav } from './components/ui'
+import { CalendarButton, SubNav } from './components/ui'
 
 const CWL_SUBS = [{ id: 'lineups', label: 'Lineups', href: '#/cwl' }, { id: 'group', label: 'Group', href: '#/cwl/group' }]
 const WAR_SUBS = [{ id: 'latest', label: 'Current', href: '#/war' }, { id: 'log', label: 'War log', href: '#/war/log' }]
@@ -27,7 +27,6 @@ const WAR_SUBS = [{ id: 'latest', label: 'Current', href: '#/war' }, { id: 'log'
 const TABS = [
   { id: 'war', label: 'War', href: '#/war', icon: <path d="M5 5l14 14M19 5L5 19M4 16l4 4M20 16l-4 4" /> },
   { id: 'cwl', label: 'CWL', href: '#/cwl', icon: <path d="M8.5 20.5h7M12 15.5v5M7.5 4h9v6.5a4.5 4.5 0 0 1-9 0V4zM7.5 6.5H4.5c0 2 1 3.2 3 3.6M16.5 6.5h3c0 2-1 3.2-3 3.6" /> },
-  { id: 'calendar', label: 'Calendar', href: '#/calendar', icon: <path d="M7 3v4M17 3v4M4 10h16M6 5h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z" /> },
   { id: 'log', label: 'Log', href: '#/log', icon: <path d="M4 6h16M4 12h16M4 18h10" /> },
   { id: 'explore', label: 'Stats', href: '#/stats/players', icon: <path d="M5 20V10M12 20V4M19 20v-7" /> },
   { id: 'plan', label: 'Plan', href: '#/plan/days', icon: <path d="M7 4v16M17 4v16M3 8h8M13 16h8" /> },
@@ -40,16 +39,15 @@ function Account({ me, onSignOut }: { me: Me; onSignOut: () => void }) {
   return (
     <span className="relative">
       <button type="button" aria-expanded={open} aria-label={`Account: ${me.user.name}`} onClick={() => setOpen((o) => !o)}
-        className="flex min-h-9 cursor-pointer items-center gap-2 rounded-full border border-line bg-white p-1 text-[13px] font-bold text-ink-2 hover:bg-page lg:pr-3">
+        className="flex min-h-9 cursor-pointer items-center rounded-full border border-line bg-white p-1 text-[13px] font-bold text-ink-2 hover:bg-page">
         {me.user.avatar_url
           ? <img src={me.user.avatar_url} alt="" className="size-7 rounded-full" />
           : <span className="flex size-7 items-center justify-center rounded-full bg-well text-xs">{initial}</span>}
-        <span className="max-w-[120px] truncate max-lg:hidden">{me.user.name}</span>
       </button>
       {open && <span aria-hidden="true" className="fixed inset-0 z-30" onClick={() => setOpen(false)} />}
       {open && (
         <span className="ff-fade absolute right-0 top-[calc(100%+6px)] z-40 flex min-w-[160px] flex-col rounded-xl border border-line bg-white p-1 shadow-[0_10px_30px_rgba(43,33,20,.12)]">
-          <span className="px-3 py-2 text-[13px] font-bold text-ink lg:hidden">{me.user.name}</span>
+          <span className="px-3 py-2 text-[13px] font-bold text-ink">{me.user.name}</span>
           <button type="button" onClick={() => { setOpen(false); onSignOut() }}
             className="min-h-10 cursor-pointer rounded-lg border-0 bg-transparent px-3 text-left text-sm font-semibold text-ink-2 hover:bg-page">Sign out</button>
         </span>
@@ -84,12 +82,12 @@ export default function App() {
   const closeSheet = useCallback(() => go.closePlayer(), [])
   // Plan is for leaders: a member reaches sign-in from the footer's link, and sees the tab only while on it.
   const tabs = TABS.filter((t) => t.id !== 'plan' || !!auth.me.user || route.tab === 'plan')
-  // The live clock; on Plan a signed-in account sits beside it, and narrower screens shrink the other two to fit.
+  // On Plan a signed-in account sits beside your card, and narrower screens shrink the other two to fit.
   const account = route.tab === 'plan' && auth.me.user ? <Account me={auth.me} onSignOut={auth.signOut} /> : null
   const you = roster && <YouChip roster={roster} compact={!roomy && !!account} />
   const corner = wide
-    ? <span className="flex items-center gap-2"><Settings wide roster={roster} />{you}<Clock wide />{account}</span>
-    : <span className="flex min-w-0 items-center gap-2"><Settings wide={false} roster={roster} />{you}{account}<Clock wide={false} /></span>
+    ? <span className="flex items-center gap-2">{you}{account}<CalendarButton current={route.tab === 'calendar'} /><Settings wide roster={roster} /></span>
+    : <span className="flex min-w-0 items-center gap-2">{you}{account}<CalendarButton current={route.tab === 'calendar'} /><Settings wide={false} roster={roster} /></span>
 
   return (
     <div className={`min-h-dvh ${wide ? '' : 'pb-[calc(58px+env(safe-area-inset-bottom))]'}`}>
@@ -162,7 +160,7 @@ export default function App() {
       {route.rival && !route.player && <RivalSheet clan={route.rival.clan} tag={route.rival.tag} wide={wide} onClose={closeSheet} />}
 
       {!wide && (
-        <nav aria-label="Sections" className="fixed inset-x-0 bottom-0 z-30 grid border-t border-gold-line bg-white pb-[env(safe-area-inset-bottom)]" style={{ gridTemplateColumns: `repeat(${tabs.length}, 1fr)` }}>
+        <nav aria-label="Sections" className="fixed inset-x-0 bottom-0 z-30 grid border-t border-gold-line bg-white pb-[env(safe-area-inset-bottom)]" style={{ gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` }}>
           {tabs.map((t) => (
             <a key={t.id} href={t.href} aria-current={route.tab === t.id ? 'page' : undefined}
               className={`flex min-h-[58px] flex-col items-center justify-center gap-[3px] text-xs font-bold no-underline ${route.tab === t.id ? 'text-ink shadow-[inset_0_2px_0_var(--color-gold)]' : 'text-faint'}`}>
