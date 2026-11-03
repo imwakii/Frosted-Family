@@ -15,17 +15,17 @@ const MAKI = '#CGJ8YR8J'
 const CAP = 50
 const STARTERS = 15
 
-type Place = { clan: ClanName; slot: Slot }
-type Moves = Record<string, Place>
+export type Place = { clan: ClanName; slot: Slot }
+export type Moves = Record<string, Place>
 
 // Within the row's clan, plain words; other clans sit under "Move to…".
 const HERE: Record<Slot, string> = { CORE: 'Core', SUB: 'Sub', OUT: 'Not in', NEW: 'New' }
 const clanOptions = (clan: ClanName): Slot[] => (clan === 'Flakes' ? ['OUT'] : ['CORE', 'SUB', 'OUT'])
 const SHORT: Record<Slot, string> = { CORE: 'core', SUB: 'sub', OUT: 'not in', NEW: 'new' }
-const placeLabel = (p: Place) => (p.clan === 'Flakes' && p.slot !== 'NEW' ? 'Flakes' : `${p.clan} ${SHORT[p.slot]}`)
+export const placeLabel = (p: Place) => (p.clan === 'Flakes' && p.slot !== 'NEW' ? 'Flakes' : `${p.clan} ${SHORT[p.slot]}`)
 
 type Check = { key: string; label: string; tip: string; tone: 'ok' | 'warn' | 'bad' | 'info' }
-function readDraft(roster: Roster): Moves {
+export function readDraft(roster: Roster): Moves {
   try {
     const raw: Moves = lineupDraft()
     const tags = new Set(roster.players.map((p) => p.tag))
@@ -33,9 +33,29 @@ function readDraft(roster: Roster): Moves {
   } catch { return {} }
 }
 
-function PlanRow({ p, at, onPlace, locked }: { p: Player; at: Place; onPlace: (v: Place) => void; locked: boolean }) {
-  const moved = at.clan !== p.clan || at.slot !== p.slot
+/** Where a player goes: their slot in this clan, or another clan's under "Move to…". */
+export function PlaceSelect({ p, at, onPlace, locked, className }: { p: Player; at: Place; onPlace: (v: Place) => void; locked: boolean; className: string }) {
   const id = 'plan-' + p.tag.slice(1)
+  return (
+    <>
+      <label htmlFor={id} className="sr-only">Place {p.name}</label>
+      <select id={id} value={`${at.clan}|${at.slot}`} disabled={locked}
+        onChange={(e) => { const [clan, slot] = e.target.value.split('|') as [ClanName, Slot]; onPlace({ clan, slot }) }}
+        className={`cursor-pointer disabled:cursor-default disabled:opacity-70 ${className}`}>
+        {at.slot === 'NEW' && <option value={`${at.clan}|NEW`}>New</option>}
+        {clanOptions(at.clan).map((slot) => <option key={slot} value={`${at.clan}|${slot}`}>{at.clan === 'Flakes' ? 'In Flakes' : HERE[slot]}</option>)}
+        <optgroup label="Move to…">
+          {CLANS.filter((c) => c !== at.clan).flatMap((c) => clanOptions(c).map((slot) => (
+            <option key={c + slot} value={`${c}|${slot}`}>{c === 'Flakes' ? 'Flakes' : `${c} · ${HERE[slot].toLowerCase()}`}</option>
+          )))}
+        </optgroup>
+      </select>
+    </>
+  )
+}
+
+export function PlanRow({ p, at, onPlace, locked }: { p: Player; at: Place; onPlace: (v: Place) => void; locked: boolean }) {
+  const moved = at.clan !== p.clan || at.slot !== p.slot
   return (
     <li className={`ff-plan-row flex min-h-11 items-center gap-2 rounded-[10px] py-[3px] pl-2.5 pr-1 ${moved ? 'bg-moved' : 'hover:bg-[#F6EEDC]'}`}>
       <Th th={p.th} />
@@ -50,24 +70,45 @@ function PlanRow({ p, at, onPlace, locked }: { p: Player; at: Place; onPlace: (v
         )}
       </span>
       <span className="w-[38px] flex-none text-right text-sm font-bold tabular-nums text-muted">{fmtScore(p.score)}</span>
-      <label htmlFor={id} className="sr-only">Place {p.name}</label>
-      <select id={id} value={`${at.clan}|${at.slot}`} disabled={locked}
-        onChange={(e) => { const [clan, slot] = e.target.value.split('|') as [ClanName, Slot]; onPlace({ clan, slot }) }}
-        className="min-h-9 w-[92px] flex-none cursor-pointer rounded-lg border px-1 text-xs font-semibold text-ink-2 disabled:cursor-default disabled:opacity-70">
-        {at.slot === 'NEW' && <option value={`${at.clan}|NEW`}>New</option>}
-        {clanOptions(at.clan).map((slot) => <option key={slot} value={`${at.clan}|${slot}`}>{at.clan === 'Flakes' ? 'In Flakes' : HERE[slot]}</option>)}
-        <optgroup label="Move to…">
-          {CLANS.filter((c) => c !== at.clan).flatMap((c) => clanOptions(c).map((slot) => (
-            <option key={c + slot} value={`${c}|${slot}`}>{c === 'Flakes' ? 'Flakes' : `${c} · ${HERE[slot].toLowerCase()}`}</option>
-          )))}
-        </optgroup>
-      </select>
+      <PlaceSelect p={p} at={at} onPlace={onPlace} locked={locked} className="min-h-9 w-[92px] flex-none rounded-lg border px-1 text-xs font-semibold text-ink-2" />
     </li>
   )
 }
 
-const toList = (m: Moves) => Object.entries(m).map(([tag, v]) => ({ tag, ...v })).sort((a, b) => a.tag.localeCompare(b.tag))
+export const toList = (m: Moves) => Object.entries(m).map(([tag, v]) => ({ tag, ...v })).sort((a, b) => a.tag.localeCompare(b.tag))
 const sameMoves = (a: Moves, b: Moves) => JSON.stringify(toList(a)) === JSON.stringify(toList(b))
+
+/** The clans as these moves leave them, and the checks a publish must pass. */
+export function lineupBoard(roster: Roster, moves: Moves) {
+  const checks: Check[] = []
+  const P = roster.players
+  const where = (p: Player) => moves[p.tag] ?? { clan: p.clan, slot: p.slot }
+  const cols = CLANS.map((clan) => {
+    const inCwl = !!roster.clans[clan]?.inCwl
+    const here = P.filter((p) => where(p).clan === clan)
+    const core = here.filter((p) => where(p).slot === 'CORE')
+    const avg = coreAvg(core.map((p) => p.score))
+    const was = coreAvg(P.filter((p) => p.clan === clan && p.slot === 'CORE').map((p) => p.score))
+    if (inCwl) checks.push({ key: clan + 'core', label: `${clan} ${core.length}/${STARTERS}`, tip: 'Starters', tone: core.length === STARTERS ? 'ok' : 'warn' })
+    checks.push({ key: clan + 'cap', label: `${clan} ${here.length}/${CAP}`, tip: 'Members', tone: here.length <= CAP ? 'ok' : 'bad' })
+    const groups = inCwl
+      ? GROUPS.map((g) => ({ label: g.label, dim: g.dim, rows: here.filter((p) => where(p).slot === g.slot) })).filter((g) => g.label !== 'New' || g.rows.length)
+      : [{ label: 'Members', dim: false, rows: here }]
+    return { clan, inCwl, count: here.length, core: core.length, avg, delta: avg !== null && was !== null ? avg - was : 0, groups }
+  })
+  const valve = P.filter((p) => p.clan === 'Fire' && where(p).clan === 'Cake').length
+  checks.push({ key: 'valve', label: valve ? `${valve} Fire → Cake` : 'Valve', tip: 'One-way valve', tone: valve ? 'bad' : 'ok' })
+  const maki = P.find((p) => p.tag === MAKI)
+  if (maki) {
+    const w = where(maki)
+    const ok = w.clan === 'Cake' && w.slot === 'CORE'
+    checks.push({ key: 'maki', label: ok ? 'Maki' : 'Maki is locked', tip: 'Locked to Cake core', tone: ok ? 'ok' : 'bad' })
+  }
+  const intoCake = P.some((p) => p.clan !== 'Cake' && where(p).clan === 'Cake')
+  const outOfCake = P.some((p) => p.clan === 'Cake' && where(p).clan !== 'Cake')
+  if (intoCake && outOfCake) checks.push({ key: 'order', label: 'Out of Cake first', tip: 'Move order', tone: 'info' })
+  return { cols, checks }
+}
 
 function Plan({ roster, me, onPublished }: { roster: Roster; me: Me; onPublished: () => Promise<void> }) {
   const [mine, setMine] = useState<Moves>(() => readDraft(roster))
@@ -136,36 +177,7 @@ function Plan({ roster, me, onPublished }: { roster: Roster; me: Me; onPublished
     })
   }
 
-  const { cols, checks } = useMemo(() => {
-    const checks: Check[] = []
-    const P = roster.players
-    const where = (p: Player) => moves[p.tag] ?? { clan: p.clan, slot: p.slot }
-    const cols = CLANS.map((clan) => {
-      const inCwl = !!roster.clans[clan]?.inCwl
-      const here = P.filter((p) => where(p).clan === clan)
-      const core = here.filter((p) => where(p).slot === 'CORE')
-      const avg = coreAvg(core.map((p) => p.score))
-      const was = coreAvg(P.filter((p) => p.clan === clan && p.slot === 'CORE').map((p) => p.score))
-      if (inCwl) checks.push({ key: clan + 'core', label: `${clan} ${core.length}/${STARTERS}`, tip: 'Starters', tone: core.length === STARTERS ? 'ok' : 'warn' })
-      checks.push({ key: clan + 'cap', label: `${clan} ${here.length}/${CAP}`, tip: 'Members', tone: here.length <= CAP ? 'ok' : 'bad' })
-      const groups = inCwl
-        ? GROUPS.map((g) => ({ label: g.label, dim: g.dim, rows: here.filter((p) => where(p).slot === g.slot) })).filter((g) => g.label !== 'New' || g.rows.length)
-        : [{ label: 'Members', dim: false, rows: here }]
-      return { clan, inCwl, count: here.length, avg, delta: avg !== null && was !== null ? avg - was : 0, groups }
-    })
-    const valve = P.filter((p) => p.clan === 'Fire' && where(p).clan === 'Cake').length
-    checks.push({ key: 'valve', label: valve ? `${valve} Fire → Cake` : 'Valve', tip: 'One-way valve', tone: valve ? 'bad' : 'ok' })
-    const maki = P.find((p) => p.tag === MAKI)
-    if (maki) {
-      const w = where(maki)
-      const ok = w.clan === 'Cake' && w.slot === 'CORE'
-      checks.push({ key: 'maki', label: ok ? 'Maki' : 'Maki is locked', tip: 'Locked to Cake core', tone: ok ? 'ok' : 'bad' })
-    }
-    const intoCake = P.some((p) => p.clan !== 'Cake' && where(p).clan === 'Cake')
-    const outOfCake = P.some((p) => p.clan === 'Cake' && where(p).clan !== 'Cake')
-    if (intoCake && outOfCake) checks.push({ key: 'order', label: 'Out of Cake first', tip: 'Move order', tone: 'info' })
-    return { cols, checks }
-  }, [roster, moves])
+  const { cols, checks } = useMemo(() => lineupBoard(roster, moves), [roster, moves])
 
   // In execution order: out of Cake, then the rest, then into Cake (50-member cap).
   const step = (p: Player) => (p.clan === 'Cake' && moves[p.tag].clan !== 'Cake' ? 0 : p.clan !== 'Cake' && moves[p.tag].clan === 'Cake' ? 2 : 1)
@@ -387,8 +399,7 @@ function Gate({ me, onSignOut }: { me: Me; onSignOut: () => void }) {
 type PlanProps = { roster: Roster; me: Me; ready: boolean; wide: boolean; onSignOut: () => void }
 
 const SUBS = [
-  { id: 'builder', label: 'Lineup builder', href: '#/plan/builder' },
-  { id: 'days', label: 'Day planner', href: '#/plan/days' },
+  { id: 'days', label: 'Plan', href: '#/plan/days' },
   { id: 'members', label: 'Members', href: '#/plan/members' },
 ]
 

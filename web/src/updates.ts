@@ -165,6 +165,21 @@ export const UPDATES: Update[] = [
       },
     ],
   },
+  {
+    id: '2026-11-04-4',
+    date: '4 Nov 2026',
+    groups: [
+      {
+        title: 'Plan tab',
+        lines: [
+          'Merged the lineup and day builders.',
+          'Added a place picker under each name.',
+          'Added an Activity list of plan changes.',
+          'Changed Publish to send it all at once.',
+        ],
+      },
+    ],
+  },
 ]
 
 export const LATEST = UPDATES[UPDATES.length - 1]

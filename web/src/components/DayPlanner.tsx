@@ -1,15 +1,18 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { Me } from '../auth'
-import { type DayBody, type DayPlans, getDays, getProposals, HttpError, type Proposal, publishDays, saveProposal, useWar, useWide, withdrawProposal } from '../data'
-import { type ClanDays, DAYS, earned, enemy, lineupDraft, locked, missedThisSeason, onTrack, onTrial, slotsBelow, suggest, TARGET, TEAM, tier, type Wars, asPlanned } from '../dayplan'
-import { CLAN } from '../theme'
-import type { Player, Roster, Slot } from '../types'
+import { checkPlan, type DayBody, type DayPlans, getDays, getProposals, HttpError, type LineupBody, type PlanMove, type Proposal, publishDays, publishPlan, saveProposal, useWar, useWide, withdrawProposal } from '../data'
+import { type ClanDays, DAYS, DRAFT_KEY, earned, enemy, locked, missedThisSeason, onTrack, onTrial, slotsBelow, suggest, TARGET, TEAM, tier, type Wars, asPlanned } from '../dayplan'
+import { CLAN, CLANS } from '../theme'
+import type { ClanName, Player, Roster, Slot } from '../types'
 import CwlTab from './CwlTab'
+import PlanActivity from './PlanActivity'
+import { lineupBoard, type Moves, type Place, PlaceSelect, placeLabel, PlanRow, readDraft, toList } from './PlanTab'
 import { ProposalBar, useProposals } from './Proposals'
-import { ClanSwitch, KEY_ROW, StatusDot, Th } from './ui'
+import { Arrow, ClanSwitch, KEY_ROW, StatusDot, Th } from './ui'
 
-// Who plays each of the seven CWL days. Opens on your own proposal, else the published plan, else a suggestion
-// from the rules in dayplan.ts. It builds on the lineup in the builder, published or not. Days whose war is on or over show the game's lineup and cannot be changed.
+// Plan: who is where, and who plays each of the seven CWL days, on one page. Opens on your own proposal, else the published
+// plan, else a suggestion from the rules in dayplan.ts. A player's place changes from their row; Publish sends places, then days.
+// Days whose war is on or over show the game's lineup and cannot be changed.
 
 type CwlClan = 'Fire' | 'Cake'
 const CWL: CwlClan[] = ['Fire', 'Cake']
@@ -48,13 +51,20 @@ function Cell({ plays, war, tag, ring, onToggle, label, changed }: {
 }
 
 export default function DayPlanner({ roster: base, me, onPublished }: { roster: Roster; me: Me; onPublished: () => Promise<void> }) {
-  const roster = useMemo<Roster>(() => {
-    const moves = lineupDraft()
-    return { ...base, players: base.players.map((p) => asPlanned(moves[p.tag] ? { ...p, ...moves[p.tag] } : p)) }
-  }, [base])
+  const [moves, setMoves] = useState<Moves>(() => readDraft(base))
+  useEffect(() => { try { localStorage.setItem(DRAFT_KEY, JSON.stringify(moves)) } catch { /* private mode */ } }, [moves])
+  const roster = useMemo<Roster>(() => ({ ...base, players: base.players.map((p) => asPlanned(moves[p.tag] ? { ...p, ...moves[p.tag] } : p)) }), [base, moves])
+  const baseOf = useMemo(() => new Map(base.players.map((p) => [p.tag, p])), [base])
+  const lineup = useProposals<LineupBody>('lineup')
+  const [lineupViewId, setLineupViewId] = useState<number | null>(null)
+  const lineupViewing = lineup.open.find((p) => p.id === lineupViewId) ?? null
+  const [view, setView] = useState<ClanName>('Fire')
+  const [override, setOverride] = useState(false)
+  const [problems, setProblems] = useState<string[]>([])
   const [server, setServer] = useState<DayPlans | null>(null)
   const [failed, setFailed] = useState(false)
-  const [clan, setClan] = useState<CwlClan>('Fire')
+  const clan: CwlClan = view === 'Flakes' ? 'Fire' : view
+  const setClan = setView
   const [plans, setPlans] = useState<Plans | null>(null)
   const [busy, setBusy] = useState(false)
   const [confirming, setConfirming] = useState(false)
@@ -84,8 +94,9 @@ export default function DayPlanner({ roster: base, me, onPublished }: { roster: 
     Promise.all([getDays(), getProposals<DayBody>('days').catch(() => null)]).then(
       ([s, p]) => { setServer(s); setPlans(start(s, p?.open.find((x) => x.mine)?.body.clans)) },
       () => { setFailed(true); setPlans(start(null)) })
+    // Only when the published roster changes: moving a player must not throw away the days on the board.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pools])
+  }, [base])
 
   // Your own plan, or the proposal you have open.
   const shown = viewing && plans ? whole(viewing.body.clans, plans) : plans
@@ -135,6 +146,42 @@ export default function DayPlanner({ roster: base, me, onPublished }: { roster: 
       return { ...ps!, [clan]: { ...ps![clan], [d]: next } }
     })
   }
+  const placeOf = (tag: string): Place => { const p = baseOf.get(tag)!; return moves[tag] ?? { clan: p.clan, slot: p.slot } }
+  const place = (p: Player, v: Place) => {
+    setNote(null)
+    setMoves((m) => {
+      const next = { ...m }
+      if (v.clan === p.clan && v.slot === p.slot) delete next[p.tag]
+      else next[p.tag] = v
+      return next
+    })
+    const was = placeOf(p.tag)
+    // Out of this clan's team: their days go with them.
+    if (v.slot === 'OUT' || v.clan !== was.clan) {
+      setPlans((ps) => Object.fromEntries(CWL.map((c) => [c, Object.fromEntries(DAYS.map((d) => [d, (ps![c][d] ?? []).filter((t) => t !== p.tag)]))])) as Plans)
+    }
+  }
+  const { cols, checks } = lineupBoard(base, moves)
+  const col = cols.find((c) => c.clan === view)!
+  const changes = base.players.filter((p) => moves[p.tag])
+  const nMoves = changes.length
+  const list = (): PlanMove[] => changes.map((p) => ({ tag: p.tag, ...moves[p.tag] }))
+  const valveHit = checks.some((k) => k.key === 'valve' && k.tone === 'bad')
+  const lineupBad = checks.filter((k) => (k.tone === 'bad' || k.tone === 'warn') && !(k.key === 'valve' && canPublish))
+  const notIn = base.players.filter((p) => { const at = placeOf(p.tag); return at.clan === view && at.slot === 'OUT' })
+  const inFlakes = base.players.filter((p) => placeOf(p.tag).clan === 'Flakes')
+  const openConfirm = async () => {
+    setOverride(false)
+    setProblems([])
+    setConfirming(true)
+    if (!nMoves) return
+    try {
+      const r = await checkPlan(list(), valveHit, me.csrf)
+      setProblems(r.problems ?? [])
+    } catch (e) {
+      if (e instanceof HttpError) setProblems(e.problems)
+    }
+  }
   const season = server?.season ?? new Date().toISOString().slice(0, 7)
   const run = async (fn: () => Promise<unknown>, ok: string) => {
     setBusy(true)
@@ -152,37 +199,46 @@ export default function DayPlanner({ roster: base, me, onPublished }: { roster: 
   }
 
   const Outer = preview ? 'div' : 'main'
-  const propose = () => run(() => saveProposal('days', season, { clans: plans }, me.csrf), 'Proposed · other leaders can see it')
+  const propose = () => run(async () => {
+    await saveProposal('days', season, { clans: plans }, me.csrf)
+    if (nMoves || lineup.mine) await saveProposal('lineup', '', { moves: toList(moves) }, me.csrf)
+    await lineup.reload()
+  }, 'Proposed')
+  // Places first, because the days build on them. If places fail nothing else goes; if days fail, the note says places went.
   const publish = () => run(async () => {
-    setServer(await publishDays(season, plans, me.csrf))
+    if (nMoves) {
+      await publishPlan(list(), valveHit && override, me.csrf)
+      setMoves({})
+      if (lineup.mine) await withdrawProposal(lineup.mine.id, me.csrf)
+      await lineup.reload()
+    }
+    try {
+      setServer(await publishDays(season, plans, me.csrf))
+    } catch (e) {
+      if (nMoves && e instanceof HttpError) e.problems.unshift('Places published, days not. Try again')
+      throw e
+    }
     if (proposals.mine) await withdrawProposal(proposals.mine.id, me.csrf)
     await onPublished()
-  }, 'Published · members see their days')
+  }, 'Published')
   const btn = 'min-h-10 cursor-pointer rounded-full border border-[#D5C8AC] bg-white px-3 text-sm font-semibold text-ink-2 hover:bg-page disabled:cursor-default disabled:opacity-60'
   return (
     <>
     <Outer className={`mx-auto flex flex-col gap-3.5 px-[clamp(16px,3vw,32px)] pt-1 md:pt-5 max-w-[1360px] ${preview ? '' : 'pb-12'}`}>
-      {!preview && <ClanSwitch<CwlClan> value={clan} onPick={setClan} options={CWL} flag={CWL.filter((c) => DAYS.some((d) => (shown[c][d]?.length ?? 0) !== TEAM))} />}
+      {!preview && <ClanSwitch<ClanName> value={view} onPick={setClan} options={CLANS} flag={CWL.filter((c) => DAYS.some((d) => (shown[c][d]?.length ?? 0) !== TEAM))} />}
       <div className="flex items-center gap-1.5">
         <button type="button" aria-pressed={preview} className={btn} onClick={() => setPreview((v) => !v)}>{preview ? 'Grid' : 'Preview'}</button>
         <span className="flex-auto" />
-        {!preview && !viewing && !confirming && <button type="button" className={btn} onClick={() => { setNote(null); setPlans((ps) => ({ ...ps!, [clan]: fresh(clan, server) })) }}>Suggest</button>}
-        {!viewing && !confirming && <button type="button" className={btn} disabled={readOnly || busy || !dirty} onClick={propose}>
-          {dirty || !saved ? 'Propose' : 'Proposed'}
+        {!preview && !viewing && view !== 'Flakes' && <button type="button" className={btn} onClick={() => { setNote(null); setPlans((ps) => ({ ...ps!, [clan]: fresh(clan, server) })) }}>Suggest</button>}
+        {!viewing && <button type="button" className={btn} disabled={readOnly || busy || (!dirty && !nMoves)} onClick={propose}>
+          {dirty || nMoves || !saved ? 'Propose' : 'Proposed'}
         </button>}
-        {canPublish && !confirming && !viewing && (
-          <button type="button" onClick={() => setConfirming(true)} disabled={busy || bad.length > 0 || !!published}
-            title={bad.length ? `Not 15: ${bad.join(', ')}` : undefined}
+        {canPublish && !viewing && (
+          <button type="button" onClick={openConfirm} disabled={busy || bad.length > 0 || lineupBad.length > 0 || (!!published && !nMoves)}
+            title={[...bad.map((b) => `Not 15: ${b}`), ...lineupBad.map((k) => k.label)].join(' · ') || undefined}
             className="min-h-10 cursor-pointer rounded-full border-0 bg-action px-3 text-sm font-bold text-white hover:bg-action-deep disabled:cursor-not-allowed disabled:bg-[#E3D8BF] disabled:text-faint">
-            {published ? 'Published' : 'Publish'}
+            {published && !nMoves ? 'Published' : 'Publish'}
           </button>
-        )}
-        {confirming && !viewing && (
-          <span className="flex items-center gap-1.5">
-            <button type="button" className={btn} onClick={() => setConfirming(false)}>Cancel</button>
-            <button type="button" autoFocus disabled={busy} onClick={publish}
-              className="min-h-10 cursor-pointer rounded-full border-0 bg-action px-4 text-sm font-bold text-white hover:bg-action-deep disabled:opacity-60">Publish to members</button>
-          </span>
         )}
       </div>
 
@@ -192,10 +248,33 @@ export default function DayPlanner({ roster: base, me, onPublished }: { roster: 
 
       <ProposalBar proposals={proposals} me={me} viewing={viewing} setViewing={setViewId} dirty={dirty} yours={countOf(plans)}
         count={(p) => countOf(asPlans(p))} lines={(p) => diff(asPlans(p)).map(lineOf)}
-        onBuild={(p) => { setPlans(asPlans(p)); setNote({ ok: true, text: `Your copy of ${p.author}'s proposal` }) }}
-        onAccepted={(p) => { getDays().then(setServer); if (!dirty) setPlans(asPlans(p)); setNote({ ok: true, text: `Accepted ${p.author}'s proposal · members see it` }) }} />
+        onBuild={(p) => { setPlans(asPlans(p)); setNote({ ok: true, text: `${p.author}'s copy` }) }}
+        onAccepted={(p) => { getDays().then(setServer); if (!dirty) setPlans(asPlans(p)); setNote({ ok: true, text: 'Accepted' }) }} />
 
-      {!preview && <>
+      {lineup.open.some((p) => !p.mine) && (
+        <ProposalBar proposals={lineup} me={me} viewing={lineupViewing} setViewing={setLineupViewId} dirty={nMoves > 0} yours={nMoves}
+          count={(p: Proposal<LineupBody>) => p.body.moves.length}
+          lines={(p: Proposal<LineupBody>) => p.body.moves.map((m) => `${baseOf.get(m.tag)?.name ?? m.tag} → ${placeLabel(m)}`)}
+          onBuild={(p: Proposal<LineupBody>) => setMoves(Object.fromEntries(p.body.moves.map((m) => [m.tag, { clan: m.clan, slot: m.slot }])))}
+          onAccepted={() => window.location.reload()} />
+      )}
+
+      {!preview && (
+        <p className="m-0 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs font-semibold tabular-nums text-muted">
+          {col.inCwl && <span className={col.core === 15 ? '' : 'font-bold text-[#B45309]'}>{col.core}/15 core</span>}
+          <span className={col.count > 50 ? 'font-bold text-[#B91C1C]' : ''}>{col.count}/50 members</span>
+          {col.inCwl && col.avg !== null && <span>Core avg {col.avg.toFixed(1)}{Math.abs(col.delta) >= 0.05 && ` (${col.delta > 0 ? '+' : '−'}${Math.abs(col.delta).toFixed(1)})`}</span>}
+          {nMoves > 0 && <button type="button" onClick={() => setMoves({})} className="min-h-6 cursor-pointer border-0 bg-transparent p-0 font-bold text-action">{nMoves} {nMoves === 1 ? 'move' : 'moves'} · Reset</button>}
+        </p>
+      )}
+
+      {!preview && view === 'Flakes' && (
+        <ul className="m-0 w-full max-w-[900px] list-none rounded-2xl border border-line bg-white p-1.5">
+          {inFlakes.map((p) => <PlanRow key={p.tag} p={p} at={placeOf(p.tag)} onPlace={(v) => place(p, v)} locked={!!viewing} />)}
+        </ul>
+      )}
+
+      {!preview && view !== 'Flakes' && <>
       <div aria-label="Key" className={KEY_ROW}>
         <span className="flex items-center gap-1"><span className="size-2.5 rounded-full bg-[#DC2626]" />Missed</span>
         <span className="flex items-center gap-1"><span className="size-2.5 rounded-full border-2 border-[#F59E0B] bg-[#FEF3C7]" />Differs</span>
@@ -248,8 +327,14 @@ export default function DayPlanner({ roster: base, me, onPublished }: { roster: 
                         <Th th={p.th} />
                         <span className="absolute bottom-0 right-0 flex rounded-full bg-white p-px md:hidden"><StatusDot status={p.status} /></span>
                       </span>
-                      <span className="truncate font-semibold max-md:text-[13px]">{p.name}</span>
-                      <span className="flex max-md:hidden"><StatusDot status={p.status} /></span>
+                      <span className="flex min-w-0 flex-col">
+                        <span className="flex min-w-0 items-center gap-1.5">
+                          <span className="truncate font-semibold max-md:text-[13px]">{p.name}</span>
+                          <span className="flex max-md:hidden"><StatusDot status={p.status} /></span>
+                        </span>
+                        <PlaceSelect p={baseOf.get(p.tag)!} at={placeOf(p.tag)} onPlace={(v) => place(baseOf.get(p.tag)!, v)} locked={!!viewing}
+                          className={`-ml-1 max-w-full rounded border-0 bg-transparent p-0 text-[11px] font-semibold ${moves[p.tag] ? 'text-action' : 'text-muted'}`} />
+                      </span>
                     </span>
                   </td>
                   {DAYS.map((d) => (
@@ -269,9 +354,54 @@ export default function DayPlanner({ roster: base, me, onPublished }: { roster: 
           </tbody>
         </table>
       </section>
-      {server?.published && <span className="px-1 text-xs font-semibold text-faint">Published by {server.published.updated_by ?? 'the publisher'}</span>}
+      {notIn.length > 0 && (
+        <section aria-label="Not in" className="flex w-full max-w-[900px] flex-col gap-1">
+          <span className="px-1 text-[11px] font-bold uppercase tracking-[0.06em] text-muted">Not in · {notIn.length}</span>
+          <ul className="m-0 list-none rounded-2xl border border-line bg-white p-1.5">
+            {notIn.map((p) => <PlanRow key={p.tag} p={p} at={placeOf(p.tag)} onPlace={(v) => place(p, v)} locked={!!viewing} />)}
+          </ul>
+        </section>
+      )}
       </>}
+      {!preview && <PlanActivity days={proposals} lineup={lineup} published={server?.published} />}
     </Outer>
+    {confirming && (
+      <div className="ff-fade fixed inset-0 z-50 flex items-center justify-center bg-[rgba(43,33,20,.4)] p-4" onClick={(e) => { if (e.target === e.currentTarget) setConfirming(false) }}>
+        <section role="dialog" aria-modal="true" aria-label="Publish to members"
+          className="ff-sheet flex max-h-[80vh] w-full max-w-[440px] flex-col gap-3 overflow-auto rounded-[20px] bg-white p-[22px] shadow-[0_20px_50px_rgba(43,33,20,.25)]">
+          <h2 className="font-display m-0 text-[22px]">Publish to members?</h2>
+          {nMoves > 0 && (
+            <ul className="m-0 flex list-none flex-col gap-0.5 p-0">
+              {changes.map((p) => (
+                <li key={p.tag} className="flex min-h-10 items-center gap-2 rounded-[10px] bg-page px-3 text-sm">
+                  <span className="min-w-0 flex-auto truncate font-semibold">{p.name}</span>
+                  <span className="whitespace-nowrap font-bold" style={{ color: CLAN[p.clan].deep }}>{placeLabel(p)}</span>
+                  <Arrow size={14} />
+                  <span className="whitespace-nowrap font-bold" style={{ color: CLAN[moves[p.tag].clan].deep }}>{placeLabel(moves[p.tag])}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+          <p className="m-0 text-sm text-ink-2">{live ? `${countOf(plans)} day ${countOf(plans) === 1 ? 'change' : 'changes'} against what is published.` : 'The first day plan for this CWL.'}</p>
+          {valveHit && (
+            <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-[10px] bg-[#FEE2E2] px-3 text-sm font-bold text-[#B91C1C]">
+              <input type="checkbox" checked={override} onChange={(e) => setOverride(e.target.checked)} className="size-4 accent-[#B91C1C]" />
+              Override the one-way valve
+            </label>
+          )}
+          {problems.length > 0 && (
+            <ul className="m-0 flex list-none flex-col gap-1 rounded-[10px] bg-[#FEF3C7] p-3 text-[13px] font-semibold text-[#92400E]">
+              {problems.map((x) => <li key={x}>{x}</li>)}
+            </ul>
+          )}
+          <div className="flex justify-end gap-2">
+            <button type="button" autoFocus onClick={() => setConfirming(false)} className="min-h-11 cursor-pointer rounded-full border border-[#D5C8AC] bg-white px-4 text-sm font-semibold text-ink-2 hover:bg-page">Cancel</button>
+            <button type="button" onClick={publish} disabled={busy || problems.length > 0 || (valveHit && !override)}
+              className="min-h-11 cursor-pointer rounded-full border-0 bg-action px-[18px] text-sm font-bold text-white hover:bg-action-deep disabled:opacity-60">Publish</button>
+          </div>
+        </section>
+      </div>
+    )}
     {/* Row links would leave the planner, so a preview keeps its rows in place. */}
     {preview && (
       <div onClickCapture={(e) => { if ((e.target as HTMLElement).closest('a')) e.preventDefault() }}>

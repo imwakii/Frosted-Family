@@ -28,7 +28,7 @@ const TABS = [
   { id: 'cwl', label: 'CWL', href: '#/cwl', icon: <path d="M8.5 20.5h7M12 15.5v5M7.5 4h9v6.5a4.5 4.5 0 0 1-9 0V4zM7.5 6.5H4.5c0 2 1 3.2 3 3.6M16.5 6.5h3c0 2-1 3.2-3 3.6" /> },
   { id: 'log', label: 'Log', href: '#/log', icon: <path d="M4 6h16M4 12h16M4 18h10" /> },
   { id: 'explore', label: 'Stats', href: '#/stats/players', icon: <path d="M5 20V10M12 20V4M19 20v-7" /> },
-  { id: 'plan', label: 'Plan', href: '#/plan/builder', icon: <path d="M7 4v16M17 4v16M3 8h8M13 16h8" /> },
+  { id: 'plan', label: 'Plan', href: '#/plan/days', icon: <path d="M7 4v16M17 4v16M3 8h8M13 16h8" /> },
 ] as const
 
 function Account({ me, onSignOut }: { me: Me; onSignOut: () => void }) {

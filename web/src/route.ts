@@ -53,7 +53,7 @@ function place(path: string, player: string | null): Omit<Route, 'clan' | 'rival
   if (parts[0] === 'explore') parts = parts[1] === 'war' || parts[1] === 'upgrades' ? ['stats', parts[1]] : ['stats', 'players', ...parts.slice(1, 2)]
   if ((parts[0] === 'plan' || parts[0] === 'leaders') && parts[1] === 'attacks') parts = ['war']  // moved 2 Nov 2026
   if (parts[0] === 'plan' || parts[0] === 'leaders') {
-    const sub = (LEADERS_SUBS as readonly string[]).includes(parts[1]) ? parts[1] : 'builder'
+    const sub = (LEADERS_SUBS as readonly string[]).includes(parts[1]) ? parts[1] : 'days'
     return { tab: 'plan', sub, kind: null, player, base: `#/plan/${sub}` }
   }
   if (parts[0] === 'stats' && parts[1] === 'clans') parts = ['stats', 'trends']  // renamed 2 Nov 2026
