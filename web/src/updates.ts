@@ -152,7 +152,6 @@ export const UPDATES: Update[] = [
       {
         title: 'Log tab',
         lines: [
-          'Folded each day\'s upgrades into a row.',
           'Added Most upgrades to Upgrades.',
           'Changed Log to open on recent days.',
         ],

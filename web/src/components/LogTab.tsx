@@ -9,14 +9,13 @@ import { norm, PhoneSearch, SearchBox } from './CwlTab'
 import { ClanFilter, Empty, useClanPick } from './ExploreTab'
 import { Bar } from './OverallBoard'
 import { chip, Eyebrow, POINT, RowChevron, Th, UnitIcon } from './ui'
-import { Chevron } from './WhatsNew'
 import { YouTag } from './You'
 
 // GET /api/log: what has happened in the family, newest day first. Each day opens with who came, went or changed role,
 // so a busy day of upgrades does not bury them; a player's upgrades that day share one row, a new town hall has its own.
 // A member's row points the way they went: towards the clan on the way in, away from it on the way out.
 // A new town hall is a milestone: a gold row at the top of its day, or an ordinary row in the Upgrades view.
-// The Upgrades view: the chart, who has made the most, then the feed. In All, a day's upgrades fold into one row under its member news.
+// The Upgrades view: the chart, who has made the most, then the feed.
 
 type View = 'all' | 'members' | 'upgrades'
 const DAYS_SHOWN = 2
@@ -296,7 +295,7 @@ function MostUpgrades({ board, clan, nq }: { board: UpgradeLeader[]; clan: ClanN
           ))}
         </ol>
       )}
-      {shown.length < ranked.length && <button type="button" onClick={() => setEveryone(true)} className="min-h-11 w-full cursor-pointer rounded-2xl border border-line bg-white text-[13px] font-bold text-action hover:bg-page">Show all {ranked.length}</button>}
+      {!nq && ranked.length > TOP && <button type="button" onClick={() => setEveryone((v) => !v)} className="min-h-11 w-full cursor-pointer rounded-2xl border border-line bg-white text-[13px] font-bold text-action hover:bg-page">{everyone ? 'Show less' : `Show all ${ranked.length}`}</button>}
     </div>
   )
 }
@@ -308,7 +307,6 @@ export default function LogTab({ roster, q, setQ, wide }: { roster: Roster; q: s
   const [kind, setKind] = useState<UpgradeCategory | 'all'>('all')
   const [open, setOpen] = useState<string | null>(null)
   const [allDays, setAllDays] = useState(false)
-  const [openDays, setOpenDays] = useState<string[]>([])
   useDrill((d) => !!data && d.unit === 'Town Hall', () => { setView('all'); setAllDays(true) })
   const nq = norm(q.trim())
   const here = useMemo(() => new Set(roster.players.map((p) => p.tag)), [roster])
@@ -381,14 +379,7 @@ export default function LogTab({ roster, q, setQ, wide }: { roster: Roster; q: s
                   {day.events.map((e) => <li key={`${e.kind}-${e.tag}-${e.at}`} className="min-w-0"><EventRow e={e} onRoster={here.has(e.tag)} /></li>)}
                 </ol>
               )}
-              {!!groups.length && view === 'all' && !nq && (
-                <button type="button" aria-expanded={openDays.includes(d)} onClick={() => setOpenDays((o) => (o.includes(d) ? o.filter((x) => x !== d) : [...o, d]))}
-                  className="flex min-h-11 w-full cursor-pointer items-center justify-between gap-2 rounded-2xl border border-line bg-white px-3.5 text-left text-sm font-semibold text-ink-2 hover:bg-page">
-                  {(() => { const n = groups.reduce((s, [, r]) => s + r.length, 0); return `${n} ${n === 1 ? 'upgrade' : 'upgrades'} by ${groups.length} ${groups.length === 1 ? 'player' : 'players'}` })()}
-                  <Chevron className={openDays.includes(d) ? 'rotate-90' : ''} />
-                </button>
-              )}
-              {!!groups.length && (view !== 'all' || !!nq || openDays.includes(d)) && (
+              {!!groups.length && (
                 <ol className="m-0 list-none divide-y divide-hair rounded-2xl border border-line bg-white py-1">
                   {groups.map(([key, rows]) => {
                     const id = `${d}-${key}`
