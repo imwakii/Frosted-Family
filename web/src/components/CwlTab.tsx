@@ -87,7 +87,7 @@ export function SearchBox({ q, setQ, tall, onEnter, autoFocus }: { q: string; se
         id="find" type="search" placeholder="Find name" value={q} autoComplete="off" spellCheck={false} autoFocus={autoFocus}
         onChange={(e) => setQ(e.target.value)}
         onKeyDown={(e) => { if (e.key === 'Enter') onEnter?.() }}
-        className={`${tall ? 'h-[52px]' : 'h-12'} w-full rounded-[14px] border border-line bg-white pl-[42px] pr-3.5 text-base text-ink placeholder:text-faint`}
+        className={`${tall ? 'h-[52px]' : 'h-[50px]'} w-full rounded-[14px] border border-line bg-white pl-[42px] pr-3.5 text-base text-ink placeholder:text-faint`}
       />
     </div>
   )
@@ -212,7 +212,7 @@ function YouLine({ roster, p, onClear }: { roster: Roster; p: Player; onClear: (
   const left = base ? base.allowed - base.used : 0
   const place = `${p.clan} · ${roster.clans[p.clan]?.inCwl ? SLOT_TEXT[p.slot] : 'Not in'}`
   return (
-    <div className="flex min-h-11 items-center gap-2 rounded-xl bg-white pl-3 pr-1" style={{ boxShadow: `inset 0 0 0 1.5px ${CLAN[p.clan].tint}` }}>
+    <div className="flex min-h-[50px] items-center gap-2 rounded-xl bg-white pl-3 pr-1" style={{ boxShadow: `inset 0 0 0 1.5px ${CLAN[p.clan].tint}` }}>
       <a href={href(p)} className="flex min-w-0 flex-auto items-center gap-2 no-underline">
         <span className="flex min-w-0 flex-auto flex-col text-[13px] font-bold leading-tight" style={{ color: CLAN[p.clan].deep }}>
           <span className="truncate text-ink">{p.name}</span>

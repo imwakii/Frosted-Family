@@ -142,7 +142,8 @@ export function Clock({ wide }: { wide: boolean }) {
   return (
     <button type="button" onClick={flip} aria-label={`${time} ${zone}. Switch to ${utc ? 'your time' : 'UTC'}`}
       className="h-9 flex-none cursor-pointer whitespace-nowrap rounded-full border border-line bg-white px-1.5 text-xs font-bold text-muted tabular-nums hover:bg-page md:px-3 md:text-[13px]">
-      {wide && <span className="font-semibold text-faint max-lg:hidden">{day} · </span>}{time}{(utc || wide) && ` ${zone}`}
+      {wide && <span className="font-semibold text-faint max-lg:hidden">{day} · </span>}{/* On a phone UTC sits under the time, which leaves the app's name its room. */}
+      {!wide && utc ? <span className="flex flex-col leading-none">{time}<span className="mt-px text-[9px]">UTC</span></span> : <>{time}{wide && ` ${zone}`}</>}
     </button>
   )
 }

@@ -94,6 +94,11 @@ export const playerHref = (tag: string) => {
 /** Link to a clan's card over the current view. */
 export const clanHref = (clan: ClanName) => `${parse().base}/c/${clan}`
 
+// Set when an upgrade card opens from a player's card, so it can offer the way back. A link or a Stats list leaves it off.
+let upgradeFromCard = false
+export const openedFromCard = () => upgradeFromCard
+export const markFromCard = (on: boolean) => { upgradeFromCard = on }
+
 /** Link to one player in one upgrade category, over the current view. */
 export const upgradeHref = (cat: Cat, tag: string, unit?: string | null) => `${parse().base}${upgradePath(cat, tag, unit)}`
 

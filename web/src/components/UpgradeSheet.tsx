@@ -1,6 +1,7 @@
+import { useEffect, useState } from 'react'
 import { CATS, type Cat, competitionRanks, isMaxed, progress, useMatrix } from '../explore'
 import { groupUnits } from '../equipment'
-import { playerHref } from '../route'
+import { markFromCard, openedFromCard, playerHref } from '../route'
 import { CLAN } from '../theme'
 import { CardSheet } from './ClanSheet'
 import { RowChevron, Star, Th, UnitIcon } from './ui'
@@ -12,6 +13,8 @@ export default function UpgradeSheet({ cat, tag, unit, wide, onClose }: {
   cat: Cat; tag: string; unit: string | null; wide: boolean; onClose: () => void
 }) {
   const { data, loading } = useMatrix(cat)
+  const [fromCard] = useState(openedFromCard)
+  useEffect(() => () => markFromCard(false), [])
   const label = CATS.find((c) => c.id === cat)?.label ?? ''
   if (loading) return null
   const p = data?.players.find((x) => x.tag === tag)
@@ -35,6 +38,12 @@ export default function UpgradeSheet({ cat, tag, unit, wide, onClose }: {
   ]
   return (
     <CardSheet label={`${p.name}, ${label}`} wide={wide} onClose={onClose} head={<>
+      {fromCard && (
+        <button type="button" aria-label={`Back to ${p.name}'s card`} onClick={() => window.history.back()}
+          className="-ml-1 flex size-11 flex-none cursor-pointer items-center justify-center rounded-full border-0 bg-[#F6EEDC] text-muted hover:bg-well">
+          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M15 6l-6 6 6 6" /></svg>
+        </button>
+      )}
       <Th th={p.th} />
       <div className="flex min-w-0 flex-auto flex-col">
         <span className="font-display truncate text-[22px] leading-tight text-ink"><YouTag tag={p.tag} />{p.name}</span>

@@ -105,7 +105,7 @@ export default function App() {
         </header>
       ) : (
         <header className="flex items-center justify-between gap-2 px-4 pb-2.5 pt-[max(16px,env(safe-area-inset-top))]">
-          <span className="font-display flex-none text-[clamp(16px,4.6vw,21px)] text-brand">Frosted Family</span>
+          <span className="font-display flex-none text-[clamp(20px,6vw,24px)] text-brand">Frosted Family</span>
           <div className="flex min-h-11 min-w-0 items-center justify-end">{corner}</div>
         </header>
       )}
