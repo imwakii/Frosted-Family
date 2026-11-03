@@ -69,8 +69,7 @@ def test_attack_left_goes_once_inside_the_window(conns):
     war(game)
     lineup(game)
     got = run(game, app)
-    assert [m["title"] for m in got] == ["Waki has an attack left"]
-    assert got[0]["body"] == "Fire v Rivals ends in 1 hour."
+    assert [m["title"] for m in got] == ["Waki: attack left, 1h"]
     assert run(game, app) == []
 
 
@@ -79,7 +78,7 @@ def test_no_attack_alert_when_used_too_early_stale_or_not_in_the_war(conns):
     phone(app)
     war(game, key="used")
     lineup(game, used=1, key="used")
-    war(game, key="early", ends_in=timedelta(hours=5))
+    war(game, key="early", ends_in=timedelta(minutes=90))
     lineup(game, key="early")
     war(game, key="stale", fresh=False)
     lineup(game, key="stale")
@@ -108,8 +107,7 @@ def test_day_alert_follows_the_published_plan(conns):
     app.execute("UPDATE day_plans SET body=?", (json.dumps({"Fire": {"3": [ME]}}),))
     app.commit()
     got = run(game, app)
-    assert [m["title"] for m in got] == ["Day 3: you're in"]
-    assert "starts in 6 hours" in got[0]["body"]
+    assert [m["title"] for m in got] == ["You play CWL day 3 in 6h"]
     assert run(game, app) == []
 
 
@@ -123,11 +121,11 @@ def test_someone_told_they_play_hears_when_the_plan_drops_them(conns):
     assert run(game, app) == []  # never told they play, so nothing to take back
     app.execute("UPDATE day_plans SET body=?", (json.dumps({"Fire": {"3": [ME]}}),))
     app.commit()
-    assert [m["title"] for m in run(game, app)] == ["Day 3: you're in"]
+    assert [m["title"] for m in run(game, app)] == ["You play CWL day 3 in 6h"]
     app.execute("UPDATE day_plans SET body=?", (json.dumps({"Fire": {"3": [OTHER]}}),))
     app.commit()
     got = run(game, app)
-    assert [m["title"] for m in got] == ["Day 3: you're out"] and "plan changed" in got[0]["body"]
+    assert [m["title"] for m in got] == ["You are out of CWL day 3"]
     assert run(game, app) == []
 
 
@@ -139,11 +137,27 @@ def test_war_started_is_off_unless_asked_and_only_when_recent(conns):
     assert run(game, app) == []
     app.execute("UPDATE push_subscriptions SET alerts=?", (json.dumps({"war": True}),))
     app.commit()
-    assert [m["title"] for m in run(game, app)] == ["Fire war started"]
+    assert [m["title"] for m in run(game, app)] == ["Fire war started v Rivals"]
     app.execute("DELETE FROM push_sent")
     app.commit()
     late = [m for m in run(game, app, now=NOW + timedelta(hours=1))]
     assert late == []
+
+
+def test_every_alert_is_one_line(conns):
+    game, app = conns
+    phone(app, tags=(ME,), war_on=True)
+    db.upsert_members(game, FIRE, [{"tag": ME, "name": "W" * 15}], "2026-11-04T15:00:00Z")
+    game.execute("INSERT INTO wars VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                 ("long", "long", "regular", None, None, "inWar", 15, 2, stamp(NOW), stamp(NOW - timedelta(minutes=5)), stamp(NOW + timedelta(hours=1)),
+                  "#ENEMY", "A Very Long Enemy Clan Name Indeed", 0, 0, 0, FIRE, "Fire", 0, 0, 0, NOW.strftime("%Y-%m-%dT%H:%M:%SZ")))
+    game.execute("INSERT INTO war_members VALUES (?,?,?,?,?,?,?,?)", ("long", ME, FIRE, "W" * 15, 18, 1, 0, 0))
+    game.commit()
+    got = []
+    notify.run(game, app, send=lambda s, m: got.append(m), now=NOW)
+    assert {m["key"].split("|")[0] for m in got} == {"hello", "attacks", "war"}
+    assert all(len(m["title"]) <= notify.ONE_LINE and "body" not in m for m in got)
+    assert any(m["title"].endswith("…") for m in got)
 
 
 def test_a_gone_phone_is_removed_and_a_failure_is_retried(conns):

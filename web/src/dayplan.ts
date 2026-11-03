@@ -89,12 +89,6 @@ export function onTrack(tag: string, plan: ClanDays, wars: Wars) {
 export const enemy = (war: DayWar | undefined, upcoming: number[]) =>
   war?.opponent_th.length ? war.opponent_th : upcoming
 
-/** How many of our slots sit below the enemy's, rank by rank. */
-export function slotsBelow(ths: number[], foe: number[]) {
-  const ours = [...ths].sort((a, b) => b - a)
-  return foe.filter((f, i) => (ours[i] ?? 0) < Math.round(f)).length
-}
-
 export function suggest(everyone: Player[], wars: Wars, upcoming: number[] = []): ClanDays {
   const pool = everyone.filter((p) => p.slot !== 'NEW')
   const missed = missedThisSeason(wars)

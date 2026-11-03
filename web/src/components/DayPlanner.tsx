@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { Me } from '../auth'
 import { checkPlan, type DayBody, type DayPlans, getDays, getProposals, HttpError, type LineupBody, type PlanMove, type Proposal, publishDays, publishPlan, saveProposal, useWar, useWide, withdrawProposal } from '../data'
-import { type ClanDays, DAYS, DRAFT_KEY, earned, enemy, locked, missedThisSeason, onTrack, onTrial, repair, slotsBelow, suggest, TARGET, TEAM, tier, type Wars, asPlanned } from '../dayplan'
+import { type ClanDays, DAYS, DRAFT_KEY, earned, enemy, locked, missedThisSeason, onTrack, onTrial, repair, suggest, TARGET, TEAM, tier, type Wars, asPlanned } from '../dayplan'
 import { CLAN, CLANS } from '../theme'
 import type { ClanName, Player, Roster, Slot } from '../types'
 import ClanCompare from './ClanCompare'
@@ -172,11 +172,6 @@ export default function DayPlanner({ roster: base, me, onPublished }: { roster: 
   const prep = DAYS.find((d) => w[d]?.state === 'preparation')
   const swapOut = prep ? w[prep].lineup.filter((t) => !plan[prep]?.includes(t)).map(nameOf) : []
   const swapIn = prep ? (plan[prep] ?? []).filter((t) => !w[prep].lineup.includes(t)).map(nameOf) : []
-  const thOf = (tag: string) => roster.players.find((p) => p.tag === tag)?.th ?? 0
-  const belowOn = (d: number) => {
-    const ths = enemy(w[d], server?.upcoming?.[clan] ?? [])
-    return ths.length && !locked(w[d]) ? slotsBelow((plan[d] ?? []).map(thOf), ths) : 0
-  }
   // Days already begun stay as planned, so the board can show where the game differed.
   const offer = (next: ClanDays, rebuilt: boolean) => {
     const kept = Object.fromEntries(DAYS.map((d) => [d, locked(w[d]) ? plans[clan][d] ?? [] : next[d]]))
@@ -362,7 +357,6 @@ export default function DayPlanner({ roster: base, me, onPublished }: { roster: 
         {anyLocked && <span className="flex items-center gap-1"><span style={LOCKED} className="flex h-3.5 items-center rounded-[3px] px-1"><Lock /></span>War started, locked</span>}
         {missed.size > 0 && <span className="flex items-center gap-1"><span className="size-2.5 rounded-full bg-[#DC2626]" />Missed</span>}
         {anyDiffers && <span className="flex items-center gap-1"><span className="size-2.5 rounded-full border-2 border-[#F59E0B] bg-[#FEF3C7]" />Not as planned</span>}
-        {DAYS.some((d) => belowOn(d) > 0) && <span className="flex items-center gap-1"><span className="rounded-full bg-[#FEF3C7] px-1 text-[11px] font-extrabold tabular-nums text-[#92400E]">−3</span>Under TH</span>}
         {rows.some((p) => tier(p, missed, w) !== null && !onTrial(p, w) && !onTrack(p.tag, plan, w)) && <span className="flex items-center gap-1"><span className="font-bold tabular-nums text-[#B45309]">5!</span>Under {TARGET}★</span>}
         {!!live && DAYS.some((d) => !locked(w[d]) && (live[clan][d] ?? []).join() !== (plan[d] ?? []).join()) && <span className="flex items-center gap-1"><span className="h-2.5 w-3.5 rounded-[3px] bg-moved" />Changed</span>}
       </div>
@@ -379,7 +373,6 @@ export default function DayPlanner({ roster: base, me, onPublished }: { roster: 
                 const ths = enemy(war, server?.upcoming?.[clan] ?? [])
                 const drawn = !!war?.opponent_th.length
                 const fixed = locked(war)
-                const below = belowOn(d)
                 const avg = ths.length ? ths.reduce((s, x) => s + x, 0) / ths.length : null
                 return (
                   <th key={d} title={drawn ? `${war?.opponent} · TH ${ths.join(' ')}` : ths.length ? `Expected: TH ${ths.map((x) => Math.round(x)).join(' ')}` : undefined}
@@ -389,7 +382,6 @@ export default function DayPlanner({ roster: base, me, onPublished }: { roster: 
                         {fixed && <Lock />}D{d}
                       </span>
                       {avg !== null && <span className={`text-[10px] font-semibold tabular-nums text-faint ${drawn ? '' : 'italic'}`}><span className="max-md:hidden">TH</span>{avg.toFixed(1)}</span>}
-                      {below > 0 && <span className="rounded-full bg-[#FEF3C7] px-1 text-[10px] font-extrabold tabular-nums text-[#92400E]">−{below}</span>}
                       {n !== TEAM && !fixed && <span className="rounded-full bg-[#FEE2E2] px-1.5 text-[10px] font-extrabold tabular-nums text-[#B91C1C]">{n}</span>}
                     </span>
                   </th>

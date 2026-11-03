@@ -8,11 +8,12 @@ import { useYou } from './You'
 // cannot get alerts yet, the steps take their place. Coming back from the phone's settings checks again.
 
 const CHOICES: { key: keyof AlertPrefs; label: string; line: string }[] = [
-  { key: 'attacks', label: 'Attack left', line: '2 hours to go, attack unused' },
+  { key: 'attacks', label: 'Attack left', line: '1 hour to go, attack unused' },
   { key: 'days', label: 'CWL days', line: "You're in the next CWL day" },
   { key: 'war', label: 'War started', line: "Your clan's war has begun" },
 ]
 const NONE: AlertPrefs = { attacks: false, days: false, war: false }
+const ONE_TAP: AlertPrefs = { attacks: true, days: true, war: false }
 
 function steps(state: AlertState): string[] | null {
   const dev = device()
@@ -91,6 +92,19 @@ export default function Alerts() {
   }
   const on = state === 'on'
   const shown = on ? prefs : NONE
+  const turnOnAll = () => {
+    const was = prefs
+    setLocal(ONE_TAP)
+    act(async () => {
+      try {
+        await setPrefs(ONE_TAP, yous)
+        setState(await turnOn(yous))
+      } catch (e) {
+        setLocal(was)
+        throw e
+      }
+    })
+  }
   const flip = (key: keyof AlertPrefs) => {
     const was = prefs
     const next = { ...shown, [key]: !shown[key] }
@@ -115,6 +129,10 @@ export default function Alerts() {
   return (
     <section aria-label="Alerts" className="flex flex-col gap-1.5">
       <Eyebrow>Alerts</Eyebrow>
+      {state === 'off' && (
+        <button type="button" disabled={busy} onClick={turnOnAll}
+          className="min-h-11 flex-none cursor-pointer rounded-xl border-0 bg-action text-sm font-bold text-white hover:bg-action-deep disabled:cursor-default disabled:opacity-60">Turn on alerts</button>
+      )}
       <ul className="m-0 flex list-none flex-col rounded-xl border border-line bg-white p-0">
         {CHOICES.map((c) => (
           <li key={c.key} className="border-b border-hair last:border-b-0">

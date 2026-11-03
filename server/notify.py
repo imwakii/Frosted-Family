@@ -1,12 +1,13 @@
 """Sends the alerts members asked for, once a minute (frosted-notify.timer). Apart from the collector, so a push failing
 can never stop war collection. Reads the collector's database and writes only app.db.
 
-    attacks   a member of a war has an attack left with two hours or less to go
+    attacks   a member of a war has an attack left with an hour or less to go
     days      the round in preparation, for a member the published day plan has on that day, and again if the plan then drops them
     war       a war has just started, for a clan one of the member's accounts is in. Off unless asked for.
     hello     once, when a phone signs up, so its owner knows alerts reach them
 
-Each goes once per phone, per war and per player. A push service saying the phone has gone removes it.
+Each goes once per phone, per war and per player. A push service saying the phone has gone removes it. An alert is one line:
+a title with no body, cut to what fits across a phone.
 
     python -m server.notify
 """
@@ -25,10 +26,11 @@ from server import db, push
 
 DEFAULT_DB = "/opt/bots/frosted/data/frosted.db"
 SITE = "https://frosted-family.vercel.app"
-ATTACK_WINDOW = timedelta(hours=2)
+ATTACK_WINDOW = timedelta(hours=1)
 STARTED_WINDOW = timedelta(minutes=30)
 STALE = timedelta(minutes=15)  # older than this, "has an attack left" may no longer be true
 KEEP_SENT = timedelta(days=60)
+ONE_LINE = 36  # characters of bold title across an iPhone
 OURS = set(CLAN_TAGS.values())
 
 
@@ -46,10 +48,11 @@ def when(s: str | None) -> datetime | None:
 
 def span(d: timedelta) -> str:
     mins = max(1, round(d.total_seconds() / 60))
-    if mins < 60:
-        return f"{mins} minutes" if mins > 1 else "1 minute"
-    hours = round(mins / 60)
-    return f"{hours} hours" if hours > 1 else "1 hour"
+    return f"{mins}m" if mins < 60 else f"{round(mins / 60)}h"
+
+
+def one_line(s: str) -> str:
+    return s if len(s) <= ONE_LINE else s[:ONE_LINE - 1].rstrip() + "…"
 
 
 def sides(w) -> tuple[str | None, str | None]:
@@ -71,7 +74,7 @@ def published_days(app, season: str | None) -> dict:
 
 def alerts_for(sub: dict, wars: list, members: dict, game, app, now: datetime, have: set[str] = frozenset()) -> list[dict]:
     """Every alert this phone should have now, whether or not it has gone; the caller skips what has."""
-    out = [{"key": "hello", "title": "Alerts are on", "body": "Frosted will tell you here.", "url": "#/war"}]
+    out = [{"key": "hello", "title": "Alerts are on", "url": "#/war"}]
     tags, want = sub["tags"], sub["alerts"]
     for w in wars:
         clan, rival = sides(w)
@@ -85,22 +88,19 @@ def alerts_for(sub: dict, wars: list, members: dict, game, app, now: datetime, h
                 m = game.execute("SELECT name, attacks_used FROM war_members WHERE war_key=? AND player_tag=?", (w["war_key"], tag)).fetchone()
                 if m and m["attacks_used"] < allowed:
                     left = allowed - m["attacks_used"]
-                    out.append({"key": f"attacks|{w['war_key']}|{tag}", "title": f"{m['name']} has {'an attack' if left == 1 else f'{left} attacks'} left",
-                                "body": f"{clan} v {rival} ends in {span(end - now)}.", "url": "#/war"})
+                    out.append({"key": f"attacks|{w['war_key']}|{tag}", "title": one_line(f"{m['name']}: {'attack' if left == 1 else f'{left} attacks'} left, {span(end - now)}"), "url": "#/war"})
         if want.get("days") and w["kind"] == "cwl" and w["state"] == "preparation" and start and start > now:
             day = published_days(app, w["season"]).get(clan, {}).get(str(w["round"]), [])
             for tag in tags:
                 name = members.get(tag, {}).get("name")
                 told = f"days|{w['war_key']}|{tag}"
                 if tag in day:
-                    out.append({"key": told, "title": f"Day {w['round']}: {name} is in" if name else f"Day {w['round']}: you're in",
-                                "body": f"{clan} v {rival} starts in {span(start - now)}.", "url": "#/cwl"})
+                    out.append({"key": told, "title": one_line(f"{name or 'You'} {'plays' if name else 'play'} CWL day {w['round']} in {span(start - now)}"), "url": "#/cwl"})
                 elif day and told in have:
-                    out.append({"key": f"daysout|{w['war_key']}|{tag}", "title": f"Day {w['round']}: {name} is out" if name else f"Day {w['round']}: you're out",
-                                "body": f"The plan changed for {clan} v {rival}.", "url": "#/cwl"})
+                    out.append({"key": f"daysout|{w['war_key']}|{tag}", "title": one_line(f"{name + ' is' if name else 'You are'} out of CWL day {w['round']}"), "url": "#/cwl"})
         if want.get("war") and w["state"] == "inWar" and start and now - STARTED_WINDOW <= start <= now:
             if any(TAG_TO_CLAN.get(members.get(t, {}).get("clan_tag")) == clan for t in tags):
-                out.append({"key": f"war|{w['war_key']}", "title": f"{clan} war started", "body": f"{clan} v {rival} is on.", "url": "#/war"})
+                out.append({"key": f"war|{w['war_key']}", "title": one_line(f"{clan} war started v {rival}"), "url": "#/war"})
     return out
 
 
@@ -110,7 +110,7 @@ def web_push(sub: dict, message: dict) -> None:
     push.public_key()  # makes the signing key if the API has not yet
     try:
         webpush(subscription_info={"endpoint": sub["endpoint"], "keys": {"p256dh": sub["p256dh"], "auth": sub["auth"]}},
-                data=json.dumps({k: message[k] for k in ("title", "body", "url")}), ttl=3600, timeout=15,
+                data=json.dumps({k: message[k] for k in ("title", "url")}), ttl=3600, timeout=15,
                 vapid_private_key=str(push.key_path()), vapid_claims={"sub": SITE})
     except WebPushException as e:
         if e.response is not None and e.response.status_code in (404, 410):
