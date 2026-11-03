@@ -106,7 +106,7 @@ export const UPDATES: Update[] = [
   },
   {
     // Further ids for the same day: the batch grew after the first, so the card opens once more.
-    id: '2026-11-04-9',
+    id: '2026-11-04-10',
     date: '4 Nov 2026',
     highlights: [
       { title: 'Standings', line: "See who's winning your CWL group.", href: '#/cwl/group', icon: 'league' },
@@ -114,6 +114,13 @@ export const UPDATES: Update[] = [
       { title: 'Who plays when', line: "See every player's days on Lineups.", href: '#/cwl', icon: 'hero' },
     ],
     groups: [
+      {
+        title: 'Calendar tab (new)',
+        lines: [
+          'Added a clan and game events calendar.',
+          'Added planned CWL and friendly dates.',
+        ],
+      },
       {
         title: 'CWL tab',
         lines: [
