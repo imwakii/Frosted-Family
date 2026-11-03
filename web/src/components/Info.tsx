@@ -64,7 +64,7 @@ const TOPICS: Record<string, { title: string; formulas?: string[]; lines?: strin
   },
 }
 
-export default function Info({ topic }: { topic: keyof typeof TOPICS }) {
+export default function Info({ topic, extra }: { topic: keyof typeof TOPICS; extra?: string | null }) {
   const [open, setOpen] = useState(false)
   const wide = useWide()
   const t = TOPICS[topic]
@@ -86,6 +86,7 @@ export default function Info({ topic }: { topic: keyof typeof TOPICS }) {
           <section role="dialog" aria-modal="true" aria-label={t.title}
             className="ff-sheet flex max-h-[80dvh] w-full max-w-[440px] flex-col gap-3 overflow-auto rounded-[20px] bg-white p-5 shadow-[0_20px_50px_rgba(43,33,20,.25)]">
             <h2 className="font-display m-0 text-[22px] leading-tight text-brand">{t.title}</h2>
+            {extra && <p className="m-0 text-sm font-bold text-ink">{extra}</p>}
             {t.formulas && (
               <div className="flex flex-col gap-1.5 rounded-xl bg-[#F6EEDC] p-3">
                 {t.formulas.map((f) => <span key={f} className="text-[13px] font-bold leading-[1.35] tabular-nums text-ink">{f}</span>)}

@@ -76,7 +76,7 @@ function Section({ title, note, children }: { title: string; note?: string | nul
 const Holding = ({ height }: { height: number }) => <div aria-hidden="true" className="animate-pulse rounded-xl bg-[#F1E8D3]" style={{ height }} />
 
 // The card's one tile. One with somewhere to go opens that ranking.
-function Stat({ label, value, sub, onOpen }: { label: string; value: ReactNode; sub?: string; onOpen?: () => void }) {
+function Stat({ label, value, sub, onOpen, small }: { label: string; value: ReactNode; sub?: string; onOpen?: () => void; small?: boolean }) {
   const body = (
     <>
       <span className="truncate text-[11px] text-faint">{label}</span>
@@ -86,6 +86,7 @@ function Stat({ label, value, sub, onOpen }: { label: string; value: ReactNode; 
   )
   const box = 'flex min-w-0 flex-col gap-0.5 rounded-xl border border-line px-2.5 py-2'
   if (!onOpen) return <div className={box}>{body}</div>
+  if (small) return <button type="button" onClick={onOpen} className={`${box} cursor-pointer bg-transparent text-left text-ink hover:bg-hover`}>{body}</button>
   return (
     <button type="button" onClick={onOpen} className={`${box} relative cursor-pointer bg-transparent pr-5 text-left text-ink hover:bg-hover`}>
       {body}
@@ -147,7 +148,7 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
   const [extra, setExtra] = useState<Partial<Player> | null>(() => playerNow(tag)?.extra ?? null)
   const [card, setCard] = useState<PlayerCard | null>(() => playerNow(tag)?.card ?? null)
   const [cardLoading, setCardLoading] = useState(() => !playerNow(tag))
-  const { yous, addYou, removeYou } = useYou()
+  const { yous, addYou } = useYou()
   const isMine = yous.includes(tag)
   const accounts = roster.players.filter((x) => yous.includes(x.tag))
   const close = useRef<HTMLButtonElement>(null)
@@ -177,7 +178,8 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
   const reached = useOnce(eight && eight.stars >= 8 ? `ff-eight-${eight.season}-${tag}` : null)
   const freshBadges = useNewIds(isMine && card?.badges ? card.badges.map((b) => `${b.id}-${b.tier}`) : null, isMine ? `ff-seen-badges-${tag}` : null)
   const inCwl = p ? !!roster.clans[p.clan]?.inCwl : false
-  const where = p ? `${p.clan} · ${p.slot === 'NEW' ? 'new' : inCwl ? { CORE: 'core', SUB: 'sub', OUT: 'not in' }[p.slot] : 'not in CWL'}` : ''
+  // A place in this month's CWL, so it sits with the CWL days under that month's name; the header says only where they are now.
+  const place = p ? (p.slot === 'NEW' ? 'New' : inCwl ? { CORE: 'Core', SUB: 'Sub', OUT: 'Not in' }[p.slot] : 'Not in CWL') : ''
   const c = p && CLAN[p.clan]
   const pct = (v: number | null) => (v === null ? '—' : `${v.toFixed(1)}%`)
   const cycle = roster.cycles[roster.cycles.length - 1]
@@ -199,21 +201,25 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
         <div className="flex items-center gap-3">
           {p && <Th th={p.th} size="lg" />}
           <div className="flex min-w-0 flex-auto flex-col">
-            {/* A name too long to share the line pushes the tag below it, rather than either being cut. */}
-            <span className="flex flex-wrap items-baseline gap-x-2">
-              <span className="font-display min-w-0 max-w-full truncate text-[26px] leading-tight">{p?.name ?? 'Not on the roster'}</span>
-              <span className="flex-none text-xs tabular-nums text-faint">{tag}</span>
-            </span>
-            <span className="flex min-w-0 items-center gap-2 text-[13px] text-faint">
-              <span className="min-w-0 truncate">{where}</span>
-              {p && (
-                <button type="button" onClick={() => (isMine ? removeYou(tag) : addYou(tag))}
-                  className={`min-h-8 flex-none cursor-pointer whitespace-nowrap rounded-full border-0 px-2.5 text-xs font-bold ${isMine ? 'bg-ink text-white' : 'bg-[#EFE6D2] text-ink-2 hover:bg-well'}`}>
-                  {isMine ? 'You · undo' : yous.length ? 'Also me' : 'This is me'}
+            <span className="flex min-w-0 items-center gap-2">
+              <span className="font-display min-w-0 truncate text-[26px] leading-tight">{p?.name ?? 'Not on the roster'}</span>
+              {p && isMine && <span className="flex-none rounded-md bg-ink px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-[0.05em] text-white">You</span>}
+              {p && !isMine && (
+                <button type="button" onClick={() => addYou(tag)}
+                  className="min-h-7 flex-none cursor-pointer whitespace-nowrap rounded-full border-0 bg-[#EFE6D2] px-2.5 text-xs font-bold text-ink-2 hover:bg-well">
+                  {yous.length ? 'Also me' : 'This is me'}
                 </button>
               )}
             </span>
+            <span className="truncate text-[13px] text-faint">{p ? `${p.inClan ?? p.clan} · ` : ''}{tag}</span>
           </div>
+          {/* The picker lists your own accounts first, so comparing with yourself stays one tap and anyone else is a search away. */}
+          {p && (
+            <a href={compareHref(tag)} onClick={() => markFromCard(true)} aria-label="Compare with another player" title="Compare with another player"
+              className="flex size-11 flex-none items-center justify-center rounded-full bg-[#F6EEDC] text-muted no-underline hover:bg-well">
+              <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M7 4L3 8l4 4M3 8h14M17 12l4 4-4 4M21 16H7" /></svg>
+            </a>
+          )}
           <button ref={close} type="button" aria-label="Close" onClick={onClose}
             className="flex size-11 flex-none cursor-pointer items-center justify-center rounded-full border-0 bg-[#F6EEDC] text-muted hover:bg-well">
             <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
@@ -241,15 +247,12 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
             <div className="flex flex-col gap-3 rounded-2xl p-4" style={{ background: c.tint }}>
               <div className="flex items-end justify-between gap-3">
                 <div className="flex flex-col">
-                  <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.06em]" style={{ color: c.label }}>Score{cycle ? ` · ${cycleShort(cycle)}` : ''}<Info topic="score" /></span>
+                  <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.06em]" style={{ color: c.label }}>Score{cycle ? ` · ${cycleShort(cycle)}` : ''}<Info topic="score" extra={p.attackScore != null && p.defenceScore != null ? `Attack ${p.attackScore.toFixed(1)} + Defence ${p.defenceScore.toFixed(1)}` : null} /></span>
                   <span className="font-display text-5xl leading-none tabular-nums" style={{ color: c.deep }}>{fmtScore(score)}</span>
                 </div>
                 <div className="flex flex-col items-end gap-1">
                   <StatusPill status={p.status} className="!px-2.5 !py-[3px] !text-xs !font-bold" />
                   {p.rank && <span className="text-[13px] font-semibold text-muted">#{p.rank} in the family</span>}
-                  {p.attackScore != null && p.defenceScore != null && (
-                    <span className="text-xs font-semibold tabular-nums text-muted">Attack {p.attackScore.toFixed(1)} + Defence {p.defenceScore.toFixed(1)}</span>
-                  )}
                 </div>
               </div>
               {eight && (
@@ -265,7 +268,7 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
                 <div className="flex flex-col gap-2 border-t pt-2.5" style={{ borderColor: 'rgba(43,33,20,.08)' }}>
                   {p.days && (
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-[13px] font-semibold text-muted">CWL days</span>
+                      <span className="text-[13px] font-semibold text-muted">{cycle ? `${cycleShort(cycle)} CWL` : 'CWL'} · {place}</span>
                       <PlayDays days={p.days} clan={p.clan} size={22} />
                     </div>
                   )}
@@ -286,6 +289,7 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
               </div>
             ) : (
             <div className="ff-fade flex flex-none flex-col gap-4">
+            <Trend p={p} cycles={roster.cycles} />
             <StarBurst show={reached} />
             {card?.badges?.length ? <Badges badges={card.badges} fresh={freshBadges} /> : null}
             {isMine && card?.next_badge && (
@@ -298,11 +302,46 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
                 <span className="text-[13px] text-muted">{card.next_badge.text}</span>
               </div>
             )}
-            {/* The picker lists your own accounts first, so comparing with yourself stays one tap and anyone else is a search away. */}
-            <a href={compareHref(tag)} onClick={() => markFromCard(true)}
-              className="flex min-h-11 flex-none items-center justify-center rounded-xl bg-[#F6EEDC] text-sm font-bold text-ink no-underline hover:bg-well">
-              Compare with another player
-            </a>
+            {card && card.heroes.length > 0 && (
+              <Section title="Heroes and equipment">
+                <ul className={LIST}>
+                  {card.heroes.map((h, i) => (
+                    <li key={h.name} className={`flex items-center gap-2 px-3 py-1.5 ${i ? 'border-t border-hair' : ''}`}>
+                      <button type="button" title={h.name} aria-label={`${h.name}, level ${h.level}: see the ranking`} onClick={() => toUnit('heroes', h.name)} className="-ml-1 flex flex-none cursor-pointer items-center gap-1.5 rounded-lg border-0 bg-transparent p-1 hover:bg-hover">
+                        <UnitIcon name={h.name} size={32} />
+                        <span className={`w-[52px] text-left text-xs font-bold tabular-nums ${h.max && h.level >= h.max ? 'text-gold' : 'text-ink-2'}`}>{h.level}{h.max ? <span className="font-semibold text-faint">/{h.max}</span> : null}</span>
+                      </button>
+                      <span className="ml-auto flex items-center gap-2.5">
+                        {h.gear?.map((g) => (
+                          <button type="button" key={g.name} title={g.name} aria-label={`${g.name}, level ${g.level}: see the ranking`} onClick={() => toUnit('equipment', g.name)} className="flex w-[52px] cursor-pointer items-center gap-1 rounded-lg border-0 bg-transparent p-0.5 hover:bg-hover">
+                            <UnitIcon name={g.name} size={28} />
+                            <span className={`text-[11px] font-bold tabular-nums ${g.max && g.level >= g.max ? 'text-gold' : 'text-muted'}`}>{g.level}</span>
+                          </button>
+                        ))}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </Section>
+            )}
+            {card && card.upgrades.length > 0 && (
+              <Section title="Latest upgrades">
+                <ul className={LIST}>
+                  {card.upgrades.slice(0, 4).map((u, i) => (
+                    <li key={`${u.unit}-${u.to}`} className={i ? 'border-t border-hair' : ''}>
+                      <button type="button" onClick={() => { markFromCard(true); go.to(historyHref(tag, 30)) }}
+                        className="flex min-h-10 w-full cursor-pointer items-center gap-2 border-0 bg-transparent px-3 py-1.5 text-left text-[13px] hover:bg-hover">
+                        <UnitIcon name={u.unit} size={26} />
+                        <span className="min-w-0 flex-auto truncate font-semibold text-ink">{u.unit}</span>
+                        <span className="flex-none text-xs font-bold tabular-nums text-ink-2">{u.from} → {u.to}</span>
+                        <span className="w-14 flex-none text-right text-[11px] text-faint">{ago(u.at)}</span>
+                        <RowChevron />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </Section>
+            )}
             {card && (
               <Section title="All upgrades">
                 <ul className="m-0 grid list-none grid-cols-3 gap-1.5 p-0">
@@ -334,29 +373,6 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
                 </div>
               </Section>
             )}
-            <Trend p={p} cycles={roster.cycles} />
-            {card && card.heroes.length > 0 && (
-              <Section title="Heroes and equipment">
-                <ul className={LIST}>
-                  {card.heroes.map((h, i) => (
-                    <li key={h.name} className={`flex items-center gap-2 px-3 py-1.5 ${i ? 'border-t border-hair' : ''}`}>
-                      <button type="button" title={h.name} aria-label={`${h.name}, level ${h.level}: see the ranking`} onClick={() => toUnit('heroes', h.name)} className="-ml-1 flex flex-none cursor-pointer items-center gap-1.5 rounded-lg border-0 bg-transparent p-1 hover:bg-hover">
-                        <UnitIcon name={h.name} size={32} />
-                        <span className={`w-[52px] text-left text-xs font-bold tabular-nums ${h.max && h.level >= h.max ? 'text-gold' : 'text-ink-2'}`}>{h.level}{h.max ? <span className="font-semibold text-faint">/{h.max}</span> : null}</span>
-                      </button>
-                      <span className="ml-auto flex items-center gap-2.5">
-                        {h.gear?.map((g) => (
-                          <button type="button" key={g.name} title={g.name} aria-label={`${g.name}, level ${g.level}: see the ranking`} onClick={() => toUnit('equipment', g.name)} className="flex w-[52px] cursor-pointer items-center gap-1 rounded-lg border-0 bg-transparent p-0.5 hover:bg-hover">
-                            <UnitIcon name={g.name} size={28} />
-                            <span className={`text-[11px] font-bold tabular-nums ${g.max && g.level >= g.max ? 'text-gold' : 'text-muted'}`}>{g.level}</span>
-                          </button>
-                        ))}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </Section>
-            )}
             {card && card.attacks.length > 0 && (
               <Section title="Latest attacks">
                 <ul className={LIST}>
@@ -374,31 +390,13 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
                 </ul>
               </Section>
             )}
-            {card && card.upgrades.length > 0 && (
-              <Section title="Latest upgrades">
-                <ul className={LIST}>
-                  {card.upgrades.slice(0, 4).map((u, i) => (
-                    <li key={`${u.unit}-${u.to}`} className={i ? 'border-t border-hair' : ''}>
-                      <button type="button" onClick={() => { markFromCard(true); go.to(historyHref(tag, 30)) }}
-                        className="flex min-h-10 w-full cursor-pointer items-center gap-2 border-0 bg-transparent px-3 py-1.5 text-left text-[13px] hover:bg-hover">
-                        <UnitIcon name={u.unit} size={26} />
-                        <span className="min-w-0 flex-auto truncate font-semibold text-ink">{u.unit}</span>
-                        <span className="flex-none text-xs font-bold tabular-nums text-ink-2">{u.from} → {u.to}</span>
-                        <span className="w-14 flex-none text-right text-[11px] text-faint">{ago(u.at)}</span>
-                        <RowChevron />
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </Section>
-            )}
             {card && (
               <Section title="Totals">
-                <div className="grid grid-cols-2 gap-2">
-                  <Stat label="Donated" value={num(card.donations)} sub="this season" onOpen={toCol('donations', 'donated')} />
-                  <Stat label="Received" value={num(card.donations_received)} sub="this season" onOpen={toCol('donations', 'received')} />
-                  <Stat label="War stars" value={num(card.war_stars)} sub="all time" onOpen={toCol('war', 'stars')} />
-                  <Stat label="Capital" value={num(card.capital)} sub="all time" onOpen={toCol('capital', 'contributed')} />
+                <div className="grid grid-cols-4 gap-1.5">
+                  <Stat small label="Donated" value={num(card.donations)} onOpen={toCol('donations', 'donated')} />
+                  <Stat small label="Received" value={num(card.donations_received)} onOpen={toCol('donations', 'received')} />
+                  <Stat small label="War stars" value={num(card.war_stars)} onOpen={toCol('war', 'stars')} />
+                  <Stat small label="Capital" value={num(card.capital)} onOpen={toCol('capital', 'contributed')} />
                 </div>
               </Section>
             )}
