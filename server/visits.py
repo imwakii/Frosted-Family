@@ -17,6 +17,7 @@ from server.auth import Leader, require_leader
 MAX_A_DAY = 5000
 DAYS_SHOWN = 30
 NOT_RECORDED = "Not recorded"
+UNKNOWN = "Unknown"  # a browser or bot that says UTC says nothing about where it is
 ASIA = {
     "South Asia": "Kolkata Calcutta Karachi Dhaka Colombo Kathmandu Katmandu Thimphu Kabul",
     "South East Asia": "Singapore Jakarta Manila Bangkok Kuala_Lumpur Kuching Ho_Chi_Minh Saigon Hanoi Yangon Rangoon Phnom_Penh Vientiane Brunei Makassar Jayapura Pontianak Dili",
@@ -25,7 +26,7 @@ ASIA = {
 }
 CITY_REGION = {city: region for region, cities in ASIA.items() for city in cities.split()}
 ELSEWHERE = {"Europe": "Europe", "America": "Americas", "Africa": "Africa", "Australia": "Oceania", "Pacific": "Oceania"}
-ORDER = [*ASIA, "Europe", "Americas", "Africa", "Oceania", "Other Asia", "Elsewhere", NOT_RECORDED]
+ORDER = [*ASIA, "Europe", "Americas", "Africa", "Oceania", "Other Asia", "Elsewhere", UNKNOWN, NOT_RECORDED]
 
 router = APIRouter(prefix="/visits")
 
@@ -39,6 +40,8 @@ def region(tz: str | None) -> str:
     if not tz:
         return NOT_RECORDED
     area, _, city = tz.partition("/")
+    if area in ("UTC", "GMT", "Etc"):
+        return UNKNOWN
     if area == "Asia":
         return CITY_REGION.get(city, "Other Asia")
     return ELSEWHERE.get(area, "Elsewhere")

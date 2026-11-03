@@ -35,7 +35,8 @@ def test_a_time_zone_is_read_as_a_region():
     assert visits.region("Europe/Paris") == "Europe"
     assert visits.region("America/New_York") == "Americas"
     assert visits.region("Pacific/Auckland") == "Oceania"
-    assert visits.region("Etc/UTC") == "Elsewhere"
+    assert visits.region("Atlantic/Reykjavik") == "Elsewhere"
+    assert visits.region("UTC") == visits.region("Etc/UTC") == visits.UNKNOWN
     assert visits.region(None) == visits.NOT_RECORDED
 
 
