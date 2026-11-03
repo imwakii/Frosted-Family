@@ -15,7 +15,7 @@ const MONTHS_BACK = 1, MONTHS_ON = 3
 // Clan colour is for clan events only. Everything else has its own quiet colour.
 const LOOK = {
   clan_games: { bg: '#D6E6E4', fg: '#1F5A5F', bar: '#2F7F86', label: 'Clan Games' },
-  raid: { bg: '#E3D8BF', fg: '#463A29', bar: '#A3957C', label: 'Raid Weekend' },
+  raid: { bg: '#E3D8BF', fg: '#463A29', bar: '#C4B69A', label: 'Raid Weekend' },
   game: { bg: '#F7EBC4', fg: '#6B4F0B', bar: '#C4901A', label: 'Event' },
   cosmetic: { bg: '#FFFBF1', fg: '#5E5240', bar: '#D4BC85', label: 'Cosmetic' },
 }
@@ -107,11 +107,13 @@ function Week({ week, events, utc, compact, today, pick, onPick }: {
   week: (string | null)[]; events: CalEvent[]; utc: boolean; compact: boolean; today: string; pick: string; onPick: (d: string) => void
 }) {
   const lanes = compact ? 4 : 5
-  const { bands, hidden } = useMemo(() => layWeek(week, events, utc, lanes), [week, events, utc, lanes])
+  const { bands, hidden } = useMemo(() => layWeek(week, events.filter((e) => e.kind !== 'raid'), utc, lanes), [week, events, utc, lanes])
+  // Raid Weekend comes every week, so it is a thin line of its own above the bars.
+  const raids = useMemo(() => layWeek(week, events.filter((e) => e.kind === 'raid'), utc, 1).bands, [week, events, utc])
   const used = bands.length ? Math.max(...bands.map((b) => b.lane)) + 1 : 0
   const barH = compact ? 4 : 20, gap = compact ? 2 : 3, top = compact ? 28 : 32
   return (
-    <div className="relative border-t border-hair" style={{ minHeight: compact ? 56 : 112, paddingBottom: 6 }}>
+    <div className="relative border-t border-hair" style={{ minHeight: compact ? 56 : 92, paddingBottom: 6 }}>
       <div className="absolute inset-0 grid grid-cols-7">
         {week.map((d, i) => d ? (
           <button key={d} type="button" aria-pressed={d === pick} aria-label={fmtDay(d)} onClick={() => onPick(d)}
@@ -121,16 +123,19 @@ function Week({ week, events, utc, compact, today, pick, onPick }: {
           </button>
         ) : <span key={i} className={`bg-page/50 ${i ? 'border-l border-hair' : ''}`} />)}
       </div>
-      <div aria-hidden="true" className="pointer-events-none relative grid grid-cols-7" style={{ paddingTop: top, rowGap: gap, gridTemplateRows: `repeat(${used}, ${barH}px)` }}>
+      <div aria-hidden="true" className="pointer-events-none relative grid grid-cols-7" style={{ paddingTop: top, rowGap: gap, gridTemplateRows: `3px repeat(${used}, ${barH}px)` }}>
+        {raids.map(({ e, col, len, opensBefore, runsOn }) => (
+          <span key={e.id} style={{ gridColumn: `${col + 1} / span ${len}`, gridRow: 1, background: LOOK.raid.bar, marginLeft: opensBefore ? 0 : 4, marginRight: runsOn ? 0 : 4 }} />
+        ))}
         {bands.map(({ e, col, len, lane, opensBefore, runsOn }) => {
           const l = look(e)
           const radius = `${opensBefore ? 0 : 6}px ${runsOn ? 0 : 6}px ${runsOn ? 0 : 6}px ${opensBefore ? 0 : 6}px`
           const inset = { marginLeft: opensBefore ? 0 : compact ? 2 : 4, marginRight: runsOn ? 0 : compact ? 2 : 4 }
           return compact
-            ? <span key={e.id} style={{ gridColumn: `${col + 1} / span ${len}`, gridRow: lane + 1, background: e.expected ? 'transparent' : l.bar, borderTop: e.expected ? `2px dashed ${l.bar}` : undefined, borderRadius: radius, ...inset }} />
+            ? <span key={e.id} style={{ gridColumn: `${col + 1} / span ${len}`, gridRow: lane + 2, background: e.expected ? 'transparent' : l.bar, borderTop: e.expected ? `2px dashed ${l.bar}` : undefined, borderRadius: radius, ...inset }} />
             : (
               <span key={e.id} className="flex min-w-0 items-center overflow-hidden whitespace-nowrap px-1.5 text-[11px] font-bold leading-none"
-                style={{ gridColumn: `${col + 1} / span ${len}`, gridRow: lane + 1, background: l.bg, color: l.fg, outline: l.outline, outlineOffset: -1.5, borderRadius: radius, ...inset }}>
+                style={{ gridColumn: `${col + 1} / span ${len}`, gridRow: lane + 2, background: l.bg, color: l.fg, outline: l.outline, outlineOffset: -1.5, borderRadius: radius, ...inset }}>
                 <bdi className="truncate">{e.title}</bdi>
               </span>
             )
@@ -155,7 +160,8 @@ export default function CalendarTab({ wide }: { wide: boolean }) {
   const weeks = useMemo(() => weeksOf(month), [month])
   const events = useMemo(() => (data?.events ?? []).filter((e) => clan === 'All' || !e.clan || e.clan === clan), [data, clan])
   const season = events.filter((e) => e.kind === 'season')
-  const onGrid = useMemo(() => events.filter((e) => e.kind !== 'season'), [events])
+  // Cosmetics stay in the day's list only: nobody plans around a new skin.
+  const onGrid = useMemo(() => events.filter((e) => e.kind !== 'season' && e.kind !== 'cosmetic'), [events])
   const earliest = shiftMonth(thisMonth, -MONTHS_BACK), latest = shiftMonth(thisMonth, MONTHS_ON)
 
   const arrow = (by: number, off: boolean, d: string) => (
@@ -204,7 +210,7 @@ export default function CalendarTab({ wide }: { wide: boolean }) {
               <span className="flex flex-none items-center gap-1.5">
                 {(clan === 'All' ? (['Fire', 'Cake', 'Flakes'] as const) : [clan]).map((c) => <span key={c} className="h-2 w-3 rounded-sm" style={{ background: CLAN[c].accent }} />)}Wars
               </span>
-              {Object.values(LOOK).map((k) => <span key={k.label} className="flex flex-none items-center gap-1.5"><span className="h-2 w-3 rounded-sm" style={{ background: k.bar }} />{k.label}</span>)}
+              {[LOOK.clan_games, LOOK.raid, LOOK.game].map((k) => <span key={k.label} className="flex flex-none items-center gap-1.5"><span className="h-2 w-3 rounded-sm" style={{ background: k.bar }} />{k.label}</span>)}
               <span className="flex flex-none items-center gap-1.5"><span className="h-0 w-3 border-t-2 border-dashed border-muted" />Planned</span>
             </div>
           </div>
