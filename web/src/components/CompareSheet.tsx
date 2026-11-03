@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useClans } from '../clash'
 import { loadPlayerAll, type PlayerCard } from '../data'
 import { CATS, isMaxed, type Matrix, progress, useMatrix } from '../explore'
 import { compareHref, go, markFromCard, openedFromCard } from '../route'
 import { CLAN, fmtScore } from '../theme'
 import type { Player, Roster } from '../types'
 import { CardSheet } from './ClanSheet'
-import { Eyebrow, SearchIcon, Th, UnitIcon } from './ui'
+import { ClanBadge, Eyebrow, SearchIcon, Th, UnitIcon } from './ui'
 import { useYou } from './You'
 
 // Two members side by side, from either's player card: who leads where, on the same figures the cards and Stats show.
@@ -95,6 +96,7 @@ export default function CompareSheet({ roster, a: aTag, b: bTag, wide, onClose }
   const cardA = usePlayerCard(aTag)
   const cardB = usePlayerCard(bTag ?? aTag)
   const [fromCard] = useState(openedFromCard)
+  const clans = useClans()
   useEffect(() => () => markFromCard(false), [])
   // One fixed call per category, so the hooks keep their order; each is the list Stats already shares.
   const matrices: { label: string; data: Matrix | null }[] = CATS.map((c) => ({ label: c.label, data: useMatrix(c.id).data })) // eslint-disable-line react-hooks/rules-of-hooks
@@ -144,7 +146,7 @@ export default function CompareSheet({ roster, a: aTag, b: bTag, wide, onClose }
       <a href={`${window.location.hash.split('/v/')[0]}/p/${encodeURIComponent(p.tag.slice(1))}`} className="flex min-w-0 max-w-full flex-col items-center gap-0.5 text-center no-underline">
         <Th th={p.th} size="lg" />
         <span className="font-display max-w-full truncate text-[17px] leading-tight" style={{ color: deep }}>{p.name}</span>
-        <span className="text-[11px] font-bold text-muted">{p.clan}</span>
+        <span className="flex items-center gap-1 text-[11px] font-bold text-muted"><ClanBadge src={clans[p.clan]?.badge} size={16} />{p.clan}</span>
         <span className="font-display text-[26px] leading-none tabular-nums" style={{ color: deep }}>{leads}</span>
       </a>
       <button type="button" aria-label={`Change ${p.name}`} onClick={() => go.to(compareHref(stays.tag))} className="min-h-8 cursor-pointer rounded-full border border-line bg-white px-2.5 text-xs font-bold text-ink-2 hover:bg-page">Change</button>

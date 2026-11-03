@@ -1,11 +1,12 @@
 import { useState } from 'react'
+import { useClans } from '../clash'
 import { type ClanDays, DAYS } from '../dayplan'
 import { CLAN, coreAvg, fmtScore } from '../theme'
 import type { ClanName, Player } from '../types'
 import { CardSheet } from './ClanSheet'
 import { ahead, type Line, Row } from './CompareSheet'
 import type { lineupBoard, Moves } from './PlanTab'
-import { chip, Eyebrow, Th } from './ui'
+import { chip, ClanBadge, Eyebrow, Th } from './ui'
 
 // Two clans side by side, from Plan: the same layout as comparing two players, on the plan as it stands on screen, moves and days included.
 
@@ -38,6 +39,7 @@ export default function ClanCompare({ cols, moves, plans, players, wide, onClose
   cols: Col[]; moves: Moves; plans: Partial<Record<ClanName, ClanDays>>; players: Player[]; wide: boolean; onClose: () => void
 }) {
   const [pair, setPair] = useState(0)
+  const clans = useClans()
   const [ca, cb] = PAIRS[pair]
   const a = cols.find((c) => c.clan === ca)!, b = cols.find((c) => c.clan === cb)!
   const cwl = a.inCwl && b.inCwl
@@ -63,6 +65,7 @@ export default function ClanCompare({ cols, moves, plans, players, wide, onClose
 
   const head = (clan: ClanName, n: number, deep: string) => (
     <div className="flex min-w-0 flex-col items-center gap-0.5 text-center">
+      <ClanBadge src={clans[clan]?.badge} size={48} />
       <span className="font-display text-[22px] leading-tight" style={{ color: deep }}>{clan}</span>
       <span className="font-display text-[26px] leading-none tabular-nums" style={{ color: deep }}>{n}</span>
     </div>

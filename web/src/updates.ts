@@ -1,4 +1,5 @@
-// What changed, for the What's new card. To add an update, append an entry to the END of UPDATES with a new id: the card
+// What changed, for the What's new card. A later update on the same date merges into that date's entry, keeping its highlights, and takes a new id.
+// To add an update on a new date, append an entry to the END of UPDATES with a new id: the card
 // opens for everyone once, shows the last entry on top, and keeps the others below it, newest first. Up to three
 // highlights lead it, each a short benefit that links to the place; the full notes fold away under them.
 // Lines sit under the tab they changed, such as "War tab", or "Player cards" or "General". Each is one patch note naming the specific feature and
@@ -105,7 +106,7 @@ export const UPDATES: Update[] = [
   },
   {
     // Further ids for the same day: the batch grew after the first, so the card opens once more.
-    id: '2026-11-04-3',
+    id: '2026-11-04-6',
     date: '4 Nov 2026',
     highlights: [
       { title: 'Standings', line: "See who's winning your CWL group.", href: '#/cwl/group', icon: 'league' },
@@ -144,9 +145,20 @@ export const UPDATES: Update[] = [
         ],
       },
       {
+        title: 'Plan tab',
+        lines: [
+          'Merged the lineup and day builders.',
+          'Added a place picker under each name.',
+          'Added an Activity list of plan changes.',
+          'Added side-by-side clan comparison.',
+          'Changed Publish to send it all at once.',
+        ],
+      },
+      {
         title: 'Player cards',
         lines: [
           'Added side-by-side player comparison.',
+          'Added Change on both compared players.',
           'Added links to all upgrade categories.',
           'Added a back arrow on upgrade cards.',
         ],
@@ -161,40 +173,6 @@ export const UPDATES: Update[] = [
           'Changed clan selector to stay pinned.',
           'Moved leader sign-in to the footer.',
           'Removed reactions and emojis.',
-        ],
-      },
-    ],
-  },
-  {
-    id: '2026-11-04-4',
-    date: '4 Nov 2026',
-    groups: [
-      {
-        title: 'Plan tab',
-        lines: [
-          'Merged the lineup and day builders.',
-          'Added a place picker under each name.',
-          'Added an Activity list of plan changes.',
-          'Changed Publish to send it all at once.',
-        ],
-      },
-    ],
-  },
-  {
-    id: '2026-11-04-5',
-    date: '4 Nov 2026',
-    groups: [
-      {
-        title: 'Plan tab',
-        lines: [
-          'Added side-by-side clan comparison.',
-        ],
-      },
-      {
-        title: 'Player cards',
-        lines: [
-          'Added any-two-player comparison.',
-          'Added Change on both compared players.',
         ],
       },
     ],
