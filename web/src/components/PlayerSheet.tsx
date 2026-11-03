@@ -3,7 +3,7 @@ import { loadPlayerAll, type PlayerCard, playerNow } from '../data'
 import { BADGES, TIER_LOOK, TIERS } from '../badges'
 import { ago } from '../leaders'
 import { CATS } from '../explore'
-import { go, markFromCard, playerHref, upgradeHref } from '../route'
+import { compareHref, go, markFromCard, playerHref, upgradeHref } from '../route'
 import { useYou } from './You'
 import { CLAN, cycleLong, cycleShort, fmtScore, fmtWindow } from '../theme'
 import type { Player, Roster } from '../types'
@@ -272,6 +272,11 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
             ) : (
             <div className="ff-fade flex flex-none flex-col gap-4">
             {card?.badges?.length ? <Badges badges={card.badges} /> : null}
+            {/* With your own account when this is someone else's card, since that is the comparison most people want. */}
+            <a href={compareHref(tag, yous.find((y) => y !== tag))} onClick={() => markFromCard(true)}
+              className="flex min-h-11 flex-none items-center justify-center rounded-xl bg-[#F6EEDC] text-sm font-bold text-ink no-underline hover:bg-well">
+              {isMine || !yous.length ? 'Compare with a player' : 'Compare with me'}
+            </a>
             {card && (
               <Section title="All upgrades">
                 <ul className="m-0 grid list-none grid-cols-3 gap-1.5 p-0">

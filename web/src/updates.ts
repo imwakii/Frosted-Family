@@ -104,8 +104,8 @@ export const UPDATES: Update[] = [
     ],
   },
   {
-    // A second id for the same day: the batch grew after the first, so the card opens once more.
-    id: '2026-11-04-2',
+    // Further ids for the same day: the batch grew after the first, so the card opens once more.
+    id: '2026-11-04-3',
     date: '4 Nov 2026',
     highlights: [
       { title: 'Standings', line: "See who's winning your CWL group.", href: '#/cwl/group', icon: 'league' },
@@ -146,6 +146,7 @@ export const UPDATES: Update[] = [
       {
         title: 'Player cards',
         lines: [
+          'Added side-by-side player comparison.',
           'Added links to all upgrade categories.',
           'Added a back arrow on upgrade cards.',
         ],

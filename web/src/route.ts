@@ -5,10 +5,11 @@ import type { ClanName } from './types'
 // Hash routes: #/war[/log[/<clan>/<war key>]] (where the app opens), #/cwl[/group], #/log, #/stats/<sub>[/<category>], #/plan/<sub>. A player sheet opens over
 // Lineups or Stats by appending /p/<tag without #>, and closes by dropping it; a clan card the same way with /c/<clan>,
 // a league group clan's card with /e/<our clan>/<its tag without #>,
-// and one player in one upgrade category with /u/<category>/<tag without #>[/<unit to mark>].
+// one player in one upgrade category with /u/<category>/<tag without #>[/<unit to mark>],
+// and two players side by side with /v/<tag>[/<other tag>], tags without #.
 // Old links (#/explore/<kind>, #/leaders/<sub>) are rewritten to their new place.
 export type Tab = 'cwl' | 'explore' | 'log' | 'war' | 'plan'
-export type Route = { tab: Tab; sub: string; kind: string | null; player: string | null; clan: ClanName | null; rival: { clan: ClanName; tag: string } | null; upgrade: { cat: Cat; tag: string; unit: string | null } | null; base: string }
+export type Route = { tab: Tab; sub: string; kind: string | null; player: string | null; clan: ClanName | null; rival: { clan: ClanName; tag: string } | null; upgrade: { cat: Cat; tag: string; unit: string | null } | null; compare: { a: string; b: string | null } | null; base: string }
 
 export const STATS_SUBS = ['players', 'badges', 'war', 'trends', 'history'] as const
 export const LEADERS_SUBS = ['builder', 'days', 'members'] as const
@@ -21,6 +22,9 @@ export function decodeTag(raw: string) {
 const upgradePath = (cat: Cat, tag: string, unit?: string | null) =>
   `/u/${cat}/${encodeURIComponent(tag.replace(/^#/, ''))}${unit ? `/${encodeURIComponent(unit)}` : ''}`
 
+const comparePath = (a: string, b?: string | null) =>
+  `/v/${encodeURIComponent(a.replace(/^#/, ''))}${b ? `/${encodeURIComponent(b.replace(/^#/, ''))}` : ''}`
+
 function parse(): Route {
   const h = window.location.hash.replace(/^#\/?/, '')
   const [head, tag] = h.split(/(?:^|\/)p\//)
@@ -31,16 +35,20 @@ function parse(): Route {
   const rivalTag = enemy ? decodeTag(enemy[2]) : null
   const stat = head.match(/(?:^|\/)u\/(heroes|equipment|troops|spells|pets|sieges)\/([^/]+)(?:\/([^/]+))?$/)
   const statTag = stat ? decodeTag(stat[2]) : null
-  const cut = enemy ?? card ?? stat
+  const versus = head.match(/(?:^|\/)v\/([^/]+)(?:\/([^/]+))?$/)
+  const versusA = versus ? decodeTag(versus[1]) : null
+  const versusB = versus?.[2] ? decodeTag(versus[2]) : null
+  const cut = enemy ?? card ?? stat ?? versus
   return {
     ...place(cut ? head.slice(0, cut.index) : head, player),
     clan: card ? (card[1] as ClanName) : null,
     rival: enemy && rivalTag ? { clan: enemy[1] as ClanName, tag: '#' + rivalTag } : null,
+    compare: versusA ? { a: '#' + versusA, b: versusB ? '#' + versusB : null } : null,
     upgrade: stat && statTag ? { cat: stat[1] as Cat, tag: '#' + statTag, unit: stat[3] ? decodeTag(stat[3]) : null } : null,
   }
 }
 
-function place(path: string, player: string | null): Omit<Route, 'clan' | 'rival' | 'upgrade'> {
+function place(path: string, player: string | null): Omit<Route, 'clan' | 'rival' | 'upgrade' | 'compare'> {
   let parts = path.split('/').filter(Boolean)
   if (parts[0] === 'explore') parts = parts[1] === 'war' || parts[1] === 'upgrades' ? ['stats', parts[1]] : ['stats', 'players', ...parts.slice(1, 2)]
   if ((parts[0] === 'plan' || parts[0] === 'leaders') && parts[1] === 'attacks') parts = ['war']  // moved 2 Nov 2026
@@ -74,7 +82,7 @@ export function useRoute() {
     const on = () => {
       const r = parse()
       // Rewrite an old link in place, so the address bar shows the new route.
-      const want = r.base + (r.clan ? `/c/${r.clan}` : '') + (r.rival ? `/e/${r.rival.clan}/${encodeURIComponent(r.rival.tag.slice(1))}` : '') + (r.upgrade ? upgradePath(r.upgrade.cat, r.upgrade.tag, r.upgrade.unit) : '') + (r.player ? `/p/${encodeURIComponent(r.player.slice(1))}` : '')
+      const want = r.base + (r.clan ? `/c/${r.clan}` : '') + (r.rival ? `/e/${r.rival.clan}/${encodeURIComponent(r.rival.tag.slice(1))}` : '') + (r.upgrade ? upgradePath(r.upgrade.cat, r.upgrade.tag, r.upgrade.unit) : '') + (r.compare ? comparePath(r.compare.a, r.compare.b) : '') + (r.player ? `/p/${encodeURIComponent(r.player.slice(1))}` : '')
       if (want && window.location.hash !== want) history.replaceState(null, '', want)
       setRoute(r)
     }
@@ -98,6 +106,9 @@ export const clanHref = (clan: ClanName) => `${parse().base}/c/${clan}`
 let upgradeFromCard = false
 export const openedFromCard = () => upgradeFromCard
 export const markFromCard = (on: boolean) => { upgradeFromCard = on }
+
+/** Link to two players side by side over the current view, or to choosing the second. */
+export const compareHref = (a: string, b?: string | null) => `${parse().base}${comparePath(a, b)}`
 
 /** Link to one player in one upgrade category, over the current view. */
 export const upgradeHref = (cat: Cat, tag: string, unit?: string | null) => `${parse().base}${upgradePath(cat, tag, unit)}`

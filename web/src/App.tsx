@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useAuth, type Me } from './auth'
 import CwlTab from './components/CwlTab'
 import ClanSheet from './components/ClanSheet'
+import CompareSheet from './components/CompareSheet'
 import RivalSheet from './components/RivalSheet'
 import UpgradeSheet from './components/UpgradeSheet'
 import Welcome from './components/Welcome'
@@ -152,6 +153,7 @@ export default function App() {
       {roster && <Welcome roster={roster} wide={wide} />}
       {roster && route.player &&<PlayerSheet tag={route.player} roster={roster} wide={wide} onClose={closeSheet} />}
       {roster && route.clan && !route.player && <ClanSheet clan={route.clan} roster={roster} wide={wide} onClose={closeSheet} />}
+      {roster && route.compare && !route.player && <CompareSheet roster={roster} {...route.compare} wide={wide} onClose={closeSheet} />}
       {route.upgrade && !route.player && <UpgradeSheet {...route.upgrade} wide={wide} onClose={closeSheet} />}
       {route.rival && !route.player && <RivalSheet clan={route.rival.clan} tag={route.rival.tag} wide={wide} onClose={closeSheet} />}
 
