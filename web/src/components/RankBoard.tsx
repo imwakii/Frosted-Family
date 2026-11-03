@@ -4,7 +4,7 @@ import { competitionRanks } from '../explore'
 import { go, playerHref, useDrill } from '../route'
 import { CLAN } from '../theme'
 import type { ClanName } from '../types'
-import { norm, SearchBox } from './CwlTab'
+import { norm, PhoneSearch, SearchBox } from './CwlTab'
 import { CategoryNav, ClanFilter, Empty, useClanPick } from './ExploreTab'
 import { chip, Th, RowChevron } from './ui'
 
@@ -135,8 +135,7 @@ export default function RankBoard({ kind, cols, note, q, setQ, wide }: {
   }
   return (
     <div className="flex flex-col gap-2.5 pb-6">
-      <div className="px-4 pt-1"><ClanFilter clan={clan} setClan={setClan} /></div>
-      <div className="sticky top-0 z-10 bg-page px-4 pb-2 pt-1"><SearchBox q={q} setQ={setQ} onEnter={enter} /></div>
+      <PhoneSearch q={q} setQ={setQ} onEnter={enter}><ClanFilter clan={clan} setClan={setClan} /></PhoneSearch>
       <CategoryNav current={kind} wide={false} />
       <div role="group" aria-label="Rank by" className="flex gap-1.5 overflow-x-auto px-4 [scrollbar-width:none]">
         {cols.map((c) => (

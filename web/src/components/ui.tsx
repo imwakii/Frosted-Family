@@ -100,7 +100,7 @@ export const Eyebrow = ({ children, className = '' }: { children: ReactNode; cla
 
 export const Star = () => <span aria-hidden="true" className="text-gold">★</span>
 
-// A tab's own sections, as links under the top bar; underlined, so it reads as a level below the tabs.
+// A tab's own sections, as links under the top bar.
 export function SubNav({ items, current, wide }: { items: { id: string; label: string; href: string }[]; current: string; wide: boolean }) {
   const ref = useRef<HTMLElement>(null)
   // A section past the edge is scrolled into view when it is the one open.
@@ -204,6 +204,9 @@ export function DayRow({ days = [], pick, onPick, live = 0, roster, drawnOnly }:
 }
 
 /** The clan switch on every tab: same look, same place, directly under the sub-tabs. */
+/** A phone page's clan switch follows the scroll, in the place it would sit anyway. */
+export const STICKY_SWITCH = 'sticky top-0 z-10 -mx-4 -mb-1 -mt-1 bg-page px-4 pb-1 pt-1'
+
 export function ClanSwitch<T extends ClanName | 'All'>({ value, onPick, options, live = [], flag = [], off = [] }: {
   value: T; onPick: (c: T) => void; options?: readonly T[]; live?: ClanName[]; flag?: ClanName[]; off?: ClanName[]
 }) {

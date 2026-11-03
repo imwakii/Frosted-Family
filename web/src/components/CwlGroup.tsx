@@ -5,7 +5,7 @@ import { clanHref, playerHref, rivalHref } from '../route'
 import { CLAN, CLANS } from '../theme'
 import type { ClanName } from '../types'
 import { readClan } from './CwlTab'
-import { chip, ClanBadge, ClanSwitch, dayWon, RowChevron, Th } from './ui'
+import { chip, ClanBadge, ClanSwitch, dayWon, RowChevron, STICKY_SWITCH, Th } from './ui'
 
 // A clan's league group. Standings: who is winning, ranked as the game ranks it, with each clan's days. Group: how the
 // clans compare, by signed-up town halls or strength, then who has the 8 stars for the bonus. Each day's war is on the War tab.
@@ -169,7 +169,7 @@ export default function CwlGroup({ wide, view }: { wide: boolean; view: 'group' 
   const shown = groups.find((c) => c.clan === own) ?? groups[0]
   return (
     <main className={wide ? 'mx-auto flex max-w-[1360px] flex-col gap-4 px-[clamp(16px,3vw,32px)] pb-12 pt-5' : 'flex flex-col gap-3 px-4 pb-6 pt-1'}>
-      <ClanSwitch<ClanName> value={shown?.clan ?? own} onPick={setOwn} off={data ? CLANS.filter((k) => !groups.some((c) => c.clan === k)) : []} />
+      <div className={wide ? '' : STICKY_SWITCH}><ClanSwitch<ClanName> value={shown?.clan ?? own} onPick={setOwn} off={data ? CLANS.filter((k) => !groups.some((c) => c.clan === k)) : []} /></div>
       {!data ? (
         loading ? <div aria-busy="true" className="h-64 animate-pulse rounded-2xl bg-well" /> : <div className="rounded-2xl border border-line bg-white p-5 text-sm text-faint">Unavailable right now</div>
       ) : !shown?.group ? (

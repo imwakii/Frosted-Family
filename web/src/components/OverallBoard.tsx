@@ -5,7 +5,7 @@ import { go, playerHref } from '../route'
 import { CLAN, CLANS } from '../theme'
 import type { ClanName } from '../types'
 import { COLOR } from './ClansBoard'
-import { norm, SearchBox } from './CwlTab'
+import { norm, PhoneSearch, SearchBox } from './CwlTab'
 import { CategoryNav, ClanFilter, Empty, useClanPick } from './ExploreTab'
 import { KEY_ROW, Star, Th, RowChevron } from './ui'
 
@@ -144,8 +144,7 @@ export default function OverallBoard({ q, setQ, wide }: { q: string; setQ: (v: s
   }
   return (
     <div className="flex flex-col gap-2.5 pb-6">
-      <div className="px-4 pt-1"><ClanFilter clan={clan} setClan={setClan} /></div>
-      <div className="sticky top-0 z-10 bg-page px-4 pb-2 pt-1"><SearchBox q={q} setQ={setQ} onEnter={enter} /></div>
+      <PhoneSearch q={q} setQ={setQ} onEnter={enter}><ClanFilter clan={clan} setClan={setClan} /></PhoneSearch>
       <CategoryNav current="overall" wide={false} />
       <div className="px-4">{legend}</div>
       <div className="px-4">{board}</div>

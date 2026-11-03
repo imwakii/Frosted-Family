@@ -111,7 +111,6 @@ export const UPDATES: Update[] = [
         lines: [
           'Added Standings for the CWL group.',
           'Added enemy clan comparison cards.',
-          'Added next-day status to your row.',
         ],
       },
       {

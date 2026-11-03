@@ -5,7 +5,7 @@ import { go, playerHref, useDrill } from '../route'
 import { CLAN, CLANS } from '../theme'
 import type { ClanName, Roster } from '../types'
 import { Card, COLOR, Dot, ticks, useWidth } from './ClansBoard'
-import { norm, SearchBox } from './CwlTab'
+import { norm, PhoneSearch, SearchBox } from './CwlTab'
 import { ClanFilter, Empty, useClanPick } from './ExploreTab'
 import ReactionBar from './ReactionBar'
 import { chip, POINT, Th, UnitIcon } from './ui'
@@ -359,8 +359,7 @@ export default function LogTab({ roster, q, setQ, wide }: { roster: Roster; q: s
   }
   return (
     <div className="flex flex-col gap-2.5 pb-6">
-      <div className="px-4 pt-1"><ClanFilter clan={clan} setClan={setClan} /></div>
-      <div className="sticky top-0 z-10 bg-page px-4 pb-2 pt-1"><SearchBox q={q} setQ={setQ} onEnter={enter} /></div>
+      <PhoneSearch q={q} setQ={setQ} onEnter={enter}><ClanFilter clan={clan} setClan={setClan} /></PhoneSearch>
       {filters}
       <div className="flex flex-col gap-3 px-4">{chart}{feed}</div>
     </div>

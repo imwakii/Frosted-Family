@@ -4,7 +4,7 @@ import { competitionRanks } from '../explore'
 import { go, playerHref } from '../route'
 import { CLAN } from '../theme'
 import type { ClanName } from '../types'
-import { norm, SearchBox } from './CwlTab'
+import { norm, PhoneSearch, SearchBox } from './CwlTab'
 import { ClanFilter, Empty, useClanPick } from './ExploreTab'
 import { useBoard } from './RankBoard'
 import { KEY_ROW, RowChevron, Th, chip } from './ui'
@@ -120,8 +120,7 @@ export default function BadgesBoard({ q, setQ, wide }: { q: string; setQ: (v: st
     </main>
   ) : (
     <div className="flex flex-col gap-2.5 pb-6">
-      <div className="px-4 pt-1"><ClanFilter clan={clan} setClan={setClan} /></div>
-      <div className="sticky top-0 z-10 bg-page px-4 pb-2 pt-1"><SearchBox q={q} setQ={setQ} onEnter={enter} /></div>
+      <PhoneSearch q={q} setQ={setQ} onEnter={enter}><ClanFilter clan={clan} setClan={setClan} /></PhoneSearch>
       <div className="flex flex-col gap-2.5 px-4">{body}</div>
     </div>
   )

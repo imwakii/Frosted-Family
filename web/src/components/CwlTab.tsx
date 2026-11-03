@@ -78,17 +78,38 @@ function ClanCard({ roster, clan, meta, compact, below }: { roster: Roster; clan
   )
 }
 
-export function SearchBox({ q, setQ, tall, onEnter }: { q: string; setQ: (v: string) => void; tall?: boolean; onEnter?: () => void }) {
+export function SearchBox({ q, setQ, tall, onEnter, autoFocus }: { q: string; setQ: (v: string) => void; tall?: boolean; onEnter?: () => void; autoFocus?: boolean }) {
   return (
     <div className="relative min-w-0">
       <label htmlFor="find" className="sr-only">Find name</label>
       <SearchIcon />
       <input
-        id="find" type="search" placeholder="Find name" value={q} autoComplete="off" spellCheck={false}
+        id="find" type="search" placeholder="Find name" value={q} autoComplete="off" spellCheck={false} autoFocus={autoFocus}
         onChange={(e) => setQ(e.target.value)}
         onKeyDown={(e) => { if (e.key === 'Enter') onEnter?.() }}
         className={`${tall ? 'h-[52px]' : 'h-12'} w-full rounded-[14px] border border-line bg-white pl-[42px] pr-3.5 text-base text-ink placeholder:text-faint`}
       />
+    </div>
+  )
+}
+
+/** A phone page's clan switch with search behind an icon beside it, both following the scroll. A search carried from another tab keeps it open. */
+export function PhoneSearch({ q, setQ, onEnter, className = '', children }: { q: string; setQ: (v: string) => void; onEnter?: () => void; className?: string; children: ReactNode }) {
+  const [searching, setSearching] = useState(false)
+  const open = searching || !!q
+  return (
+    <div className={`sticky top-0 z-10 flex flex-col gap-2 bg-page px-4 pb-2 pt-1 ${className}`}>
+      <div className="flex items-center gap-2">
+        <div className="min-w-0 flex-auto">{children}</div>
+        <button type="button" aria-label={open ? 'Close search' : 'Find name'} aria-expanded={open}
+          onClick={() => { if (open) { setQ(''); setSearching(false) } else setSearching(true) }}
+          className="relative size-[50px] flex-none cursor-pointer rounded-xl border-0 bg-well text-muted hover:text-ink">
+          {open
+            ? <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" className="m-auto"><path d="M6 6l12 12M18 6L6 18" /></svg>
+            : <SearchIcon />}
+        </button>
+      </div>
+      {open && <SearchBox q={q} setQ={setQ} autoFocus={searching} onEnter={onEnter} />}
     </div>
   )
 }
@@ -169,15 +190,15 @@ function Groups({ roster, clan, q, dense, day }: { roster: Roster; clan: ClanNam
   )
 }
 
-// One line per account on this device, above the lineups: where it plays and what it has to do now. The name only once there are alts.
-function YouPanel({ roster, day, next }: { roster: Roster; day: number; next: number }) {
+// One line per account on this device, above the lineups: its name, where it plays, its days and any attacks left.
+function YouPanel({ roster }: { roster: Roster }) {
   const { yous, removeYou } = useYou()
   const [adding, setAdding] = useState(false)
   const mine = yous.map((t) => roster.players.find((p) => p.tag === t)).filter((p): p is Player => !!p)
   if (!mine.length) return null
   return (
     <div className="flex w-full flex-col gap-1">
-      {mine.map((p) => <YouLine key={p.tag} roster={roster} p={p} day={day} next={next} named={mine.length > 1} onClear={() => removeYou(p.tag)} />)}
+      {mine.map((p) => <YouLine key={p.tag} roster={roster} p={p} onClear={() => removeYou(p.tag)} />)}
       <button type="button" aria-expanded={adding} onClick={() => setAdding((v) => !v)}
         className="min-h-8 cursor-pointer self-start border-0 bg-transparent px-1.5 text-xs font-bold text-action">+ Add an alt</button>
       {adding && <YouPrompt roster={roster} onDone={() => setAdding(false)} />}
@@ -185,25 +206,20 @@ function YouPanel({ roster, day, next }: { roster: Roster; day: number; next: nu
   )
 }
 
-function YouLine({ roster, p, day, next, named, onClear }: { roster: Roster; p: Player; day: number; next: number; named: boolean; onClear: () => void }) {
+function YouLine({ roster, p, onClear }: { roster: Roster; p: Player; onClear: () => void }) {
   const board = useWarBoard().data
   const base = board?.clans.flatMap((c) => (c.war?.state === 'inWar' ? c.war.pairs : [])).find((x) => x.us?.tag === p.tag)?.us
   const left = base ? base.allowed - base.used : 0
-  // Today once a war is on; before the first one, the day being prepared.
-  const playing = !!p.days?.includes(day || next)
-  const when = day ? 'today' : `Day ${next}`
   const place = `${p.clan} · ${roster.clans[p.clan]?.inCwl ? SLOT_TEXT[p.slot] : 'Not in'}`
   return (
     <div className="flex min-h-11 items-center gap-2 rounded-xl bg-white pl-3 pr-1" style={{ boxShadow: `inset 0 0 0 1.5px ${CLAN[p.clan].tint}` }}>
       <a href={href(p)} className="flex min-w-0 flex-auto items-center gap-2 no-underline">
         <span className="flex min-w-0 flex-auto flex-col text-[13px] font-bold leading-tight" style={{ color: CLAN[p.clan].deep }}>
-          {named && <span className="truncate text-ink">{p.name}</span>}
+          <span className="truncate text-ink">{p.name}</span>
           <span className="truncate">{place}</span>
         </span>
         {p.days && <PlayDays days={p.days} clan={p.clan} />}
-        {left > 0
-          ? <span className="flex-none whitespace-nowrap text-[11px] font-bold text-[#B45309]">{left} {left === 1 ? 'attack' : 'attacks'} left</span>
-          : p.days && (day || next) > 0 && <span className={`flex-none whitespace-nowrap text-[11px] font-bold ${playing ? 'text-[#15803D]' : 'text-muted'}`}>{playing ? 'Playing' : 'Resting'} {when}</span>}
+        {left > 0 && <span className="flex-none whitespace-nowrap text-[11px] font-bold text-[#B45309]">{left} {left === 1 ? 'attack' : 'attacks'} left</span>}
       </a>
       <button type="button" aria-label="Not you" onClick={onClear}
         className="flex size-8 flex-none cursor-pointer items-center justify-center rounded-full border-0 bg-transparent text-base leading-none text-faint hover:bg-page hover:text-ink">×</button>
@@ -263,13 +279,11 @@ function Phone({ roster, war, q, setQ, lock }: Omit<Props, 'wide'>) {
   const clans = useClans()
   const { planned, day, setDay, live } = useDay(roster, war)
   const days = useCwlGroups().data?.clans.find((c) => c.clan === clan)?.group?.days
-
   return (
     <>
-      <div className="px-4 pb-2.5 pt-1"><ClanSwitch<ClanName> value={clan} onPick={lock?.onPick ?? setOwn} options={lock?.options} /></div>
-      <div className="sticky top-0 z-10 bg-page px-4 pb-3 pt-1">
-        <SearchBox q={q} setQ={setQ} onEnter={() => { if (results[0]) window.location.hash = href(results[0]) }} />
-      </div>
+      <PhoneSearch q={q} setQ={setQ} className="pb-2.5" onEnter={() => { if (results[0]) window.location.hash = href(results[0]) }}>
+        <ClanSwitch<ClanName> value={clan} onPick={lock?.onPick ?? setOwn} options={lock?.options} />
+      </PhoneSearch>
       <div className="flex flex-col gap-3 px-4 pb-6">
         {nq ? (
           <ul className="m-0 list-none rounded-2xl border border-line bg-white py-1">
@@ -296,7 +310,7 @@ function Phone({ roster, war, q, setQ, lock }: Omit<Props, 'wide'>) {
           </ul>
         ) : (
           <>
-            <YouPanel roster={roster} day={live} next={stateDay(war, 'preparation')} />
+            <YouPanel roster={roster} />
             {planned && inCwl && <DayRow days={days} pick={day} onPick={setDay} live={live} roster />}
             <ClanCard roster={roster} clan={clan} meta={clans[clan]} below={inCwl ? <Countdown roster={roster} war={war} slim /> : undefined} />
             <StatusKey className="px-1" />
@@ -325,7 +339,7 @@ function Desktop({ roster, war, q, setQ, lock }: Omit<Props, 'wide'>) {
     <main className="mx-auto flex max-w-[1360px] flex-col gap-4 px-[clamp(16px,3vw,32px)] pb-12 pt-5">
       <div className="flex items-start justify-between gap-4">
         <div className="flex w-full max-w-[480px] flex-col gap-3">
-          <div className="empty:hidden"><YouPanel roster={roster} day={live} next={stateDay(war, 'preparation')} /></div>
+          <div className="empty:hidden"><YouPanel roster={roster} /></div>
           <div className="empty:hidden"><Countdown roster={roster} war={war} /></div>
         </div>
         <div className="flex w-[clamp(220px,28vw,340px)] flex-none flex-col gap-1">
