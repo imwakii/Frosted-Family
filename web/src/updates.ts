@@ -187,7 +187,7 @@ export const UPDATES: Update[] = [
       {
         title: 'Player cards',
         lines: [
-          'Changed the card's order and header.',
+          "Changed the card's order and header.",
           'Added each player\'s attack history.',
           'Added a way back to the card.',
           'Added your stars toward 8.',
