@@ -5,7 +5,7 @@ import { CLAN, CLANS } from '../theme'
 import type { ClanName } from '../types'
 import { norm, PhoneSearch, SearchBox } from './CwlTab'
 import { ClanFilter, Empty, useClanPick } from './ExploreTab'
-import { ClanBadge, KEY_ROW, RowChevron, Th } from './ui'
+import { ClanBadge, KEY_ROW, RowChevron, Th, GoblinNote } from './ui'
 import { YouTag } from './You'
 
 // GET /api/stats/history: the family's story from Clash of Stats. Who first appeared when, and who has been here longest.
@@ -129,7 +129,7 @@ export default function HistoryBoard({ q, setQ, wide }: { q: string; setQ: (v: s
               </a>
             </li>
           ))}
-          {!longest.length && <li className="p-4 text-sm text-faint">No one by that name in this village</li>}
+          {!longest.length && <li><GoblinNote goblin="page">No one by that name in this village</GoblinNote></li>}
         </ol>
       </Section>
       </div>

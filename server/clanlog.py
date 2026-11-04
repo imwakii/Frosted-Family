@@ -8,11 +8,13 @@ from __future__ import annotations
 
 import sqlite3
 from bisect import bisect_left, bisect_right
+from datetime import timedelta
 
 from frosted.config import TAG_TO_CLAN
-from server import history, leaders
+from server import history, leaders, profiles
 
 UPGRADE_DAYS = 14
+STAR_STEP = 500            # lifetime war stars: a milestone at each multiple
 GONE_AFTER_POLLS = 2       # clean polls that must miss a player before they count as gone
 ROLE_RANK = {"member": 0, "admin": 1, "coLeader": 2, "leader": 3}
 
@@ -93,11 +95,31 @@ def _gone(r, clan_last, missed, add) -> None:
         add("left", r, r["seen_at"])
 
 
+def milestones(conn, days: int = UPGRADE_DAYS) -> list[dict]:
+    """Recent moments worth a gold row for people still here: a hero taken to the game's max, and lifetime war stars
+    passing a round number. A first fetch only sets where a player starts, so it never counts as passing one."""
+    cutoff = (leaders.now() - timedelta(days=days)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    ms = leaders.members_by_tag(conn)
+    tops = {(r["player_tag"], r["name"]): r["max_level"] for r in conn.execute("SELECT player_tag, name, max_level FROM player_units WHERE kind='hero'")}
+    out = []
+    for tag, unit, cat, _frm, to, at, _change in leaders.upgrade_events(conn):
+        if cat == "hero" and tag in ms and at >= cutoff and to == tops.get((tag, unit)):
+            out.append({**profiles.row(ms[tag]), "kind": "hero", "unit": unit, "at": at})
+    before: dict[str, int] = {}
+    for s in conn.execute("SELECT player_tag, fetched_at, war_stars FROM profile_snapshots WHERE war_stars IS NOT NULL ORDER BY player_tag, fetched_at"):
+        tag, stars = s["player_tag"], s["war_stars"]
+        was = before.get(tag)
+        before[tag] = stars
+        if was is not None and stars // STAR_STEP > was // STAR_STEP and tag in ms and s["fetched_at"] >= cutoff:
+            out.append({**profiles.row(ms[tag]), "kind": "war_stars", "stars": stars // STAR_STEP * STAR_STEP, "at": s["fetched_at"]})
+    return sorted(out, key=lambda m: m["at"], reverse=True)
+
+
 def clan_log(conn) -> dict:
     """GET /log: every member event on record, newest first, the last two weeks' upgrades and all upgrades by day."""
     if conn is None:
-        return {"since": None, "upgrade_days": UPGRADE_DAYS, "events": [], "upgrades": [], "upgrade_counts": [], "upgrade_board": []}
+        return {"since": None, "upgrade_days": UPGRADE_DAYS, "events": [], "upgrades": [], "upgrade_counts": [], "upgrade_board": [], "milestones": []}
     since = conn.execute("SELECT MIN(snapshot_date) FROM member_snapshots").fetchone()[0]
     return {"since": since, "upgrade_days": UPGRADE_DAYS, "events": member_events(conn),
             "upgrades": leaders.upgrades(conn, UPGRADE_DAYS)["upgrades"], "upgrade_counts": leaders.upgrade_counts(conn),
-            "upgrade_board": leaders.upgrade_board(conn)}
+            "upgrade_board": leaders.upgrade_board(conn), "milestones": milestones(conn)}

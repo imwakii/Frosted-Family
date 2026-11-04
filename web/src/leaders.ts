@@ -56,7 +56,8 @@ export type LogEvent = {
 }
 export type UpgradeCount = { day: string; clan: ClanName; category: UpgradeCategory; n: number }
 export type UpgradeLeader = { tag: string; name: string | null; clan: ClanName; th: number | null; week: number; month: number; last: string }
-export type ClanLog = { since: string | null; upgrade_days: number; events: LogEvent[]; upgrades: Upgrade[]; upgrade_counts?: UpgradeCount[]; upgrade_board?: UpgradeLeader[] }
+export type Milestone = { kind: 'hero' | 'war_stars'; tag: string; name: string | null; clan: string | null; at: string; unit?: string; stars?: number }
+export type ClanLog = { milestones?: Milestone[]; since: string | null; upgrade_days: number; events: LogEvent[]; upgrades: Upgrade[]; upgrade_counts?: UpgradeCount[]; upgrade_board?: UpgradeLeader[] }
 
 const loadClanLog = (): Promise<ClanLog | null> => (mock()
   ? import('./devMock').then((m) => m.mockUpgrades()).then((d) => ({ since: null, upgrade_days: 14, events: [], upgrades: (d as { upgrades: Upgrade[] }).upgrades }))

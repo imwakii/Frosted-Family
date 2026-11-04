@@ -6,7 +6,7 @@ import { useClans, type ClanMeta } from '../clash'
 import { stillToMove } from '../data'
 import { setDayPick, useCwlGroups, useDayPick } from '../leaders'
 import { jumpToYou, useYou, YouTag } from './You'
-import { ClanBadge, ClanSwitch, DayRow, Eyebrow, LeaguePill, PlayDays, SearchIcon, StatusDot, StatusKey, Th, useNow, RowChevron } from './ui'
+import { ClanBadge, ClanSwitch, DayRow, Eyebrow, LeaguePill, PlayDays, SearchIcon, StatusDot, StatusKey, Th, useNow, RowChevron, GoblinNote } from './ui'
 
 type Props = {
   roster: Roster; war: Partial<Record<ClanName, LiveWar | null>>; wide: boolean; q: string; setQ: (v: string) => void
@@ -280,7 +280,7 @@ function Phone({ roster, war, q, setQ, lock }: Omit<Props, 'wide'>) {
                 </a>
               </li>
             ))}
-            {!results.length && <li className="p-4 text-sm text-faint">No one by that name in this village</li>}
+            {!results.length && <li><GoblinNote goblin="page">No one by that name in this village</GoblinNote></li>}
           </ul>
         ) : (
           <>

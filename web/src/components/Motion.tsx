@@ -8,6 +8,29 @@ const read = (k: string) => { try { return localStorage.getItem(k) } catch { ret
 const write = (k: string, v: string) => { try { localStorage.setItem(k, v) } catch { /* private mode */ } }
 const still = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
+/** Five quick taps and a goblin slides across the screen, the picture as drawn. */
+export function useGoblin() {
+  const [run, setRun] = useState(0)
+  const taps = useRef<number[]>([])
+  const tap = () => {
+    const at = Date.now()
+    taps.current = [...taps.current.filter((t) => at - t < 2000), at]
+    if (taps.current.length >= 5 && !still()) { taps.current = []; setRun((r) => r + 1) }
+  }
+  return { tap, goblin: run > 0 ? <Goblin key={run} /> : null }
+}
+
+function Goblin() {
+  const [on, setOn] = useState(true)
+  if (!on) return null
+  return createPortal(
+    <div aria-hidden="true" onAnimationEnd={(e) => { if (e.target === e.currentTarget) setOn(false) }} className="ff-goblin pointer-events-none fixed bottom-[calc(58px+env(safe-area-inset-bottom))] left-0 z-[25] md:bottom-0">
+      <img src="/icons/goblin-run.png" alt="" className="block h-28 w-auto" />
+    </div>,
+    document.body,
+  )
+}
+
 /** True once, the first time this key comes up on this device. */
 export function useOnce(key: string | null) {
   const [fire, setFire] = useState(false)

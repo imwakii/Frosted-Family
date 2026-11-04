@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 import pytest
 
 from frosted.config import CLAN_TAGS
@@ -112,3 +114,35 @@ def test_upgrades_per_day_stay_with_the_clan_of_that_day_after_leaving(conn):
         {"day": "2026-11-01", "clan": "Fire", "category": "hero", "n": 1},
         {"day": "2026-11-02", "clan": "Cake", "category": "hero", "n": 1},
     ]
+
+
+def stars_row(conn, tag, at, stars):
+    conn.execute("INSERT INTO profile_snapshots (player_tag, fetched_at, war_stars) VALUES (?,?,?)", (tag, at, stars))
+
+
+def test_milestones_are_a_maxed_hero_and_round_war_stars(conn, monkeypatch):
+    monkeypatch.setattr(clanlog.leaders, "now", lambda: datetime(2026, 11, 4, tzinfo=timezone.utc))
+    monkeypatch.setattr(clanlog.leaders, "members_by_tag", lambda c: {"#A": {"tag": "#A"}})
+    monkeypatch.setattr(clanlog.profiles, "row", lambda m: {"tag": m["tag"], "name": "Waki", "clan": "Fire"})
+    stars_row(conn, "#A", "2026-10-01T00:00:00Z", 2990)  # the first fetch is where they start
+    stars_row(conn, "#A", "2026-11-01T00:00:00Z", 3002)
+    stars_row(conn, "#B", "2026-10-01T00:00:00Z", 490)  # has left
+    stars_row(conn, "#B", "2026-11-01T00:00:00Z", 510)
+    conn.execute("INSERT INTO player_profiles (player_tag, fetched_at) VALUES ('#A', '2026-10-01T00:00:00Z')")
+    conn.execute("INSERT INTO player_units VALUES ('#A','hero','Archer Queen',110,110,NULL,1)")
+    conn.execute("INSERT INTO player_units VALUES ('#A','hero','Grand Warden',80,85,NULL,2)")
+    for name, level, at in (("Archer Queen", 109, "2026-10-01T00:00:00Z"), ("Archer Queen", 110, "2026-11-02T00:00:00Z"),
+                            ("Grand Warden", 79, "2026-10-01T00:00:00Z"), ("Grand Warden", 80, "2026-11-03T00:00:00Z")):
+        conn.execute("INSERT INTO player_unit_history VALUES ('#A','hero',?,?,?)", (name, level, at))
+    conn.commit()
+    got = clanlog.milestones(conn)
+    assert [(m["kind"], m.get("unit"), m.get("stars")) for m in got] == [("hero", "Archer Queen", None), ("war_stars", None, 3000)]
+
+
+def test_a_milestone_outside_the_window_is_not_shown(conn, monkeypatch):
+    monkeypatch.setattr(clanlog.leaders, "now", lambda: datetime(2026, 12, 25, tzinfo=timezone.utc))
+    monkeypatch.setattr(clanlog.leaders, "members_by_tag", lambda c: {"#A": {"tag": "#A"}})
+    stars_row(conn, "#A", "2026-10-01T00:00:00Z", 2990)
+    stars_row(conn, "#A", "2026-11-01T00:00:00Z", 3002)
+    conn.commit()
+    assert clanlog.milestones(conn) == []

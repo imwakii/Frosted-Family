@@ -156,6 +156,16 @@ export function SwitchRow({ label, line, on, disabled, onFlip }: { label: string
   )
 }
 
+/** An empty or error screen: one goblin, shown as drawn, and a short line. */
+export function GoblinNote({ goblin, box, children }: { goblin: 'panic' | 'bored' | 'coin' | 'page'; box?: boolean; children: ReactNode }) {
+  return (
+    <div className={`flex flex-none flex-col items-center gap-3 px-5 py-6 text-center text-sm text-faint ${box ? 'rounded-2xl border border-line bg-white' : ''}`}>
+      <img src={`/icons/goblin-${goblin}.png`} alt="" className="h-28 w-auto" />
+      <span className="text-balance">{children}</span>
+    </div>
+  )
+}
+
 /** A compact choice for a phone: the size of a chip, opens the phone's own list. */
 export function Picker<T extends string>({ label, value, options, onPick }: { label: string; value: T; options: { id: T; label: string }[]; onPick: (v: T) => void }) {
   return (

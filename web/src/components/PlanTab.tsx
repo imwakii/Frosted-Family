@@ -367,8 +367,8 @@ function Gate({ me, onSignOut }: { me: Me; onSignOut: () => void }) {
   return (
     <main className="mx-auto flex max-w-[1360px] justify-center px-4 pt-16">
       <section className="flex w-full max-w-[380px] flex-col items-center gap-3 rounded-[20px] border border-line bg-white px-6 py-8 text-center">
-        {failed && !me.user
-          ? <span className="size-20 overflow-hidden rounded-full bg-[#EFE6D2]"><img src="/icons/baby-dragon.png" alt="" className="size-full object-cover object-top" /></span>
+        {failed === 'denied' && !me.user ? <img src="/icons/baby-dragon.png" alt="" className="h-20 w-auto" />
+          : failed && !me.user ? <img src="/icons/goblin-panic.png" alt="" className="h-24 w-auto" />
           : <img src="/icons/master-builder.png" alt="" className="h-24 w-auto" />}
         <h2 className="font-display m-0 text-[24px] text-brand">War room</h2>
         {!me.user && (failed

@@ -143,9 +143,12 @@ export default function Alerts() {
       {failed && <span className="text-xs font-semibold text-[#92400E]">Not saved. Try again.</span>}
       {yous.length > 1 && <span className="text-xs text-muted">Covers all your accounts</span>}
       {state === 'blocked' && guide && (
-        <div className="flex flex-col gap-2.5 rounded-xl border border-line bg-white p-3">
-          <span className="text-[15px] font-bold text-ink">Alerts are blocked</span>
-          <Steps list={guide} />
+        <div className="flex items-center gap-3 rounded-xl border border-line bg-white p-3">
+          <img src="/icons/goblin-beg.png" alt="" className="h-20 w-auto flex-none" />
+          <div className="flex min-w-0 flex-col gap-2.5">
+            <span className="text-[15px] font-bold text-ink">Alerts are blocked</span>
+            <Steps list={guide} />
+          </div>
         </div>
       )}
     </section>

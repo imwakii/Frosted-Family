@@ -13,7 +13,7 @@ import ClansBoard, { COLOR } from './ClansBoard'
 import HistoryBoard from './HistoryBoard'
 import Info from './Info'
 import { ShowAll, topRows, useShowAll } from './Top'
-import { ClanSwitch, Picker, Star, StatusKey, SubNav, Th, UnitIcon, RowChevron, chip } from './ui'
+import { ClanSwitch, Picker, Star, StatusKey, SubNav, Th, UnitIcon, RowChevron, chip, GoblinNote } from './ui'
 
 export type ClanPick = ClanName | 'All'
 type BoardProps = { q: string; setQ: (v: string) => void; wide: boolean }
@@ -227,7 +227,7 @@ function MatrixBoard({ cat, q, setQ, wide }: BoardProps & { cat: Cat }) {
                       })}
                     </tr>
                   ) })}
-                  {!shown.length && <tr><td colSpan={3 + units.length} className="p-5 text-sm text-faint">No one by that name in this village</td></tr>}
+                  {!shown.length && <tr><td colSpan={3 + units.length}><GoblinNote goblin="page">No one by that name in this village</GoblinNote></td></tr>}
                 </tbody>
               </table>
             </section>
@@ -297,7 +297,7 @@ function MatrixBoard({ cat, q, setQ, wide }: BoardProps & { cat: Cat }) {
                 </li>
               )
             })}
-            {!shown.length && <li className="p-4 text-sm text-faint">No one by that name in this village</li>}
+            {!shown.length && <li><GoblinNote goblin="page">No one by that name in this village</GoblinNote></li>}
           </ol>
           {listed.length < shown.length && <ShowAll total={shown.length} onClick={() => top.setAll(true)} className="mx-4" />}
         </>
@@ -461,7 +461,7 @@ function WarBoardView({ q, setQ, wide }: BoardProps) {
                     })}
                   </tr>
                 ))}
-                {!shown.length && <tr><td colSpan={2 + cols.length} className="p-5 text-sm text-faint">No one by that name in this village</td></tr>}
+                {!shown.length && <tr><td colSpan={2 + cols.length}><GoblinNote goblin="page">No one by that name in this village</GoblinNote></td></tr>}
               </tbody>
               <tfoot>
                 {footer.map((f, fi) => {
@@ -525,7 +525,7 @@ function WarBoardView({ q, setQ, wide }: BoardProps) {
                 </a>
               </li>
             ))}
-            {!shown.length && <li className="p-4 text-sm text-faint">No one by that name in this village</li>}
+            {!shown.length && <li><GoblinNote goblin="page">No one by that name in this village</GoblinNote></li>}
           </ol>
           {listed.length < shown.length && <ShowAll total={shown.length} onClick={() => top.setAll(true)} className="mx-4" />}
         </>

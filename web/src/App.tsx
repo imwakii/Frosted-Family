@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useGoblin } from './components/Motion'
 import { useAuth } from './auth'
 import CalendarTab from './components/CalendarTab'
 import CwlTab from './components/CwlTab'
@@ -21,7 +22,7 @@ import { JumpToYou, YouChip } from './components/You'
 import { fetchPlayer, useRoster, useWar, useWide } from './data'
 import { useVisits } from './visits'
 import { cardToReturnTo, returnToCard, decodeTag, go, onDrill, useRoute } from './route'
-import { CalendarButton, SubNav } from './components/ui'
+import { CalendarButton, GoblinNote, SubNav } from './components/ui'
 
 const CWL_SUBS = [{ id: 'lineups', label: 'Lineups', href: '#/cwl' }, { id: 'group', label: 'Group', href: '#/cwl/group' }]
 const WAR_SUBS = [{ id: 'latest', label: 'Current', href: '#/war' }, { id: 'log', label: 'War log', href: '#/war/log' }]
@@ -62,6 +63,7 @@ export default function App() {
   const locked = (id: string) => id === 'plan' && auth.status === 'ready' && !auth.me.role
   const lock = <svg aria-label="Locked" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="11" width="14" height="9" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></svg>
   const you = roster && <YouChip roster={roster} />
+  const { tap, goblin } = useGoblin()
   const leaderAccount = auth.me.user ? { name: auth.me.user.name, onSignOut: auth.signOut } : null
   const corner = wide
     ? <span className="flex items-center gap-2">{you}<CalendarButton current={route.tab === 'calendar'} /><Settings wide roster={roster} leader={!!auth.me.role} account={leaderAccount} /></span>
@@ -72,7 +74,7 @@ export default function App() {
       {wide ? (
         <header className="border-b border-gold-line bg-white">
           <div className="mx-auto flex max-w-[1360px] flex-wrap items-center gap-x-4 gap-y-3 lg:gap-x-6 px-[clamp(16px,3vw,32px)] py-3">
-            <span className="font-display text-2xl text-brand">Frosted Family</span>
+            <span onClick={tap} className="font-display select-none text-2xl text-brand">Frosted Family</span>
             <nav aria-label="Sections" className="flex gap-1 rounded-xl bg-[#EFE6D2] p-1">
               {TABS.map((t) => (
                 <a key={t.id} href={t.href} aria-current={route.tab === t.id ? 'page' : undefined}
@@ -86,14 +88,14 @@ export default function App() {
         </header>
       ) : (
         <header className="flex items-center justify-between gap-2 px-4 pb-2.5 pt-[max(16px,env(safe-area-inset-top))]">
-          <span className="font-display flex-none text-[clamp(20px,6vw,24px)] text-brand">Frosted Family</span>
+          <span onClick={tap} className="font-display flex-none touch-manipulation select-none text-[clamp(20px,6vw,24px)] text-brand">Frosted Family</span>
           <div className="flex min-h-11 min-w-0 items-center justify-end">{corner}</div>
         </header>
       )}
 
       <div key={route.tab} className="ff-fade">
       {error ? (
-        <p className="px-4 pt-16 text-center text-sm font-semibold text-faint">Roster's under a shield. Try again shortly.</p>
+        <div className="pt-16"><GoblinNote goblin="panic">Roster's under a shield. Try again shortly.</GoblinNote></div>
       ) : !roster ? (
         <div aria-busy="true" aria-label="Loading" className="mx-auto flex max-w-[1320px] flex-col gap-3 px-4 pt-4">
           {[48, 120, 46, 320].map((h, i) => <div key={i} className="animate-pulse rounded-2xl bg-well" style={{ height: h }} />)}
@@ -125,7 +127,7 @@ export default function App() {
         </p>
       )}
       <footer className="mx-auto max-w-[1320px] px-4 pb-4 pt-1 text-center text-[10px] text-faint opacity-70">
-        Unofficial, not endorsed by Supercell.{' '}
+        This material is unofficial and is not endorsed by Supercell.{' '}
         <a href="https://supercell.com/en/fan-content-policy/" target="_blank" rel="noopener noreferrer" className="text-faint underline hover:text-muted">Fan Content Policy</a>
       </footer>
 
@@ -158,6 +160,7 @@ export default function App() {
           ))}
         </nav>
       )}
+      {goblin}
     </div>
   )
 }

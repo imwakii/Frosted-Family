@@ -202,6 +202,8 @@ export const UPDATES: Update[] = [
       {
         title: 'General',
         lines: [
+          'Added gold Log rows for milestones.',
+          'Added goblins to empty screens.',
           'Changed buttons to two matching sizes.',
           'Moved Stats categories back to chips.',
           'Added a way to undo This is me.',

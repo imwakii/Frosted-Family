@@ -1,6 +1,6 @@
-import { type PointerEvent, useEffect, useMemo, useRef, useState } from 'react'
+import { type PointerEvent, type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
 import { thIcon } from '../clash'
-import { ago, type LogEvent, type Upgrade, type UpgradeCategory, type UpgradeCount, type UpgradeLeader, useClanLog } from '../leaders'
+import { ago, type LogEvent, type Milestone, type Upgrade, type UpgradeCategory, type UpgradeCount, type UpgradeLeader, useClanLog } from '../leaders'
 import { go, historyHref, markFromCard, playerHref, useDrill } from '../route'
 import { CLAN, CLANS } from '../theme'
 import type { ClanName, Roster } from '../types'
@@ -8,7 +8,7 @@ import { Card, COLOR, Dot, ticks, useWidth } from './ClansBoard'
 import { norm, PhoneSearch, SearchBox } from './CwlTab'
 import { ClanFilter, Empty, useClanPick } from './ExploreTab'
 import { Bar } from './OverallBoard'
-import { chip, Eyebrow, POINT, RowChevron, Th, UnitIcon } from './ui'
+import { chip, Eyebrow, POINT, RowChevron, Th, UnitIcon, GoblinNote } from './ui'
 import { useYou, YouTag } from './You'
 
 // GET /api/log: what has happened in the family, newest day first. Each day opens with who came, went or changed role,
@@ -129,12 +129,12 @@ function EventRow({ e, onRoster }: { e: LogEvent; onRoster: boolean }) {
     : <div className={cls} style={style}>{body}</div>
 }
 
-function MilestoneRow({ u }: { u: Upgrade }) {
+function MilestoneRow({ tag, name, at, children }: { tag: string; name: string | null; at: string; children: ReactNode }) {
   return (
-    <a href={playerHref(u.tag)} className="flex min-h-10 w-full items-center gap-2 px-3 text-[13px] text-ink no-underline hover:brightness-95">
-      <span className="min-w-0 flex-auto truncate font-semibold"><YouTag tag={u.tag} />{u.name}</span>
-      <span className="flex-none whitespace-nowrap text-xs font-semibold text-[#92400E]">★ Reached TH{u.to}, {u.clan}</span>
-      <span className="flex-none whitespace-nowrap text-[11px] font-semibold text-faint">{ago(u.at)}</span>
+    <a href={playerHref(tag)} className="flex min-h-10 w-full items-center gap-2 px-3 text-[13px] text-ink no-underline hover:brightness-95">
+      <span className="min-w-0 flex-auto truncate font-semibold"><YouTag tag={tag} />{name}</span>
+      <span className="flex-none whitespace-nowrap text-xs font-semibold text-[#92400E]">★ {children}</span>
+      <span className="flex-none whitespace-nowrap text-[11px] font-semibold text-faint">{ago(at)}</span>
     </a>
   )
 }
@@ -308,7 +308,7 @@ function MostUpgrades({ board, clan, nq }: { board: UpgradeLeader[]; clan: ClanN
       <div role="group" aria-label="Range" className="flex gap-1.5">
         {([7, 30] as const).map((d) => <button key={d} type="button" aria-pressed={d === days} onClick={() => setDays(d)} className={chip(d === days)}>{d} days</button>)}
       </div>
-      {!shown.length ? <div className="rounded-2xl border border-line bg-white p-5 text-sm text-faint">{nq ? 'No one by that name in this village' : 'No upgrades yet'}</div> : (
+      {!shown.length ? <GoblinNote box goblin={nq ? 'page' : 'coin'}>{nq ? 'No one by that name in this village' : 'No upgrades yet'}</GoblinNote> : (
         <ol className="m-0 list-none rounded-2xl border border-line bg-white py-1">
           {shown.map((r, i) => (
             <li key={r.tag}>
@@ -351,16 +351,18 @@ export default function LogTab({ roster, q, setQ, wide }: { roster: Roster; q: s
     .filter((e) => (clan === 'All' || e.clan === clan || e.from_clan === clan) && named(e))
   const allUps = (data?.upgrades ?? []).filter((u) => (clan === 'All' || u.clan === clan) && named(u))
   const halls = view === 'upgrades' ? [] : allUps.filter((u) => u.category === 'town_hall')
+  const miles = view === 'all' ? (data?.milestones ?? []).filter((m) => (clan === 'All' || m.clan === clan) && named(m)) : []
   const ups = view === 'members' ? [] : allUps.filter((u) => (view === 'upgrades' ? kind === 'all' || u.category === kind : u.category !== 'town_hall'))
 
   // One day: its member events, then a row for each player's upgrades, most recent first.
-  const days = new Map<string, { halls: Upgrade[]; events: LogEvent[]; groups: Map<string, Upgrade[]> }>()
+  const days = new Map<string, { halls: Upgrade[]; miles: Milestone[]; events: LogEvent[]; groups: Map<string, Upgrade[]> }>()
   const dayOf = (at: string) => {
     const d = feedDay(at)
-    if (!days.has(d)) days.set(d, { halls: [], events: [], groups: new Map() })
+    if (!days.has(d)) days.set(d, { halls: [], miles: [], events: [], groups: new Map() })
     return days.get(d)!
   }
   halls.forEach((u) => dayOf(u.at).halls.push(u))
+  miles.forEach((m) => dayOf(m.at).miles.push(m))
   events.forEach((e) => dayOf(e.at).events.push(e))
   ups.forEach((u) => {
     const g = dayOf(u.at).groups
@@ -400,7 +402,7 @@ export default function LogTab({ roster, q, setQ, wide }: { roster: Roster; q: s
 
   const chart = view === 'upgrades' && !!data?.upgrade_counts?.length && <UpgradeChart counts={data.upgrade_counts} clan={clan} kind={kind} />
   const feed = !data ? <Empty loading={loading} /> : !order.length
-    ? <div className="rounded-2xl border border-line bg-white p-5 text-sm text-faint">{nq ? 'No one by that name in this village' : 'All quiet in the village'}</div>
+    ? <GoblinNote box goblin={nq ? 'page' : 'bored'}>{nq ? 'No one by that name in this village' : 'All quiet in the village'}</GoblinNote>
     : (
       <div className="flex flex-col gap-3">
         {shown.map((d) => {
@@ -409,9 +411,10 @@ export default function LogTab({ roster, q, setQ, wide }: { roster: Roster; q: s
           return (
             <section key={d} aria-label={dayLabel(d)} className="flex flex-col gap-1.5">
               <span className="px-1 text-xs font-bold uppercase tracking-[0.06em] text-faint">{dayLabel(d)}</span>
-              {!!(day.halls.length || day.events.length) && (
+              {!!(day.halls.length || day.miles.length || day.events.length) && (
                 <ol className="m-0 grid list-none grid-cols-1 gap-1 p-0 md:grid-cols-2">
-                  {day.halls.map((u) => <li key={`${u.tag}-th-${u.to}`} data-tag={u.tag} className="min-w-0 bg-[#F7E8BC] md:col-span-2"><MilestoneRow u={u} /></li>)}
+                  {day.halls.map((u) => <li key={`${u.tag}-th-${u.to}`} data-tag={u.tag} className="min-w-0 bg-[#F7E8BC] md:col-span-2"><MilestoneRow tag={u.tag} name={u.name} at={u.at}>Reached TH{u.to}</MilestoneRow></li>)}
+                  {day.miles.map((m) => <li key={`${m.kind}-${m.tag}-${m.at}`} data-tag={m.tag} className="min-w-0 bg-[#F7E8BC] md:col-span-2"><MilestoneRow tag={m.tag} name={m.name} at={m.at}>{m.kind === 'hero' ? `Maxed ${m.unit}` : `${(m.stars ?? 0).toLocaleString('en-GB')} war stars`}</MilestoneRow></li>)}
                   {day.events.map((e) => <li key={`${e.kind}-${e.tag}-${e.at}`} className="min-w-0"><EventRow e={e} onRoster={here.has(e.tag)} /></li>)}
                 </ol>
               )}

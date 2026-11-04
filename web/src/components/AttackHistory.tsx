@@ -3,7 +3,7 @@ import { loadPlayerAll, type PlayerCard, playerNow } from '../data'
 import { markFromCard, openedFromCard, playerHref } from '../route'
 import type { Roster } from '../types'
 import { CardSheet } from './ClanSheet'
-import { chip, Stars, Th } from './ui'
+import { chip, Stars, Th, GoblinNote } from './ui'
 
 // One player's attacks over the last 7 or 30 days, a war at a time. Opens from Latest attacks on their card.
 
@@ -50,7 +50,7 @@ export default function AttackHistory({ tag, days: start, roster, wide, onClose 
         {([7, 30] as const).map((d) => <button key={d} type="button" aria-pressed={d === days} onClick={() => setDays(d)} className={chip(d === days)}>{d} days</button>)}
       </div>
       {!card ? <div aria-busy="true" aria-label="Loading" className="h-40 flex-none animate-pulse rounded-2xl bg-well" />
-        : !hits.length ? <p className="m-0 rounded-2xl border border-line bg-white p-5 text-sm text-faint">No attacks in {days} days. Their army's still training</p>
+        : !hits.length ? <GoblinNote box goblin="bored">No attacks in {days} days. Their army's still training</GoblinNote>
         : [...byWar.entries()].map(([key, rows]) => (
           <section key={key} aria-label={warLabel(rows[0])} className="flex flex-none flex-col gap-1.5">
             <span className="flex items-baseline justify-between gap-2 px-1">
