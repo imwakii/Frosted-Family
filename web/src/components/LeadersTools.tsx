@@ -8,7 +8,7 @@ import Info from './Info'
 import { ClanSwitch, Th, RowChevron } from './ui'
 import { YouTag } from './You'
 
-// Who could go: each clan's members in the server's removal order (docs/specs/02-allocation-rules.md, "Removing members").
+// Who to yeet: each clan's members in the server's removal order (docs/specs/02-allocation-rules.md, "Removing members").
 // It only suggests; the decision to remove anyone stays with Ka Wai in game.
 
 function groupByActivity(players: Candidate[]) {
@@ -103,7 +103,7 @@ function SignIn() {
 
 export default function LeadersTools({ wide }: { wide: boolean }) {
   return (
-    <section aria-label="Who could go" className="mx-auto flex max-w-[1360px] flex-col gap-4 px-[clamp(16px,3vw,32px)] pb-12 pt-5">
+    <section aria-label="Who to yeet" className="mx-auto flex max-w-[1360px] flex-col gap-4 px-[clamp(16px,3vw,32px)] pb-12 pt-5">
       <div className={wide ? 'max-w-[900px]' : ''}><WhoCouldGo /></div>
     </section>
   )

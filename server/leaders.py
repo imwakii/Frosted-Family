@@ -117,7 +117,7 @@ def upgrades(conn, days: int = 7, clan: str | None = None) -> dict:
 
 
 def upgrade_board(conn) -> list[dict]:
-    """Current members with an upgrade in the last 30 days, most first: for Log's leaderboard and Who could go."""
+    """Current members with an upgrade in the last 30 days, most first: for Log's leaderboard and Who to yeet."""
     t = now()
     week, month = [(t - timedelta(days=n)).strftime("%Y-%m-%dT%H:%M:%SZ") for n in (7, 30)]
     tally: dict[str, dict] = {}
