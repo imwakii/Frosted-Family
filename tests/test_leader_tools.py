@@ -82,6 +82,14 @@ def test_upgrades_list_changes_after_the_first_snapshot(timeline):
     assert body["upgrades"][0]["clan"] in ("Fire", "Flakes") and body["upgrades"][0]["th"]
 
 
+def test_upgrade_board_counts_each_kind(timeline):
+    with db.connect(timeline / "frosted.db") as conn:
+        waki = next(r for r in leaders.upgrade_board(conn) if r["tag"] == "#R2PPV8CL")
+    assert waki["month"] == sum(k["month"] for k in waki["kinds"].values())
+    assert waki["week"] == sum(k["week"] for k in waki["kinds"].values())
+    assert {"hero", "troop"} <= set(waki["kinds"])
+
+
 def test_upgrades_filter_by_clan_and_days(timeline):
     fire = client().get("/explore/upgrades", params={"days": 30, "clan": "Fire"}).json()["upgrades"]
     assert {u["unit"] for u in fire} == {"Barbarian King", "Electro Titan"}

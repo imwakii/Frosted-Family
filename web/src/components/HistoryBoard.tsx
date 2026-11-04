@@ -88,7 +88,7 @@ export default function HistoryBoard({ q, setQ, wide }: { q: string; setQ: (v: s
           </ol>
         </Section>
 
-        <Section title="New faces each year" note="First seen in each clan">
+        <Section title="New faces each year" note="First time in the family">
           <div className="flex flex-col gap-2 rounded-2xl border border-line bg-white p-3">
             <div aria-label="Key" className={KEY_ROW}>
               {shownClans.map((c) => <span key={c} className="flex items-center gap-1"><span className="size-2.5 rounded-sm" style={{ background: BAR[c] }} />{c}</span>)}

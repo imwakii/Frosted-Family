@@ -121,13 +121,14 @@ def upgrade_board(conn) -> list[dict]:
     t = now()
     week, month = [(t - timedelta(days=n)).strftime("%Y-%m-%dT%H:%M:%SZ") for n in (7, 30)]
     tally: dict[str, dict] = {}
-    for tag, _unit, _cat, _frm, _to, at, _change in upgrade_events(conn):
+    for tag, _unit, cat, _frm, _to, at, _change in upgrade_events(conn):
         if at < month:
             continue
-        r = tally.setdefault(tag, {"week": 0, "month": 0, "last": at})
-        r["month"] += 1
-        r["week"] += at >= week
-        r["last"] = max(r["last"], at)
+        r = tally.setdefault(tag, {"week": 0, "month": 0, "last": at, "kinds": {}})
+        for c in (r, r["kinds"].setdefault(cat, {"week": 0, "month": 0, "last": at})):
+            c["month"] += 1
+            c["week"] += at >= week
+            c["last"] = max(c["last"], at)
     ms = members_by_tag(conn)
     out = [{**profiles.row(ms[tag]), **r} for tag, r in tally.items() if tag in ms]
     return sorted(out, key=lambda r: (-r["month"], r["name"] or ""))

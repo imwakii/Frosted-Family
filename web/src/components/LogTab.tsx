@@ -295,12 +295,14 @@ function UpgradeRow({ ups, showClan, open, onToggle }: { ups: Upgrade[]; showCla
 }
 
 /** Most upgrades in the last 7 or 30 days. Clan and search come from the page. */
-function MostUpgrades({ board, clan, nq }: { board: UpgradeLeader[]; clan: ClanName | 'All'; nq: string }) {
+function MostUpgrades({ board, clan, kind, nq }: { board: UpgradeLeader[]; clan: ClanName | 'All'; kind: UpgradeCategory | 'all'; nq: string }) {
   const [days, setDays] = useState<7 | 30>(7)
   const [everyone, setEveryone] = useState(false)
-  const n = (r: UpgradeLeader) => (days === 7 ? r.week : r.month)
+  const tally = (r: UpgradeLeader) => (kind === 'all' ? r : r.kinds?.[kind])
+  const n = (r: UpgradeLeader) => (days === 7 ? tally(r)?.week : tally(r)?.month) ?? 0
+  const last = (r: UpgradeLeader) => tally(r)?.last ?? r.last
   const ranked = board.filter((r) => (clan === 'All' || r.clan === clan) && n(r) > 0
-    && (!nq || norm(r.name ?? '').includes(nq) || r.tag.toLowerCase().includes(nq))).sort((a, b) => n(b) - n(a) || b.last.localeCompare(a.last))
+    && (!nq || norm(r.name ?? '').includes(nq) || r.tag.toLowerCase().includes(nq))).sort((a, b) => n(b) - n(a) || last(b).localeCompare(last(a)))
   const shown = everyone || nq ? ranked : ranked.slice(0, TOP)
   const most = ranked.length ? n(ranked[0]) : 1
   return (
@@ -319,7 +321,7 @@ function MostUpgrades({ board, clan, nq }: { board: UpgradeLeader[]; clan: ClanN
                   <span className="flex min-w-0 items-baseline gap-1.5">
                     <span className="truncate text-[15px] font-semibold"><YouTag tag={r.tag} />{r.name}</span>
                     {clan === 'All' && <span className="flex-none text-[11px] font-bold" style={{ color: CLAN[r.clan].deep }}>{r.clan}</span>}
-                    <span className="ml-auto flex-none text-xs text-faint">{ago(r.last)}</span>
+                    <span className="ml-auto flex-none text-xs text-faint">{ago(last(r))}</span>
                   </span>
                   <Bar v={(n(r) / most) * 100} color={COLOR[r.clan]} />
                 </span>
@@ -382,18 +384,15 @@ export default function LogTab({ roster, q, setQ, wide }: { roster: Roster; q: s
     </div>
   )
   const kinds = view === 'upgrades' && (
-    <section aria-label="Upgrades by day" className="flex flex-col gap-1.5">
-      <Eyebrow>Every upgrade</Eyebrow>
-      <div role="group" aria-label="Kind" className={`flex gap-1.5 overflow-x-auto [scrollbar-width:none] ${wide ? 'flex-wrap' : ''}`}>
-        {KINDS.map((k) => <button key={k.id} type="button" aria-pressed={k.id === kind} onClick={() => setKind(k.id)} className={chip(k.id === kind)}>{k.label}</button>)}
-      </div>
-    </section>
+    <div role="group" aria-label="Kind" className={`flex flex-none gap-1.5 overflow-x-auto [scrollbar-width:none] ${wide ? 'flex-wrap' : ''}`}>
+      {KINDS.map((k) => <button key={k.id} type="button" aria-pressed={k.id === kind} onClick={() => setKind(k.id)} className={chip(k.id === kind)}>{k.label}</button>)}
+    </div>
   )
   const look = view === 'all' && !!data && !nq && <SinceLastLook data={data} roster={roster} />
   const leaders = view === 'upgrades' && !!data && (
     <section aria-label="Most upgrades" className="flex flex-col gap-1.5">
       <Eyebrow>Most upgrades</Eyebrow>
-      <MostUpgrades board={data.upgrade_board ?? []} clan={clan} nq={nq} />
+      <MostUpgrades board={data.upgrade_board ?? []} clan={clan} kind={kind} nq={nq} />
     </section>
   )
   const first = events.find((e) => here.has(e.tag))?.tag ?? halls[0]?.tag ?? ups[0]?.tag
@@ -436,6 +435,13 @@ export default function LogTab({ roster, q, setQ, wide }: { roster: Roster; q: s
       </div>
     )
 
+  const everything = (
+    <div className="flex flex-col gap-1.5">
+      {view === 'upgrades' && <Eyebrow>Every upgrade</Eyebrow>}
+      {feed}
+    </div>
+  )
+
   if (wide) {
     return (
       <main className="mx-auto flex max-w-[1360px] flex-col gap-3.5 px-[clamp(16px,3vw,32px)] pb-12 pt-5">
@@ -444,7 +450,7 @@ export default function LogTab({ roster, q, setQ, wide }: { roster: Roster; q: s
           <div className="w-[clamp(220px,28vw,340px)] flex-none"><SearchBox q={q} setQ={setQ} onEnter={enter} /></div>
         </div>
         {filters}
-        <div className="flex w-full flex-col gap-3">{look}{chart}{leaders}{kinds}{feed}</div>
+        <div className="flex w-full flex-col gap-3">{look}{kinds}{chart}{leaders}{everything}</div>
       </main>
     )
   }
@@ -452,7 +458,7 @@ export default function LogTab({ roster, q, setQ, wide }: { roster: Roster; q: s
     <div className="flex flex-col gap-2.5 pb-6">
       <PhoneSearch q={q} setQ={setQ} onEnter={enter}><ClanFilter clan={clan} setClan={setClan} /></PhoneSearch>
       {filters}
-      <div className="flex flex-col gap-3 px-4">{look}{chart}{leaders}{kinds}{feed}</div>
+      <div className="flex flex-col gap-3 px-4">{look}{kinds}{chart}{leaders}{everything}</div>
     </div>
   )
 }

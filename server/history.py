@@ -13,6 +13,7 @@ from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
 
+from frosted.config import TAG_TO_CLAN
 from server import profiles
 
 CLANS = {"fire": "Fire", "cake": "Cake", "flakes": "Flakes"}
@@ -56,16 +57,46 @@ def since(tag: str, conn=None) -> str | None:
     return min(dates) if dates else None
 
 
+def _recorded(conn) -> tuple[dict[str, dict], dict[str, set[str]]]:
+    """What the collector has seen since it began: each player's first date and clan, and every clan they have been in."""
+    if conn is None:
+        return {}, {}
+    firsts: dict[str, dict] = {}
+    for r in conn.execute("""SELECT f.player_tag AS tag, f.first_seen AS seen,
+                                    (SELECT clan_tag FROM member_snapshots m WHERE m.player_tag = f.player_tag ORDER BY seen_at LIMIT 1) AS clan_tag
+                             FROM member_first_seen f"""):
+        clan = TAG_TO_CLAN.get(r["clan_tag"])
+        if clan:
+            firsts[r["tag"]] = {"first": r["seen"][:10], "clan": clan}
+    clans: dict[str, set[str]] = {}
+    for r in conn.execute("SELECT DISTINCT player_tag, clan_tag FROM member_snapshots"):
+        clan = TAG_TO_CLAN.get(r["clan_tag"])
+        if clan:
+            clans.setdefault(r["player_tag"], set()).add(clan)
+    return firsts, clans
+
+
 def timeline(conn) -> dict | None:
     """GET /stats/history: each clan's start, first appearances by year, and every current member by time in the family."""
     h = load()
     if not h:
         return None
     rows = h["rows"]
+    recorded, recorded_clans = _recorded(conn)
+    been_in: dict[str, set[str]] = {tag: {r["clan"] for r in spans} for tag, spans in h["by_tag"].items()}
+    for tag, seen in recorded_clans.items():
+        been_in.setdefault(tag, set()).update(seen)
     clans = [{"clan": c, "first": min(r["first"] for r in rows if r["clan"] == c),
-              "players": sum(r["clan"] == c for r in rows)} for c in CLANS.values() if any(r["clan"] == c for r in rows)]
+              "players": sum(c in seen for seen in been_in.values())} for c in CLANS.values() if any(r["clan"] == c for r in rows)]
+    # Each person once: the year and clan the family first saw them, from the import or the collector, whichever is earlier.
+    first_time: dict[str, dict] = {}
+    for r in sorted(rows, key=lambda r: r["first"]):
+        first_time.setdefault(r["tag"], r)
+    for tag, r in recorded.items():
+        if tag not in first_time or r["first"] < first_time[tag]["first"]:
+            first_time[tag] = r
     years: dict[str, dict] = {}
-    for r in rows:
+    for r in first_time.values():
         y = years.setdefault(r["first"][:4], {"year": r["first"][:4], **{c: 0 for c in CLANS.values()}})
         y[r["clan"]] += 1
     members = profiles.current_members(conn) if conn else []
@@ -76,7 +107,7 @@ def timeline(conn) -> dict | None:
             longest.append({**profiles.row(m), "since": first})
     longest.sort(key=lambda r: (r["since"], r["name"] or ""))
     return {
-        "read_at": h["read_at"], "players": len(h["by_tag"]),
-        "in_several": sum(len({r["clan"] for r in spans}) > 1 for spans in h["by_tag"].values()),
+        "read_at": h["read_at"], "players": len(been_in),
+        "in_several": sum(len(seen) > 1 for seen in been_in.values()),
         "clans": clans, "years": sorted(years.values(), key=lambda y: y["year"]), "longest": longest,
     }

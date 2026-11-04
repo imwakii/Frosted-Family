@@ -202,6 +202,8 @@ export const UPDATES: Update[] = [
       {
         title: 'General',
         lines: [
+          'Added kind filters to Most upgrades.',
+          'Changed New faces to count people once.',
           'Added gold Log rows for milestones.',
           'Added goblins to empty screens.',
           'Changed buttons to two matching sizes.',

@@ -441,13 +441,20 @@ def test_history_gives_first_dates_and_never_a_clan_size(conn, tmp_path, monkeyp
     t = history.timeline(conn)
     assert t["players"] == 3 and t["in_several"] == 1
     assert [c["first"] for c in t["clans"][:2]] == ["2017-11-29", "2021-03-03"]
-    assert {y["year"]: (y["Fire"], y["Cake"]) for y in t["years"]} == {"2017": (1, 0), "2018": (1, 0), "2021": (0, 2)}
+    assert {y["year"]: (y["Fire"], y["Cake"]) for y in t["years"]} == {"2017": (1, 0), "2018": (1, 0), "2021": (0, 1)}  # #OLD counts once, where the family first saw them
     assert [r["tag"] for r in t["longest"]] == ["#OLD", "#NEW"]  # oldest first; a member with no record is left out
     # Someone who joined after the import takes the collector's date; the earlier date wins if both exist.
     with conn:
         conn.execute("INSERT INTO member_first_seen (player_tag, first_seen) VALUES ('#NONE', '2026-11-05T01:00:00Z'), ('#OLD', '2026-10-31T20:30:04Z')")
     assert history.since("#NONE", conn) == "2026-11-05" and history.since("#OLD", conn) == "2017-11-29"
     assert [r["tag"] for r in history.timeline(conn)["longest"]] == ["#OLD", "#NEW", "#NONE"]
+    # A newcomer the collector saw joins that year's count, under their first clan, and the clan's total; a move adds no new face.
+    with conn:
+        conn.execute("INSERT INTO member_snapshots (clan_tag, player_tag, snapshot_date, seen_at) VALUES (?, '#NONE', '2026-11-05', '2026-11-05T01:00:00Z')", (CAKE,))
+        conn.execute("INSERT INTO member_snapshots (clan_tag, player_tag, snapshot_date, seen_at) VALUES (?, '#NONE', '2026-11-06', '2026-11-06T01:00:00Z')", (FIRE,))
+    t = history.timeline(conn)
+    assert {y["year"]: (y["Fire"], y["Cake"]) for y in t["years"]}["2026"] == (0, 1)
+    assert {c["clan"]: c["players"] for c in t["clans"]} == {"Fire": 3, "Cake": 3} and t["players"] == 4 and t["in_several"] == 2
 
 
 def test_history_is_absent_without_its_file(conn, tmp_path, monkeypatch):

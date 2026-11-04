@@ -55,7 +55,8 @@ export type LogEvent = {
   tag: string; name: string | null; th: number | null; clan: ClanName; from_clan?: ClanName; role?: string; at: string; approx: boolean
 }
 export type UpgradeCount = { day: string; clan: ClanName; category: UpgradeCategory; n: number }
-export type UpgradeLeader = { tag: string; name: string | null; clan: ClanName; th: number | null; week: number; month: number; last: string }
+export type UpgradeTally = { week: number; month: number; last: string }
+export type UpgradeLeader = UpgradeTally & { tag: string; name: string | null; clan: ClanName; th: number | null; kinds?: Partial<Record<UpgradeCategory, UpgradeTally>> }
 export type Milestone = { kind: 'hero' | 'war_stars'; tag: string; name: string | null; clan: string | null; at: string; unit?: string; stars?: number }
 export type ClanLog = { milestones?: Milestone[]; since: string | null; upgrade_days: number; events: LogEvent[]; upgrades: Upgrade[]; upgrade_counts?: UpgradeCount[]; upgrade_board?: UpgradeLeader[] }
 
