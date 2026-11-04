@@ -107,8 +107,8 @@ export function SubNav({ items, current, wide }: { items: { id: string; label: s
   useEffect(() => { ref.current?.querySelector('[aria-current="page"]')?.scrollIntoView({ inline: 'center', block: 'nearest' }) }, [current])
   return (
     <div className={wide ? 'border-b border-line bg-white' : 'px-4'}>
-      {/* A soft gold pill marks the open section, so this row reads apart from the clan switch and chips below it. Its padding closes up so Stats' five fit from 360px wide. The row starts a pill's padding to the left, so the first word lines up with the app name. */}
-      <nav ref={ref} aria-label="Section" className={`flex overflow-x-auto [scrollbar-width:none] ${wide ? 'mx-auto max-w-[1360px] gap-1.5 pl-[calc(clamp(16px,3vw,32px)-12px)] pr-[clamp(16px,3vw,32px)]' : '-ml-[clamp(8px,calc((100vw-271px)/10),12px)] gap-1'}`}>
+      {/* A soft gold pill marks the open section, so this row reads apart from the clan switch and chips below it. Its padding closes up so Stats' five fit from 360px wide. The first pill lines up with the page's left edge, like every chip and card below it. */}
+      <nav ref={ref} aria-label="Section" className={`flex overflow-x-auto [scrollbar-width:none] ${wide ? 'mx-auto max-w-[1360px] gap-1.5 px-[clamp(16px,3vw,32px)]' : 'gap-1'}`}>
         {items.map((s) => (
           <a key={s.id} href={s.href} aria-current={s.id === current ? 'page' : undefined} className="flex min-h-11 flex-none items-center no-underline">
             <span className={`whitespace-nowrap rounded-full px-[clamp(8px,calc((100vw-271px)/10),12px)] py-1 text-[14px] font-bold ${s.id === current ? 'bg-[#F3E3B3] text-ink' : 'text-muted hover:text-ink'}`}>{s.label}</span>
