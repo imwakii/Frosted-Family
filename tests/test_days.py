@@ -94,3 +94,35 @@ def test_a_day_that_has_begun_is_the_games(env, monkeypatch, tmp_path):
     assert r.json()["published"]["clans"]["Fire"]["1"] == fire and r.json()["published"]["clans"]["Fire"]["2"] == sorted(played)
     short = every_day(fire) | {"2": fire[:3]}
     assert c.post("/plan/days/publish", json=body({"Fire": short}), headers=csrf).status_code == 422
+
+
+def test_a_published_move_takes_someone_off_their_old_clans_days(env, monkeypatch):
+    fire = core(roster_rows(env), "Fire")
+    monkeypatch.setattr(days, "current_season", lambda: SEASON)
+    with days.connect() as conn:
+        days.write(conn, days.DayPlan(season=SEASON, clans={"Fire": every_day(fire)}), "published", type("L", (), {"name": "x"})())
+    with days.connect() as conn:
+        stamp = days.read(conn, SEASON, "published")["updated_at"]
+    move = lambda tag, clan, slot: type("M", (), {"tag": tag, "clan": clan, "slot": slot})()
+    days.after_moves([move(fire[0], "Cake", "SUB"), move(fire[1], "Fire", "SUB"), move(fire[2], "Fire", "OUT")])
+    with days.connect() as conn:
+        saved = days.read(conn, SEASON, "published")
+    day = saved["clans"]["Fire"]["1"]
+    assert fire[0] not in day and fire[2] not in day and fire[1] in day and len(day) == len(fire) - 2
+    assert saved["updated_at"] == stamp  # a proposal drafted from this plan is still current
+
+
+def test_publishing_one_clan_keeps_the_others_plan(env, monkeypatch):
+    rows = roster_rows(env)
+    fire, cake = core(rows, "Fire"), core(rows, "Cake")
+    boss, csrf = signed_in()
+    assert boss.post("/plan/days/publish", json=body({"Fire": every_day(fire), "Cake": every_day(cake)}), headers=csrf).status_code == 200
+    assert boss.post("/plan/days/publish", json=body({"Fire": every_day(fire)}), headers=csrf).status_code == 200
+    with days.connect() as conn:
+        assert days.read(conn, SEASON, "published")["clans"]["Cake"]["1"] == cake
+
+
+def test_someone_sitting_out_cannot_be_published_back_in():
+    rows = [{"tag": f"#P2{c}", "clan": "Fire", "cwl_slot": "CORE", "name": c} for c in "0289PYLQGRJCUV"] + [{"tag": "#R2PPV8CL", "clan": "Fire", "cwl_slot": "Sitting Out", "name": "Xan"}]
+    plan_ = days.DayPlan(season=SEASON, clans={"Fire": every_day([r["tag"] for r in rows])})
+    assert any("sitting out: Xan" in p for p in days.check(plan_, rows))

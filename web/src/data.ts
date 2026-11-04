@@ -190,14 +190,23 @@ export async function loadWar(): Promise<LiveMap> {
 
 export function useRoster() {
   const [state, setState] = useState<{ roster: Roster | null; live: boolean; error: boolean }>({ roster: null, live: false, error: false })
+  // A failed refresh keeps a live roster on screen rather than swapping it for the saved one, and an unchanged answer changes
+  // nothing, so the Plan tab doesn't start over.
+  const keep = useCallback(({ roster, live }: { roster: Roster; live: boolean }) => setState((s) => {
+    if (s.live && !live) return s
+    if (s.roster && s.live === live && JSON.stringify(s.roster) === JSON.stringify(roster)) return s
+    return { roster, live, error: false }
+  }), [])
   useEffect(() => {
-    loadRoster().then(
-      ({ roster, live }) => setState({ roster, live, error: false }),
-      () => setState({ roster: null, live: false, error: true }),
-    )
-  }, [])
+    loadRoster().then(keep, () => setState({ roster: null, live: false, error: true }))
+    const tick = () => { loadRoster().then(keep, () => {}) }
+    const back = () => { if (document.visibilityState === 'visible') tick() }
+    const id = window.setInterval(tick, 300_000)
+    document.addEventListener('visibilitychange', back)
+    return () => { window.clearInterval(id); document.removeEventListener('visibilitychange', back) }
+  }, [keep])
   // After a publish: past the browser's short cache, and keeping what is on screen if this fails.
-  const reload = useCallback(() => loadRoster(true).then(({ roster, live }) => setState({ roster, live, error: false }), () => {}), [])
+  const reload = useCallback(() => loadRoster(true).then(keep, () => {}), [keep])
   return { ...state, reload }
 }
 

@@ -264,7 +264,7 @@ def test_what_counts_as_activity():
     base = {"town_hall": 17, "exp_level": 200, "attack_wins": 5, "war_stars": 900, "capital_contributions": 1000,
             "unit_levels": 400, "donations": 50, "donations_received": 20, "trophies": 5000, "builder_trophies": 3000}
     assert not leaders.was_active(base, {**base, "trophies": 4950, "builder_trophies": 3100})
-    assert not leaders.was_active(base, {**base, "donations": 0, "donations_received": 0})  # season reset
+    assert not leaders.was_active(base, {**base, "donations": 0, "donations_received": 0, "attack_wins": 0})  # season reset
     assert leaders.was_active(base, {**base, "donations": 51})
     assert leaders.was_active(base, {**base, "donations_received": 21})
     for k in ("town_hall", "exp_level", "attack_wins", "war_stars", "capital_contributions", "unit_levels"):

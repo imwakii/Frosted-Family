@@ -207,3 +207,28 @@ def test_the_signing_key_is_made_once_and_private(api, conns):
     assert api.get("/push/key").json()["key"] == first
     assert len(first) == 87  # 65 bytes, base64url without padding
     assert push.key_path().exists()
+
+
+def test_someone_dropped_and_put_back_hears_they_are_back(conns):
+    game, app = conns
+    phone(app)
+    war(game, state="preparation", ends_in=timedelta(hours=30), starts_ago=timedelta(hours=-6), round_no=3)
+    app.execute("CREATE TABLE day_plans (season TEXT, state TEXT, body TEXT, updated_at TEXT, updated_by TEXT)")
+    app.execute("INSERT INTO day_plans VALUES ('2026-11','published',?,'x','x')", (json.dumps({"Fire": {"3": [ME]}}),))
+    app.commit()
+    run(game, app)
+    app.execute("UPDATE day_plans SET body=?", (json.dumps({"Fire": {"3": [OTHER]}}),))
+    app.commit()
+    run(game, app)
+    app.execute("UPDATE day_plans SET body=?", (json.dumps({"Fire": {"3": [ME]}}),))
+    app.commit()
+    back = run(game, app)
+    assert [m["title"] for m in back] == ["You are back in CWL day 3"] and back[0]["url"]  # web_push needs one
+    assert run(game, app) == []
+    app.execute("UPDATE day_plans SET body=?", (json.dumps({"Fire": {"3": [OTHER]}}),))
+    app.commit()
+    assert [m["title"] for m in run(game, app)] == ["You are out of CWL day 3"]
+    app.execute("UPDATE day_plans SET body=?", (json.dumps({"Fire": {"3": [ME]}}),))
+    app.commit()
+    assert [m["title"] for m in run(game, app)] == ["You are back in CWL day 3"]
+    assert run(game, app) == []

@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import os
 from collections import Counter
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
 
@@ -26,6 +26,8 @@ DONATIONS_SETTLE_DAY = 14  # before this day of the month, season donations have
 UNPROVEN_TIERS = ("NO DATA", "THIN RECORD")
 CATEGORY = {"hero": "hero", "equipment": "equipment", "troop": "troop", "spell": "spell", "pet": "pet",
             "siege": "siege"}  # super troops are boosted copies and are left out
+
+RETURN_GAP = 2  # days the collector ran without seeing a player before they count as having been away
 
 router = APIRouter(prefix="/leaders")
 
@@ -55,16 +57,35 @@ def first_seen(conn) -> dict[str, str]:
 
 # ─── upgrade feed ─────────────────────────────────────────────────────────────
 
+def returned_on(conn) -> dict[str, set[str]]:
+    """The days a player came back after missing the family, and the day after: their first fetch back can land on either.
+    A gap is counted in days the collector saw anyone at all, so an outage is not everyone leaving."""
+    seen: dict[str, list[str]] = {}
+    for r in conn.execute("SELECT DISTINCT player_tag, snapshot_date FROM member_snapshots ORDER BY player_tag, snapshot_date"):
+        seen.setdefault(r["player_tag"], []).append(r["snapshot_date"])
+    polled = sorted({d for days in seen.values() for d in days})
+    place = {d: i for i, d in enumerate(polled)}
+    out: dict[str, set[str]] = {}
+    for tag, days in seen.items():
+        for a, b in zip(days, days[1:]):
+            if place[b] - place[a] > RETURN_GAP:
+                after = date.fromisoformat(b) + timedelta(days=1)
+                out.setdefault(tag, set()).update((b, after.isoformat()))
+    return out
+
+
 def upgrade_events(conn) -> list[tuple]:
-    """Every upgrade on record as (tag, unit, category, from, to, at, change), whether or not the player is still here."""
+    """Every upgrade on record as (tag, unit, category, from, to, at, change), whether or not the player is still here.
+    What a player levelled while away arrives all at once when they return, so it counts no more than their first fetch does."""
     start = first_seen(conn)
+    back = returned_on(conn)
     events = []
     prev: dict[tuple, int] = {}
     for u in conn.execute("SELECT * FROM player_unit_history ORDER BY player_tag, kind, name, level"):
         key = (u["player_tag"], u["kind"], u["name"])
         before = prev.get(key)
         prev[key] = u["level"]
-        if u["kind"] not in CATEGORY or u["seen_at"] <= start.get(u["player_tag"], ""):
+        if u["kind"] not in CATEGORY or u["seen_at"] <= start.get(u["player_tag"], "") or u["seen_at"][:10] in back.get(u["player_tag"], ()):
             continue
         events.append((u["player_tag"], u["name"], CATEGORY[u["kind"]], before or 0, u["level"], u["seen_at"],
                        "level_up" if before else "unlock"))
@@ -72,7 +93,7 @@ def upgrade_events(conn) -> list[tuple]:
     for s in conn.execute("SELECT player_tag, fetched_at, town_hall FROM profile_snapshots ORDER BY player_tag, fetched_at"):
         before = th.get(s["player_tag"])
         th[s["player_tag"]] = s["town_hall"]
-        if before and s["town_hall"] and s["town_hall"] > before:
+        if before and s["town_hall"] and s["town_hall"] > before and s["fetched_at"][:10] not in back.get(s["player_tag"], ()):
             events.append((s["player_tag"], "Town Hall", "town_hall", before, s["town_hall"], s["fetched_at"],
                            "level_up"))
     return events
@@ -136,8 +157,8 @@ def upgrade_board(conn) -> list[dict]:
 
 # ─── inactivity ───────────────────────────────────────────────────────────────
 
-ACTIVE_IF_CHANGED = ("town_hall", "exp_level", "attack_wins", "war_stars", "capital_contributions", "unit_levels")
-ACTIVE_IF_RISEN = ("donations", "donations_received")  # both reset to 0 at season end, which is not activity
+ACTIVE_IF_CHANGED = ("town_hall", "exp_level", "war_stars", "capital_contributions", "unit_levels")
+ACTIVE_IF_RISEN = ("attack_wins", "donations", "donations_received")  # all reset to 0 at season end, which is not activity
 # Trophies and builder trophies are left out: defenses move them while the player is idle.
 
 

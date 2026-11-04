@@ -86,8 +86,9 @@ def write(conn, body: DayPlan, state: str, leader: Leader) -> None:
 
 
 def check(body: DayPlan, rows: list[dict], begun: dict | None = None) -> list[str]:
-    """Exactly 15 on every day still to come of each planned clan, each of them in that clan."""
+    """Exactly 15 on every day still to come of each planned clan, each of them in that clan and not sitting out."""
     clan_of = {r["tag"]: r.get("clan") for r in rows if r.get("tag")}
+    sitting = {r["tag"]: r.get("name") or r["tag"] for r in rows if r.get("tag") and r.get("cwl_slot") == "Sitting Out"}
     problems = []
     for clan, days in body.clans.items():
         for d in DAYS:
@@ -99,6 +100,9 @@ def check(body: DayPlan, rows: list[dict], begun: dict | None = None) -> list[st
             elsewhere = [t for t in tags if clan_of.get(t) != clan]
             if elsewhere:
                 problems.append(f"{clan} day {d}: not in {clan}: {', '.join(elsewhere)}")
+            out = [sitting[t] for t in tags if t in sitting]
+            if out:
+                problems.append(f"{clan} day {d}: sitting out: {', '.join(out)}")
     return problems
 
 
@@ -208,6 +212,33 @@ def publish_days(body: DayPlan, leader: Leader = Depends(require_publisher)):
     return do_publish(body, leader)
 
 
+def after_moves(moves: list) -> None:
+    """A published lineup that moves someone takes them off their old clan's days still to come, and off every clan's if
+    they're out, so the plan and alerts don't send them to the wrong place. Leaders see the clan short of 15 until they
+    fill it. The plan's own date stays: a proposal drafted from it is not out of date because of this."""
+    from server.api import open_db
+    stays = {m.tag: None if m.slot in ("OUT", "Sitting Out") else m.clan for m in moves}
+    if not stays:
+        return
+    season = current_season()
+    fixed = begun(open_db(), season)
+    with connect() as conn:
+        for state in ("published", "draft"):
+            saved = read(conn, season, state)
+            if not saved:
+                continue
+            clans = saved["clans"]
+            changed = False
+            for clan, days in clans.items():
+                for d, lineup in days.items():
+                    kept = [t for t in lineup if stays.get(t, clan) == clan]
+                    if d not in fixed.get(clan, {}) and kept != lineup:
+                        days[d] = kept
+                        changed = True
+            if changed:
+                conn.execute("UPDATE day_plans SET body=? WHERE season=? AND state=?", (json.dumps(clans), season, state))
+
+
 def do_publish(body: DayPlan, leader: Leader) -> dict:
     from server.api import open_db
     fixed = begun(open_db(), body.season)
@@ -216,6 +247,9 @@ def do_publish(body: DayPlan, leader: Leader) -> dict:
         raise HTTPException(422, {"problems": problems})
     with connect() as conn:
         pub = read(conn, body.season, "published")
+        # A clan this plan leaves out keeps what is published.
+        for clan, days in (pub["clans"] if pub else {}).items():
+            body.clans.setdefault(clan, days)
         # Days already begun stay as they were planned, so the page can show where the game differed.
         for clan, days in body.clans.items():
             for d, lineup in fixed.get(clan, {}).items():

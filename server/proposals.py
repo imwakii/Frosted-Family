@@ -109,6 +109,11 @@ def accept(proposal_id: int, a: AcceptBody | None = None, leader: Leader = Depen
     body = json.loads(r["body"])
     # Either publish raises a 422 with the rule problems, and the proposal stays open.
     if r["kind"] == "days":
+        # Drafted from an older plan, it would quietly undo whatever was published since.
+        with days.connect() as conn:
+            pub = days.read(conn, r["season"], "published")
+        if pub and pub["updated_at"] > r["updated_at"]:
+            raise HTTPException(409, {"problems": ["The plan has changed since this was proposed. Ask for it to be proposed again."]})
         days.do_publish(days.DayPlan(season=r["season"], clans=body["clans"]), leader)
     else:
         plan.do_publish(plan.PublishBody(moves=body["moves"], override_valve=bool(a and a.override_valve)), leader)

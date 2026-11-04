@@ -10,6 +10,8 @@ import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 
+from frosted.config import CLAN_TAGS
+
 SCHEMA = """
 -- Each tagged player's last allocation in the roster CSV (with any publish laid over it), rewritten every collector
 -- pass. It outlives their row: a player dropped from the CSV after leaving gets their slot back if they rejoin the same
@@ -309,13 +311,27 @@ CREATE TABLE IF NOT EXISTS game_events (
     PRIMARY KEY (slug, line)
 );
 
--- A missed attack is an attack slot left unused once the war has ended. Wars still running are not counted.
-CREATE VIEW IF NOT EXISTS missed_attacks AS
+"""
+
+# The API does not say a war is a friendly. The family's habit is one for each CWL clan on the 1st, before the draw, so a
+# CWL clan's regular war starting that day is taken as one. It stays in the war log and out of misses, rates and scores.
+_CWL_TAGS = f"('{CLAN_TAGS['Fire']}', '{CLAN_TAGS['Cake']}')"
+FRIENDLY = (f"(w.kind = 'regular' AND (w.clan_tag IN {_CWL_TAGS} OR w.opponent_tag IN {_CWL_TAGS}) "
+            "AND IFNULL(substr(w.start_time, 7, 2), '') = '01')")
+
+# A missed attack is an attack slot left unused once the war has ended. Wars still running are not counted.
+MISSED_VIEW = f"""CREATE VIEW missed_attacks AS
 SELECT m.war_key, m.player_tag, m.clan_tag, m.name, w.kind, w.season, w.round, w.end_time,
        w.attacks_per_member - m.attacks_used AS missed
 FROM war_members m JOIN wars w USING (war_key)
-WHERE w.state = 'warEnded' AND m.attacks_used < w.attacks_per_member;
-"""
+WHERE w.state = 'warEnded' AND m.attacks_used < w.attacks_per_member AND NOT {FRIENDLY}"""
+
+
+def _ensure_missed_view(conn: sqlite3.Connection) -> None:
+    """Replaced only when its definition has changed, in one transaction, so readers and other connections never see it gone."""
+    row = conn.execute("SELECT sql FROM sqlite_master WHERE type='view' AND name='missed_attacks'").fetchone()
+    if not row or row[0] != MISSED_VIEW:
+        conn.executescript(f"BEGIN IMMEDIATE; DROP VIEW IF EXISTS missed_attacks; {MISSED_VIEW}; COMMIT;")
 
 
 def clean_name(name: str | None) -> str | None:
@@ -333,6 +349,7 @@ def connect(path: str | Path) -> sqlite3.Connection:
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA foreign_keys=ON")
     conn.executescript(SCHEMA)
+    _ensure_missed_view(conn)
     return conn
 
 

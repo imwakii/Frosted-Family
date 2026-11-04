@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import type { Cat } from './explore'
 import type { ClanName } from './types'
 
-// Hash routes: #/war[/log[/<clan>/<war key>]] (where the app opens), #/cwl[/group], #/calendar, #/log, #/stats/<sub>[/<category>], #/plan/<sub>. A player sheet opens over
+// Hash routes: #/war[/log[/<clan>/<war key>]] (where the app opens), #/cwl[/group], #/calendar, #/log[/recap], #/stats/<sub>[/<category>], #/plan/<sub>. A player sheet opens over
 // Lineups or Stats by appending /p/<tag without #>, and closes by dropping it; a clan card the same way with /c/<clan>,
 // a league group clan's card with /e/<our clan>/<its tag without #>,
 // one player in one upgrade category with /u/<category>/<tag without #>[/<unit to mark>],
@@ -74,7 +74,9 @@ function place(path: string, player: string | null): Omit<Route, 'clan' | 'rival
     return { tab: 'explore', sub, kind, player, base: `#/stats/${sub}${kind ? '/' + kind : ''}` }
   }
   if (parts[0] === 'calendar') return { tab: 'calendar', sub: '', kind: null, player, base: '#/calendar' }
-  if (parts[0] === 'log') return { tab: 'log', sub: '', kind: null, player, base: '#/log' }
+  if (parts[0] === 'log') return parts[1] === 'recap'
+    ? { tab: 'log', sub: 'recap', kind: null, player, base: '#/log/recap' }
+    : { tab: 'log', sub: 'feed', kind: null, player, base: '#/log' }
   if (parts[0] === 'cwl') {
     const sub = parts[1] === 'group' || parts[1] === 'standings' ? 'group' : 'lineups'  // Standings joined Group on 4 Nov 2026
     return { tab: 'cwl', sub, kind: null, player, base: sub === 'lineups' ? '#/cwl' : `#/cwl/${sub}` }

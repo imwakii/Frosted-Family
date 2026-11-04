@@ -9,6 +9,7 @@ site through a Vercel rewrite.
     GET /player/{tag}    one player's allocation, latest snapshot, wars, attacks and missed attacks
     GET /allocation.csv  the latest published allocation, for server/pull_allocation.py
     GET /log     the family's log: joins, leaves, moves, role changes and recent upgrades
+    GET /log/recap  one month in the family: awards, the clan race, comings and goings, milestones
     GET /explore/upgrades?days=7&clan=   level-ups, unlocks and TH upgrades between profile snapshots
     GET /leaders/inactivity, /leaders/make-room?clan=   leaders only (passcode or Discord session), read-only
     GET /explore/war     every member's all-time war stars and their record over the recorded wars, plus this CWL season
@@ -30,13 +31,14 @@ CSV is the one it was published against (server/plan.py). Tag is the join key, n
 from __future__ import annotations
 
 import os
+import re
 import sqlite3
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
 
 from frosted.config import CLAN_TAGS, TAG_TO_CLAN
-from server import auth, clanlog, days, db, events, history, leaders, members, plan, profiles, proposals, push, stats, visits, war
+from server import auth, clanlog, days, db, events, history, leaders, members, plan, profiles, proposals, push, recap, stats, visits, war
 
 DEFAULT_DB = "/opt/bots/frosted/data/frosted.db"
 ROSTER_FIELDS = ("tag", "name", "clan", "cwl_slot", "transferred_from", "tier", "final_score", "offense_score",
@@ -247,6 +249,13 @@ def stats_clans():
 @app.get("/log")
 def log():
     return clanlog.clan_log(open_db())
+
+
+@app.get("/log/recap")
+def log_recap(month: str | None = None):
+    if month is not None and not re.fullmatch(r"\d{4}-(0[1-9]|1[0-2])", month):
+        raise HTTPException(422, "month is YYYY-MM")
+    return recap.recap(open_db(), month)
 
 
 @app.get("/explore/upgrades")  # before /explore/{board}, like war and matrix

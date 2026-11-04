@@ -16,6 +16,7 @@ from statistics import mean
 
 from frosted.config import CLAN_TAGS, TAG_TO_CLAN
 from server import plan
+from server.db import FRIENDLY
 
 SEASON_RESET = 0.5   # season-to-date donations falling by half or more mark a new season
 
@@ -92,7 +93,7 @@ def daily_rows(conn, tags: list[str]) -> list[dict]:
 def wars(conn, tags: list[str]) -> list[dict]:
     """Every ended war of these clans, oldest first, from our side."""
     out = []
-    for w in conn.execute("SELECT * FROM wars WHERE state='warEnded' ORDER BY end_time"):
+    for w in conn.execute(f"SELECT * FROM wars w WHERE state='warEnded' AND NOT {FRIENDLY} ORDER BY end_time"):
         for us in tags:
             if us not in (w["clan_tag"], w["opponent_tag"]):
                 continue

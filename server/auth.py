@@ -273,6 +273,8 @@ def callback(request: Request, code: str | None = None, state: str | None = None
     if user.status_code != 200:
         return back_to_site(cfg, back, "failed")
     u = user.json()
+    if member.status_code not in (200, 404):
+        return back_to_site(cfg, back, "failed")  # Discord having a moment: nobody is refused or signed out over it
     if member.status_code != 200:
         resp = back_to_site(cfg, back, "denied")  # not in the server
         resp.delete_cookie(MEMBER_COOKIE, path="/", secure=True, httponly=True, samesite="lax")

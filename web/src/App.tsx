@@ -14,6 +14,7 @@ import Settings from './components/Settings'
 import CwlGroup from './components/CwlGroup'
 import ExploreTab from './components/ExploreTab'
 import LogTab from './components/LogTab'
+import Recap from './components/Recap'
 import PlanTab from './components/PlanTab'
 import PlayerSheet from './components/PlayerSheet'
 import WarTab from './components/WarTab'
@@ -26,6 +27,7 @@ import { CalendarButton, GoblinNote, SubNav } from './components/ui'
 
 const CWL_SUBS = [{ id: 'lineups', label: 'Lineups', href: '#/cwl' }, { id: 'group', label: 'Group', href: '#/cwl/group' }]
 const WAR_SUBS = [{ id: 'latest', label: 'Current', href: '#/war' }, { id: 'log', label: 'War log', href: '#/war/log' }]
+const LOG_SUBS = [{ id: 'feed', label: 'Feed', href: '#/log' }, { id: 'recap', label: 'Recap', href: '#/log/recap' }]
 
 const TABS = [
   { id: 'war', label: 'War', href: '#/war', icon: <path d="M5 5l14 14M19 5L5 19M4 16l4 4M20 16l-4 4" /> },
@@ -36,7 +38,7 @@ const TABS = [
 ] as const
 
 export default function App() {
-  const { roster, error, reload } = useRoster()
+  const { roster, live, error, reload } = useRoster()
   const war = useWar()
   const wide = useWide()
   const route = useRoute()
@@ -93,6 +95,7 @@ export default function App() {
         </header>
       )}
 
+      {roster && !live && <p role="status" className="m-0 px-4 py-1.5 text-center text-xs font-semibold text-muted">Can't reach the server, so this lineup may be out of date.</p>}
       <div key={route.tab} className="ff-fade">
       {error ? (
         <div className="pt-16"><GoblinNote goblin="panic">Roster's under a shield. Try again shortly.</GoblinNote></div>
@@ -110,7 +113,10 @@ export default function App() {
       ) : route.tab === 'calendar' ? (
         <CalendarTab wide={wide} />
       ) : route.tab === 'log' ? (
-        <LogTab roster={roster} q={q} setQ={setQ} wide={wide} />
+        <>
+          <SubNav items={LOG_SUBS} current={route.sub} wide={wide} />
+          {route.sub === 'recap' ? <Recap wide={wide} /> : <LogTab roster={roster} q={q} setQ={setQ} wide={wide} />}
+        </>
       ) : route.tab === 'explore' ? (
         <ExploreTab sub={route.sub} kind={route.kind} q={q} setQ={setQ} wide={wide} />
       ) : (

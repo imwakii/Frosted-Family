@@ -20,6 +20,7 @@ import pandas as pd
 
 from frosted.config import CLAN_TAGS
 from frosted.scoring import add_scores
+from server.db import FRIENDLY
 from server import baseline
 
 
@@ -113,7 +114,7 @@ def recorded_upto(conn, day: str, cutoffs: dict[str, str]) -> dict[str, dict]:
     for r in conn.execute(f"""SELECT a.attacker_tag AS t, SUM(dm.town_hall) AS tth, COUNT(dm.town_hall) AS tn
                               FROM attacks a JOIN wars w USING (war_key)
                               JOIN war_members dm ON dm.war_key = a.war_key AND dm.player_tag = a.defender_tag
-                              WHERE substr(w.start_time, 1, 8) <= ?{after} GROUP BY a.attacker_tag""", (d, *flat)):
+                              WHERE substr(w.start_time, 1, 8) <= ? AND NOT {FRIENDLY}{after} GROUP BY a.attacker_tag""", (d, *flat)):
         if r["t"] in rec:
             rec[r["t"]].update(tth=r["tth"] or 0, tn=r["tn"])
     return rec

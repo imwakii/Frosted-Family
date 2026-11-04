@@ -16,7 +16,7 @@ from fastapi import HTTPException
 
 from frosted.config import TAG_TO_CLAN
 from server import baseline
-from server.db import clean_name
+from server.db import FRIENDLY, clean_name
 
 # Hourly: about 115 calls a pass, well inside the API's limits. Due after 55 minutes so it lands on the 10-minute
 # pass nearest the hour instead of slipping to the next one.
@@ -181,6 +181,8 @@ def army(conn, ms):
 def recorded_counts(conn, where: str = "1", args: tuple = (), cutoffs: dict[str, str] | None = None) -> dict:
     """Raw counts per player over the recorded wars matching `where` (a condition on wars w). With cutoffs (clan tag
     -> YYYY-MM-DD), a war counts for a clan only if its battle started after that date: the export covers the rest."""
+    where = f"({where}) AND NOT {FRIENDLY}"
+
     def scoped(clan_expr: str) -> tuple[str, tuple]:
         if not cutoffs:
             return where, args
@@ -328,7 +330,7 @@ def streaks_for(conn, tag: str) -> dict:
     wars in a row, newest back, the player used every attack."""
     now = best = run = 0
     current = True
-    for a in conn.execute("""SELECT a.stars FROM attacks a JOIN wars w USING (war_key) WHERE a.attacker_tag=?
+    for a in conn.execute(f"""SELECT a.stars FROM attacks a JOIN wars w USING (war_key) WHERE a.attacker_tag=? AND NOT {FRIENDLY}
                              ORDER BY w.preparation_start DESC, a.attack_order DESC""", (tag,)):
         if a["stars"] == 3:
             run += 1
@@ -338,8 +340,8 @@ def streaks_for(conn, tag: str) -> dict:
             run = 0
         best = max(best, run)
     clean = 0
-    for w in conn.execute("""SELECT m.attacks_used, w.attacks_per_member AS allowed FROM war_members m JOIN wars w USING (war_key)
-                             WHERE m.player_tag=? AND w.state='warEnded' ORDER BY w.preparation_start DESC""", (tag,)):
+    for w in conn.execute(f"""SELECT m.attacks_used, w.attacks_per_member AS allowed FROM war_members m JOIN wars w USING (war_key)
+                             WHERE m.player_tag=? AND w.state='warEnded' AND NOT {FRIENDLY} ORDER BY w.preparation_start DESC""", (tag,)):
         if w["attacks_used"] < (w["allowed"] or 1):
             break
         clean += 1
@@ -372,7 +374,7 @@ def badge_context(conn, record: dict | None = None) -> dict:
     # In attack order within each war: a cleanup is a three-star hit after a base's earlier attackers fell short.
     cleanups: dict[str, int] = {}
     best: dict[tuple, int] = {}
-    for a in conn.execute("SELECT war_key, attacker_tag, defender_tag, stars FROM attacks ORDER BY war_key, attack_order"):
+    for a in conn.execute(f"SELECT a.war_key, a.attacker_tag, a.defender_tag, a.stars FROM attacks a JOIN wars w USING (war_key) WHERE NOT {FRIENDLY} ORDER BY a.war_key, a.attack_order"):
         base = (a["war_key"], a["defender_tag"])
         if base in best and best[base] < 3 and a["stars"] == 3:
             cleanups[a["attacker_tag"]] = cleanups.get(a["attacker_tag"], 0) + 1
@@ -384,10 +386,11 @@ def badge_context(conn, record: dict | None = None) -> dict:
         "war_stars": {m["tag"]: m.get("war_stars") for m in members},
         "upgrades": upgrades,
         "cleanups": cleanups,
-        "slain": {r[0]: r[1] for r in conn.execute("""SELECT a.attacker_tag, COUNT(*) FROM attacks a
+        "slain": {r[0]: r[1] for r in conn.execute(f"""SELECT a.attacker_tag, COUNT(*) FROM attacks a
+            JOIN wars w USING (war_key)
             JOIN war_members m ON m.war_key = a.war_key AND m.player_tag = a.attacker_tag
             JOIN war_members d ON d.war_key = a.war_key AND d.player_tag = a.defender_tag
-            WHERE a.stars = 3 AND d.town_hall > m.town_hall GROUP BY a.attacker_tag""")},
+            WHERE a.stars = 3 AND d.town_hall > m.town_hall AND NOT {FRIENDLY} GROUP BY a.attacker_tag""")},
         "loot": {r["player_tag"]: r["looted"] for r in conn.execute("""SELECT r.player_tag, r.looted FROM raid_members r
             JOIN (SELECT clan_tag, MAX(start_time) AS start_time FROM raid_members GROUP BY clan_tag) l
             USING (clan_tag, start_time)""")},

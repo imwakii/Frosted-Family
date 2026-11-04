@@ -95,10 +95,10 @@ def _gone(r, clan_last, missed, add) -> None:
         add("left", r, r["seen_at"])
 
 
-def milestones(conn, days: int = UPGRADE_DAYS) -> list[dict]:
+def milestones(conn, days: int | None = UPGRADE_DAYS) -> list[dict]:
     """Recent moments worth a gold row for people still here: a hero taken to the game's max, and lifetime war stars
     passing a round number. A first fetch only sets where a player starts, so it never counts as passing one."""
-    cutoff = (leaders.now() - timedelta(days=days)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    cutoff = "" if days is None else (leaders.now() - timedelta(days=days)).strftime("%Y-%m-%dT%H:%M:%SZ")
     ms = leaders.members_by_tag(conn)
     tops = {(r["player_tag"], r["name"]): r["max_level"] for r in conn.execute("SELECT player_tag, name, max_level FROM player_units WHERE kind='hero'")}
     out = []

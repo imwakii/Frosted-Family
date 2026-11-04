@@ -473,3 +473,19 @@ def test_unit_history_records_only_level_changes(env):
     rows = conn.execute("SELECT level, seen_at FROM player_unit_history WHERE name='Barbarian King' ORDER BY level")
     assert [tuple(r) for r in rows] == [(90, "2026-11-02T00:00:00Z"), (91, "2026-11-02T04:00:00Z")]
     assert conn.execute("SELECT COUNT(*) FROM player_unit_history").fetchone()[0] == first + 1
+
+
+def test_a_discord_hiccup_is_a_failed_sign_in_and_keeps_the_session(env, monkeypatch):
+    c, _ = signed_in()
+    def busy(request):
+        return httpx.Response(429) if request.url.path.endswith("/guilds/555/member") else discord(request)
+    monkeypatch.setattr(auth, "discord_client", lambda: httpx.Client(base_url=auth.DISCORD_API, transport=httpx.MockTransport(busy)))
+    assert "signin=failed" in sign_in(c).headers["location"]
+    assert c.get("/auth/me").json()["role"] == "publisher"
+
+
+def test_someone_not_in_the_server_is_refused(env, monkeypatch):
+    def gone(request):
+        return httpx.Response(404) if request.url.path.endswith("/guilds/555/member") else discord(request)
+    monkeypatch.setattr(auth, "discord_client", lambda: httpx.Client(base_url=auth.DISCORD_API, transport=httpx.MockTransport(gone)))
+    assert "signin=denied" in sign_in(client()).headers["location"]

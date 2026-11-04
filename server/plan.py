@@ -212,6 +212,8 @@ def do_publish(body: PublishBody, leader: Leader) -> dict:
         conn.execute("INSERT INTO publishes VALUES (?,?,?,?,?,?,?)",
                      (now, leader.id, leader.name, sha, int(body.override_valve),
                       json.dumps([m.model_dump() for m in body.moves]), json.dumps(after)))
+    from server import days
+    days.after_moves(body.moves)
     return {"ok": True, "published_at": now, "published_by": leader.name, "changes": len(body.moves)}
 
 

@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
-import type { Me } from '../auth'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { loginHref, type Me } from '../auth'
 import { checkPlan, type DayBody, type DayPlans, getDays, getProposals, HttpError, type LineupBody, type PlanMove, type Proposal, publishDays, publishPlan, saveProposal, useWar, useWide, withdrawProposal } from '../data'
 import { type ClanDays, DAYS, DRAFT_KEY, earned, enemy, locked, missedThisSeason, onTrack, onTrial, repair, suggest, TARGET, TEAM, tier, type Wars, asPlanned } from '../dayplan'
 import { CLAN, CLANS } from '../theme'
@@ -9,7 +9,7 @@ import CwlTab from './CwlTab'
 import PlanActivity from './PlanActivity'
 import { lineupBoard, type Moves, type Place, PlaceSelect, placeLabel, PlanRow, readDraft, toList } from './PlanTab'
 import { ProposalBar, useProposals } from './Proposals'
-import { Arrow, ClanSwitch, KEY_ROW, StatusDot, Th } from './ui'
+import { Arrow, ClanSwitch, KEY_ROW, StatusDot, Th, GoblinNote } from './ui'
 
 // Plan: who is where, and who plays each of the seven CWL days, on one page. Opens on your own proposal, else the published
 // plan, else a suggestion from the rules in dayplan.ts. A player's place changes from their row; Publish sends places, then days.
@@ -64,6 +64,23 @@ function Cell({ plays, war, tag, ring, onToggle, label, changed, first }: {
   )
 }
 
+const DAYS_KEY = 'ff-day-edits'
+type KeptDays = { season: string; plans: Plans; published: string | null; mine: string | null }
+function readDays(season: string, published: string | null, mine: string | null): Plans | null {
+  try {
+    const k = JSON.parse(localStorage.getItem(DAYS_KEY) ?? 'null') as KeptDays | null
+    return k && k.season === season && k.published === published && k.mine === mine ? k.plans : null
+  } catch { return null }
+}
+/** Called while rendering the board, once its plan is known. `ready` is false until the server has answered. */
+function keepDays(k: KeptDays | null, ready: boolean) {
+  if (!ready) return
+  try {
+    if (k) localStorage.setItem(DAYS_KEY, JSON.stringify(k))
+    else localStorage.removeItem(DAYS_KEY)
+  } catch { /* private mode */ }
+}
+
 export default function DayPlanner({ roster: base, me, onPublished }: { roster: Roster; me: Me; onPublished: () => Promise<void> }) {
   const [moves, setMoves] = useState<Moves>(() => readDraft(base))
   useEffect(() => { try { localStorage.setItem(DRAFT_KEY, JSON.stringify(moves)) } catch { /* private mode */ } }, [moves])
@@ -76,7 +93,15 @@ export default function DayPlanner({ roster: base, me, onPublished }: { roster: 
   const [override, setOverride] = useState(false)
   const [problems, setProblems] = useState<string[]>([])
   const [server, setServer] = useState<DayPlans | null>(null)
-  const [failed, setFailed] = useState(false)
+  const [failed, setFailed] = useState<'load' | 'signin' | null>(null)
+  const [attempt, setAttempt] = useState(0)
+  // What the board opened with, so only a leader's own changes count as edits to keep.
+  const [origin, setOrigin] = useState<Plans | null>(null)
+  const edited = useRef(false)
+  const opened = useRef(false)
+  // The plan the edits on the board were built from. It holds still while there are edits, so they never pass as built on a newer one.
+  const basis = useRef<{ season: string; published: string | null } | null>(null)
+  const warned = useRef<string | null>(null)  // the publish a note has already mentioned
   const clan: CwlClan = view === 'Flakes' ? 'Fire' : view
   const setClan = setView
   const [plans, setPlans] = useState<Plans | null>(null)
@@ -100,9 +125,14 @@ export default function DayPlanner({ roster: base, me, onPublished }: { roster: 
     return Object.fromEntries(base.players.filter((x) => x.slot === 'NEW' && planned.has(x.tag)).map((x) => [x.tag, { clan: x.clan, slot: 'SUB' as Slot }]))
   }
   const fresh = (c: CwlClan, s: DayPlans | null) => sorted(suggest(pools[c], s?.wars?.[c] ?? {}, s?.upcoming?.[c] ?? []))
+  // Someone since marked as sitting out comes off the days still to come, so the clan shows short rather than hiding them.
+  const free = (c: CwlClan, days: ClanDays, s: DayPlans | null): ClanDays => {
+    const outs = new Set(base.players.filter((p) => p.slot === 'OUT').map((p) => p.tag))
+    return Object.fromEntries(DAYS.map((d) => [d, locked(s?.wars?.[c]?.[d]) ? days[d] ?? [] : (days[d] ?? []).filter((t) => !outs.has(t))])) as ClanDays
+  }
   const start = (s: DayPlans | null, mine?: DayBody['clans']): Plans => {
     const from = mine ?? s?.published?.clans
-    return { Fire: from?.Fire ? sorted(from.Fire) : fresh('Fire', s), Cake: from?.Cake ? sorted(from.Cake) : fresh('Cake', s) }
+    return { Fire: from?.Fire ? sorted(free('Fire', from.Fire, s)) : fresh('Fire', s), Cake: from?.Cake ? sorted(free('Cake', from.Cake, s)) : fresh('Cake', s) }
   }
   // A plan as the board shows it; a clan it leaves out keeps what is on the board.
   const whole = (clans: DayBody['clans'], rest: Plans): Plans => ({
@@ -110,17 +140,36 @@ export default function DayPlanner({ roster: base, me, onPublished }: { roster: 
   })
 
   useEffect(() => {
+    setFailed(null)
     Promise.all([getDays(), getProposals<DayBody>('days').catch(() => null)]).then(
       ([s, p]) => {
-        const ps = start(s, p?.open.find((x) => x.mine)?.body.clans)
+        // A roster refresh must not touch days someone is working on, or move them to a new month.
+        if (edited.current) {
+          if (s.season !== basis.current?.season) return
+          setServer(s)
+          const stamp = s.published?.updated_at ?? null
+          if (stamp !== basis.current.published && stamp !== warned.current) {
+            warned.current = stamp
+            setNote({ ok: false, text: 'Another leader just published. Publishing yours replaces theirs.' })
+          }
+          return
+        }
+        basis.current = { season: s.season, published: s.published?.updated_at ?? null }
         setServer(s)
+        const mine = p?.open.find((x) => x.mine)
+        const from = start(s, mine?.body.clans)
+        const kept = readDays(s.season, s.published?.updated_at ?? null, mine?.updated_at ?? null)
+        const ps = kept ? { Fire: free('Fire', kept.Fire, s), Cake: free('Cake', kept.Cake, s) } : from
+        setOrigin(from)
         setPlans(ps)
         setMoves((m) => ({ ...promoted(ps, s), ...m }))  // a plan that already gives days to someone in New
+        if (kept && !opened.current) setNote({ ok: true, text: 'Your unsaved changes are back' })
+        opened.current = true
       },
-      () => { setFailed(true); setPlans(start(null)) })
+      (e) => { if (!opened.current) setFailed(e instanceof HttpError && e.status === 401 ? 'signin' : 'load') })
     // Only when the published roster changes: moving a player must not throw away the days on the board.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [base])
+  }, [base, attempt])
 
   // Your own plan, or the proposal you have open.
   const shown = viewing && plans ? whole(viewing.body.clans, plans) : plans
@@ -133,6 +182,16 @@ export default function DayPlanner({ roster: base, me, onPublished }: { roster: 
       return { ...p, days: days ? DAYS.filter((d) => days[d]?.includes(p.tag)) : p.days }
     }),
   }), [roster, shown])
+  if (failed) {
+    return (
+      <main className="mx-auto flex max-w-[480px] flex-col items-center gap-2 px-4 pt-10">
+        <GoblinNote goblin="panic">{failed === 'signin' ? 'Your sign-in has run out. Nothing has changed.' : "The plan wouldn't load. Nothing has changed."}</GoblinNote>
+        {failed === 'signin'
+          ? <a href={loginHref()} className="flex min-h-11 items-center rounded-full bg-[#5865F2] px-4 text-sm font-bold text-white no-underline hover:bg-[#4752C4]">Sign in with Discord</a>
+          : <button type="button" onClick={() => setAttempt((n) => n + 1)} className="min-h-11 cursor-pointer rounded-full border border-line bg-white px-4 text-sm font-bold text-ink-2 hover:bg-hover">Try again</button>}
+      </main>
+    )
+  }
   if (!plans || !shown) return <div aria-busy="true" aria-label="Loading" className="mx-auto mt-10 h-64 max-w-[760px] animate-pulse rounded-2xl bg-well" />
 
   const readOnly = !me.role || me.via === 'passcode' || failed
@@ -143,6 +202,10 @@ export default function DayPlanner({ roster: base, me, onPublished }: { roster: 
   const live = server?.published ? whole(server.published.clans, plans) : null
   const saved = proposals.mine ? whole(proposals.mine.body.clans, plans) : null
   const dirty = saved ? !same(plans, saved) : !live || !same(plans, live)
+  // Days on the board survive a tab switch or a reload, for as long as what they were built on still stands.
+  edited.current = dirty && !!origin && !same(plans, origin)
+  if (server && !edited.current) basis.current = { season: server.season, published: server.published?.updated_at ?? null }
+  if (!viewing) keepDays(edited.current && basis.current ? { ...basis.current, plans, mine: proposals.mine?.updated_at ?? null } : null, !!server)
   const published = live && same(plans, live)
   const bad = CWL.flatMap((c) => DAYS.filter((d) => !locked(wars(c)[d]) && (plans[c][d]?.length ?? 0) !== TEAM).map((d) => `${c} day ${d}`))
   const nameOf = (tag: string) => roster.players.find((p) => p.tag === tag)?.name ?? tag
@@ -251,6 +314,7 @@ export default function DayPlanner({ roster: base, me, onPublished }: { roster: 
   const Outer = preview ? 'div' : 'main'
   const propose = () => run(async () => {
     await saveProposal('days', season, { clans: plans }, me.csrf)
+    setOrigin(plans)
     if (nMoves || lineup.mine) await saveProposal('lineup', '', { moves: toList(moves) }, me.csrf)
     await lineup.reload()
   }, 'Proposed')
@@ -307,10 +371,10 @@ export default function DayPlanner({ roster: base, me, onPublished }: { roster: 
         </div>
       )}
 
-      <ProposalBar proposals={proposals} me={me} viewing={viewing} setViewing={setViewId} dirty={dirty} yours={countOf(plans)}
+      <ProposalBar proposals={proposals} me={me} viewing={viewing} setViewing={setViewId} dirty={edited.current} yours={countOf(plans)}
         count={(p) => countOf(asPlans(p))} lines={(p) => diff(asPlans(p)).map(lineOf)}
         onBuild={(p) => { setPlans(asPlans(p)); setNote({ ok: true, text: `${p.author}'s copy` }) }}
-        onAccepted={(p) => { getDays().then(setServer); if (!dirty) setPlans(asPlans(p)); setNote({ ok: true, text: 'Accepted' }) }} />
+        onAccepted={(p) => { getDays().then((s) => { basis.current = { season: s.season, published: s.published?.updated_at ?? null }; setServer(s) }); if (!edited.current) { setPlans(asPlans(p)); setOrigin(asPlans(p)) }; setNote({ ok: true, text: 'Accepted' }) }} />
 
       {lineup.open.some((p) => !p.mine) && (
         <ProposalBar proposals={lineup} me={me} viewing={lineupViewing} setViewing={setLineupViewId} dirty={nMoves > 0} yours={nMoves}

@@ -89,3 +89,16 @@ def test_a_malformed_proposal_is_refused(env):
     assert co.put("/plan/proposals", json={"kind": "days", "season": "soon", "body": {"clans": {}}}, headers=co_csrf).status_code == 422
     bad = {"kind": "lineup", "body": {"moves": [{"tag": "#X", "clan": "Nowhere", "slot": "SUB"}]}}
     assert co.put("/plan/proposals", json=bad, headers=co_csrf).status_code == 422
+
+
+def test_a_proposal_drafted_before_a_publish_cannot_undo_it(env, monkeypatch):
+    fire = core(roster_rows(env), "Fire")
+    monkeypatch.setattr(days, "current_season", lambda: SEASON)
+    co, co_csrf = signed_in("coleader-code")
+    boss, boss_csrf = signed_in()
+    pid = co.put("/plan/proposals", json=day_proposal(fire), headers=co_csrf).json()["id"]
+    with days.connect() as conn:
+        conn.execute("""INSERT INTO day_plans VALUES (?, 'published', '{}', '2999-01-01T00:00:00Z', 'x')""", (SEASON,))
+    r = boss.post(f"/plan/proposals/{pid}/accept", headers=boss_csrf)
+    assert r.status_code == 409 and "changed" in r.json()["detail"]["problems"][0]
+    assert len(listed(boss)["open"]) == 1

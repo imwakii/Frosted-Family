@@ -10,11 +10,27 @@ const starText = (stars: number[]) => stars.map((n) => '★'.repeat(n) + '☆'.r
 const why = (r: Recap) => (r.mvp.tied > 1 ? `Fastest of ${r.mvp.tied} with this score` : `${Math.round(r.mvp.destruction)}% average`)
 const upsetText = (u: Recap['upsets'][number]) => `TH${u.attacker.th} on TH${u.defender.th} ${u.defender.name}`
 
-function fit(ctx: CanvasRenderingContext2D, text: string, width: number) {
+export function fit(ctx: CanvasRenderingContext2D, text: string, width: number) {
   if (ctx.measureText(text).width <= width) return text
   let s = text
   while (s && ctx.measureText(`${s}…`).width > width) s = s.slice(0, -1)
   return `${s}…`
+}
+
+/** Phones share straight into Discord; everything else downloads. */
+export async function shareCanvas(canvas: HTMLCanvasElement, name: string) {
+  const blob = await new Promise<Blob | null>((done) => canvas.toBlob(done, 'image/png'))
+  if (!blob) return
+  const file = new File([blob], name, { type: 'image/png' })
+  if (navigator.canShare?.({ files: [file] })) {
+    await navigator.share({ files: [file] }).catch(() => {})
+    return
+  }
+  const a = document.createElement('a')
+  a.href = URL.createObjectURL(blob)
+  a.download = name
+  a.click()
+  URL.revokeObjectURL(a.href)
 }
 
 async function saveImage(clan: ClanName, war: ClanWar, result: string, r: Recap) {
@@ -48,20 +64,7 @@ async function saveImage(clan: ClanName, war: ClanWar, result: string, r: Recap)
   }
   row(0, 'MVP', r.mvp.name, starText(r.mvp.stars), why(r))
   r.upsets.forEach((u, i) => row(i + 1, 'Upset', u.attacker.name, '★★★', upsetText(u)))
-  const blob = await new Promise<Blob | null>((done) => canvas.toBlob(done, 'image/png'))
-  if (!blob) return
-  const name = `frosted-${clan.toLowerCase()}-war-recap.png`
-  const file = new File([blob], name, { type: 'image/png' })
-  // Phones share straight into Discord; everything else downloads.
-  if (navigator.canShare?.({ files: [file] })) {
-    await navigator.share({ files: [file] }).catch(() => {})
-    return
-  }
-  const a = document.createElement('a')
-  a.href = URL.createObjectURL(blob)
-  a.download = name
-  a.click()
-  URL.revokeObjectURL(a.href)
+  await shareCanvas(canvas, `frosted-${clan.toLowerCase()}-war-recap.png`)
 }
 
 export default function WarRecap({ clan, war, result, recap }: { clan: ClanName; war: ClanWar; result: string; recap: Recap }) {

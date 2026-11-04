@@ -55,6 +55,11 @@ const TOPICS: Record<string, { title: string; formulas?: string[]; lines?: strin
     formulas: ['Strength = clan total ÷ players in the group'],
     lines: ['Done for war stars, heroes and equipment.'],
   },
+  recap: {
+    title: 'How the awards work',
+    formulas: ['Three-Star General = three-stars ÷ attacks, 5 attacks minimum'],
+    lines: ['Awards are for people still here. Months run on UTC.'],
+  },
   trends: {
     title: 'How to read these charts',
     lines: [

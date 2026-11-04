@@ -202,6 +202,8 @@ export const UPDATES: Update[] = [
       {
         title: 'General',
         lines: [
+          'Added a monthly Recap to the Log.',
+          'Fixed friendlies counting as misses.',
           'Added kind filters to Most upgrades.',
           'Changed New faces to count people once.',
           'Added gold Log rows for milestones.',

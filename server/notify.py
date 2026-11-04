@@ -94,10 +94,15 @@ def alerts_for(sub: dict, wars: list, members: dict, game, app, now: datetime, h
             for tag in tags:
                 name = members.get(tag, {}).get("name")
                 told = f"days|{w['war_key']}|{tag}"
-                if tag in day:
+                # Told in, told out, told back: each change of mind gets its own key, numbered after the first.
+                flips = lambda word: next(n for n in range(len(have) + 2) if f"{word}{n or ''}|{w['war_key']}|{tag}" not in have)
+                outs, backs = flips("daysout"), flips("daysback")
+                if tag in day and outs > backs:
+                    out.append({"key": f"daysback{backs or ''}|{w['war_key']}|{tag}", "title": one_line(f"{name + ' is' if name else 'You are'} back in CWL day {w['round']}"), "url": "#/cwl"})
+                elif tag in day:
                     out.append({"key": told, "title": one_line(f"{name or 'You'} {'plays' if name else 'play'} CWL day {w['round']} in {span(start - now)}"), "url": "#/cwl"})
-                elif day and told in have:
-                    out.append({"key": f"daysout|{w['war_key']}|{tag}", "title": one_line(f"{name + ' is' if name else 'You are'} out of CWL day {w['round']}"), "url": "#/cwl"})
+                elif day and told in have and outs <= backs:
+                    out.append({"key": f"daysout{outs or ''}|{w['war_key']}|{tag}", "title": one_line(f"{name + ' is' if name else 'You are'} out of CWL day {w['round']}"), "url": "#/cwl"})
         if want.get("war") and w["state"] == "inWar" and start and now - STARTED_WINDOW <= start <= now:
             if any(TAG_TO_CLAN.get(members.get(t, {}).get("clan_tag")) == clan for t in tags):
                 out.append({"key": f"war|{w['war_key']}", "title": one_line(f"{clan} war started v {rival}"), "url": "#/war"})

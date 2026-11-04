@@ -310,14 +310,16 @@ function Desktop({ roster, war, q, setQ, lock }: Omit<Props, 'wide'>) {
 
   return (
     <main className="mx-auto flex max-w-[1360px] flex-col gap-4 px-[clamp(16px,3vw,32px)] pb-12 pt-5">
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex w-full max-w-[480px] flex-col gap-3 empty:hidden"><Countdown roster={roster} war={war} /></div>
+      <div className="flex items-end justify-between gap-4">
+        <div className="flex w-full min-w-0 max-w-[480px] flex-col gap-3 empty:hidden">
+          <Countdown roster={roster} war={war} />
+          {planned && <DayRow pick={day} onPick={setDay} live={live} roster />}
+        </div>
         <div className="ml-auto flex w-[clamp(220px,28vw,340px)] flex-none flex-col gap-1">
           <SearchBox q={q} setQ={setQ} onEnter={() => { if (hits[0]) window.location.hash = href(hits[0]) }} />
           {nq && !hits.length && <span className="px-1 text-sm text-faint">No one by that name in this village</span>}
         </div>
       </div>
-      {planned && <DayRow pick={day} onPick={setDay} live={live} roster />}
       <div ref={grid} className="grid items-start gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr))]">
         {(lock?.options ?? CLANS).map((clan) => {
           return (

@@ -60,6 +60,17 @@ export type UpgradeLeader = UpgradeTally & { tag: string; name: string | null; c
 export type Milestone = { kind: 'hero' | 'war_stars'; tag: string; name: string | null; clan: string | null; at: string; unit?: string; stars?: number }
 export type ClanLog = { milestones?: Milestone[]; since: string | null; upgrade_days: number; events: LogEvent[]; upgrades: Upgrade[]; upgrade_counts?: UpgradeCount[]; upgrade_board?: UpgradeLeader[] }
 
+export type RecapPlace = { tag: string; name: string | null; clan: ClanName; th: number | null; n?: number; attacks?: number; three?: number; rate?: number }
+export type Recap = {
+  month: string; live: boolean; min_attacks: number; months: string[]
+  awards: { three_star: RecapPlace[]; builder: RecapPlace[]; donor: RecapPlace[] }
+  race: { war_stars: Record<ClanName, number>; upgrades: Record<ClanName, number>; donations: Record<ClanName, number> }
+  comings: { joined: number; left: number; moved: number }
+  milestones: Milestone[]
+}
+export const useRecap = (month: string | null, visit: number) =>
+  useLoad<Recap>(`recap-${month ?? 'now'}-${visit}`, () => getJson<Recap>(`/api/log/recap${month ? `?month=${month}` : ''}`))
+
 const loadClanLog = (): Promise<ClanLog | null> => (mock()
   ? import('./devMock').then((m) => m.mockUpgrades()).then((d) => ({ since: null, upgrade_days: 14, events: [], upgrades: (d as { upgrades: Upgrade[] }).upgrades }))
   : getJson<ClanLog>('/api/log').then((d) => (d && Array.isArray(d.events) ? d : null)))

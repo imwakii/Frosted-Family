@@ -129,12 +129,12 @@ function EventRow({ e, onRoster }: { e: LogEvent; onRoster: boolean }) {
     : <div className={cls} style={style}>{body}</div>
 }
 
-function MilestoneRow({ tag, name, at, children }: { tag: string; name: string | null; at: string; children: ReactNode }) {
+export function MilestoneRow({ tag, name, at, children }: { tag: string; name: string | null; at?: string; children: ReactNode }) {
   return (
     <a href={playerHref(tag)} className="flex min-h-10 w-full items-center gap-2 px-3 text-[13px] text-ink no-underline hover:brightness-95">
       <span className="min-w-0 flex-auto truncate font-semibold"><YouTag tag={tag} />{name}</span>
       <span className="flex-none whitespace-nowrap text-xs font-semibold text-[#92400E]">★ {children}</span>
-      <span className="flex-none whitespace-nowrap text-[11px] font-semibold text-faint">{ago(at)}</span>
+      {at && <span className="flex-none whitespace-nowrap text-[11px] font-semibold text-faint">{ago(at)}</span>}
     </a>
   )
 }
@@ -413,7 +413,7 @@ export default function LogTab({ roster, q, setQ, wide }: { roster: Roster; q: s
               {!!(day.halls.length || day.miles.length || day.events.length) && (
                 <ol className="m-0 grid list-none grid-cols-1 gap-1 p-0 md:grid-cols-2">
                   {day.halls.map((u) => <li key={`${u.tag}-th-${u.to}`} data-tag={u.tag} className="min-w-0 bg-[#F7E8BC] md:col-span-2"><MilestoneRow tag={u.tag} name={u.name} at={u.at}>Reached TH{u.to}</MilestoneRow></li>)}
-                  {day.miles.map((m) => <li key={`${m.kind}-${m.tag}-${m.at}`} data-tag={m.tag} className="min-w-0 bg-[#F7E8BC] md:col-span-2"><MilestoneRow tag={m.tag} name={m.name} at={m.at}>{m.kind === 'hero' ? `Maxed ${m.unit}` : `${(m.stars ?? 0).toLocaleString('en-GB')} war stars`}</MilestoneRow></li>)}
+                  {day.miles.map((m) => <li key={`${m.kind}-${m.tag}-${m.at}-${m.unit ?? ''}`} data-tag={m.tag} className="min-w-0 bg-[#F7E8BC] md:col-span-2"><MilestoneRow tag={m.tag} name={m.name} at={m.at}>{m.kind === 'hero' ? `Maxed ${m.unit}` : `${(m.stars ?? 0).toLocaleString('en-GB')} war stars`}</MilestoneRow></li>)}
                   {day.events.map((e) => <li key={`${e.kind}-${e.tag}-${e.at}`} className="min-w-0"><EventRow e={e} onRoster={here.has(e.tag)} /></li>)}
                 </ol>
               )}
