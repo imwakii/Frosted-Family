@@ -151,6 +151,12 @@ export default function OverallBoard({ q, setQ, wide }: { q: string; setQ: (v: s
     <div className="flex flex-col gap-2.5 pb-6">
       <PhoneSearch q={q} setQ={setQ} onEnter={enter}><ClanFilter clan={clan} setClan={setClan} /></PhoneSearch>
       <CategoryNav current="overall" wide={false} />
+      {all.length > 0 && (
+        <p className="m-0 flex items-baseline justify-between gap-2 px-4 text-xs font-semibold text-muted">
+          <span>% of max levels reached</span>
+          <span className="flex-none"><Star /> {maxedN} of {ranked.length} maxed</span>
+        </p>
+      )}
       <div className="flex flex-col gap-2 px-4">
         {board}
         {listed.length < shown.length && <ShowAll total={shown.length} onClick={() => top.setAll(true)} />}

@@ -54,8 +54,8 @@ export function useAuth() {
   return { ...state, signOut }
 }
 
-/** ?signin=denied|failed, added by the callback on a failed sign-in; read once and dropped from the URL. */
-export function takeSigninError(): 'denied' | 'failed' | null {
+/** ?signin=denied|failed, added by the callback on a failed sign-in; read once at load and dropped from the URL, so a remount cannot lose it. */
+function takeSigninError(): 'denied' | 'failed' | null {
   const params = new URLSearchParams(window.location.search)
   const v = params.get('signin')
   if (v !== 'denied' && v !== 'failed') return null
@@ -64,5 +64,7 @@ export function takeSigninError(): 'denied' | 'failed' | null {
   window.history.replaceState(null, '', window.location.pathname + (qs ? `?${qs}` : '') + window.location.hash)
   return v
 }
+
+export const signinError = takeSigninError()
 
 export const loginHref = () => `/api/auth/login?return_to=${encodeURIComponent('/#/plan/days')}`

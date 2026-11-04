@@ -53,7 +53,7 @@ function Accounts({ roster }: { roster: Roster }) {
   )
 }
 
-export default function Settings({ wide, roster, leader }: { wide: boolean; roster: Roster | null; leader: boolean }) {
+export default function Settings({ wide, roster, leader, account }: { wide: boolean; roster: Roster | null; leader: boolean; account: { name: string; onSignOut: () => void } | null }) {
   const news = useNews()
   const { yous } = useYou()
   const utc = useUtc()
@@ -93,6 +93,16 @@ export default function Settings({ wide, roster, leader }: { wide: boolean; rost
               <SwitchRow label="Show UTC" line="Show calendar times in UTC" on={utc} onFlip={() => setUtc(!utc)} />
             </div>
           </section>
+          {account && (
+            <section aria-label="Leader sign-in" className="flex flex-col gap-1.5">
+              <Eyebrow>Leader sign-in</Eyebrow>
+              <div className="flex min-h-[52px] items-center gap-2.5 rounded-xl border border-line bg-white pl-3 pr-2">
+                <span className="min-w-0 flex-auto truncate text-sm font-semibold text-ink">{account.name}</span>
+                <button type="button" onClick={() => { setOpen(false); account.onSignOut() }}
+                  className="min-h-9 flex-none cursor-pointer rounded-full border border-line bg-white px-3 text-[13px] font-bold text-ink-2 hover:bg-hover">Sign out</button>
+              </div>
+            </section>
+          )}
         </CardSheet>
       )}
       {news.open && <WhatsNewCard wide={wide} leader={leader} onClose={news.close} onSettings={openSheet} />}

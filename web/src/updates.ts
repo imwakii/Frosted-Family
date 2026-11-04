@@ -202,6 +202,10 @@ export const UPDATES: Update[] = [
       {
         title: 'General',
         lines: [
+          'Changed buttons to two matching sizes.',
+          'Moved Stats categories back to chips.',
+          'Added a way to undo This is me.',
+          'Added the Plan tab for leader sign-in.',
           'Added small animations.',
           'Added swiping between clans and days.',
           'Added a search icon on phones.',

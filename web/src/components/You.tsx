@@ -71,7 +71,7 @@ export function JumpToYou({ wide }: { wide: boolean }) {
   if (!show) return null
   return (
     <button type="button" onClick={jumpToYou}
-      className={`fixed right-4 z-20 min-h-10 cursor-pointer rounded-full border-0 bg-ink px-4 text-sm font-bold text-white shadow-[0_4px_14px_rgba(43,33,20,.3)] ${wide ? 'bottom-6' : 'bottom-[72px]'}`}>
+      className={`fixed right-4 z-20 min-h-11 cursor-pointer rounded-full border-0 bg-ink px-4 text-sm font-bold text-white shadow-[0_4px_14px_rgba(43,33,20,.3)] ${wide ? 'bottom-6' : 'bottom-[72px]'}`}>
       Find me
     </button>
   )
@@ -113,7 +113,7 @@ export function YouPrompt({ roster, onDone, autoFocus, bare }: { roster: Roster;
           ))}
         </ul>
       )}
-      {n && !hits.length && <span className="px-1 text-sm text-faint">No one by that name</span>}
+      {n && !hits.length && <span className="px-1 text-sm text-faint">No one by that name in this village</span>}
     </section>
   )
 }

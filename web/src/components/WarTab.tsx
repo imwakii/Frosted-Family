@@ -188,9 +188,9 @@ export function WarBoard({ clan, war, now, roster }: { clan: ClanName; war: Clan
   const pickedActions = picked && (
     <span className="flex flex-none items-center gap-1.5">
       {war.pairs.some((p) => p.us?.tag === picked) && (
-        <a href={playerHref(picked)} className="flex min-h-8 items-center rounded-full bg-ink px-2.5 text-xs font-bold text-white no-underline">View card</a>
+        <a href={playerHref(picked)} className="flex min-h-9 items-center rounded-full bg-ink px-3 text-[13px] font-bold text-white no-underline">View card</a>
       )}
-      <button type="button" onClick={() => setPicked(null)} className="min-h-8 cursor-pointer rounded-full border border-line bg-white px-2.5 text-xs font-bold text-ink-2 hover:bg-page">{sideBySide ? 'Show all' : 'Close'}</button>
+      <button type="button" onClick={() => setPicked(null)} className="min-h-9 cursor-pointer rounded-full border border-line bg-white px-3 text-[13px] font-bold text-ink-2 hover:bg-hover">{sideBySide ? 'Show all' : 'Close'}</button>
     </span>
   )
   const gaps = lineupGaps(war, clan, roster)
@@ -263,7 +263,7 @@ export function WarBoard({ clan, war, now, roster }: { clan: ClanName; war: Clan
             <ul className="m-0 flex list-none flex-wrap gap-1.5 p-0">
               {gaps.missing.map((p) => (
                 <li key={p.tag}>
-                  <a href={playerHref(p.tag)} data-tag={p.tag} className="flex min-h-8 items-center gap-1 rounded-full bg-white px-2.5 text-[13px] font-bold text-ink no-underline">
+                  <a href={playerHref(p.tag)} data-tag={p.tag} className="flex min-h-9 items-center gap-1 rounded-full bg-white px-3 text-[13px] font-bold text-ink no-underline">
                     {p.name}
                     {p.inClan && p.inClan !== clan && <span className="text-[11px] font-semibold text-[#92400E]">· in {p.inClan}</span>}
                   </a>

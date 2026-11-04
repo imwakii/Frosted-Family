@@ -131,7 +131,7 @@ export default function Alerts() {
       <Eyebrow>Alerts</Eyebrow>
       {state === 'off' && (
         <button type="button" disabled={busy} onClick={turnOnAll}
-          className="min-h-11 flex-none cursor-pointer rounded-xl border-0 bg-action text-sm font-bold text-white hover:bg-action-deep disabled:cursor-default disabled:opacity-60">Turn on alerts</button>
+          className="min-h-11 flex-none cursor-pointer rounded-full border-0 bg-action text-sm font-bold text-white hover:bg-action-deep disabled:cursor-default disabled:opacity-60">Turn on alerts</button>
       )}
       <ul className="m-0 flex list-none flex-col rounded-xl border border-line bg-white p-0">
         {CHOICES.map((c) => (

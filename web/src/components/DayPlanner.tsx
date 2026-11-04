@@ -4,7 +4,6 @@ import { checkPlan, type DayBody, type DayPlans, getDays, getProposals, HttpErro
 import { type ClanDays, DAYS, DRAFT_KEY, earned, enemy, locked, missedThisSeason, onTrack, onTrial, repair, suggest, TARGET, TEAM, tier, type Wars, asPlanned } from '../dayplan'
 import { CLAN, CLANS } from '../theme'
 import type { ClanName, Player, Roster, Slot } from '../types'
-import ClanCompare from './ClanCompare'
 import Info from './Info'
 import CwlTab from './CwlTab'
 import PlanActivity from './PlanActivity'
@@ -86,13 +85,6 @@ export default function DayPlanner({ roster: base, me, onPublished }: { roster: 
   const [note, setNote] = useState<{ ok: boolean; text: string; lines?: string[]; undo?: Plans; rebuild?: boolean } | null>(null)
   const [preview, setPreview] = useState(false)
   const [q, setQ] = useState('')
-  // A history entry of its own, so the phone's back button closes it and keeps the plan on screen.
-  const [comparing, setComparing] = useState(false)
-  useEffect(() => {
-    const on = () => setComparing(false)
-    window.addEventListener('popstate', on)
-    return () => window.removeEventListener('popstate', on)
-  }, [])
   const war = useWar()
   const wide = useWide()
   const proposals = useProposals<DayBody>('days')
@@ -279,14 +271,14 @@ export default function DayPlanner({ roster: base, me, onPublished }: { roster: 
     if (proposals.mine) await withdrawProposal(proposals.mine.id, me.csrf)
     await onPublished()
   }, 'Published')
-  const btn = 'min-h-10 cursor-pointer rounded-full border border-[#D5C8AC] bg-white px-3 text-sm font-semibold text-ink-2 hover:bg-page disabled:cursor-default disabled:opacity-60'
+  const btn = 'min-h-9 cursor-pointer rounded-full border border-line bg-white px-3 text-[13px] font-bold text-ink-2 hover:bg-hover disabled:cursor-default disabled:opacity-60'
   return (
     <>
     <Outer className={`mx-auto flex flex-col gap-3.5 px-[clamp(16px,3vw,32px)] pt-1 md:pt-5 max-w-[1360px] ${preview ? '' : 'pb-12'}`}>
       {!preview && <ClanSwitch<ClanName> value={view} onPick={setClan} options={CLANS} flag={CWL.filter((c) => DAYS.some((d) => !locked(wars(c)[d]) && (shown[c][d]?.length ?? 0) !== TEAM))} />}
-      <div className="flex items-center gap-1.5">
+      <div className="flex flex-wrap items-center gap-1.5">
         <button type="button" aria-pressed={preview} className={btn} onClick={() => setPreview((v) => !v)}>{preview ? 'Grid' : 'Preview'}</button>
-        <span className="flex-auto" />
+        <span className="ml-auto flex items-center gap-1.5">
         {!preview && !viewing && view !== 'Flakes' && <Info topic="suggest" />}
         {!preview && !viewing && view !== 'Flakes' && <button type="button" className={btn} onClick={() => offer(sorted(repair(pools[clan], w, plans[clan])), false)}>Suggest</button>}
         {!viewing && <button type="button" className={btn} disabled={readOnly || busy || (!dirty && !nMoves)} onClick={propose}>
@@ -295,10 +287,11 @@ export default function DayPlanner({ roster: base, me, onPublished }: { roster: 
         {canPublish && !viewing && (
           <button type="button" onClick={openConfirm} disabled={busy || bad.length > 0 || lineupBad.length > 0 || (!!published && !nMoves)}
             title={[...bad.map((b) => `Not 15: ${b}`), ...lineupBad.map((k) => k.label)].join(' · ') || undefined}
-            className="min-h-10 cursor-pointer rounded-full border-0 bg-action px-3 text-sm font-bold text-white hover:bg-action-deep disabled:cursor-not-allowed disabled:bg-[#E3D8BF] disabled:text-faint">
+            className="min-h-9 cursor-pointer rounded-full border-0 bg-action px-3 text-[13px] font-bold text-white hover:bg-action-deep disabled:cursor-not-allowed disabled:bg-[#E3D8BF] disabled:text-faint">
             {published && !nMoves ? 'Published' : 'Publish'}
           </button>
         )}
+        </span>
       </div>
 
       {note && (
@@ -327,11 +320,10 @@ export default function DayPlanner({ roster: base, me, onPublished }: { roster: 
           onAccepted={() => window.location.reload()} />
       )}
 
-      {!preview && (
+      {!preview && ((col.inCwl && col.core !== 15) || col.count > 50 || nMoves > 0) && (
         <p className="m-0 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs font-semibold tabular-nums text-muted">
-          {col.inCwl && <span className={col.core === 15 ? '' : 'font-bold text-[#B45309]'}>{col.core}/15 core</span>}
-          <span className={col.count > 50 ? 'font-bold text-[#B91C1C]' : ''}>{col.count}/50 members</span>
-          {col.inCwl && col.avg !== null && <span>Core avg {col.avg.toFixed(1)}{Math.abs(col.delta) >= 0.05 && ` (${col.delta > 0 ? '+' : '−'}${Math.abs(col.delta).toFixed(1)})`}</span>}
+          {col.inCwl && col.core !== 15 && <span className="font-bold text-[#B45309]">{col.core}/15 core</span>}
+          {col.count > 50 && <span className="font-bold text-[#B91C1C]">{col.count}/50 members</span>}
           {nMoves > 0 && (
             <span className="font-bold text-action">
               {nMoves === 1 ? `${changes[0].name} to ${placeLabel(moves[changes[0].tag])}` : `${nMoves} moves: ${changes.slice(0, 2).map((p) => p.name).join(', ')}${nMoves > 2 ? '…' : ''}`}
@@ -339,7 +331,6 @@ export default function DayPlanner({ roster: base, me, onPublished }: { roster: 
               {changes.some((p) => !auto[p.tag]) && <button type="button" onClick={() => setMoves(auto)} className="ml-1 min-h-6 cursor-pointer border-0 bg-transparent p-0 font-bold text-action underline">Reset</button>}
             </span>
           )}
-          <button type="button" onClick={() => { history.pushState(null, ''); setComparing(true) }} className="ml-auto min-h-8 cursor-pointer border-0 bg-transparent p-0 font-bold text-action">Compare</button>
         </p>
       )}
 
@@ -359,7 +350,7 @@ export default function DayPlanner({ roster: base, me, onPublished }: { roster: 
         {anyLocked && <span className="flex items-center gap-1"><span style={LOCKED} className="flex h-3.5 items-center rounded-[3px] px-1"><Lock /></span>War started, locked</span>}
         {missed.size > 0 && <span className="flex items-center gap-1"><span className="size-2.5 rounded-full bg-[#DC2626]" />Missed</span>}
         {anyDiffers && <span className="flex items-center gap-1"><span className="size-2.5 rounded-full border-2 border-[#F59E0B] bg-[#FEF3C7]" />Not as planned</span>}
-        {rows.some((p) => tier(p, missed, w) !== null && !onTrial(p, w) && !onTrack(p.tag, plan, w)) && <span className="flex items-center gap-1"><span className="font-bold tabular-nums text-[#B45309]">5!</span>Under {TARGET}★</span>}
+        {rows.some((p) => tier(p, missed, w) !== null && !onTrial(p, w) && !onTrack(p.tag, plan, w)) && <span className="flex items-center gap-1"><span className="font-bold text-[#B45309]">!</span>Can't reach {TARGET}★</span>}
         {!!live && DAYS.some((d) => !locked(w[d]) && (live[clan][d] ?? []).join() !== (plan[d] ?? []).join()) && <span className="flex items-center gap-1"><span className="h-2.5 w-3.5 rounded-[3px] bg-moved" />Changed</span>}
       </div>
 
@@ -444,7 +435,6 @@ export default function DayPlanner({ roster: base, me, onPublished }: { roster: 
       </>}
       {!preview && <PlanActivity days={proposals} lineup={lineup} published={server?.published} />}
     </Outer>
-    {comparing && <ClanCompare cols={cols} moves={moves} plans={shown} players={roster.players} wide={wide} onClose={() => window.history.back()} />}
     {confirming && (
       <div className="ff-fade fixed inset-0 z-50 flex items-center justify-center bg-[rgba(43,33,20,.4)] p-4" onClick={(e) => { if (e.target === e.currentTarget) setConfirming(false) }}>
         <section role="dialog" aria-modal="true" aria-label="Publish to members"
@@ -480,9 +470,9 @@ export default function DayPlanner({ roster: base, me, onPublished }: { roster: 
             </ul>
           )}
           <div className="flex justify-end gap-2">
-            <button type="button" autoFocus onClick={() => setConfirming(false)} className="min-h-11 cursor-pointer rounded-full border border-[#D5C8AC] bg-white px-4 text-sm font-semibold text-ink-2 hover:bg-page">Cancel</button>
+            <button type="button" autoFocus onClick={() => setConfirming(false)} className="min-h-11 cursor-pointer rounded-full border border-line bg-white px-4 text-sm font-bold text-ink-2 hover:bg-hover">Cancel</button>
             <button type="button" onClick={publish} disabled={busy || problems.length > 0 || (valveHit && !override)}
-              className="min-h-11 cursor-pointer rounded-full border-0 bg-action px-[18px] text-sm font-bold text-white hover:bg-action-deep disabled:opacity-60">Publish</button>
+              className="min-h-11 cursor-pointer rounded-full border-0 bg-action px-4 text-sm font-bold text-white hover:bg-action-deep disabled:opacity-60">Publish</button>
           </div>
         </section>
       </div>

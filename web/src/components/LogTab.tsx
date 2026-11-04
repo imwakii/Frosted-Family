@@ -51,7 +51,7 @@ function SinceLastLook({ data, roster }: { data: { events: LogEvent[]; upgrades:
     ups > 0 && `${ups} ${ups === 1 ? 'upgrade' : 'upgrades'}`,
     joined > 0 && `${joined} joined`,
     left > 0 && `${left} left`,
-    moved !== 0 && `you moved ${moved > 0 ? 'up' : 'down'} ${Math.abs(moved)} ${Math.abs(moved) === 1 ? 'place' : 'places'}`,
+    moved !== 0 && `you moved ${moved > 0 ? 'up' : 'down'} ${Math.abs(moved)} ${Math.abs(moved) === 1 ? 'place' : 'places'} in the family`,
   ].filter(Boolean)
   if (!parts.length) return null
   return (
@@ -287,7 +287,7 @@ function UpgradeRow({ ups, showClan, open, onToggle }: { ups: Upgrade[]; showCla
               </li>
             ))}
           </ul>
-          <a href={playerHref(u.tag)} className="flex min-h-9 items-center justify-center rounded-lg text-[13px] font-bold text-action no-underline hover:bg-page">View card</a>
+          <a href={playerHref(u.tag)} className="flex min-h-9 items-center justify-center rounded-full text-[13px] font-bold text-action no-underline hover:bg-hover">View card</a>
         </div>
       )}
     </>
@@ -308,7 +308,7 @@ function MostUpgrades({ board, clan, nq }: { board: UpgradeLeader[]; clan: ClanN
       <div role="group" aria-label="Range" className="flex gap-1.5">
         {([7, 30] as const).map((d) => <button key={d} type="button" aria-pressed={d === days} onClick={() => setDays(d)} className={chip(d === days)}>{d} days</button>)}
       </div>
-      {!shown.length ? <div className="rounded-2xl border border-line bg-white p-5 text-sm text-faint">{nq ? 'No one by that name' : 'No upgrades yet'}</div> : (
+      {!shown.length ? <div className="rounded-2xl border border-line bg-white p-5 text-sm text-faint">{nq ? 'No one by that name in this village' : 'No upgrades yet'}</div> : (
         <ol className="m-0 list-none rounded-2xl border border-line bg-white py-1">
           {shown.map((r, i) => (
             <li key={r.tag}>
@@ -330,7 +330,7 @@ function MostUpgrades({ board, clan, nq }: { board: UpgradeLeader[]; clan: ClanN
           ))}
         </ol>
       )}
-      {!nq && ranked.length > TOP && <button type="button" onClick={() => setEveryone((v) => !v)} className="min-h-11 w-full cursor-pointer rounded-2xl border border-line bg-white text-[13px] font-bold text-action hover:bg-page">{everyone ? 'Show less' : `Show all ${ranked.length}`}</button>}
+      {!nq && ranked.length > TOP && <button type="button" onClick={() => setEveryone((v) => !v)} className="min-h-11 w-full cursor-pointer rounded-full border border-line bg-white text-sm font-bold text-action hover:bg-hover">{everyone ? 'Show less' : `Show all ${ranked.length}`}</button>}
     </div>
   )
 }
@@ -400,7 +400,7 @@ export default function LogTab({ roster, q, setQ, wide }: { roster: Roster; q: s
 
   const chart = view === 'upgrades' && !!data?.upgrade_counts?.length && <UpgradeChart counts={data.upgrade_counts} clan={clan} kind={kind} />
   const feed = !data ? <Empty loading={loading} /> : !order.length
-    ? <div className="rounded-2xl border border-line bg-white p-5 text-sm text-faint">{nq ? 'No one by that name' : 'Nothing here yet'}</div>
+    ? <div className="rounded-2xl border border-line bg-white p-5 text-sm text-faint">{nq ? 'No one by that name in this village' : 'All quiet in the village'}</div>
     : (
       <div className="flex flex-col gap-3">
         {shown.map((d) => {
@@ -427,7 +427,7 @@ export default function LogTab({ roster, q, setQ, wide }: { roster: Roster; q: s
           )
         })}
         {shown.length < order.length && (
-          <button type="button" onClick={() => setAllDays(true)} className="min-h-11 w-full cursor-pointer rounded-2xl border border-line bg-white text-[13px] font-bold text-action hover:bg-page">Show all {order.length} days</button>
+          <button type="button" onClick={() => setAllDays(true)} className="min-h-11 w-full cursor-pointer rounded-full border border-line bg-white text-sm font-bold text-action hover:bg-hover">Show all {order.length} days</button>
         )}
         {started && <span className="px-1 text-xs font-semibold text-faint">Members since {started} · upgrades from the last {data.upgrade_days} days</span>}
       </div>

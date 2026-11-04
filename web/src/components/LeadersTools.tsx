@@ -96,7 +96,7 @@ function SignIn() {
   return (
     <div className="flex flex-col items-center gap-3 rounded-2xl border border-line bg-white px-6 py-12 text-center">
       <span className="text-sm font-semibold text-muted">Leaders only</span>
-      <a href={loginHref()} className="flex min-h-11 items-center rounded-full bg-[#5865F2] px-5 text-sm font-bold text-white no-underline hover:bg-[#4752C4]">Sign in with Discord</a>
+      <a href={loginHref()} className="flex min-h-11 items-center rounded-full bg-[#5865F2] px-4 text-sm font-bold text-white no-underline hover:bg-[#4752C4]">Sign in with Discord</a>
     </div>
   )
 }

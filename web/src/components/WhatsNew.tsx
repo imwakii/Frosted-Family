@@ -125,7 +125,7 @@ export function WhatsNewCard({ wide, leader, onClose: close, onSettings }: { wid
           )}
           {/* Stays in reach however many earlier updates are open. */}
           <div className="sticky -bottom-px flex-none bg-white pt-2">
-            <button type="button" onClick={close} className="min-h-11 w-full cursor-pointer rounded-xl border border-line bg-white text-sm font-bold text-ink-2 hover:bg-page">Got it</button>
+            <button type="button" onClick={close} className="min-h-11 w-full cursor-pointer rounded-full border border-line bg-white text-sm font-bold text-ink-2 hover:bg-hover">Got it</button>
           </div>
         </CardSheet>
   )

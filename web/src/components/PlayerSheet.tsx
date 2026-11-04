@@ -148,7 +148,7 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
   const [extra, setExtra] = useState<Partial<Player> | null>(() => playerNow(tag)?.extra ?? null)
   const [card, setCard] = useState<PlayerCard | null>(() => playerNow(tag)?.card ?? null)
   const [cardLoading, setCardLoading] = useState(() => !playerNow(tag))
-  const { yous, addYou } = useYou()
+  const { yous, addYou, removeYou } = useYou()
   const isMine = yous.includes(tag)
   const accounts = roster.players.filter((x) => yous.includes(x.tag))
   const close = useRef<HTMLButtonElement>(null)
@@ -203,10 +203,15 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
           <div className="flex min-w-0 flex-auto flex-col">
             <span className="flex min-w-0 items-center gap-2">
               <span className="font-display min-w-0 truncate text-[26px] leading-tight">{p?.name ?? 'Not on the roster'}</span>
-              {p && isMine && <span className="flex-none rounded-md bg-ink px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-[0.05em] text-white">You</span>}
+              {p && isMine && (
+                <button type="button" aria-label="This is not me" title="This is not me" onClick={() => removeYou(tag)}
+                  className="relative before:absolute before:-inset-x-1 before:-inset-y-2 before:content-[''] flex min-h-7 flex-none cursor-pointer items-center gap-1 whitespace-nowrap rounded-full border-0 bg-ink px-2.5 text-xs font-bold text-white">
+                  You<span aria-hidden="true" className="text-[13px] leading-none opacity-70">×</span>
+                </button>
+              )}
               {p && !isMine && (
                 <button type="button" onClick={() => addYou(tag)}
-                  className="min-h-7 flex-none cursor-pointer whitespace-nowrap rounded-full border-0 bg-[#EFE6D2] px-2.5 text-xs font-bold text-ink-2 hover:bg-well">
+                  className="relative before:absolute before:-inset-x-1 before:-inset-y-2 before:content-[''] min-h-7 flex-none cursor-pointer whitespace-nowrap rounded-full border-0 bg-[#EFE6D2] px-2.5 text-xs font-bold text-ink-2 hover:bg-well">
                   {yous.length ? 'Also me' : 'This is me'}
                 </button>
               )}
@@ -232,7 +237,7 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
               <nav aria-label="Your accounts" className="flex gap-1.5 overflow-x-auto [scrollbar-width:none]">
                 {accounts.map((a) => (
                   <a key={a.tag} href={playerHref(a.tag)} aria-current={a.tag === tag ? 'page' : undefined}
-                    className={`flex-none rounded-full border px-2.5 py-1 text-xs font-bold no-underline ${a.tag === tag ? 'border-ink bg-ink text-white' : 'border-line bg-white text-ink-2 hover:bg-page'}`}>{a.name}</a>
+                    className={`flex min-h-9 flex-none items-center rounded-full border px-3 text-[13px] font-bold no-underline ${a.tag === tag ? 'border-ink bg-ink text-white' : 'border-line bg-white text-ink-2 hover:bg-page'}`}>{a.name}</a>
                 ))}
               </nav>
             )}

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { useAuth, type Me } from './auth'
+import { useAuth } from './auth'
 import CalendarTab from './components/CalendarTab'
 import CwlTab from './components/CwlTab'
 import ClanSheet from './components/ClanSheet'
@@ -34,35 +34,10 @@ const TABS = [
   { id: 'plan', label: 'Plan', href: '#/plan/days', icon: <path d="M7 4v16M17 4v16M3 8h8M13 16h8" /> },
 ] as const
 
-function Account({ me, onSignOut }: { me: Me; onSignOut: () => void }) {
-  const [open, setOpen] = useState(false)
-  if (!me.user) return null
-  const initial = me.user.name.slice(0, 1).toUpperCase()
-  return (
-    <span className="relative">
-      <button type="button" aria-expanded={open} aria-label={`Account: ${me.user.name}`} onClick={() => setOpen((o) => !o)}
-        className="flex min-h-9 cursor-pointer items-center rounded-full border border-line bg-white p-1 text-[13px] font-bold text-ink-2 hover:bg-page">
-        {me.user.avatar_url
-          ? <img src={me.user.avatar_url} alt="" className="size-7 rounded-full" />
-          : <span className="flex size-7 items-center justify-center rounded-full bg-well text-xs">{initial}</span>}
-      </button>
-      {open && <span aria-hidden="true" className="fixed inset-0 z-30" onClick={() => setOpen(false)} />}
-      {open && (
-        <span className="ff-fade absolute right-0 top-[calc(100%+6px)] z-40 flex min-w-[160px] flex-col rounded-xl border border-line bg-white p-1 shadow-[0_10px_30px_rgba(43,33,20,.12)]">
-          <span className="px-3 py-2 text-[13px] font-bold text-ink">{me.user.name}</span>
-          <button type="button" onClick={() => { setOpen(false); onSignOut() }}
-            className="min-h-10 cursor-pointer rounded-lg border-0 bg-transparent px-3 text-left text-sm font-semibold text-ink-2 hover:bg-page">Sign out</button>
-        </span>
-      )}
-    </span>
-  )
-}
-
 export default function App() {
   const { roster, error, reload } = useRoster()
   const war = useWar()
   const wide = useWide()
-  const roomy = useWide('(min-width: 1024px)')
   const route = useRoute()
   const back = cardToReturnTo(route.tab)
   const auth = useAuth()
@@ -83,14 +58,14 @@ export default function App() {
   }, [])
   onDrill(useCallback(() => setQ(''), []))
   const closeSheet = useCallback(() => go.closePlayer(), [])
-  // Plan is for leaders: a member reaches sign-in from the footer's link, and sees the tab only while on it.
-  const tabs = TABS.filter((t) => t.id !== 'plan' || !!auth.me.user || route.tab === 'plan')
-  // On Plan a signed-in account sits beside your card, and narrower screens shrink the other two to fit.
-  const account = route.tab === 'plan' && auth.me.user ? <Account me={auth.me} onSignOut={auth.signOut} /> : null
-  const you = roster && <YouChip roster={roster} compact={!roomy && !!account} />
+  // Plan shows to everyone, locked until a leader signs in with Discord.
+  const locked = (id: string) => id === 'plan' && auth.status === 'ready' && !auth.me.role
+  const lock = <svg aria-label="Locked" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="11" width="14" height="9" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></svg>
+  const you = roster && <YouChip roster={roster} />
+  const leaderAccount = auth.me.user ? { name: auth.me.user.name, onSignOut: auth.signOut } : null
   const corner = wide
-    ? <span className="flex items-center gap-2">{you}{account}<CalendarButton current={route.tab === 'calendar'} /><Settings wide roster={roster} leader={!!auth.me.role} /></span>
-    : <span className="flex min-w-0 items-center gap-2">{you}{account}<CalendarButton current={route.tab === 'calendar'} /><Settings wide={false} roster={roster} leader={!!auth.me.role} /></span>
+    ? <span className="flex items-center gap-2">{you}<CalendarButton current={route.tab === 'calendar'} /><Settings wide roster={roster} leader={!!auth.me.role} account={leaderAccount} /></span>
+    : <span className="flex min-w-0 items-center gap-2">{you}<CalendarButton current={route.tab === 'calendar'} /><Settings wide={false} roster={roster} leader={!!auth.me.role} account={leaderAccount} /></span>
 
   return (
     <div className={`min-h-dvh ${wide ? '' : 'pb-[calc(58px+env(safe-area-inset-bottom))]'}`}>
@@ -99,10 +74,10 @@ export default function App() {
           <div className="mx-auto flex max-w-[1360px] flex-wrap items-center gap-x-4 gap-y-3 lg:gap-x-6 px-[clamp(16px,3vw,32px)] py-3">
             <span className="font-display text-2xl text-brand">Frosted Family</span>
             <nav aria-label="Sections" className="flex gap-1 rounded-xl bg-[#EFE6D2] p-1">
-              {tabs.map((t) => (
+              {TABS.map((t) => (
                 <a key={t.id} href={t.href} aria-current={route.tab === t.id ? 'page' : undefined}
-                  className={`flex min-h-[38px] items-center rounded-[9px] px-3 font-bold lg:px-[18px] no-underline ${route.tab === t.id ? 'bg-white text-ink shadow-[0_1px_3px_rgba(43,33,20,.12),inset_0_-2px_0_var(--color-gold)]' : 'text-muted hover:text-ink'}`}>
-                  {t.label}
+                  className={`flex min-h-[38px] items-center gap-1.5 rounded-[9px] px-3 font-bold lg:px-[18px] no-underline ${route.tab === t.id ? 'bg-white text-ink shadow-[0_1px_3px_rgba(43,33,20,.12),inset_0_-2px_0_var(--color-gold)]' : 'text-muted hover:text-ink'}`}>
+                  {t.label}{locked(t.id) && lock}
                 </a>
               ))}
             </nav>
@@ -118,7 +93,7 @@ export default function App() {
 
       <div key={route.tab} className="ff-fade">
       {error ? (
-        <p className="px-4 pt-16 text-center text-sm font-semibold text-faint">Roster unavailable. Try again shortly.</p>
+        <p className="px-4 pt-16 text-center text-sm font-semibold text-faint">Roster's under a shield. Try again shortly.</p>
       ) : !roster ? (
         <div aria-busy="true" aria-label="Loading" className="mx-auto flex max-w-[1320px] flex-col gap-3 px-4 pt-4">
           {[48, 120, 46, 320].map((h, i) => <div key={i} className="animate-pulse rounded-2xl bg-well" style={{ height: h }} />)}
@@ -150,14 +125,13 @@ export default function App() {
         </p>
       )}
       <footer className="mx-auto max-w-[1320px] px-4 pb-4 pt-1 text-center text-[10px] text-faint opacity-70">
-        {!auth.me.user && <><a href="#/plan" className="text-faint underline hover:text-muted">Leader sign-in</a>{' · '}</>}
         Unofficial, not endorsed by Supercell.{' '}
         <a href="https://supercell.com/en/fan-content-policy/" target="_blank" rel="noopener noreferrer" className="text-faint underline hover:text-muted">Fan Content Policy</a>
       </footer>
 
       {roster && back && !route.player && !route.upgrade && !route.compare && !route.history && !route.attacks && (
         <button type="button" onClick={returnToCard}
-          className={`ff-rise fixed left-4 z-20 flex min-h-10 max-w-[60vw] cursor-pointer items-center gap-1.5 rounded-full border-0 bg-ink px-3.5 text-sm font-bold text-white shadow-[0_4px_14px_rgba(43,33,20,.3)] ${wide ? 'bottom-6' : 'bottom-[72px]'}`}>
+          className={`ff-rise fixed left-4 z-20 flex min-h-11 max-w-[60vw] cursor-pointer items-center gap-1.5 rounded-full border-0 bg-ink px-4 text-sm font-bold text-white shadow-[0_4px_14px_rgba(43,33,20,.3)] ${wide ? 'bottom-6' : 'bottom-[72px]'}`}>
           <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" className="flex-none"><path d="M15 6l-6 6 6 6" /></svg>
           <span className="truncate">{roster.players.find((p) => p.tag === back.tag)?.name ?? 'Back'}'s card</span>
         </button>
@@ -174,12 +148,12 @@ export default function App() {
       {route.rival && !route.player && <RivalSheet clan={route.rival.clan} tag={route.rival.tag} wide={wide} onClose={closeSheet} />}
 
       {!wide && (
-        <nav aria-label="Sections" className="fixed inset-x-0 bottom-0 z-30 grid border-t border-gold-line bg-white pb-[env(safe-area-inset-bottom)]" style={{ gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` }}>
-          {tabs.map((t) => (
+        <nav aria-label="Sections" className="fixed inset-x-0 bottom-0 z-30 grid border-t border-gold-line bg-white pb-[env(safe-area-inset-bottom)]" style={{ gridTemplateColumns: `repeat(${TABS.length}, minmax(0, 1fr))` }}>
+          {TABS.map((t) => (
             <a key={t.id} href={t.href} aria-current={route.tab === t.id ? 'page' : undefined}
               className={`flex min-h-[58px] flex-col items-center justify-center gap-[3px] text-xs font-bold no-underline ${route.tab === t.id ? 'text-ink shadow-[inset_0_2px_0_var(--color-gold)]' : 'text-faint'}`}>
               <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">{t.icon}</svg>
-              {t.label}
+              <span className="flex items-center gap-1">{t.label}{locked(t.id) && lock}</span>
             </a>
           ))}
         </nav>

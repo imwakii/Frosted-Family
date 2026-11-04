@@ -50,7 +50,7 @@ export default function AttackHistory({ tag, days: start, roster, wide, onClose 
         {([7, 30] as const).map((d) => <button key={d} type="button" aria-pressed={d === days} onClick={() => setDays(d)} className={chip(d === days)}>{d} days</button>)}
       </div>
       {!card ? <div aria-busy="true" aria-label="Loading" className="h-40 flex-none animate-pulse rounded-2xl bg-well" />
-        : !hits.length ? <p className="m-0 rounded-2xl border border-line bg-white p-5 text-sm text-faint">No attacks in the last {days} days</p>
+        : !hits.length ? <p className="m-0 rounded-2xl border border-line bg-white p-5 text-sm text-faint">No attacks in {days} days. Their army's still training</p>
         : [...byWar.entries()].map(([key, rows]) => (
           <section key={key} aria-label={warLabel(rows[0])} className="flex flex-none flex-col gap-1.5">
             <span className="flex items-baseline justify-between gap-2 px-1">

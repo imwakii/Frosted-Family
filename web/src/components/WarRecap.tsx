@@ -96,7 +96,7 @@ export default function WarRecap({ clan, war, result, recap }: { clan: ClanName;
         </div>
       ))}
       <div className="flex justify-end border-y border-hair px-3 py-2">
-        <button type="button" onClick={() => { void saveImage(clan, war, result, recap) }} className="min-h-9 cursor-pointer rounded-full border border-line bg-white px-3 text-[13px] font-bold text-ink-2 hover:bg-page">Save image</button>
+        <button type="button" onClick={() => { void saveImage(clan, war, result, recap) }} className="min-h-9 cursor-pointer rounded-full border border-line bg-white px-3 text-[13px] font-bold text-ink-2 hover:bg-hover">Save image</button>
       </div>
     </div>
   )

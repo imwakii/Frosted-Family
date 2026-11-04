@@ -280,7 +280,7 @@ function Phone({ roster, war, q, setQ, lock }: Omit<Props, 'wide'>) {
                 </a>
               </li>
             ))}
-            {!results.length && <li className="p-4 text-sm text-faint">No one by that name</li>}
+            {!results.length && <li className="p-4 text-sm text-faint">No one by that name in this village</li>}
           </ul>
         ) : (
           <>
@@ -314,7 +314,7 @@ function Desktop({ roster, war, q, setQ, lock }: Omit<Props, 'wide'>) {
         <div className="flex w-full max-w-[480px] flex-col gap-3 empty:hidden"><Countdown roster={roster} war={war} /></div>
         <div className="ml-auto flex w-[clamp(220px,28vw,340px)] flex-none flex-col gap-1">
           <SearchBox q={q} setQ={setQ} onEnter={() => { if (hits[0]) window.location.hash = href(hits[0]) }} />
-          {nq && !hits.length && <span className="px-1 text-sm text-faint">No one by that name</span>}
+          {nq && !hits.length && <span className="px-1 text-sm text-faint">No one by that name in this village</span>}
         </div>
       </div>
       {planned && <DayRow pick={day} onPick={setDay} live={live} roster />}

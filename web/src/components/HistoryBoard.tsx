@@ -129,7 +129,7 @@ export default function HistoryBoard({ q, setQ, wide }: { q: string; setQ: (v: s
               </a>
             </li>
           ))}
-          {!longest.length && <li className="p-4 text-sm text-faint">No one by that name</li>}
+          {!longest.length && <li className="p-4 text-sm text-faint">No one by that name in this village</li>}
         </ol>
       </Section>
       </div>

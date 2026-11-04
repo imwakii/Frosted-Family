@@ -59,7 +59,7 @@ export function ProposalBar<B>({ proposals, me, viewing, setViewing, dirty, line
   const accept = (override: boolean) => viewing && act(() => acceptProposal(viewing.id, override, me.csrf), () => { setViewing(null); onAccepted(viewing) })
   const valve = problems.some((x) => x.startsWith('Fire to Cake') || x.startsWith('one-way valve'))
   const canDecide = me.role === 'publisher'
-  const btn = 'min-h-9 cursor-pointer rounded-full border border-[#D5C8AC] bg-white px-3 text-[13px] font-semibold text-ink-2 hover:bg-page disabled:opacity-60'
+  const btn = 'min-h-9 cursor-pointer rounded-full border border-line bg-white px-3 text-[13px] font-bold text-ink-2 hover:bg-hover disabled:opacity-60'
   const go = 'min-h-9 cursor-pointer rounded-full border-0 bg-action px-3 text-[13px] font-bold text-white hover:bg-action-deep disabled:opacity-60'
   const changes = viewing ? lines(viewing) : []
 
@@ -78,7 +78,7 @@ export function ProposalBar<B>({ proposals, me, viewing, setViewing, dirty, line
         ))}
         {!viewing && mine && (
           <button type="button" disabled={busy} onClick={() => act(() => withdrawProposal(mine.id, me.csrf))}
-            className="min-h-9 flex-none cursor-pointer border-0 bg-transparent px-2 text-[13px] font-semibold text-faint hover:text-ink">Withdraw yours</button>
+            className="min-h-9 flex-none cursor-pointer border-0 bg-transparent px-2 text-[13px] font-bold text-faint hover:text-ink">Withdraw yours</button>
         )}
       </div>
 

@@ -41,7 +41,7 @@ export default function Welcome({ roster, wide }: { roster: Roster; wide: boolea
         </div>
       }>
         <Alerts />
-        <button type="button" onClick={done} className="min-h-11 flex-none cursor-pointer rounded-xl border-0 bg-transparent text-sm font-bold text-muted hover:text-ink">Done</button>
+        <button type="button" onClick={done} className="min-h-11 flex-none cursor-pointer rounded-full border-0 bg-transparent text-sm font-bold text-muted hover:text-ink">Done</button>
       </CardSheet>
     )
   }
@@ -53,7 +53,7 @@ export default function Welcome({ roster, wide }: { roster: Roster; wide: boolea
       </div>
     }>
       <YouPrompt roster={roster} onDone={found} bare />
-      <button type="button" onClick={done} className="min-h-11 flex-none cursor-pointer rounded-xl border-0 bg-transparent text-sm font-bold text-muted hover:text-ink">Not now</button>
+      <button type="button" onClick={done} className="min-h-11 flex-none cursor-pointer rounded-full border-0 bg-transparent text-sm font-bold text-muted hover:text-ink">Not now</button>
     </CardSheet>
   )
 }

@@ -20,7 +20,7 @@ type BoardProps = { q: string; setQ: (v: string) => void; wide: boolean }
 
 // Players: all upgrades together, one unit matrix per category, then past a divider the two rankings that are not upgrades.
 const NAV: { id: string; label: string; icon: string | null }[] = [
-  { id: 'overall', label: 'Upgrades', icon: null }, ...CATS, { id: 'donations', label: 'Donations', icon: null }, { id: 'capital', label: 'Capital', icon: null },
+  { id: 'overall', label: 'Overall', icon: null }, ...CATS, { id: 'donations', label: 'Donations', icon: null }, { id: 'capital', label: 'Capital', icon: null },
 ]
 
 const SUBS = [
@@ -53,25 +53,20 @@ export function useClanPick() {
 export function CategoryNav({ current, wide, children }: { current: string; wide: boolean; children?: ReactNode }) {
   const navRef = useRef<HTMLElement>(null)
   useEffect(() => { navRef.current?.querySelector('[aria-pressed="true"]')?.scrollIntoView({ inline: 'center', block: 'nearest' }) }, [current])
-  if (!wide) {
-    return (
-      <div className="flex flex-wrap items-center gap-2 px-4">
-        <Picker label="Category" value={current} options={NAV} onPick={(id) => go.to(`#/stats/players/${id}`)} />
-        {children}
-      </div>
-    )
-  }
   return (
+    <>
     <nav ref={navRef} aria-label="Category" className={`flex flex-none gap-1.5 overflow-x-auto [scrollbar-width:none] ${wide ? 'max-w-full flex-wrap' : 'px-4'}`}>
       {NAV.map((c) => (
         <Fragment key={c.id}>
           {c.id === 'donations' && <span aria-hidden="true" className="mx-1 my-1.5 w-px flex-none bg-line" />}
           <button type="button" aria-pressed={c.id === current} onClick={() => go.to(`#/stats/players/${c.id}`)} className={chip(c.id === current)}>
-            {wide && c.icon && <UnitIcon name={c.icon} size={22} />}{c.label}
+            {c.icon && <UnitIcon name={c.icon} size={22} />}{c.label}
           </button>
         </Fragment>
       ))}
     </nav>
+    {children && <div className="flex flex-wrap items-center gap-2 px-4">{children}</div>}
+    </>
   )
 }
 
@@ -232,7 +227,7 @@ function MatrixBoard({ cat, q, setQ, wide }: BoardProps & { cat: Cat }) {
                       })}
                     </tr>
                   ) })}
-                  {!shown.length && <tr><td colSpan={3 + units.length} className="p-5 text-sm text-faint">No one by that name</td></tr>}
+                  {!shown.length && <tr><td colSpan={3 + units.length} className="p-5 text-sm text-faint">No one by that name in this village</td></tr>}
                 </tbody>
               </table>
             </section>
@@ -302,7 +297,7 @@ function MatrixBoard({ cat, q, setQ, wide }: BoardProps & { cat: Cat }) {
                 </li>
               )
             })}
-            {!shown.length && <li className="p-4 text-sm text-faint">No one by that name</li>}
+            {!shown.length && <li className="p-4 text-sm text-faint">No one by that name in this village</li>}
           </ol>
           {listed.length < shown.length && <ShowAll total={shown.length} onClick={() => top.setAll(true)} className="mx-4" />}
         </>
@@ -466,7 +461,7 @@ function WarBoardView({ q, setQ, wide }: BoardProps) {
                     })}
                   </tr>
                 ))}
-                {!shown.length && <tr><td colSpan={2 + cols.length} className="p-5 text-sm text-faint">No one by that name</td></tr>}
+                {!shown.length && <tr><td colSpan={2 + cols.length} className="p-5 text-sm text-faint">No one by that name in this village</td></tr>}
               </tbody>
               <tfoot>
                 {footer.map((f, fi) => {
@@ -530,7 +525,7 @@ function WarBoardView({ q, setQ, wide }: BoardProps) {
                 </a>
               </li>
             ))}
-            {!shown.length && <li className="p-4 text-sm text-faint">No one by that name</li>}
+            {!shown.length && <li className="p-4 text-sm text-faint">No one by that name in this village</li>}
           </ol>
           {listed.length < shown.length && <ShowAll total={shown.length} onClick={() => top.setAll(true)} className="mx-4" />}
         </>

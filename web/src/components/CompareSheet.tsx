@@ -91,7 +91,7 @@ function Picker({ roster, first, wide, onClose, onBack }: { roster: Roster; firs
           ))}
         </ul>
       )}
-      {n && !hits.length && <p className="m-0 text-sm text-faint">No one by that name</p>}
+      {n && !hits.length && <p className="m-0 text-sm text-faint">No one by that name in this village</p>}
     </CardSheet>
   )
 }
@@ -158,7 +158,7 @@ export default function CompareSheet({ roster, a: aTag, b: bTag, wide, onClose }
         <span className="flex items-center gap-1 text-[11px] font-bold text-muted"><ClanBadge src={clans[p.clan]?.badge} size={16} />{p.clan}</span>
         <span className="font-display text-[26px] leading-none tabular-nums" style={{ color: deep }}>{leads}</span>
       </a>
-      <button type="button" aria-label={`Change ${p.name}`} onClick={() => go.to(compareHref(stays.tag))} className="min-h-8 cursor-pointer rounded-full border border-line bg-white px-2.5 text-xs font-bold text-ink-2 hover:bg-page">Change</button>
+      <button type="button" aria-label={`Change ${p.name}`} onClick={() => go.to(compareHref(stays.tag))} className="min-h-9 cursor-pointer rounded-full border border-line bg-white px-3 text-[13px] font-bold text-ink-2 hover:bg-hover">Change</button>
     </div>
   )
   return (

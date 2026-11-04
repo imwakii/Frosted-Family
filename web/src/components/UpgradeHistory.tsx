@@ -50,7 +50,7 @@ export default function UpgradeHistory({ tag, days: start, roster, wide, onClose
         {([7, 30] as const).map((d) => <button key={d} type="button" aria-pressed={d === days} onClick={() => setDays(d)} className={chip(d === days)}>{d} days</button>)}
       </div>
       {!card ? <div aria-busy="true" aria-label="Loading" className="h-40 flex-none animate-pulse rounded-2xl bg-well" />
-        : !ups.length ? <p className="m-0 rounded-2xl border border-line bg-white p-5 text-sm text-faint">No upgrades in the last {days} days</p>
+        : !ups.length ? <p className="m-0 rounded-2xl border border-line bg-white p-5 text-sm text-faint">No upgrades in {days} days. All builders on holiday</p>
         : [...byDay.entries()].map(([d, rows]) => (
           <section key={d} aria-label={dayLabel(d)} className="flex flex-none flex-col gap-1.5">
             <span className="px-1 text-xs font-bold uppercase tracking-[0.06em] text-faint">{dayLabel(d)}</span>

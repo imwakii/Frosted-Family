@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { loginHref, takeSigninError, type Me } from '../auth'
+import { loginHref, signinError, type Me } from '../auth'
 import { checkPlan, getProposals, HttpError, type LineupBody, type PlanMove, type Proposal, publishPlan, saveProposal, withdrawProposal } from '../data'
 import { CLAN, CLANS, GROUPS, coreAvg, fmtScore } from '../theme'
 import type { ClanName, Player, Roster, Slot } from '../types'
@@ -237,23 +237,23 @@ function Plan({ roster, me, onPublished }: { roster: Roster; me: Me; onPublished
           <span className="flex-auto" />
           {n > 0 && !viewing && (
             <button type="button" onClick={() => { setMine({}); setResult(null) }}
-              className="min-h-10 cursor-pointer rounded-full border border-[#D5C8AC] bg-white px-3 text-sm font-semibold text-ink-2 hover:bg-page">
+              className="min-h-9 cursor-pointer rounded-full border border-line bg-white px-3 text-[13px] font-bold text-ink-2 hover:bg-hover">
               Reset
             </button>
           )}
           {!viewing && <button type="button" onClick={save} disabled={readOnly || !dirty || saving} title={readOnly ? lockedTip : undefined}
-            className="min-h-10 cursor-pointer rounded-full border border-[#D5C8AC] bg-white px-3 text-sm font-semibold text-ink-2 hover:bg-page disabled:cursor-default disabled:opacity-60">
+            className="min-h-9 cursor-pointer rounded-full border border-line bg-white px-3 text-[13px] font-bold text-ink-2 hover:bg-hover disabled:cursor-default disabled:opacity-60">
             {dirty || !Object.keys(mine).length ? 'Propose' : 'Proposed'}
           </button>}
           {viewing ? null : readOnly ? (
             <button type="button" disabled title={lockedTip}
-              className="min-h-10 cursor-not-allowed rounded-[10px] border-0 bg-[#E3D8BF] px-4 text-sm font-bold text-faint">
+              className="min-h-9 cursor-not-allowed rounded-full border-0 bg-[#E3D8BF] px-3 text-[13px] font-bold text-faint">
               Publish
             </button>
           ) : canPublish ? (
             <button type="button" onClick={openConfirm} disabled={cant}
               title={blocked ? checks.filter((k) => (k.tone === 'bad' || k.tone === 'warn') && !valveOnly(k)).map((k) => k.label).join(' · ') : undefined}
-              className="min-h-10 cursor-pointer rounded-full border-0 bg-action px-4 text-sm font-bold text-white hover:bg-action-deep disabled:cursor-not-allowed disabled:bg-[#E3D8BF] disabled:text-faint">
+              className="min-h-9 cursor-pointer rounded-full border-0 bg-action px-3 text-[13px] font-bold text-white hover:bg-action-deep disabled:cursor-not-allowed disabled:bg-[#E3D8BF] disabled:text-faint">
               Publish
             </button>
           ) : null}
@@ -264,7 +264,7 @@ function Plan({ roster, me, onPublished }: { roster: Roster; me: Me; onPublished
         {result && (
           <div role="status" className={`flex min-h-12 items-center gap-2.5 rounded-[14px] px-4 text-sm font-bold ${result.ok ? 'bg-[#DCFCE7] text-[#166534]' : 'bg-[#FEF3C7] text-[#92400E]'}`}>
             <span className="flex-auto">{result.ok ? `Published · ${result.n} ${result.n === 1 ? 'change' : 'changes'} on CWL` : result.why}</span>
-            {result.ok && <a href="#/cwl" className="flex min-h-9 items-center rounded-[9px] bg-white px-3.5 text-[#166534] no-underline">Open CWL</a>}
+            {result.ok && <a href="#/cwl" className="flex min-h-9 items-center rounded-full bg-white px-3 text-[13px] font-bold text-[#166534] no-underline">Open CWL</a>}
           </div>
         )}
 
@@ -347,9 +347,9 @@ function Plan({ roster, me, onPublished }: { roster: Roster; me: Me; onPublished
             )}
             <div className="flex justify-end gap-2">
               <button type="button" autoFocus onClick={() => setConfirming(false)}
-                className="min-h-11 cursor-pointer rounded-full border border-[#D5C8AC] bg-white px-4 text-sm font-semibold text-ink-2 hover:bg-page">Cancel</button>
+                className="min-h-11 cursor-pointer rounded-full border border-line bg-white px-4 text-sm font-bold text-ink-2 hover:bg-hover">Cancel</button>
               <button type="button" onClick={publish} disabled={busy || server === 'checking' || serverProblems.length > 0 || (valveHit && !override)}
-                className="min-h-11 cursor-pointer rounded-full border-0 bg-action px-[18px] text-sm font-bold text-white hover:bg-action-deep disabled:opacity-60">Publish</button>
+                className="min-h-11 cursor-pointer rounded-full border-0 bg-action px-4 text-sm font-bold text-white hover:bg-action-deep disabled:opacity-60">Publish</button>
             </div>
           </section>
         </div>
@@ -363,32 +363,30 @@ const Discord = () => (
 )
 
 function Gate({ me, onSignOut }: { me: Me; onSignOut: () => void }) {
-  const [failed] = useState(takeSigninError)
+  const failed = signinError
   return (
     <main className="mx-auto flex max-w-[1360px] justify-center px-4 pt-16">
       <section className="flex w-full max-w-[380px] flex-col items-center gap-3 rounded-[20px] border border-line bg-white px-6 py-8 text-center">
-        <span className="flex size-12 items-center justify-center rounded-2xl bg-[#EFE6D2] text-ink-2">
-          <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="11" width="14" height="9" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></svg>
-        </span>
-        <h2 className="font-display m-0 text-[24px] text-brand">Leaders only</h2>
-        {failed && !me.user && (
-          <span role="status" className="rounded-full bg-[#FEF3C7] px-3 py-1 text-[13px] font-bold text-[#92400E]">
-            {failed === 'denied' ? 'Not a leader account' : 'Sign-in failed. Try again.'}
-          </span>
-        )}
+        {failed && !me.user
+          ? <span className="size-20 overflow-hidden rounded-full bg-[#EFE6D2]"><img src="/icons/baby-dragon.png" alt="" className="size-full object-cover object-top" /></span>
+          : <img src="/icons/master-builder.png" alt="" className="h-24 w-auto" />}
+        <h2 className="font-display m-0 text-[24px] text-brand">War room</h2>
+        {!me.user && (failed
+          ? <p role="status" className="m-0 text-balance text-sm font-semibold text-[#B4451A]">{failed === 'denied' ? "Nice try goblin, but that account isn't a leader or co-leader." : "The Clan Castle gate jammed. Try again."}</p>
+          : <p className="m-0 text-sm text-ink-2">When we're not being deadbeats, we plan</p>)}
         {me.user ? (
           <>
             <span className="text-sm text-faint">Signed in as {me.user.name}</span>
             <button type="button" onClick={onSignOut}
-              className="min-h-11 w-full cursor-pointer rounded-full border border-[#D5C8AC] bg-white text-sm font-semibold text-ink-2 hover:bg-page">Sign out</button>
+              className="min-h-11 w-full cursor-pointer rounded-full border border-line bg-white text-sm font-bold text-ink-2 hover:bg-hover">Sign out</button>
           </>
         ) : !me.configured ? (
-          <button type="button" disabled className="mt-1 flex min-h-12 w-full items-center justify-center gap-2.5 rounded-[12px] border-0 bg-[#E3D8BF] text-[15px] font-bold text-faint">
+          <button type="button" disabled className="mt-1 flex min-h-11 w-full items-center justify-center gap-2.5 rounded-full border-0 bg-[#E3D8BF] text-sm font-bold text-faint">
             <Discord />Sign-in coming soon
           </button>
         ) : (
           <a href={loginHref()}
-            className="mt-1 flex min-h-12 w-full items-center justify-center gap-2.5 rounded-[12px] bg-[#5865F2] text-[15px] font-bold text-white no-underline hover:bg-[#4752C4]">
+            className="mt-1 flex min-h-11 w-full items-center justify-center gap-2.5 rounded-full bg-[#5865F2] text-sm font-bold text-white no-underline hover:bg-[#4752C4]">
             <Discord />Sign in with Discord
           </a>
         )}
@@ -407,9 +405,8 @@ const SUBS = [
 
 export default function PlanTab({ sub, roster, onPublished, me, ready, wide, onSignOut }: PlanProps & { sub: string; onPublished: () => Promise<void> }) {
   if (!ready) return <div aria-busy="true" aria-label="Loading" className="mx-auto mt-16 h-48 max-w-[380px] animate-pulse rounded-[20px] bg-well" />
-  // Open to all only while Discord sign-in is not set up. Once it is, signed-out visitors and non-leaders
-  // see the sign-in card alone, on both sections.
-  if (me.configured && !me.role) return <Gate me={me} onSignOut={onSignOut} />
+  // Anyone who is not a signed-in leader sees the sign-in card alone, on every section.
+  if (!me.role) return <Gate me={me} onSignOut={onSignOut} />
   return (
     <>
       <SubNav items={SUBS} current={sub} wide={wide} />

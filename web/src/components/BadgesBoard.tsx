@@ -101,7 +101,7 @@ export default function BadgesBoard({ q, setQ, wide }: { q: string; setQ: (v: st
             </li>
           ))}
         </ol>
-      ) : <div className="rounded-2xl border border-line bg-white p-5 text-sm text-faint">{nq ? 'No one by that name holds this' : 'No one here holds this yet'}</div>}
+      ) : <div className="rounded-2xl border border-line bg-white p-5 text-sm text-faint">{nq ? 'No one by that name in this village holds this' : 'No one here holds this yet'}</div>}
     </>
   )
 

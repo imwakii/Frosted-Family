@@ -20,5 +20,5 @@ export const topRows = <T,>(rows: T[], tag: (r: T) => string, yous: string[], al
   (all ? rows : rows.filter((r, i) => i < TOP || yous.includes(tag(r))))
 
 export function ShowAll({ total, onClick, className = '' }: { total: number; onClick: () => void; className?: string }) {
-  return <button type="button" onClick={onClick} className={`min-h-11 cursor-pointer rounded-2xl border border-line bg-white text-[13px] font-bold text-action hover:bg-page ${className}`}>Show all {total}</button>
+  return <button type="button" onClick={onClick} className={`min-h-11 cursor-pointer rounded-full border border-line bg-white text-sm font-bold text-action hover:bg-hover ${className}`}>Show all {total}</button>
 }

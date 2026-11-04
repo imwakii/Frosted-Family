@@ -41,7 +41,7 @@ export function InstallHint({ onDismiss }: { onDismiss: () => void }) {
       </span>
       {offer && (
         <button type="button" onClick={() => { offer?.prompt(); onDismiss() }}
-          className="min-h-9 flex-none cursor-pointer rounded-full border-0 bg-white px-3.5 text-[13px] font-bold text-ink">Install</button>
+          className="min-h-9 flex-none cursor-pointer rounded-full border-0 bg-white px-3 text-[13px] font-bold text-ink">Install</button>
       )}
       <button type="button" aria-label="Not now" onClick={onDismiss}
         className="flex size-9 flex-none cursor-pointer items-center justify-center rounded-full border-0 bg-transparent text-lg leading-none text-white/70 hover:text-white">×</button>

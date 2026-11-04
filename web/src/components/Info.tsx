@@ -93,7 +93,7 @@ export default function Info({ topic, extra }: { topic: keyof typeof TOPICS; ext
               </div>
             )}
             {t.lines?.map((l) => <p key={l} className="m-0 text-sm leading-[1.4] text-ink-2">{l}</p>)}
-            <button type="button" autoFocus onClick={() => setOpen(false)} className="min-h-11 flex-none cursor-pointer rounded-xl border border-line bg-white text-sm font-bold text-ink-2 hover:bg-page">Got it</button>
+            <button type="button" autoFocus onClick={() => setOpen(false)} className="min-h-11 flex-none cursor-pointer rounded-full border border-line bg-white text-sm font-bold text-ink-2 hover:bg-hover">Got it, chief</button>
           </section>
         </div>,
         document.body,
