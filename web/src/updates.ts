@@ -249,6 +249,7 @@ export const UPDATES: Update[] = [
         title: 'General',
         lines: [
           'Added a home screen guide.',
+          'Changed visitors to leave out bots.',
           'Fixed back reopening closed cards.',
           'Fixed blank pages after a crash.',
           'Changed labels to match everywhere.',

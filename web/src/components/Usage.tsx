@@ -4,13 +4,14 @@ import { getVisitsDaily, type VisitsDaily } from '../visits'
 import { Eyebrow } from './ui'
 
 // Plan's Usage: visitors a day, stacked by region. A region comes from the phone's time zone, so it is close rather than exact.
+// Probably bots are left out of every number here except their own line.
 // Colour follows the region, whichever others are there; the order is the server's.
 
 const COLOURS: Record<string, string> = {
   'South Asia': '#2a78d6', 'South East Asia': '#eb6834', 'Middle East': '#1baf7a', 'East Asia': '#eda100',
   Europe: '#e87ba4', Americas: '#008300', Africa: '#6250d6', Oceania: '#e34948',
 }
-const REST = '#B8AE98'  // other Asia, elsewhere, and days before regions were recorded
+const REST = '#B8AE98'  // other Asia and elsewhere
 const colour = (region: string) => COLOURS[region] ?? REST
 const dayLabel = (day: string) => new Date(`${day}T00:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' })
 const CHART = 160
@@ -73,6 +74,7 @@ export default function Usage({ onLapsed }: { onLapsed: () => void }) {
             </li>
           ))}
         </ul>
+        {!!data.bots && <span className="px-1 text-xs font-semibold text-muted">Left out: {data.bots.toLocaleString('en-GB')} probably bots</span>}
       </section>
     </main>
   )
