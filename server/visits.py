@@ -4,8 +4,10 @@ Each browser makes up a random id and reports it once a UTC day, with its time z
 one person on two devices counts twice and anyone can inflate the count a little. A cap on new ids a day keeps that from
 growing the table. A region is read from the time zone, so it follows the phone's setting and is close rather than exact.
 
-Only a visit with a real place counts. A browser saying plain UTC is almost always a program on a server, and leaders see those
-apart as probably bots. Visits from before time zones were recorded (2 and 3 Nov 2026) can't be told apart, so they are left out.
+A visit counts when it shows a real person: a place, the home screen app, or a clock set away from UTC. Each visit also says whether
+it came from the home screen and the clock's offset, because a home screen app can report plain UTC. A browser with none of these is
+probably a bot. Plain UTC visits from before the offset was recorded (to 5 Nov 2026) are unclear and left out, and so are visits from
+before time zones were recorded (2 and 3 Nov 2026).
 """
 from __future__ import annotations
 
@@ -20,7 +22,10 @@ from server.auth import Leader, require_leader
 MAX_A_DAY = 5000
 DAYS_SHOWN = 30
 NOT_RECORDED = "Not recorded"
-BOTS = "Probably bots"  # phones report a place; a browser that says UTC is nearly always a program on a server
+BOTS = "Probably bots"
+UNCLEAR = "Unclear"
+HOME_SCREEN = "Home screen app"
+HIDDEN = "Place hidden"  # a clock away from UTC under a time zone that says UTC
 ASIA = {
     "South Asia": "Kolkata Calcutta Karachi Dhaka Colombo Kathmandu Katmandu Thimphu Kabul",
     "South East Asia": "Singapore Jakarta Manila Bangkok Kuala_Lumpur Kuching Ho_Chi_Minh Saigon Hanoi Yangon Rangoon Phnom_Penh Vientiane Brunei Makassar Jayapura Pontianak Dili",
@@ -29,9 +34,10 @@ ASIA = {
 }
 CITY_REGION = {city: region for region, cities in ASIA.items() for city in cities.split()}
 ELSEWHERE = {"Europe": "Europe", "America": "Americas", "Africa": "Africa", "Australia": "Oceania", "Pacific": "Oceania"}
-ORDER = [*ASIA, "Europe", "Americas", "Africa", "Oceania", "Other Asia", "Elsewhere"]
+ORDER = [*ASIA, "Europe", "Americas", "Africa", "Oceania", "Other Asia", "Elsewhere", HOME_SCREEN, HIDDEN]
 # The same test as region(), for counting in SQL.
-A_PERSON = "tz IS NOT NULL AND tz NOT IN ('UTC', 'GMT') AND tz NOT LIKE 'UTC/%' AND tz NOT LIKE 'GMT/%' AND tz NOT LIKE 'Etc/%'"
+A_PERSON = ("tz IS NOT NULL AND (standalone=1 OR offset_min<>0 OR"
+            " (tz NOT IN ('UTC', 'GMT') AND tz NOT LIKE 'UTC/%' AND tz NOT LIKE 'GMT/%' AND tz NOT LIKE 'Etc/%'))")
 
 router = APIRouter(prefix="/visits")
 
@@ -39,14 +45,20 @@ router = APIRouter(prefix="/visits")
 class Visit(BaseModel):
     id: str = Field(pattern=r"^[0-9a-f-]{16,40}$")
     tz: str | None = Field(default=None, pattern=r"^[A-Za-z0-9_+/-]{1,40}$")
+    standalone: bool | None = None
+    offset: int | None = Field(default=None, ge=-900, le=900)  # minutes from UTC, as the browser's clock says
 
 
-def region(tz: str | None) -> str:
+def region(tz: str | None, standalone: bool | int | None = None, offset: int | None = None) -> str:
     if not tz:
         return NOT_RECORDED
     area, _, city = tz.partition("/")
     if area in ("UTC", "GMT", "Etc"):
-        return BOTS
+        if standalone:
+            return HOME_SCREEN
+        if offset:
+            return HIDDEN
+        return UNCLEAR if standalone is None else BOTS
     if area == "Asia":
         return CITY_REGION.get(city, "Other Asia")
     return ELSEWHERE.get(area, "Elsewhere")
@@ -71,8 +83,11 @@ def add_visit(body: Visit):
     day = db.utcnow()[:10]
     with appdb.connect() as conn:
         if conn.execute("SELECT COUNT(*) FROM visits WHERE day=?", (day,)).fetchone()[0] < MAX_A_DAY:
-            conn.execute("""INSERT INTO visits (day, visitor, tz) VALUES (?,?,?)
-                            ON CONFLICT (day, visitor) DO UPDATE SET tz=COALESCE(excluded.tz, visits.tz)""", (day, body.id, body.tz))
+            conn.execute("""INSERT INTO visits (day, visitor, tz, standalone, offset_min) VALUES (?,?,?,?,?)
+                            ON CONFLICT (day, visitor) DO UPDATE SET tz=COALESCE(excluded.tz, visits.tz),
+                            standalone=COALESCE(excluded.standalone, visits.standalone),
+                            offset_min=COALESCE(excluded.offset_min, visits.offset_min)""",
+                         (day, body.id, body.tz, body.standalone, body.offset))
         return counts(conn)
 
 
@@ -82,16 +97,15 @@ def daily(leader: Leader = Depends(require_leader)):
     days = [(today - timedelta(days=i)).isoformat() for i in range(DAYS_SHOWN - 1, -1, -1)]
     by_day: dict[str, dict[str, int]] = {d: {} for d in days}
     seen: dict[str, set[str]] = {}
-    bots: set[str] = set()
+    left_out: dict[str, set[str]] = {BOTS: set(), UNCLEAR: set(), NOT_RECORDED: set()}
     with appdb.connect() as conn:
-        for r in conn.execute("SELECT day, visitor, tz FROM visits WHERE day>=?", (days[0],)):
-            name = region(r["tz"])
-            if name == BOTS:
-                bots.add(r["visitor"])
-            if name in (BOTS, NOT_RECORDED):
+        for r in conn.execute("SELECT day, visitor, tz, standalone, offset_min FROM visits WHERE day>=?", (days[0],)):
+            name = region(r["tz"], r["standalone"], r["offset_min"])
+            if name in left_out:
+                left_out[name].add(r["visitor"])
                 continue
             by_day[r["day"]][name] = by_day[r["day"]].get(name, 0) + 1
             seen.setdefault(name, set()).add(r["visitor"])
         totals = counts(conn)
     return {**totals, "days": [{"day": d, "total": sum(by_day[d].values()), "regions": by_day[d]} for d in days],
-            "regions": [{"name": n, "total": len(seen[n])} for n in ORDER if n in seen], "bots": len(bots)}
+            "regions": [{"name": n, "total": len(seen[n])} for n in ORDER if n in seen], "bots": len(left_out[BOTS]), "unclear": len(left_out[UNCLEAR])}

@@ -63,6 +63,12 @@ def connect() -> sqlite3.Connection:
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     conn.executescript(SCHEMA)
-    if "tz" not in {r["name"] for r in conn.execute("PRAGMA table_info(visits)")}:
-        conn.execute("ALTER TABLE visits ADD COLUMN tz TEXT")
+    have = {r["name"] for r in conn.execute("PRAGMA table_info(visits)")}
+    for name, kind in (("tz", "TEXT"), ("standalone", "INTEGER"), ("offset_min", "INTEGER")):
+        if name not in have:
+            try:
+                conn.execute(f"ALTER TABLE visits ADD COLUMN {name} {kind}")
+            except sqlite3.OperationalError as e:  # another process starting at the same moment got there first
+                if "duplicate column" not in str(e):
+                    raise
     return conn

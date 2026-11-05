@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { LATEST } from '../updates'
 import type { Roster } from '../types'
+import { countingOn, setCounting } from '../visits'
 import Alerts from './Alerts'
 import { CardSheet } from './ClanSheet'
 import InstallGuide from './InstallGuide'
@@ -59,6 +60,7 @@ export default function Settings({ wide, roster, leader, account }: { wide: bool
   const news = useNews()
   const { yous } = useYou()
   const utc = useUtc()
+  const [counted, setCounted] = useState(countingOn)
   const [open, setOpen] = useState(false)
   const [guide, setGuide] = useState(false)
   // Once someone has marked themselves, the button lights until they have been in here and seen alerts.
@@ -106,6 +108,15 @@ export default function Settings({ wide, roster, leader, account }: { wide: bool
             <div className="rounded-xl border border-line bg-white">
               <SwitchRow label="Show UTC" line="On the calendar" on={utc} onFlip={() => setUtc(!utc)} />
             </div>
+          </section>
+          <section aria-label="Privacy" className="flex flex-col gap-1.5">
+            <Eyebrow>Privacy</Eyebrow>
+            <div className="rounded-xl border border-line bg-white">
+              <SwitchRow label="Count my visits" line="A random ID and your time zone" on={counted} onFlip={() => { setCounting(!counted); setCounted(!counted) }} />
+            </div>
+            <p className="m-0 px-1 text-xs leading-[1.45] text-muted">
+              Your accounts stay on this device unless you turn on alerts. Discord sign-in uses a cookie, and fonts come from Google. No ads or trackers.
+            </p>
           </section>
           {account && (
             <section aria-label="Leader sign-in" className="flex flex-col gap-1.5">
