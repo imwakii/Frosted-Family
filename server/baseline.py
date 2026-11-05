@@ -1,9 +1,9 @@
-"""The war-record baseline: the latest cycle's clashspot war-statistics exports, committed in data/raw/.
+"""The war-record baseline: the clashspot war-statistics export our own tally starts from, committed in data/raw/.
 
-The cycle is the newest data/raw/<cycle>/ folder with a manifest.md. Its manifest table gives each clan's pull_date
-(the most recent war in the export) and earliest_war. A recorded war only adds to this baseline for a clan if its
-battle started after that clan's pull_date, so no war is counted twice. When the next cycle's exports are committed,
-the baseline moves to them on its own.
+The tally is its own record from here on, so it stays on TALLY_CYCLE however many exports follow. Later exports feed only
+the rolling scores (build_cycle.py), and server/export_diff.py checks them against our records. The manifest table gives
+each clan's pull_date (the most recent war in the export) and earliest_war. A recorded war only adds to this baseline for
+a clan if its battle started after that clan's pull_date, so no war is counted twice.
 
 clashspot reports attack and defense counts by stars and missed attacks, but no destruction and no war count.
 """
@@ -22,6 +22,7 @@ ATTACK_COLS = {"attacks": "Attack: count", "three": "Attack: 3 Stars Count", "tw
                "one": "Attack: 1 Star Count", "missed": "Attack: Miss attacks"}
 DEFENSE_COLS = {"defenses": "Defense: count", "three": "Defense: 3 Stars Count", "two": "Defense: 2 Stars Count",
                 "one": "Defense: 1 Star Count"}
+TALLY_CYCLE = "2026-11"
 ROW = re.compile(r"^\s*(\w+)\s+(\d{4}-\d{2}-\d{2})\s+(\d{4}-\d{2}-\d{2})\b")
 
 
@@ -93,8 +94,10 @@ def _cached(cycle_dir: str, mtimes: tuple) -> Baseline:
 
 
 def current() -> Baseline | None:
-    """The newest cycle's baseline, re-read only when its files change (the 30-minute pull brings a new cycle)."""
-    d = latest_cycle(raw_dir())
+    """The tally's baseline, or the newest there is without it, re-read only when its files change."""
+    d = raw_dir() / TALLY_CYCLE
+    if not (d / "manifest.md").exists():
+        d = latest_cycle(raw_dir())
     if d is None:
         return None
     files = sorted(d.glob("*"))

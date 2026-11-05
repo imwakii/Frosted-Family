@@ -384,13 +384,11 @@ def test_war_record_merges_the_export_with_later_recorded_wars(raw, explored):
     assert rows["cake two"]["war"] is None and rows["flake"]["war"] is None
 
 
-def test_war_record_follows_the_newest_cycle(raw, explored):
+def test_war_record_stays_on_its_tally_when_a_new_export_arrives(raw, explored):
+    before = explored.get("/explore/war").json()
     (raw / "2026-12" / "manifest.md").write_text(MANIFEST.format(cycle="2026-12", fire_pull="2026-11-05"),
                                                  encoding="utf-8")
-    body = explored.get("/explore/war").json()
-    # The new cycle has no exports yet and its pull dates are later, so day 2 is now inside its window.
-    assert body["sources"] == ["clashspot export 2026-12"]
-    assert by_name(body)["Waki renamed"]["war"] is None
+    assert explored.get("/explore/war").json() == before
 
 
 def test_war_record_without_an_export_is_recorded_only(explored):

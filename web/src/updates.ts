@@ -239,6 +239,7 @@ export const UPDATES: Update[] = [
           'Added Donations and Capital cards.',
           'Added a card for each Badges row.',
           'Added lifetime war stars to War.',
+          'Added a miss rate column to War.',
         ],
       },
       {

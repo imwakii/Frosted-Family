@@ -315,6 +315,7 @@ const WAR_COLS: WarCol[] = [
   { key: 'stars', label: 'Tracked ★', value: (r) => r.war?.stars ?? null, fmt: (v) => v.toLocaleString('en-GB') },
   { key: 'attacks', label: 'Attacks', value: (r) => r.war?.attacks ?? null, fmt: String },
   { key: 'missed', label: 'Missed', value: (r) => (r.war ? r.war.missed : null), fmt: String, low: true },
+  { key: 'rate', label: 'Miss rate', value: (r) => missRate(r.war), fmt: pct, low: true },
   { key: 'triple', label: '3★ rate', value: (r) => (r.war?.attacks ? (100 * r.war.three_stars) / r.war.attacks : null), fmt: pct },
   { key: 'avg', label: 'Avg ★', value: (r) => (r.war?.attacks ? r.war.stars / r.war.attacks : null), fmt: (v) => v.toFixed(1) },
   { key: 'dest', label: 'Avg destruction', value: (r) => r.war?.avg_destruction ?? null, fmt: pct, recordedOnly: true },
@@ -398,7 +399,7 @@ function WarBoardView({ q, setQ, wide }: BoardProps) {
     { label: `Average · ${who}`, cell: {
       total: summary.totalMean === null ? '' : `${Math.round(summary.totalMean).toLocaleString('en-GB')}★`,
       stars: summary.warStarsMean === null ? '' : `${Math.round(summary.warStarsMean).toLocaleString('en-GB')}★`,
-      attacks: '', missed: summary.missRate === null ? '' : `${Math.round(summary.missRate)}%`,
+      attacks: '', rate: summary.missRate === null ? '' : `${Math.round(summary.missRate)}%`,
       triple: summary.triple === null ? '' : pct(summary.triple), avg: summary.avgStars === null ? '' : summary.avgStars.toFixed(2),
       dest: summary.dest === null ? '' : pct(summary.dest),
     } },
@@ -471,10 +472,10 @@ function WarBoardView({ q, setQ, wide }: BoardProps) {
                     </td>
                     {cols.map((c) => {
                       const v = c.value(r)
-                      const high = c.key === 'missed' && (missRate(r.war) ?? 0) > HIGH_MISS
+                      const high = (c.key === 'missed' || c.key === 'rate') && (missRate(r.war) ?? 0) > HIGH_MISS
                       return (
                         <td key={c.key} className={`border-b border-hair px-4 text-right tabular-nums group-hover:bg-hover ${c.key === sort.key ? 'bg-[#F6EEDC] font-extrabold text-ink' : 'font-semibold text-ink-2'} ${v === null ? '!font-normal !text-[#D5C8AC]' : ''}`}>
-                          {v === null ? '—' : high ? <span className="rounded-full bg-[#FEF3C7] px-2 py-0.5 text-[#92400E]">{c.fmt(v)}</span> : <>{c.fmt(v)}{isStars(c.key) && <span className="ml-0.5 text-gold">★</span>}</>}
+                          {v === null ? '—' : high ? <span className="font-extrabold text-[#A3261A]">{c.fmt(v)}</span> : <>{c.fmt(v)}{isStars(c.key) && <span className="ml-0.5 text-gold">★</span>}</>}
                         </td>
                       )
                     })}

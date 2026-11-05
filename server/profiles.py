@@ -247,7 +247,7 @@ def api_day(t: str | None) -> str | None:
 def war_record(conn, scope: str = "all") -> dict:
     """GET /explore/war?scope=all|cwl. Every current member's all-time war stars (profile) and their war record.
 
-    scope=all: the latest cycle's clashspot export (baseline.py) plus the recorded wars that started after each
+    scope=all: the tally's clashspot export (baseline.py) plus the recorded wars that started after each
     clan's pull date, so no war counts twice. scope=cwl: the current league season's recorded CWL wars only.
     A member with nothing in the scope has war null. Ranked by all-time war stars in both scopes. window_from opens the
     whole window (the export's earliest war, else the first recorded one); since is the first recorded war counted."""

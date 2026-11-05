@@ -332,7 +332,7 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
             <Section title="War record" note={rec?.from ? sinceDay(rec.from) : fmtWindow(roster.window)}>
               <div className="grid grid-cols-3 gap-2">
                 <Stat label="3★ rate" value={pct(threeStar)} onOpen={toCol('war', 'triple')} />
-                <Stat label="Miss rate" value={pct(missed)} onOpen={toCol('war', 'missed')} />
+                <Stat label="Miss rate" value={pct(missed)} onOpen={toCol('war', 'rate')} />
                 <Stat label="Attacks" value={rec?.attacks ?? p.attacks ?? '—'} onOpen={toCol('war', 'attacks')} />
               </div>
             </Section>
