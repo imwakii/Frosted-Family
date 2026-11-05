@@ -398,15 +398,9 @@ export default function DayPlanner({ roster: base, me, onPublished }: { roster: 
         </p>
       )}
 
-      {!preview && view === 'Flakes' && (
-        <ul className="m-0 w-full max-w-[900px] list-none rounded-2xl border border-line bg-white p-1.5">
-          {inFlakes.map((p) => <PlanRow key={p.tag} p={p} at={placeOf(p.tag)} onPlace={(v) => place(p, v)} locked={!!viewing} />)}
-        </ul>
-      )}
-
       {!preview && view !== 'Flakes' && <>
       {(swapOut.length > 0 || swapIn.length > 0) && (
-        <p role="status" className="m-0 w-full max-w-[900px] rounded-[14px] bg-[#FEF3C7] px-4 py-2.5 text-sm font-bold text-[#92400E]">
+        <p role="status" className="m-0 w-full rounded-[14px] bg-[#FEF3C7] px-4 py-2.5 text-sm font-bold text-[#92400E]">
           Day {prep} in game: {swapOut.length > 0 && swapIn.length > 0 ? `swap ${swapOut.join(', ')} for ${swapIn.join(', ')}` : swapIn.length > 0 ? `add ${swapIn.join(', ')}` : `take out ${swapOut.join(', ')}`}
         </p>
       )}
@@ -417,9 +411,18 @@ export default function DayPlanner({ roster: base, me, onPublished }: { roster: 
         {rows.some((p) => tier(p, missed, w) !== null && !onTrial(p, w) && !onTrack(p.tag, plan, w)) && <span className="flex items-center gap-1"><span className="font-bold text-[#B45309]">!</span>Can't reach {TARGET}★</span>}
         {!!live && DAYS.some((d) => !locked(w[d]) && (live[clan][d] ?? []).join() !== (plan[d] ?? []).join()) && <span className="flex items-center gap-1"><span className="h-2.5 w-3.5 rounded-[3px] bg-moved" />Changed</span>}
       </div>
+      </>}
 
+      {/* On a wide screen the side lists sit beside the board. With nothing to list, the board takes the width. */}
+      {!preview && <div className="flex flex-col gap-3.5 xl:flex-row xl:items-start">
+      {view === 'Flakes' && (
+        <ul className="m-0 grid w-full min-w-0 flex-auto list-none gap-x-2 rounded-2xl border border-line bg-white p-1.5 [grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr))]">
+          {inFlakes.map((p) => <PlanRow key={p.tag} p={p} at={placeOf(p.tag)} onPlace={(v) => place(p, v)} locked={!!viewing} />)}
+        </ul>
+      )}
+      {view !== 'Flakes' && <>
       {/* Clipped, not scrolled, so the page is the one scroll and the day row sticks to the top of the screen. Only the narrowest phones need to scroll across. */}
-      <section className="w-full max-w-[900px] overflow-clip max-[359px]:overflow-x-auto rounded-2xl border border-line bg-white">
+      <section className="w-full min-w-0 flex-auto overflow-clip max-[359px]:overflow-x-auto rounded-2xl border border-line bg-white">
         <table className="w-full border-separate border-spacing-0 text-sm">
           <thead className="sticky top-0 z-[3] bg-white">
             <tr>
@@ -488,16 +491,19 @@ export default function DayPlanner({ roster: base, me, onPublished }: { roster: 
           </tbody>
         </table>
       </section>
-      {notIn.length > 0 && (
-        <section aria-label="Not in" className="flex w-full max-w-[900px] flex-col gap-1">
-          <span className="px-1 text-[11px] font-bold uppercase tracking-[0.06em] text-muted">Not in · {notIn.length}</span>
-          <ul className="m-0 list-none rounded-2xl border border-line bg-white p-1.5">
-            {notIn.map((p) => <PlanRow key={p.tag} p={p} at={placeOf(p.tag)} onPlace={(v) => place(p, v)} locked={!!viewing} />)}
-          </ul>
-        </section>
-      )}
       </>}
-      {!preview && <PlanActivity days={proposals} lineup={lineup} published={server?.published} />}
+      <aside className="flex min-w-0 flex-col gap-3.5 empty:hidden xl:sticky xl:top-3 xl:max-h-[calc(100vh-1.5rem)] xl:w-[380px] xl:flex-none xl:overflow-y-auto">
+        {view !== 'Flakes' && notIn.length > 0 && (
+          <section aria-label="Not in" className="flex w-full flex-col gap-1">
+            <span className="px-1 text-[11px] font-bold uppercase tracking-[0.06em] text-muted">Not in · {notIn.length}</span>
+            <ul className="m-0 list-none rounded-2xl border border-line bg-white p-1.5">
+              {notIn.map((p) => <PlanRow key={p.tag} p={p} at={placeOf(p.tag)} onPlace={(v) => place(p, v)} locked={!!viewing} />)}
+            </ul>
+          </section>
+        )}
+        <PlanActivity days={proposals} lineup={lineup} published={server?.published} />
+      </aside>
+      </div>}
     </Outer>
     {confirming && (
       <div className="ff-fade fixed inset-0 z-50 flex items-center justify-center bg-[rgba(43,33,20,.4)] p-4" onClick={(e) => { if (e.target === e.currentTarget) setConfirming(false) }}>

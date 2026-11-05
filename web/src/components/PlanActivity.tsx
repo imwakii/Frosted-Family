@@ -23,7 +23,7 @@ export default function PlanActivity({ days, lineup, published }: ActivityInput)
     .sort((a, b) => b.at.localeCompare(a.at))
   if (!items.length) return null
   return (
-    <section aria-label="Activity" className="w-full max-w-[900px] overflow-hidden rounded-2xl border border-line bg-white">
+    <section aria-label="Activity" className="w-full overflow-hidden rounded-2xl border border-line bg-white">
       <div className="border-b border-hair px-3.5 py-2 text-[11px] font-bold uppercase tracking-[0.06em] text-muted">Activity</div>
       <ol className="m-0 list-none">
         {(all ? items : items.slice(0, SHOWN)).map((x, i) => (
