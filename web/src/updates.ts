@@ -228,7 +228,7 @@ export const UPDATES: Update[] = [
     date: '5 Nov 2026',
     highlights: [
       { title: 'See how they got there', line: 'Tap a name on Stats for the breakdown.', href: '#/stats/players/overall', icon: 'hero' },
-      { title: 'A better Recap', line: 'Awards open cards. See who came and went.', href: '#/log/recap', icon: 'league' },
+      { title: 'A better Recap', line: 'Tap an award to open its card.', href: '#/log/recap', icon: 'league' },
       { title: 'Home screen', line: 'See how to add Frosted to your phone.', icon: 'bell' },
     ],
     groups: [
@@ -238,6 +238,7 @@ export const UPDATES: Update[] = [
           'Added breakdown cards to Overall.',
           'Added Donations and Capital cards.',
           'Added a card for each Badges row.',
+          'Added lifetime war stars to War.',
         ],
       },
       {

@@ -3,7 +3,7 @@ import { Fragment, type ReactNode, useCallback, useEffect, useMemo, useRef, useS
 import { groupUnits } from '../equipment'
 import OverallBoard, { Bar } from './OverallBoard'
 import RankBoard, { type RankCol } from './RankBoard'
-import { CATS, type Cat, competitionRanks, HIGH_MISS, isMaxed, type MatrixPlayer, missRate, progress, useMatrix, useWarBoard, type WarRow, type WarScope, tenth } from '../explore'
+import { CATS, type Cat, competitionRanks, HIGH_MISS, isMaxed, type MatrixPlayer, missRate, progress, useMatrix, useWarBoard, type WarRow, type WarScope, tenth, sinceDay } from '../explore'
 import { go, onDrill, playerHref, upgradeHref, useDrill } from '../route'
 import { CLAN, CLANS } from '../theme'
 import type { ClanName } from '../types'
@@ -11,7 +11,6 @@ import { norm, PhoneSearch, SearchBox } from './CwlTab'
 import BadgesBoard from './BadgesBoard'
 import ClansBoard, { COLOR } from './ClansBoard'
 import HistoryBoard from './HistoryBoard'
-import Info from './Info'
 import { ShowAll, topRows, useShowAll } from './Top'
 import { ClanSwitch, Picker, Star, StatusKey, SubNav, Th, UnitIcon, RowChevron, chip, GoblinNote } from './ui'
 
@@ -309,8 +308,11 @@ function MatrixBoard({ cat, q, setQ, wide }: BoardProps & { cat: Cat }) {
 type WarCol = { key: string; label: string; value: (r: WarRow) => number | null; fmt: (v: number) => string; low?: boolean; recordedOnly?: boolean }
 
 const pct = (v: number) => `${Math.round(v)}%`
+// Lifetime is the count on a player's profile, which a season's view has no use for.
+const isStars = (key: string) => key === 'total' || key === 'stars'
 const WAR_COLS: WarCol[] = [
-  { key: 'stars', label: 'War stars', value: (r) => r.war?.stars ?? null, fmt: (v) => v.toLocaleString('en-GB') },
+  { key: 'total', label: 'Lifetime ★', value: (r) => r.war_stars ?? null, fmt: (v) => v.toLocaleString('en-GB') },
+  { key: 'stars', label: 'Tracked ★', value: (r) => r.war?.stars ?? null, fmt: (v) => v.toLocaleString('en-GB') },
   { key: 'attacks', label: 'Attacks', value: (r) => r.war?.attacks ?? null, fmt: String },
   { key: 'missed', label: 'Missed', value: (r) => (r.war ? r.war.missed : null), fmt: String, low: true },
   { key: 'triple', label: '3★ rate', value: (r) => (r.war?.attacks ? (100 * r.war.three_stars) / r.war.attacks : null), fmt: pct },
@@ -337,12 +339,15 @@ function WarBoardView({ q, setQ, wide }: BoardProps) {
   const { data, loading } = useWarBoard(scoped ? scope : 'all')
   const [clan, setClan] = useClanPick()
   const top = useShowAll(`${scope}-${clan}`)
-  const cols = useMemo(() => WAR_COLS.filter((c) => !data || data.players.some((r) => c.value(r) !== null)), [data])
+  const cols = useMemo(() => WAR_COLS.filter((c) => !(c.key === 'total' && scoped && scope === 'cwl') && (!data || data.players.some((r) => c.value(r) !== null))), [data, scoped, scope])
   const [sortKey, setSortKey] = useState<{ key: string; asc: boolean } | null>(null)
   const sort = sortKey && cols.some((c) => c.key === sortKey.key) ? sortKey : { key: cols[0]?.key ?? 'attacks', asc: !!cols[0]?.low }
   const col = cols.find((c) => c.key === sort.key) ?? cols[0]
   const pick = (c: WarCol) => setSortKey(sort.key === c.key ? { key: c.key, asc: !sort.asc } : { key: c.key, asc: !!c.low })
-  useDrill((d) => cols.some((c) => c.key === d.col), (d) => setSortKey({ key: d.col!, asc: !!cols.find((c) => c.key === d.col)!.low }))
+  useDrill((d) => d.col === 'total' || cols.some((c) => c.key === d.col), (d) => {
+    if (d.col === 'total') pickScope('all')
+    setSortKey({ key: d.col!, asc: !!WAR_COLS.find((c) => c.key === d.col)!.low })
+  })
 
   const nq = norm(q.trim())
   const ranked = useMemo(() => {
@@ -352,15 +357,16 @@ function WarBoardView({ q, setQ, wide }: BoardProps) {
       .map((r) => ({ r, v: col.value(r) }))
       .sort((a, b) => (a.v === null ? (b.v === null ? 0 : 1) : b.v === null ? -1 : sort.asc ? a.v - b.v : b.v - a.v) || a.r.name.localeCompare(b.r.name))
   }, [data, clan, col, sort.asc])
-  const placeCol = cols.find((c) => c.key === 'stars') ?? cols[0]
+  const placeCol = cols[0]
   const place = useMemo(() => competitionRanks(ranked.map((x) => x.r), (r) => (wide ? placeCol : col)?.value(r) ?? null, !wide && !!col?.low), [ranked, placeCol, col, wide])
   const shown = ranked.filter(({ r }) => !nq || norm(r.name).includes(nq) || r.tag.toLowerCase().includes(nq))
-  const since = sinceLabel(data?.windowFrom ?? data?.since ?? null)
+  const since = data?.windowFrom ? sinceDay(data.windowFrom) : sinceLabel(data?.since ?? null)
   // Destruction comes from recorded wars only, which can start later than the window.
   // Totals and weighted averages over the players the clan and scope filters keep.
   const summary = useMemo(() => {
     const rows = ranked.map((x) => x.r)
     const ws = rows.map((r) => r.war?.stars).filter((v): v is number => v !== null && v !== undefined)
+    const all = rows.map((r) => r.war_stars).filter((v): v is number => v !== null && v !== undefined)
     let attacks = 0, missed = 0, three = 0, stars = 0, destSum = 0, destN = 0
     for (const r of rows) {
       const w = r.war
@@ -372,6 +378,8 @@ function WarBoardView({ q, setQ, wide }: BoardProps) {
     return {
       warStars: ws.length ? ws.reduce((a, b) => a + b, 0) : null,
       warStarsMean: ws.length ? ws.reduce((a, b) => a + b, 0) / ws.length : null,
+      total: all.length ? all.reduce((a, b) => a + b, 0) : null,
+      totalMean: all.length ? all.reduce((a, b) => a + b, 0) / all.length : null,
       attacks, missed, three, stars,
       triple: attacks ? (100 * three) / attacks : null,
       avgStars: attacks ? stars / attacks : null,
@@ -382,11 +390,13 @@ function WarBoardView({ q, setQ, wide }: BoardProps) {
   const who = clan === 'All' ? 'Family' : clan
   const footer: { label: string; cell: Record<string, string> }[] = [
     { label: `Total · ${who}`, cell: {
+      total: summary.total === null ? '' : `${summary.total.toLocaleString('en-GB')}★`,
       stars: summary.warStars === null ? '' : `${summary.warStars.toLocaleString('en-GB')}★`,
       attacks: String(summary.attacks), missed: String(summary.missed),
       triple: `${summary.three} × 3★`, avg: `${Math.round(summary.stars).toLocaleString('en-GB')}★`, dest: '',
     } },
     { label: `Average · ${who}`, cell: {
+      total: summary.totalMean === null ? '' : `${Math.round(summary.totalMean).toLocaleString('en-GB')}★`,
       stars: summary.warStarsMean === null ? '' : `${Math.round(summary.warStarsMean).toLocaleString('en-GB')}★`,
       attacks: '', missed: summary.missRate === null ? '' : `${Math.round(summary.missRate)}%`,
       triple: summary.triple === null ? '' : pct(summary.triple), avg: summary.avgStars === null ? '' : summary.avgStars.toFixed(2),
@@ -406,8 +416,21 @@ function WarBoardView({ q, setQ, wide }: BoardProps) {
       ))}
     </div>
   )
-  const sinceChip = since && <span className="flex-none text-xs font-semibold text-faint">{since}</span>
+  // Lifetime has no window, so on a phone its view says nothing of one.
+  const sinceChip = since && col?.key !== 'total' && <span className="flex-none text-xs font-semibold text-faint">{since}</span>
   const key = <StatusKey only={['active', 'highMiss']} className="!text-xs" />
+  // Lifetime stands apart from the columns that cover the rolling window, which share one heading over them.
+  const lifetime = cols[0]?.key === 'total' ? cols[0] : null
+  const head = (c: WarCol, rows = 1, top = 'top-0') => (
+    <th key={c.key} rowSpan={rows} className={`sticky ${top} z-[2] border-b border-line p-0 text-right ${c.key === sort.key ? 'bg-[#F1E8D3]' : 'bg-white'}`} aria-sort={c.key === sort.key ? (sort.asc ? 'ascending' : 'descending') : undefined}>
+                      <button type="button" onClick={() => pick(c)} title={c.recordedOnly ? recordedTip : undefined}
+                        className={`min-h-12 w-full cursor-pointer whitespace-nowrap border-0 bg-transparent px-4 text-right text-xs font-bold hover:bg-[#F1E8D3] ${c.key === sort.key ? 'text-ink' : 'text-faint'}`}>
+                        {c.label}{c.key === sort.key ? (sort.asc ? ' ↑' : ' ↓') : ''}
+                        {c.recordedOnly && recordedStart && <span className="block text-[10px] font-semibold text-faint">{sinceLabel(recordedStart)}</span>}
+                      </button>
+    </th>
+  )
+
   const enter = () => { if (shown[0]) go.to(playerHref(shown[0].r.tag)) }
 
   if (wide) {
@@ -418,25 +441,21 @@ function WarBoardView({ q, setQ, wide }: BoardProps) {
           <div className="w-[clamp(220px,28vw,340px)] flex-none"><SearchBox q={q} setQ={setQ} onEnter={enter} /></div>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          {scopeToggle}{sinceChip}{key}
+          {scopeToggle}{!lifetime && sinceChip}{key}
         </div>
         {!data || !col ? <Empty loading={loading} /> : (
           <section className="max-h-[calc(100dvh-210px)] overflow-auto rounded-2xl border border-line bg-white">
             <table className="min-w-full border-separate border-spacing-0 text-sm">
               <thead>
                 <tr className="text-left text-xs font-bold text-faint">
-                  <th className="sticky left-0 top-0 z-[4] w-12 min-w-12 border-b border-line bg-white py-2.5 pl-4 pr-1 font-bold">#</th>
-                  <th className="sticky left-12 top-0 z-[4] min-w-[220px] border-b border-line bg-white px-2 font-bold">PLAYER</th>
-                  {cols.map((c) => (
-                    <th key={c.key} className={`sticky top-0 z-[2] border-b border-line p-0 text-right ${c.key === sort.key ? 'bg-[#F1E8D3]' : 'bg-white'}`} aria-sort={c.key === sort.key ? (sort.asc ? 'ascending' : 'descending') : undefined}>
-                      <button type="button" onClick={() => pick(c)} title={c.recordedOnly ? recordedTip : undefined}
-                        className={`min-h-12 w-full cursor-pointer whitespace-nowrap border-0 bg-transparent px-4 text-right text-xs font-bold hover:bg-[#F1E8D3] ${c.key === sort.key ? 'text-ink' : 'text-faint'}`}>
-                        {c.label}{c.key === sort.key ? (sort.asc ? ' ↑' : ' ↓') : ''}
-                        {c.recordedOnly && recordedStart && <span className="block text-[10px] font-semibold text-faint">{sinceLabel(recordedStart)}</span>}
-                      </button>
-                    </th>
-                  ))}
+                  <th rowSpan={lifetime ? 2 : 1} className="sticky left-0 top-0 z-[4] w-12 min-w-12 border-b border-line bg-white py-2.5 pl-4 pr-1 font-bold">#</th>
+                  <th rowSpan={lifetime ? 2 : 1} className="sticky left-12 top-0 z-[4] min-w-[220px] border-b border-line bg-white px-2 font-bold">PLAYER</th>
+                  {lifetime ? <>
+                    {head(lifetime, 2)}
+                    <th colSpan={cols.length - 1} className="sticky top-0 z-[2] h-[26px] border-b border-hair bg-white px-4 text-center text-[11px] font-bold text-muted">{since}</th>
+                  </> : cols.map((c) => head(c))}
                 </tr>
+                {lifetime && <tr className="text-left text-xs font-bold text-faint">{cols.slice(1).map((c) => head(c, 1, 'top-[26px]'))}</tr>}
               </thead>
               <tbody>
                 {shown.map(({ r }) => (
@@ -455,7 +474,7 @@ function WarBoardView({ q, setQ, wide }: BoardProps) {
                       const high = c.key === 'missed' && (missRate(r.war) ?? 0) > HIGH_MISS
                       return (
                         <td key={c.key} className={`border-b border-hair px-4 text-right tabular-nums group-hover:bg-hover ${c.key === sort.key ? 'bg-[#F6EEDC] font-extrabold text-ink' : 'font-semibold text-ink-2'} ${v === null ? '!font-normal !text-[#D5C8AC]' : ''}`}>
-                          {v === null ? '—' : high ? <span className="rounded-full bg-[#FEF3C7] px-2 py-0.5 text-[#92400E]">{c.fmt(v)}</span> : <>{c.fmt(v)}{c.key === 'stars' && <span className="ml-0.5 text-gold">★</span>}</>}
+                          {v === null ? '—' : high ? <span className="rounded-full bg-[#FEF3C7] px-2 py-0.5 text-[#92400E]">{c.fmt(v)}</span> : <>{c.fmt(v)}{isStars(c.key) && <span className="ml-0.5 text-gold">★</span>}</>}
                         </td>
                       )
                     })}
@@ -487,7 +506,8 @@ function WarBoardView({ q, setQ, wide }: BoardProps) {
     )
   }
 
-  const rest = col ? cols.filter((c) => c.key !== col.key).slice(0, 2) : []
+  // The figures under each name cover the window, so sorting by Lifetime shows none, and Lifetime is never among them.
+  const rest = col && col.key !== 'total' ? cols.filter((c) => c.key !== col.key && c.key !== 'total').slice(0, 2) : []
   const listed = topRows(shown, (x) => x.r.tag, top.yous, top.all || !!nq)
   return (
     <div className="flex flex-col gap-2.5 pb-6">
@@ -495,12 +515,14 @@ function WarBoardView({ q, setQ, wide }: BoardProps) {
       <div className="flex flex-wrap items-center gap-2 px-4">
         {scoped && <Picker<WarScope> label="Wars" value={scope} options={[{ id: 'all', label: 'All wars' }, { id: 'cwl', label: 'CWL season' }]} onPick={pickScope} />}
         {col && <Picker label="Sort by" value={sort.key} options={cols.map((c) => ({ id: c.key, label: c.label }))} onPick={(k) => pick(cols.find((c) => c.key === k)!)} />}
-        <span className="ml-auto flex items-center gap-2">{sinceChip}<Info topic="warBoard" /></span>
+        <span className="ml-auto flex items-center gap-2">{sinceChip}</span>
       </div>
       {!data || !col ? <div className="px-4"><Empty loading={loading} /></div> : (
         <>
           <p aria-label={`${who} summary`} className="m-0 mx-4 text-xs font-semibold tabular-nums text-muted">
-            {summary.triple === null ? '—' : pct(summary.triple)} 3★ rate · {summary.avgStars === null ? '—' : summary.avgStars.toFixed(2)} avg ★ · {summary.attacks.toLocaleString('en-GB')} attacks
+            {col.key === 'total'
+              ? `${(summary.total ?? 0).toLocaleString('en-GB')}★ in total · ${Math.round(summary.totalMean ?? 0).toLocaleString('en-GB')}★ average`
+              : <>{summary.triple === null ? '—' : pct(summary.triple)} 3★ rate · {summary.avgStars === null ? '—' : summary.avgStars.toFixed(2)} avg ★ · {summary.attacks.toLocaleString('en-GB')} attacks</>}
           </p>
           <ol className="m-0 mx-4 list-none rounded-2xl border border-line bg-white py-1">
             {listed.map(({ r, v }, i) => (
@@ -514,12 +536,12 @@ function WarBoardView({ q, setQ, wide }: BoardProps) {
                       <MissDot r={r} />
                       {clan === 'All' && <span className="flex-none text-[11px] font-bold" style={{ color: CLAN[r.clan].deep }}>{r.clan}</span>}
                     </span>
-                    <span className="truncate text-xs text-faint">
+                    {rest.length > 0 && <span className="truncate text-xs text-faint">
                       {rest.map((c, j) => { const x = c.value(r); return <span key={c.key}>{j ? ' · ' : ''}{c.label} {x === null ? '—' : c.fmt(x)}</span> })}
-                    </span>
+                    </span>}
                   </span>
                   <span className={`flex-none whitespace-nowrap text-right text-base tabular-nums ${v === null ? 'text-[#D5C8AC]' : 'font-extrabold'}`}>
-                    {v === null ? '—' : col.fmt(v)}{v !== null && col.key === 'stars' && <span className="ml-0.5 text-gold">★</span>}
+                    {v === null ? '—' : col.fmt(v)}{v !== null && isStars(col.key) && <span className="ml-0.5 text-gold">★</span>}
                   </span>
                   <RowChevron />
                 </a>

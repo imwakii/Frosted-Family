@@ -171,6 +171,9 @@ export function useWarBoard(scope: WarScope) {
   return state.scope === scope ? state : { scope, data: null, loading: true }
 }
 
+/** Where the war figures begin, with the year, as they keep adding up from that day. */
+export const sinceDay = (from: string) => `Since ${new Date(`${from}T00:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' })}`
+
 /** Missed as a share of attacks owed; null before any recorded war. */
 export const missRate = (w: WarRow['war']) => (w && w.attacks + w.missed ? (100 * w.missed) / (w.attacks + w.missed) : null)
 export const HIGH_MISS = 20

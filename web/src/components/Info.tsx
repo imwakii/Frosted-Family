@@ -103,11 +103,6 @@ const TOPICS: Record<string, { title: string; formulas?: string[]; math?: ReactN
       'No ads or trackers.',
     ],
   },
-  warBoard: {
-    title: 'Reading this list',
-    formulas: ['Miss rate = missed ÷ (attacks + missed)'],
-    lines: ['Amber dot: miss rate above 20%. Green dot: at or below it.'],
-  },
   strength: {
     title: 'How strength is worked out',
     formulas: ['Strength = clan total ÷ players in the group'],

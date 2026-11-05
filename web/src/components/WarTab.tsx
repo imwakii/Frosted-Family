@@ -43,7 +43,7 @@ const CLASH_MS = 1900
 function useBlast(live: boolean, attacks: number, war: string) {
   const [blast, setBlast] = useState({ n: 0, on: false })
   useEffect(() => {
-    if (!live) return
+    if (!live) { setBlast((b) => ({ ...b, on: false })); return }
     setBlast((b) => ({ n: b.n + 1, on: true }))
     const t = window.setTimeout(() => setBlast((b) => ({ ...b, on: false })), CLASH_MS)
     return () => window.clearTimeout(t)

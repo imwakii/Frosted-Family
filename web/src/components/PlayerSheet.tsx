@@ -3,7 +3,7 @@ import { sheetVisit, useSheetMotion } from '../sheetMotion'
 import { loadPlayerAll, type PlayerCard, playerNow, stillToMove } from '../data'
 import { BADGES, TIER_LOOK } from '../badges'
 import { ago } from '../leaders'
-import { CATS } from '../explore'
+import { CATS, sinceDay } from '../explore'
 import { attacksHref, compareHref, go, historyHref, markFromCard, markStatFromCard, playerHref, statHref, upgradeHref } from '../route'
 import Info from './Info'
 import { StarBurst, useCountUp, useNewIds, useOnce } from './Motion'
@@ -329,7 +329,7 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
               </Section>
             )}
             {/* The monthly figures stand in only if the live ones fail, so the numbers do not change under the reader. */}
-            <Section title="War record" note={rec?.from ? `Since ${dayMonth(rec.from)}` : fmtWindow(roster.window)}>
+            <Section title="War record" note={rec?.from ? sinceDay(rec.from) : fmtWindow(roster.window)}>
               <div className="grid grid-cols-3 gap-2">
                 <Stat label="3★ rate" value={pct(threeStar)} onOpen={toCol('war', 'triple')} />
                 <Stat label="Miss rate" value={pct(missed)} onOpen={toCol('war', 'missed')} />
@@ -371,7 +371,7 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
                 <div className="grid grid-cols-4 gap-1.5">
                   <Stat small label="Donated" value={num(card.donations)} onOpen={toCol('donations', 'donated')} />
                   <Stat small label="Received" value={num(card.donations_received)} onOpen={toCol('donations', 'received')} />
-                  <Stat small label="War stars" value={num(card.war_stars)} onOpen={toCol('war', 'stars')} />
+                  <Stat small label="War stars" value={num(card.war_stars)} onOpen={toCol('war', 'total')} />
                   <Stat small label="Capital" value={num(card.capital)} onOpen={toCol('capital', 'contributed')} />
                 </div>
               </Section>
