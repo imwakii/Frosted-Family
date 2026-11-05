@@ -79,13 +79,13 @@ input[type="search"]:focus, select:focus-visible { outline: none; border-color: 
 @keyframes ff-recoil-r { 0%, 57%, 78%, 100% { transform: none; } 60% { transform: translateX(5px) rotate(5deg); } }
 .ff-sword-a { transform-box: view-box; transform-origin: 19px 19px; animation: ff-sword-a 1.9s cubic-bezier(.5, 0, .2, 1) infinite; }
 .ff-sword-b { transform-box: view-box; transform-origin: 5px 19px; animation: ff-sword-b 1.9s cubic-bezier(.5, 0, .2, 1) infinite; }
-.ff-shake { animation: ff-shake 1.9s linear infinite; }
+.ff-shake { animation: ff-shake 1.9s linear; }
 .ff-flash, .ff-ring { transform-box: fill-box; transform-origin: center; }
-.ff-flash { animation: ff-flash 1.9s ease-out infinite; }
-.ff-ring { animation: ff-ring 1.9s ease-out infinite; }
-.ff-burst { transform-box: fill-box; transform-origin: center; animation: ff-burst 1.9s cubic-bezier(.1, .7, .3, 1) infinite; }
-.ff-recoil-l { animation: ff-recoil-l 1.9s ease-out infinite; }
-.ff-recoil-r { animation: ff-recoil-r 1.9s ease-out infinite; }
+.ff-flash { animation: ff-flash 1.9s ease-out; }
+.ff-ring { animation: ff-ring 1.9s ease-out; }
+.ff-burst { transform-box: fill-box; transform-origin: center; animation: ff-burst 1.9s cubic-bezier(.1, .7, .3, 1); }
+.ff-recoil-l { animation: ff-recoil-l 1.9s ease-out; }
+.ff-recoil-r { animation: ff-recoil-r 1.9s ease-out; }
 /* Preparation: the swords sway and the lineup rises into place. */
 @keyframes ff-sway { 0%, 100% { transform: rotate(-5deg); } 50% { transform: rotate(5deg); } }
 .ff-sway { transform-origin: center; animation: ff-sway 3.2s ease-in-out infinite; }

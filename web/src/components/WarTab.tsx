@@ -36,15 +36,30 @@ const ENEMY_ROW = '#F1E8D3'
 // Where each spark flies from the point of impact, in px, and its colour.
 const SPARKS = [[0, -34, '#F59E0B'], [25, -25, '#EF4444'], [36, -4, '#FBBF24'], [27, 20, '#F97316'], [-27, 20, '#FBBF24'], [-36, -4, '#EF4444'], [-25, -25, '#F97316'], [12, -32, '#F59E0B'], [-12, -32, '#EF4444']] as const
 
-// The tab's crossed swords between the two clans. While the war is live they wind up and strike, with a flash,
-// a shockwave and flying sparks; the two badges recoil from the blow.
-function Swords({ live, sway, color }: { live: boolean; sway: boolean; color: string }) {
+// The length of one clash in index.css: the swords' swing, and the blast on their strike.
+const CLASH_MS = 1900
+
+// The blast plays once on opening a live war and once for each new attack. A new count starts the swords' swing again, so the two land together.
+function useBlast(live: boolean, attacks: number, war: string) {
+  const [blast, setBlast] = useState({ n: 0, on: false })
+  useEffect(() => {
+    if (!live) return
+    setBlast((b) => ({ n: b.n + 1, on: true }))
+    const t = window.setTimeout(() => setBlast((b) => ({ ...b, on: false })), CLASH_MS)
+    return () => window.clearTimeout(t)
+  }, [live, attacks, war])
+  return blast
+}
+
+// The tab's crossed swords between the two clans. While the war is live they wind up and strike. With blast on, the strike
+// has a flash, a shockwave and flying sparks, and the two badges recoil from the blow.
+function Swords({ live, blast, sway, color }: { live: boolean; blast: boolean; sway: boolean; color: string }) {
   return (
-    <span className={`relative z-[1] flex size-11 items-center justify-center rounded-full bg-white shadow-[0_2px_8px_rgba(43,33,20,.12)] ${live ? 'ff-shake' : ''}`}>
+    <span className={`relative z-[1] flex size-11 items-center justify-center rounded-full bg-white shadow-[0_2px_8px_rgba(43,33,20,.12)] ${blast ? 'ff-shake' : ''}`}>
       <svg aria-hidden="true" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.4" strokeLinecap="round" className={`overflow-visible ${sway ? 'ff-sway' : ''}`}>
         <g className={live ? 'ff-sword-a' : ''}><path d="M5 5l14 14M16 20l4-4" /></g>
         <g className={live ? 'ff-sword-b' : ''}><path d="M19 5L5 19M4 16l4 4" /></g>
-        {live && <>
+        {blast && <>
           <circle cx="12" cy="9" r="4" stroke="#F59E0B" strokeWidth="1.8" className="ff-ring" />
           <circle cx="12" cy="9" r="3.4" fill="#FDE68A" stroke="none" className="ff-flash" />
           {SPARKS.map(([dx, dy, c], i) => (
@@ -168,6 +183,7 @@ export function WarBoard({ clan, war, now, roster, q = '' }: { clan: ClanName; w
   useEffect(() => { if (picked) opened.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }) }, [picked])
   const end = at(war.end_time), start = at(war.start_time)
   const live = war.state === 'inWar', over = war.state === 'warEnded', prep = war.state === 'preparation'
+  const blast = useBlast(live, war.attacks_used + war.opponent_attacks_used, `${clan}-${war.start_time}`)
   const won = war.stars > war.opponent_stars || (war.stars === war.opponent_stars && war.destruction > war.opponent_destruction)
   const draw = war.stars === war.opponent_stars && war.destruction === war.opponent_destruction
   const toAttack = war.pairs.filter((p) => p.us && p.us.used < p.us.allowed).length
@@ -203,7 +219,7 @@ export function WarBoard({ clan, war, now, roster, q = '' }: { clan: ClanName; w
   )
   const gaps = lineupGaps(war, clan, roster)
   const opponent = <>
-    <span className={`h-11 ${live ? 'ff-recoil-r' : ''}`}><ClanBadge src={war.opponent_badge} size={44} /></span>
+    <span className={`h-11 ${blast.on ? 'ff-recoil-r' : ''}`}><ClanBadge src={war.opponent_badge} size={44} /></span>
     <span className="font-display max-w-full truncate text-[clamp(19px,5.4vw,20px)] leading-tight text-ink-2">{war.opponent}</span>
   </>
   const score = (stars: number, pct: number, used: number, deep: string) => !prep && (
@@ -225,12 +241,12 @@ export function WarBoard({ clan, war, now, roster, q = '' }: { clan: ClanName; w
           <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-1">
             <div className="flex min-w-0 flex-col items-center gap-1.5">
               <a href={clanHref(clan)} className="flex max-w-full flex-col items-center gap-1.5 no-underline">
-                <span className={`h-11 ${live ? 'ff-recoil-l' : ''}`}><ClanBadge src={war.badge ?? clans[clan]?.badge} size={44} /></span>
+                <span className={`h-11 ${blast.on ? 'ff-recoil-l' : ''}`}><ClanBadge src={war.badge ?? clans[clan]?.badge} size={44} /></span>
                 <span className="font-display max-w-full truncate text-[clamp(19px,5.4vw,20px)] leading-tight" style={{ color: t.deep }}>{clans[clan]?.name ?? `Frosted ${clan}`}</span>
               </a>
               {score(war.stars, war.destruction, war.attacks_used, t.deep)}
             </div>
-            <Swords live={live} sway={prep} color={t.deep} />
+            <Swords key={blast.n} live={live} blast={blast.on} sway={prep} color={t.deep} />
             <div className="flex min-w-0 flex-col items-center gap-1.5">
               {/* A league group clan has a card; a regular war's opponent does not. */}
               {war.kind === 'cwl' && war.opponent_tag ? (

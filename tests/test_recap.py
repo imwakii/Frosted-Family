@@ -67,24 +67,40 @@ def donate(conn, tag, day, n, clan=FIRE):
     conn.execute("INSERT INTO member_snapshots (clan_tag, player_tag, snapshot_date, seen_at, donations) VALUES (?,?,?,?,?)", (clan, tag, day, f"{day}T12:00:00Z", n))
 
 
-def test_donations_are_the_rises_in_the_month_through_a_reset(conn):
-    donate(conn, "#A", "2026-10-31", 900)  # the running count before this month
-    donate(conn, "#A", "2026-11-01", 950)
+def test_donations_in_the_running_month_are_the_games_count_after_its_reset(conn):
+    donate(conn, "#A", "2026-11-01", 950)  # the end of last season
     donate(conn, "#A", "2026-11-02", 30)   # Clash reset it
     donate(conn, "#A", "2026-11-03", 80)
-    donate(conn, "#C", "2026-11-19", 5000, CAKE)  # a first row has nothing to compare with
+    donate(conn, "#C", "2026-11-19", 5000, CAKE)
     conn.commit()
     r = recap.recap(conn, "2026-11")
-    assert [(p["name"], p["n"]) for p in r["awards"]["donor"]] == [("Ann", 130)]
-    assert (r["race"]["donations"]["Fire"], r["race"]["donations"]["Cake"]) == (130, 0)
+    assert [(p["name"], p["n"]) for p in r["awards"]["donor"]] == [("Cy", 5000), ("Ann", 80)]
+    assert (r["race"]["donations"]["Fire"], r["race"]["donations"]["Cake"]) == (80, 5000)
 
 
-def test_donations_given_elsewhere_during_a_gap_do_not_count(conn):
-    donate(conn, "#A", "2026-10-31", 100)
-    donate(conn, "#A", "2026-11-10", 4100)  # back after giving 4,000 somewhere else
-    donate(conn, "#A", "2026-11-11", 4200)
+def test_donations_in_the_running_month_match_the_players_card(conn, monkeypatch):
+    with_counts = {"#A": {**member("#A", "Ann"), "donations": 1826}, "#B": {**member("#B", "Bob"), "donations": 0}}
+    monkeypatch.setattr(leaders, "members_by_tag", lambda c: with_counts)
+    donate(conn, "#A", "2026-11-03", 1308)  # the daily row lags the hourly profile
+    donate(conn, "#GONE", "2026-11-03", 9000)  # has left, so the game's clan total no longer has them
     conn.commit()
-    assert recap.recap(conn, "2026-11")["awards"]["donor"][0]["n"] == 100
+    r = recap.recap(conn, "2026-11")
+    assert [(p["name"], p["n"]) for p in r["awards"]["donor"]] == [("Ann", 1826)]
+    assert r["race"]["donations"]["Fire"] == 1826
+
+
+def test_a_finished_month_keeps_the_season_that_filled_it(conn, monkeypatch):
+    monkeypatch.setattr(leaders, "now", lambda: datetime(2026, 12, 20, tzinfo=timezone.utc))
+    donate(conn, "#A", "2026-11-01", 950)  # last season's tail
+    donate(conn, "#A", "2026-11-02", 30)
+    donate(conn, "#A", "2026-11-29", 2000)
+    donate(conn, "#A", "2026-11-30", 5)    # the next season's first hours
+    donate(conn, "#GONE", "2026-11-10", 700)
+    donate(conn, "#GONE", "2026-11-12", 900)  # has left since, and still counted in the clan's month
+    conn.commit()
+    r = recap.recap(conn, "2026-11")
+    assert [(p["name"], p["n"]) for p in r["awards"]["donor"]] == [("Ann", 2000)]
+    assert r["race"]["donations"]["Fire"] == 2900
 
 
 def test_early_in_a_month_it_opens_on_the_one_just_finished(conn, monkeypatch):

@@ -1,6 +1,7 @@
 """A month in the family: three awards, the clan race, who came and went, and the milestones. For Log's Recap sub-tab.
 
-Months are UTC, and friendlies don't count. Awards go to people still here; the race counts everything a clan did that month, whoever has left since.
+Months are UTC, and friendlies don't count. Awards go to people still here; the race counts everything a clan did that month, whoever has left since,
+except donations, which match the game's count.
 The collector began on 31 Oct 2026, so a recap starts with November: October would be one day's upgrades passed off as a month.
 """
 from __future__ import annotations
@@ -13,7 +14,6 @@ from server import clanlog, leaders, profiles
 from server.db import FRIENDLY
 
 MIN_ATTACKS = 5  # a Three-Star General has to have fought; CWL alone gives 7 at most, so this has to stay below that
-MAX_GAP_DAYS = 2  # donation rows further apart than this are someone coming back, and what they gave away is unknown
 EARLY_DAYS = 3   # for the first days of a month, the page opens on the month just finished
 PLACES = 3       # the winner and who came next
 FIRST_MONTH = "2026-11"
@@ -60,27 +60,37 @@ def _war_month(conn, month: str) -> tuple[dict[str, dict], Counter]:
     return players, stars
 
 
-def _donated(conn, month: str) -> tuple[Counter, Counter]:
-    """Troops given this month, by player and by clan. Clash's count only runs up until it resets, so each rise between
-    daily rows is what was given, and a drop means it reset. A player's first row has nothing to compare with, and nor does
-    someone coming back after a gap, so those add nothing."""
+def _donated(conn, month: str, live: bool, ms: dict) -> tuple[Counter, Counter]:
+    """Each player's donations as the game counts them, by player and by clan. The count runs up until the game resets it,
+    so a drop starts a new run. A month past is the run that filled most of it, at its highest; a reset near either end leaves
+    a short run that is ignored. In the month running, the count is the player's latest, as the game and their card show it,
+    and a clan's total is its members now, as the game adds it up."""
+    runs: dict[str, list[dict]] = {}
+    for r in conn.execute("""SELECT player_tag, clan_tag, snapshot_date, donations FROM member_snapshots
+                             WHERE donations IS NOT NULL AND snapshot_date LIKE ? ORDER BY player_tag, snapshot_date, seen_at""", (month + "%",)):
+        mine = runs.setdefault(r["player_tag"], [])
+        if not mine or r["donations"] < mine[-1]["n"]:
+            mine.append({"first": r["snapshot_date"], "n": r["donations"]})
+        mine[-1].update(last=r["snapshot_date"], n=r["donations"], clan=r["clan_tag"])
+    span = lambda run: (date.fromisoformat(run["last"]) - date.fromisoformat(run["first"])).days
     players: Counter = Counter()
     clans: Counter = Counter()
-    before: dict[str, tuple[int, str]] = {}
-    for r in conn.execute("""SELECT player_tag, clan_tag, snapshot_date, donations FROM member_snapshots
-                             WHERE donations IS NOT NULL ORDER BY player_tag, snapshot_date, seen_at"""):
-        tag, now_at = r["player_tag"], r["donations"]
-        was = before.get(tag)
-        before[tag] = (now_at, r["snapshot_date"])
-        if was is None or r["snapshot_date"][:7] != month:
-            continue
-        if (date.fromisoformat(r["snapshot_date"]) - date.fromisoformat(was[1])).days > MAX_GAP_DAYS:
-            continue
-        given = now_at - was[0] if now_at >= was[0] else now_at
-        clan = TAG_TO_CLAN.get(r["clan_tag"])
-        if given and clan:
-            players[tag] += given
-            clans[clan] += given
+    if live:
+        for tag, m in ms.items():
+            n = m.get("donations")
+            if n is None:
+                n = runs[tag][-1]["n"] if tag in runs else 0
+            clan = TAG_TO_CLAN.get(m["clan_tag"])
+            if n and clan:
+                players[tag] = n
+                clans[clan] += n
+        return players, clans
+    for tag, mine in runs.items():
+        run = max(reversed(mine), key=span)
+        clan = TAG_TO_CLAN.get(run["clan"])
+        if run["n"] and clan:
+            players[tag] = run["n"]
+            clans[clan] += run["n"]
     return players, clans
 
 
@@ -116,7 +126,7 @@ def recap(conn, month: str | None = None) -> dict:
         if c["day"][:7] == month:
             out["race"]["upgrades"][c["clan"]] += c["n"]
 
-    given, by_clan = _donated(conn, month)
+    given, by_clan = _donated(conn, month, out["live"], ms)
     out["race"]["donations"].update(by_clan)
     top = sorted(((t, n) for t, n in given.items() if t in ms), key=lambda x: (-x[1], row(x[0])["name"] or ""))
     out["awards"]["donor"] = [{**row(t), "n": n} for t, n in top[:PLACES]]

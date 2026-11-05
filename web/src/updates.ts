@@ -249,6 +249,7 @@ export const UPDATES: Update[] = [
           'Added dates to Recap milestones.',
           'Changed upgrade rows to open in place.',
           'Fixed Most upgrades ignoring the kind.',
+          'Fixed Recap donations to match game.',
         ],
       },
       {
@@ -268,6 +269,7 @@ export const UPDATES: Update[] = [
           'Added search to the current war.',
           'Changed the war score wording.',
           'Moved the clan switch beside the days.',
+          'Changed the war blast to play less.',
         ],
       },
       {
