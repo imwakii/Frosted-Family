@@ -15,13 +15,15 @@ type Range = 7 | 30
 
 export default function UpgradeHistory({ tag, days: start, roster, wide, onClose }: { tag: string; days: Range; roster: Roster; wide: boolean; onClose: () => void }) {
   const [card, setCard] = useState<PlayerCard | null>(() => playerNow(tag)?.card ?? null)
+  const [failed, setFailed] = useState(false)
   const [days, setDays] = useState<Range>(start)
   const [fromCard] = useState(openedFromCard)
   useEffect(() => () => markFromCard(false), [])
   useEffect(() => {
     let live = true
-    if (!playerNow(tag)) loadPlayerAll(tag).then((x) => { if (live) setCard(x.card) })
-    else setCard(playerNow(tag)?.card ?? null)
+    const had = playerNow(tag)
+    if (!had) loadPlayerAll(tag).then((x) => { if (live) { setCard(x.card); setFailed(!x.card) } })
+    else { setCard(had.card); setFailed(!had.card) }
     return () => { live = false }
   }, [tag])
   const p = roster.players.find((x) => x.tag === tag)
@@ -49,7 +51,8 @@ export default function UpgradeHistory({ tag, days: start, roster, wide, onClose
       <div role="group" aria-label="Range" className="flex flex-none gap-1.5">
         {([7, 30] as const).map((d) => <button key={d} type="button" aria-pressed={d === days} onClick={() => setDays(d)} className={chip(d === days)}>{d} days</button>)}
       </div>
-      {!card ? <div aria-busy="true" aria-label="Loading" className="h-40 flex-none animate-pulse rounded-2xl bg-well" />
+      {failed ? <GoblinNote box goblin="panic">Their upgrades are under a shield. Try again shortly.</GoblinNote>
+        : !card ? <div aria-busy="true" aria-label="Loading" className="h-40 flex-none animate-pulse rounded-2xl bg-well" />
         : !ups.length ? <GoblinNote box goblin="coin">No upgrades in {days} days. All builders on holiday</GoblinNote>
         : [...byDay.entries()].map(([d, rows]) => (
           <section key={d} aria-label={dayLabel(d)} className="flex flex-none flex-col gap-1.5">

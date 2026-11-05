@@ -33,7 +33,7 @@ function Badges({ badges, fresh = [] }: { badges: NonNullable<PlayerCard['badges
               onPointerEnter={(e) => { if (e.pointerType === 'mouse') setHover(b.id) }}
               onPointerLeave={(e) => { if (e.pointerType === 'mouse') setHover(null) }}
               onClick={() => setPinned((p) => (p === b.id ? null : b.id))}
-              className={`${fresh.includes(`${b.id}-${b.tier}`) ? 'ff-shine' : ''} flex min-h-8 cursor-pointer items-center gap-1.5 rounded-full border px-2.5 text-xs font-bold ${TIER_LOOK[b.tier ?? 'silver'][open?.id === b.id ? 'on' : 'chip']}`}>
+              className={`${fresh.includes(`${b.id}-${b.tier}`) ? 'ff-shine' : ''} flex min-h-9 cursor-pointer items-center gap-1.5 rounded-full border px-3 text-[13px] font-bold ${TIER_LOOK[b.tier ?? 'silver'][open?.id === b.id ? 'on' : 'chip']}`}>
               {BADGES[b.id]?.label ?? b.label}
             </button>
           </li>
@@ -205,13 +205,13 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
               <span className="font-display min-w-0 truncate text-[26px] leading-tight">{p?.name ?? 'Not on the roster'}</span>
               {p && isMine && (
                 <button type="button" aria-label="This is not me" title="This is not me" onClick={() => removeYou(tag)}
-                  className="relative before:absolute before:-inset-x-1 before:-inset-y-2 before:content-[''] flex min-h-7 flex-none cursor-pointer items-center gap-1 whitespace-nowrap rounded-full border-0 bg-ink px-2.5 text-xs font-bold text-white">
+                  className="relative before:absolute before:-inset-x-1 before:-inset-y-2 before:content-[''] flex min-h-9 flex-none cursor-pointer items-center gap-1 whitespace-nowrap rounded-full border-0 bg-ink px-3 text-[13px] font-bold text-white">
                   You<span aria-hidden="true" className="text-[13px] leading-none opacity-70">×</span>
                 </button>
               )}
               {p && !isMine && (
                 <button type="button" onClick={() => addYou(tag)}
-                  className="relative before:absolute before:-inset-x-1 before:-inset-y-2 before:content-[''] min-h-7 flex-none cursor-pointer whitespace-nowrap rounded-full border-0 bg-[#EFE6D2] px-2.5 text-xs font-bold text-ink-2 hover:bg-well">
+                  className="relative before:absolute before:-inset-x-1 before:-inset-y-2 before:content-[''] min-h-9 flex-none cursor-pointer whitespace-nowrap rounded-full border-0 bg-[#EFE6D2] px-3 text-[13px] font-bold text-ink-2 hover:bg-well">
                   {yous.length ? 'Also me' : 'This is me'}
                 </button>
               )}
@@ -364,8 +364,8 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
             {/* The monthly figures stand in only if the live ones fail, so the numbers do not change under the reader. */}
             <Section title="War record" note={rec?.from ? `Since ${dayMonth(rec.from)}` : fmtWindow(roster.window)}>
               <div className="grid grid-cols-3 gap-2">
-                <Stat label="Three stars" value={pct(threeStar)} onOpen={toCol('war', 'triple')} />
-                <Stat label="Missed" value={pct(missed)} onOpen={toCol('war', 'missed')} />
+                <Stat label="3★ rate" value={pct(threeStar)} onOpen={toCol('war', 'triple')} />
+                <Stat label="Miss rate" value={pct(missed)} onOpen={toCol('war', 'missed')} />
                 <Stat label="Attacks" value={rec?.attacks ?? p.attacks ?? '—'} onOpen={toCol('war', 'attacks')} />
               </div>
             </Section>

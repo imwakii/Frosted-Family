@@ -13,7 +13,7 @@ import { useYou } from './You'
 
 export type Line = { label: string; a: number | null; b: number | null; show?: (v: number) => string; low?: boolean; unit?: string; even?: boolean }
 
-const whole = (v: number) => Math.round(v).toLocaleString('en-GB')
+const whole = (v: number) => (v >= 1_000_000 ? `${(v / 1_000_000).toFixed(1)}M` : Math.round(v).toLocaleString('en-GB'))
 const percent = (v: number) => `${v.toFixed(1)}%`
 const threeStar = (p: Player, c: PlayerCard | null) => (c?.record ? (c.record.three_star_rate === null ? null : c.record.three_star_rate * 100) : p.threeStar ?? null)
 const missed = (p: Player, c: PlayerCard | null) => {
@@ -125,7 +125,7 @@ export default function CompareSheet({ roster, a: aTag, b: bTag, wide, onClose }
       { title: 'War', lines: [
         { label: 'Score', a: a.score ?? null, b: b.score ?? null, show: fmtScore as (v: number) => string },
         { label: '3★ rate', a: threeStar(a, cardA), b: threeStar(b, cardB), show: percent },
-        { label: 'Attacks missed', a: missed(a, cardA), b: missed(b, cardB), show: percent, low: true },
+        { label: 'Miss rate', a: missed(a, cardA), b: missed(b, cardB), show: percent, low: true },
         { label: 'Best 3★ streak', a: cardA?.streaks?.three_stars_best ?? null, b: cardB?.streaks?.three_stars_best ?? null },
         { label: 'War stars', a: cardA?.war_stars ?? null, b: cardB?.war_stars ?? null },
       ] as Line[] },

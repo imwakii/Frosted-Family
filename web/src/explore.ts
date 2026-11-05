@@ -35,20 +35,27 @@ function normalise(d: Raw): Matrix {
   }
 }
 
-const cache = new Map<Cat, Promise<Matrix | null>>()
+// An answer is kept a few minutes, so moving between boards is instant. A failed load isn't kept, so the next look tries again.
+const KEEP_MS = 5 * 60_000
+type Kept<V> = Map<string, { at: number; loading: Promise<V | null> }>
+
+function keep<V>(store: Kept<V>, key: string, load: () => Promise<V | null>) {
+  const had = store.get(key)
+  if (had && Date.now() - had.at < KEEP_MS) return had.loading
+  const entry = { at: Date.now(), loading: load().then((v) => { if (!v && store.get(key) === entry) store.delete(key); return v }) }
+  store.set(key, entry)
+  return entry.loading
+}
+
+const cache: Kept<Matrix> = new Map()
 
 function fetchMatrix(cat: Cat): Promise<Matrix | null> {
-  if (!cache.has(cat)) {
-    if (import.meta.env.DEV && new URLSearchParams(window.location.search).has('mock')) {
-      cache.set(cat, import('./devMock').then((m) => m.mockMatrix(cat)))
-    } else {
-      cache.set(cat, fetch(`/api/explore/matrix?cat=${cat}`, { headers: { Accept: 'application/json' } })
-        .then((r) => (r.ok && r.headers.get('content-type')?.includes('json') ? r.json() : null))
-        .then((d: Raw | null) => (d && Array.isArray(d.units) && d.units.length && Array.isArray(d.players) && d.players.length ? normalise(d) : null))
-        .catch(() => null))
-    }
-  }
-  return cache.get(cat)!
+  return keep(cache, cat, () => (import.meta.env.DEV && new URLSearchParams(window.location.search).has('mock')
+    ? import('./devMock').then((m) => m.mockMatrix(cat))
+    : fetch(`/api/explore/matrix?cat=${cat}`, { headers: { Accept: 'application/json' } })
+      .then((r) => (r.ok && r.headers.get('content-type')?.includes('json') ? r.json() : null))
+      .then((d: Raw | null) => (d && Array.isArray(d.units) && d.units.length && Array.isArray(d.players) && d.players.length ? normalise(d) : null))
+      .catch(() => null)))
 }
 
 export function useMatrix(cat: Cat) {
@@ -61,6 +68,9 @@ export function useMatrix(cat: Cat) {
   }, [cat])
   return state.cat === cat ? state : { cat, data: null, loading: true }
 }
+
+/** A share to one decimal, rounded down, so 100.0% only ever means maxed. Places go by this figure, so a tie always reads as one. */
+export const tenth = (v: number) => Math.floor(v * 10) / 10
 
 /** Share of game max reached across a category's units, 0–100. */
 export function progress(levels: (number | null)[], units: Unit[]) {
@@ -111,11 +121,10 @@ function fromBlock(b: WarBlock | null | undefined): WarRow['war'] {
   }
 }
 
-const warCache = new Map<WarScope, Promise<WarBoard | null>>()
+const warCache: Kept<WarBoard> = new Map()
 
 function fetchWar(scope: WarScope): Promise<WarBoard | null> {
-  if (!warCache.has(scope)) {
-    warCache.set(scope, (import.meta.env.DEV && new URLSearchParams(window.location.search).has('mock')
+  return keep(warCache, scope, () => (import.meta.env.DEV && new URLSearchParams(window.location.search).has('mock')
       ? import('./devMock').then((m) => m.mockWar(scope))
       : fetch(`/api/explore/war?scope=${scope}`, { headers: { Accept: 'application/json' } })
         .then((r) => (r.ok && r.headers.get('content-type')?.includes('json') ? r.json() : null)))
@@ -141,8 +150,6 @@ function fetchWar(scope: WarScope): Promise<WarBoard | null> {
         }
       })
       .catch(() => null))
-  }
-  return warCache.get(scope)!
 }
 
 export function useWarBoard(scope: WarScope) {

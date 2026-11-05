@@ -287,7 +287,7 @@ function Phone({ roster, war, q, setQ, lock }: Omit<Props, 'wide'>) {
             {planned && inCwl && <DayRow days={days} pick={day} onPick={setDay} live={live} roster />}
             <ClanCard roster={roster} clan={clan} meta={clans[clan]} below={inCwl ? <Countdown roster={roster} war={war} slim /> : undefined} />
             <Groups roster={roster} clan={clan} day={day} />
-            <StatusKey className="px-1" />
+            <StatusKey className="px-1" extra={planned && inCwl ? <span className="flex flex-none items-center gap-1 md:gap-1.5">Filled number: plays that day</span> : undefined} />
           </>
         )}
       </div>

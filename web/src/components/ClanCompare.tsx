@@ -28,7 +28,7 @@ const figures = (a: Player[], b: Player[]): Line[] => {
     { label: 'Avg score', a: x.score, b: y.score, show: fmtScore as (v: number) => string },
     { label: 'Avg town hall', a: x.th, b: y.th, show: one },
     { label: '3★ rate', a: x.three, b: y.three, show: percent },
-    { label: 'Attacks missed', a: x.miss, b: y.miss, show: percent, low: true },
+    { label: 'Miss rate', a: x.miss, b: y.miss, show: percent, low: true },
   ]
 }
 const coreOf = (c: Col) => c.groups.find((g) => g.label === 'Core')?.rows ?? []

@@ -291,7 +291,7 @@ function Plan({ roster, me, onPublished }: { roster: Roster; me: Me; onPublished
                   </div>
                   {c.inCwl && (
                     <div className="flex flex-none flex-col items-end">
-                    <span className="text-[11px] font-bold uppercase tracking-[0.06em] text-muted">Core avg</span>
+                    <span className="text-[11px] font-bold uppercase tracking-[0.06em] text-muted">Core avg score</span>
                     <div className="flex items-baseline gap-2">
                       {Math.abs(c.delta) >= 0.05 && (
                         <span className="text-[13px] font-bold tabular-nums" style={{ color: c.delta > 0 ? '#15803D' : '#B4451A' }}>
@@ -403,14 +403,14 @@ const SUBS = [
   { id: 'usage', label: 'Usage', href: '#/plan/usage' },
 ]
 
-export default function PlanTab({ sub, roster, onPublished, me, ready, wide, onSignOut }: PlanProps & { sub: string; onPublished: () => Promise<void> }) {
+export default function PlanTab({ sub, roster, onPublished, me, ready, wide, onSignOut, q, setQ }: PlanProps & { sub: string; onPublished: () => Promise<void>; q: string; setQ: (v: string) => void }) {
   if (!ready) return <div aria-busy="true" aria-label="Loading" className="mx-auto mt-16 h-48 max-w-[380px] animate-pulse rounded-[20px] bg-well" />
   // Anyone who is not a signed-in leader sees the sign-in card alone, on every section.
   if (!me.role) return <Gate me={me} onSignOut={onSignOut} />
   return (
     <>
       <SubNav items={SUBS} current={sub} wide={wide} />
-      {sub === 'usage' ? <Usage /> : sub === 'members' ? <LeadersTools /> : sub === 'days' ? <DayPlanner roster={roster} me={me} onPublished={onPublished} /> : <Plan roster={roster} me={me} onPublished={onPublished} />}
+      {sub === 'usage' ? <Usage /> : sub === 'members' ? <LeadersTools q={q} setQ={setQ} wide={wide} /> : sub === 'days' ? <DayPlanner roster={roster} me={me} onPublished={onPublished} /> : <Plan roster={roster} me={me} onPublished={onPublished} />}
     </>
   )
 }

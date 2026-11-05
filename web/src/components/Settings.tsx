@@ -26,9 +26,9 @@ function Accounts({ roster }: { roster: Roster }) {
   const mine = roster.players.filter((p) => yous.includes(p.tag))
   return (
     <section aria-label="Your accounts" className="flex flex-col gap-1.5">
-      <div className="flex min-h-8 items-center justify-between">
+      <div className="flex min-h-9 items-center justify-between">
         <Eyebrow>Your accounts</Eyebrow>
-        {mine.length > 0 && !adding && <button type="button" onClick={() => setAdding(true)} className="min-h-8 cursor-pointer border-0 bg-transparent p-0 text-xs font-bold text-action">Add</button>}
+        {mine.length > 0 && !adding && <button type="button" onClick={() => setAdding(true)} className="min-h-9 cursor-pointer rounded-full border border-line bg-white px-3 text-[13px] font-bold text-ink-2 hover:bg-hover">Add</button>}
       </div>
       {mine.length > 0 && (
         <ul className="m-0 flex list-none flex-col rounded-xl border border-line bg-white p-0">

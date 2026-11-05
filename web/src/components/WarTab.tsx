@@ -1,4 +1,5 @@
 import { type CSSProperties, Fragment, useEffect, useRef, useState } from 'react'
+import { norm, PhoneSearch } from './CwlTab'
 import WarLog from './WarLog'
 import WarRecap from './WarRecap'
 import { useYou, YouTag } from './You'
@@ -10,7 +11,7 @@ import { CLAN, CLANS } from '../theme'
 import type { ClanName, Roster } from '../types'
 import Info from './Info'
 import { StarBurst, useOnce } from './Motion'
-import { ClanBadge, ClanSwitch, DayRow, KEY_ROW, POINT, STICKY_SWITCH, Stars, Th, useNow } from './ui'
+import { ClanBadge, ClanSwitch, DayRow, GoblinNote, KEY_ROW, POINT, STICKY_SWITCH, Stars, Th, useNow } from './ui'
 
 // Each clan's war, side by side: our bases and badge on the left, the enemy's on the right, facing by map position.
 // The attack log says who hit whom, how well and roughly when: we stay on the left and they on the right, and each row
@@ -153,7 +154,7 @@ function GhostLog({ tint }: { tint: string }) {
   )
 }
 
-export function WarBoard({ clan, war, now, roster }: { clan: ClanName; war: ClanWar; now: number; roster: Roster }) {
+export function WarBoard({ clan, war, now, roster, q = '' }: { clan: ClanName; war: ClanWar; now: number; roster: Roster; q?: string }) {
   const t = CLAN[clan]
   const clans = useClans()
   const [picked, setPicked] = useState<string | null>(null)
@@ -171,7 +172,12 @@ export function WarBoard({ clan, war, now, roster }: { clan: ClanName; war: Clan
   const total = war.team_size * war.attacks_allowed
   // Bases still worth hitting: not yet three-starred.
   const open = war.pairs.filter((p) => p.them && p.them.best !== 3)
-  const rows = live && openOnly ? open : war.pairs
+  const nq = norm(q.trim())
+  // A row picked under one search must not stay open and hidden under the next.
+  useEffect(() => { setPicked(null) }, [nq])
+  // A search looks at both sides and shows only the matches, so they sit above a phone's keyboard.
+  const found = (b: WarBase | null) => !!b && (norm(b.name).includes(nq) || b.tag.toLowerCase().includes(nq))
+  const rows = nq ? war.pairs.filter((p) => found(p.us) || found(p.them)) : live && openOnly ? open : war.pairs
   // All your accounts in this war, together; tapping goes to the first with an attack left.
   const accounts = war.pairs.flatMap((p) => (p.us && yous.includes(p.us.tag) ? [p.us] : []))
   const mineLeft = accounts.reduce((n, b) => n + b.allowed - b.used, 0)
@@ -201,14 +207,14 @@ export function WarBoard({ clan, war, now, roster }: { clan: ClanName; war: Clan
   const score = (stars: number, pct: number, used: number, deep: string) => !prep && (
     <span className="flex flex-col items-center gap-0.5">
       <span className="font-display flex items-baseline gap-1 text-[26px] leading-none tabular-nums" style={{ color: deep }}>{stars}<span className="text-base text-gold">★</span></span>
-      <span className="text-[11px] font-semibold tabular-nums text-muted">{Math.round(pct)}% · {used}/{total}</span>
+      <span className="flex flex-col items-center text-[11px] font-semibold leading-tight tabular-nums text-muted"><span>{Math.round(pct)}% destroyed</span><span>{used}/{total} attacks</span></span>
     </span>
   )
   return (
     <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_400px] lg:items-stretch">
       <StarBurst show={cheer} />
       <section aria-label={`${clan} against ${war.opponent}`} className="overflow-hidden rounded-2xl border border-line bg-white">
-        <div className="flex flex-col gap-2 p-3.5" style={{ background: t.tint }}>
+        {!nq && <div className="flex flex-col gap-2 p-3.5" style={{ background: t.tint }}>
           <div className="flex justify-center">
             <span className={`whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-bold ${live ? 'bg-white text-[#15803D]' : over ? 'bg-white/60 text-muted' : 'bg-[#FFEDD5] text-[#B4451A]'}`}>
               {live ? (end ? `${left(end - now)} left` : 'Live') : over ? (draw ? 'Draw' : won ? 'Won' : 'Lost') : 'Preparation'}
@@ -238,9 +244,9 @@ export function WarBoard({ clan, war, now, roster }: { clan: ClanName; war: Clan
             </span>
             {' · '}Updated {ago(war.updated_at, now)}
           </span>
-        </div>
-        {over && war.recap && <WarRecap clan={clan} war={war} result={draw ? 'Draw' : won ? 'Won' : 'Lost'} recap={war.recap} />}
-        {!prep && <div className="flex min-h-[53px] items-center gap-2 border-b border-hair px-3 py-2">
+        </div>}
+        {!nq && over && war.recap && <WarRecap clan={clan} war={war} result={draw ? 'Draw' : won ? 'Won' : 'Lost'} recap={war.recap} />}
+        {!nq && !prep && <div className="flex min-h-[53px] items-center gap-2 border-b border-hair px-3 py-2">
             {live ? (
               <>
                 {mine && (
@@ -254,10 +260,10 @@ export function WarBoard({ clan, war, now, roster }: { clan: ClanName; war: Clan
                 </button>
               </>
             ) : (
-              <span className="text-[13px] font-semibold text-muted">{war.pairs.filter((p) => p.them?.best === 3).length} of {war.team_size} bases three-starred</span>
+              <span className="text-[13px] font-semibold text-muted">{war.pairs.filter((p) => p.them?.best === 3).length} of {war.team_size} bases 3-starred</span>
             )}
         </div>}
-        {gaps.missing.length > 0 && (
+        {!nq && gaps.missing.length > 0 && (
           <div className="flex flex-col gap-1.5 border-b border-hair bg-[#FDF3D7] px-3 py-2.5">
             <span className="text-xs font-bold text-[#92400E]">Should be in</span>
             <ul className="m-0 flex list-none flex-wrap gap-1.5 p-0">
@@ -272,12 +278,12 @@ export function WarBoard({ clan, war, now, roster }: { clan: ClanName; war: Clan
             </ul>
           </div>
         )}
-        {!prep && <div aria-label="Key" className={`${KEY_ROW} border-b border-hair px-3 py-2`}>
+        {!nq && !prep && <div aria-label="Key" className={`${KEY_ROW} border-b border-hair px-3 py-2`}>
           {live && <>
             <span className="flex items-center gap-1.5"><span className="size-2 rounded-full border-[1.5px] border-[#A3957C]" />Attack left</span>
             <span className="flex items-center gap-1.5"><span className="size-2 rounded-full bg-[#16A34A]" />Used</span>
           </>}
-          <span className="flex items-center gap-1.5"><span className="text-gold">★</span>Best on this base</span>
+          <span className="flex items-center gap-1.5"><span className="text-gold">★</span>Stars taken off this base</span>
           <span className="ml-auto flex flex-none items-center pl-2"><Info topic="war" /></span>
         </div>}
         <ol className="m-0 list-none px-1.5 py-1">
@@ -302,12 +308,13 @@ export function WarBoard({ clan, war, now, roster }: { clan: ClanName; war: Clan
               )}
             </Fragment>
           ))}
+          {nq && !rows.length && <li><GoblinNote goblin="page">No one by that name in this war</GoblinNote></li>}
         </ol>
       </section>
 
       {/* On a phone the log sits under the board, so before the war it would only push the page longer. */}
       {/* Beside the board the log never runs past the lineup's height; longer, it scrolls. Taken out of the flow, so the board alone sets that height. */}
-      {(!prep || sideBySide) && (
+      {!nq && (!prep || sideBySide) && (
         <div className="relative min-w-0">
         <section aria-label="Attacks" className="overflow-hidden rounded-2xl border border-line bg-white lg:absolute lg:inset-x-0 lg:top-0 lg:flex lg:max-h-full lg:flex-col">
           {/* Always the height the picked player's buttons need, so picking one does not move the list. */}
@@ -333,13 +340,13 @@ export function WarBoard({ clan, war, now, roster }: { clan: ClanName; war: Clan
   )
 }
 
-function OtherDay({ clan, warKey, now, roster }: { clan: ClanName; warKey: string; now: number; roster: Roster }) {
+function OtherDay({ clan, warKey, now, roster, q }: { clan: ClanName; warKey: string; now: number; roster: Roster; q?: string }) {
   const { data, loading } = useCwlDay(clan, warKey)
   if (!data) return loading ? <div aria-busy="true" className="h-64 animate-pulse rounded-2xl bg-well" /> : <div className="rounded-2xl border border-line bg-white p-5 text-sm text-faint">Unavailable right now</div>
-  return <WarBoard key={warKey} clan={clan} war={data} now={now} roster={roster} />
+  return <WarBoard key={warKey} clan={clan} war={data} now={now} roster={roster} q={q} />
 }
 
-export default function WarTab({ wide, roster, sub, opened }: { wide: boolean; roster: Roster; sub: string; opened: string | null }) {
+export default function WarTab({ wide, roster, sub, opened, q, setQ }: { wide: boolean; roster: Roster; sub: string; opened: string | null; q: string; setQ: (v: string) => void }) {
   const { data, loading } = useWarBoard()
   const pick = useWarClan()
   const { yous } = useYou()
@@ -378,13 +385,16 @@ export default function WarTab({ wide, roster, sub, opened }: { wide: boolean; r
       </main>
     )
   }
+  const switcher = (
+    <ClanSwitch value={clan?.clan ?? 'Fire'} onPick={setWarClan}
+      live={wars.filter((c) => c.war!.state === 'inWar').map((c) => c.clan)}
+      off={data ? CLANS.filter((k) => !wars.some((c) => c.clan === k)) : []} />
+  )
+  // Wide pages here have no search box, so a search carried from another tab doesn't narrow them.
+  const search = wide ? '' : q
   return (
     <main className={wide ? 'mx-auto flex max-w-[1360px] flex-col gap-4 px-[clamp(16px,3vw,32px)] pb-12 pt-5' : 'flex flex-col gap-3 px-4 pb-6 pt-1'}>
-      <div className={wide ? '' : STICKY_SWITCH}>
-        <ClanSwitch value={clan?.clan ?? 'Fire'} onPick={setWarClan}
-          live={wars.filter((c) => c.war!.state === 'inWar').map((c) => c.clan)}
-          off={data ? CLANS.filter((k) => !wars.some((c) => c.clan === k)) : []} />
-      </div>
+      {wide ? switcher : <PhoneSearch q={q} setQ={setQ} onEnter={() => (document.activeElement as HTMLElement | null)?.blur()} className="-mx-4 -mb-1 -mt-1">{switcher}</PhoneSearch>}
       {!data ? (
         loading ? <div aria-busy="true" className="h-64 animate-pulse rounded-2xl bg-well" /> : <div className="rounded-2xl border border-line bg-white p-5 text-sm text-faint">Unavailable right now</div>
       ) : !clan ? (
@@ -392,7 +402,7 @@ export default function WarTab({ wide, roster, sub, opened }: { wide: boolean; r
       ) : (
         <>
           {onCwl && <DayRow days={days} pick={picked ?? clan.war!.day ?? null} onPick={setDayPick} drawnOnly />}
-          {nearby ? <WarBoard key={nearby.war_key} clan={clan.clan} war={nearby} now={now} roster={roster} /> : other ? <OtherDay clan={clan.clan} warKey={other.war_key} now={now} roster={roster} /> : null}
+          {nearby ? <WarBoard key={nearby.war_key} clan={clan.clan} war={nearby} now={now} roster={roster} q={search} /> : other ? <OtherDay clan={clan.clan} warKey={other.war_key} now={now} roster={roster} q={search} /> : null}
         </>
       )}
     </main>

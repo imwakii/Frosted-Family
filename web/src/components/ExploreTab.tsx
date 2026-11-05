@@ -3,7 +3,7 @@ import { Fragment, type ReactNode, useCallback, useEffect, useMemo, useRef, useS
 import { groupUnits } from '../equipment'
 import OverallBoard, { Bar } from './OverallBoard'
 import RankBoard, { type RankCol } from './RankBoard'
-import { CATS, type Cat, competitionRanks, HIGH_MISS, isMaxed, type MatrixPlayer, missRate, progress, useMatrix, useWarBoard, type WarRow, type WarScope } from '../explore'
+import { CATS, type Cat, competitionRanks, HIGH_MISS, isMaxed, type MatrixPlayer, missRate, progress, useMatrix, useWarBoard, type WarRow, type WarScope, tenth } from '../explore'
 import { go, onDrill, playerHref, upgradeHref, useDrill } from '../route'
 import { CLAN, CLANS } from '../theme'
 import type { ClanName } from '../types'
@@ -141,7 +141,7 @@ function MatrixBoard({ cat, q, setQ, wide }: BoardProps & { cat: Cat }) {
     const key = (r: (typeof rows)[number]) => (sort.col < 0 ? r.pct : r.p.levels[sort.col] ?? -1)
     rows.sort((a, b) => (sort.asc ? key(a) - key(b) : key(b) - key(a)) || b.pct - a.pct || a.p.name.localeCompare(b.p.name))
     // # is the overall position by category progress, whatever column is sorted.
-    const place = competitionRanks(rows, (r) => Math.round(r.pct * 10) / 10)
+    const place = competitionRanks(rows, (r) => tenth(r.pct))
     const maxedN = rows.filter((r) => r.maxed).length
     const shown = rows.filter((r) => matchQ(r.p))
     const pick = (col: number) => setSort((s) => (s.col === col ? { col, asc: !s.asc } : { col, asc: false }))
@@ -159,7 +159,7 @@ function MatrixBoard({ cat, q, setQ, wide }: BoardProps & { cat: Cat }) {
         <div className="flex flex-wrap items-center gap-2 text-sm text-muted">
           {data && (
             <>
-              <span className="font-bold text-ink"><Star /> {maxedN} of {rows.length} fully maxed</span>
+              <span className="font-bold text-ink"><Star /> {maxedN} of {rows.length} maxed</span>
               <span className="font-semibold">Ranked by {sort.col < 0 ? `${catLabel} progress` : units[sort.col]?.name}</span>
               {stamp && <span className="text-xs font-semibold text-faint">Updated {stamp}</span>}
             </>
@@ -290,7 +290,7 @@ function MatrixBoard({ cat, q, setQ, wide }: BoardProps & { cat: Cat }) {
                       <Bar v={(100 * Math.min(l, u.max)) / u.max} color={COLOR[p.clan]} />
                     </span>
                     <span className={`w-[78px] flex-none whitespace-nowrap text-right text-sm tabular-nums ${maxed ? 'font-extrabold text-ink' : l ? 'font-semibold text-muted' : 'text-[#D5C8AC]'}`}>
-                      {l ? `${l} / ${u.max}` : '—'}{maxed && <span className="ml-0.5 text-gold">★</span>}
+                      {l ? `${l}/${u.max}` : '—'}{maxed && <span className="ml-0.5 text-gold">★</span>}
                     </span>
                     <RowChevron />
                   </a>
@@ -500,7 +500,7 @@ function WarBoardView({ q, setQ, wide }: BoardProps) {
       {!data || !col ? <div className="px-4"><Empty loading={loading} /></div> : (
         <>
           <p aria-label={`${who} summary`} className="m-0 mx-4 text-xs font-semibold tabular-nums text-muted">
-            {summary.triple === null ? '—' : pct(summary.triple)} 3★ rate · {summary.avgStars === null ? '—' : summary.avgStars.toFixed(2)} avg ★ · {summary.attacks} attacks
+            {summary.triple === null ? '—' : pct(summary.triple)} 3★ rate · {summary.avgStars === null ? '—' : summary.avgStars.toFixed(2)} avg ★ · {summary.attacks.toLocaleString('en-GB')} attacks
           </p>
           <ol className="m-0 mx-4 list-none rounded-2xl border border-line bg-white py-1">
             {listed.map(({ r, v }, i) => (

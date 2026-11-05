@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { CATS, type Cat, competitionRanks, isMaxed, progress, useMatrix } from '../explore'
+import { CATS, type Cat, competitionRanks, isMaxed, progress, tenth, useMatrix } from '../explore'
 import { groupUnits } from '../equipment'
 import { markFromCard, openedFromCard, playerHref } from '../route'
 import { CLAN } from '../theme'
@@ -16,7 +16,13 @@ export default function UpgradeSheet({ cat, tag, unit, wide, onClose }: {
   const [fromCard] = useState(openedFromCard)
   useEffect(() => () => markFromCard(false), [])
   const label = CATS.find((c) => c.id === cat)?.label ?? ''
-  if (loading) return null
+  if (loading) {
+    return (
+      <CardSheet label={label} wide={wide} onClose={onClose} head={<span className="font-display truncate text-[26px] leading-tight text-ink-2">{label}</span>}>
+        <div aria-busy="true" aria-label="Loading" className="h-40 flex-none animate-pulse rounded-2xl bg-well" />
+      </CardSheet>
+    )
+  }
   const p = data?.players.find((x) => x.tag === tag)
   if (!data || !p) {
     return (
@@ -28,7 +34,7 @@ export default function UpgradeSheet({ cat, tag, unit, wide, onClose }: {
   const c = CLAN[p.clan]
   const { units } = data
   const pct = progress(p.levels, units)
-  const ranks = data.players.map((x) => ({ tag: x.tag, pct: Math.round(progress(x.levels, units) * 10) / 10 }))
+  const ranks = data.players.map((x) => ({ tag: x.tag, pct: tenth(progress(x.levels, units)) }))
   const place = competitionRanks(ranks, (x) => x.pct).get(ranks.find((x) => x.tag === tag)!)
   const maxed = units.filter((u, i) => isMaxed(p.levels[i], u)).length
   const facts = [

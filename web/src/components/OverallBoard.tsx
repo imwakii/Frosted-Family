@@ -1,6 +1,6 @@
 import { YouTag } from './You'
 import { useMemo, useState } from 'react'
-import { CATS, type Cat, competitionRanks, type Matrix, progress, useMatrix } from '../explore'
+import { CATS, type Cat, competitionRanks, type Matrix, progress, useMatrix, tenth } from '../explore'
 import { go, playerHref } from '../route'
 import { CLAN, CLANS } from '../theme'
 import type { ClanName } from '../types'
@@ -29,7 +29,7 @@ function combine(boards: (Matrix | null)[]): Row[] {
 }
 
 const pct = (v: number | undefined) => (v === undefined ? '—' : `${Math.round(v)}%`)
-const pct1 = (v: number) => `${(Math.floor(v * 10) / 10).toFixed(1)}%`
+const pct1 = (v: number) => `${tenth(v).toFixed(1)}%`
 
 // The one progress bar on the Stats boards, in the clan's soft colour.
 export function Bar({ v, color }: { v: number; color: string }) {
@@ -48,7 +48,7 @@ export default function OverallBoard({ q, setQ, wide }: { q: string; setQ: (v: s
 
   const key = (r: Row) => (sort === 'overall' ? r.overall : r.cats[sort] ?? -1)
   const ranked = all.filter((r) => clan === 'All' || r.clan === clan).sort((a, b) => key(b) - key(a) || b.overall - a.overall || a.name.localeCompare(b.name))
-  const place = competitionRanks(ranked, (r) => Math.round(key(r) * 10) / 10)
+  const place = competitionRanks(ranked, (r) => tenth(key(r)))
   const shown = ranked.filter((r) => !nq || norm(r.name).includes(nq) || r.tag.toLowerCase().includes(nq))
   // Fully maxed means every category at game max; the stamp is the newest of the six boards.
   const maxedN = ranked.filter((r) => CATS.every((c) => (r.cats[c.id] ?? 0) >= 100)).length
@@ -136,7 +136,7 @@ export default function OverallBoard({ q, setQ, wide }: { q: string; setQ: (v: s
         <div className="flex flex-wrap items-center gap-2 text-sm text-muted">
           {all.length > 0 && (
             <>
-              <span className="font-bold text-ink"><Star /> {maxedN} of {ranked.length} fully maxed</span>
+              <span className="font-bold text-ink"><Star /> {maxedN} of {ranked.length} maxed</span>
               <span className="font-semibold">Ranked by {sort === 'overall' ? 'overall' : `${cols.find((c) => c.id === sort)!.label.toLowerCase()}`} progress</span>
               {stamp && <span className="text-xs font-semibold text-faint">Updated {stamp}</span>}
             </>

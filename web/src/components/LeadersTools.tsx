@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { loginHref } from '../auth'
 import { ACTIVITY_LABEL, type Activity, ago, type Candidate, reasonLabel, useMakeRoom } from '../leaders'
-import { playerHref } from '../route'
+import { go, playerHref } from '../route'
 import type { ClanName } from '../types'
+import { norm, PhoneSearch } from './CwlTab'
 import { Empty } from './ExploreTab'
 import Info from './Info'
-import { ClanSwitch, Th, RowChevron } from './ui'
+import { ClanSwitch, GoblinNote, Th, RowChevron } from './ui'
 import { YouTag } from './You'
 
 // Who to yeet: each clan's members in the server's removal order (docs/specs/02-allocation-rules.md, "Removing members").
@@ -30,34 +31,51 @@ function standing(p: Candidate) {
 }
 const upgradesLine = (p: Candidate) => (p.last_upgrade ? `${p.upgrades_30d} ${p.upgrades_30d === 1 ? 'upgrade' : 'upgrades'}, last ${ago(p.last_upgrade)}` : 'No upgrades yet')
 
-function WhoCouldGo() {
+type Search = { q: string; setQ: (v: string) => void; wide: boolean }
+
+function WhoCouldGo({ q, setQ, wide }: Search) {
   const [clan, setClan] = useState<ClanName>('Cake')
   const { data, loading, denied } = useMakeRoom(clan, true)
   const full = data && data.members >= data.cap
   const since = data?.players.map((p) => p.tracking_since).filter((t): t is string => !!t).sort()[0]
+  // Wide pages here have no search box, so a search carried from another tab doesn't narrow them.
+  const nq = wide ? '' : norm(q.trim())
+  // Filtered after grouping, so each player keeps their place in the removal order.
+  const groups = groupByActivity(data?.players ?? [])
+    .map((g) => ({ ...g, total: g.rows.length, rows: g.rows.filter(({ p }) => !nq || norm(p.name).includes(nq) || p.tag.toLowerCase().includes(nq)) }))
+    .filter((g) => g.rows.length)
+  const enter = () => { const first = groups[0]?.rows[0]; if (first) go.to(playerHref(first.p.tag)) }
+  const switcher = <ClanSwitch value={clan} onPick={setClan} />
+  const count = data && (
+    <span className="flex items-center gap-2.5">
+      <span className={`rounded-full px-3 py-1.5 text-[13px] font-bold tabular-nums ${full ? 'bg-[#FEF3C7] text-[#92400E]' : 'bg-[#EFE6D2] text-ink-2'}`}>
+        {data.members}/{data.cap} members
+      </span>
+      <Info topic="who" />
+    </span>
+  )
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <ClanSwitch value={clan} onPick={setClan} />
-        {data && (
-          <span className="flex items-center gap-2.5">
-            <span className={`rounded-full px-3 py-1.5 text-[13px] font-bold tabular-nums ${full ? 'bg-[#FEF3C7] text-[#92400E]' : 'bg-[#EFE6D2] text-ink-2'}`}>
-              {data.members}/{data.cap} members
-            </span>
-            <Info topic="who" />
-          </span>
-        )}
-      </div>
+      {wide ? (
+        <div className="flex flex-wrap items-center justify-between gap-3">{switcher}{count}</div>
+      ) : (
+        <>
+          <PhoneSearch q={q} setQ={setQ} onEnter={enter} className="-mx-4 -mb-1 -mt-1">{switcher}</PhoneSearch>
+          {count && !nq && <div className="flex justify-end">{count}</div>}
+        </>
+      )}
       {denied ? <SignIn /> : !data ? <Empty loading={loading} /> : !data.players.length ? (
         <div className="rounded-2xl border border-line bg-white p-4 text-sm text-faint">No one to show</div>
+      ) : !groups.length ? (
+        <GoblinNote box goblin="page">No one by that name in this village</GoblinNote>
       ) : (
         // The server's order is the removal order; consecutive rows share an activity heading.
         <div className="flex flex-col gap-3">
-          {groupByActivity(data.players).map((g) => (
+          {groups.map((g) => (
             <section key={g.activity ?? 'all'} aria-label={g.activity ? ACTIVITY_LABEL[g.activity] : undefined} className="flex flex-col gap-1.5">
               {g.activity && (
                 <div className="flex justify-between px-1 text-xs font-bold uppercase tracking-[0.06em] text-faint">
-                  <span>{ACTIVITY_LABEL[g.activity]}</span><span>{g.rows.length}</span>
+                  <span>{ACTIVITY_LABEL[g.activity]}</span><span>{g.total}</span>
                 </div>
               )}
               <ol className="m-0 grid list-none gap-x-4 rounded-2xl border border-line bg-white py-1 lg:grid-cols-2">
@@ -101,10 +119,10 @@ function SignIn() {
   )
 }
 
-export default function LeadersTools() {
+export default function LeadersTools({ q, setQ, wide }: Search) {
   return (
-    <section aria-label="Who to yeet" className="mx-auto flex max-w-[1360px] flex-col gap-4 px-[clamp(16px,3vw,32px)] pb-12 pt-5">
-      <WhoCouldGo />
+    <section aria-label="Who to yeet" className={wide ? 'mx-auto flex max-w-[1360px] flex-col gap-4 px-[clamp(16px,3vw,32px)] pb-12 pt-5' : 'flex flex-col gap-3 px-4 pb-6 pt-1'}>
+      <WhoCouldGo q={q} setQ={setQ} wide={wide} />
     </section>
   )
 }

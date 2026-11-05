@@ -40,10 +40,23 @@ const TOPICS: Record<string, { title: string; formulas?: string[]; lines?: strin
   war: {
     title: 'Reading this war',
     formulas: [
-      '7% · 1/15 = destruction · attacks used / attacks available',
-      'Open bases = enemy bases not yet three-starred',
-      'Best on this base = most stars taken from it',
+      '7% destroyed = share of the enemy village destroyed so far',
+      '1/15 attacks = attacks used / attacks available',
+      'Open bases = enemy bases not yet 3-starred',
+      'Stars on a base = the most anyone has taken off it',
     ],
+  },
+  clan: {
+    title: 'What these numbers mean',
+    formulas: [
+      'Avg war stars = lifetime war stars ÷ players',
+      '3★ rate = three-star attacks ÷ attacks',
+      'Stars per attack = stars won ÷ attacks',
+      'Miss rate = missed ÷ (attacks + missed)',
+      'Stars given up = stars taken off us ÷ defences',
+      'Bases 3-starred = defences three-starred ÷ defences',
+    ],
+    lines: ['Avg score is the average score of the core, or of the top 15 when the clan is out of CWL.'],
   },
   warBoard: {
     title: 'Reading this list',

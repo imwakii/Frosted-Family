@@ -358,6 +358,10 @@ export default function DayPlanner({ roster: base, me, onPublished }: { roster: 
         </span>
       </div>
 
+      {canPublish && !viewing && !preview && (bad.length > 0 || lineupBad.length > 0) && (
+        <p className="m-0 text-xs font-semibold text-[#92400E]">Can't publish yet: {[...bad.map((b) => `Not 15: ${b}`), ...lineupBad.map((k) => k.label)].join(' · ')}</p>
+      )}
+
       {note && (
         <div role="status" className={`flex flex-col justify-center rounded-[14px] px-4 py-1 text-sm font-bold ${note.ok ? 'bg-[#DCFCE7] text-[#166534]' : 'bg-[#FEF3C7] text-[#92400E]'}`}>
           <span className="flex min-h-9 items-center justify-between gap-3">
@@ -392,7 +396,7 @@ export default function DayPlanner({ roster: base, me, onPublished }: { roster: 
             <span className="font-bold text-action">
               {nMoves === 1 ? `${changes[0].name} to ${placeLabel(moves[changes[0].tag])}` : `${nMoves} moves: ${changes.slice(0, 2).map((p) => p.name).join(', ')}${nMoves > 2 ? '…' : ''}`}
               {/* Someone in New with days stays a Sub while they have them, so there is nothing of theirs to reset. */}
-              {changes.some((p) => !auto[p.tag]) && <button type="button" onClick={() => setMoves(auto)} className="ml-1 min-h-6 cursor-pointer border-0 bg-transparent p-0 font-bold text-action underline">Reset</button>}
+              {changes.some((p) => !auto[p.tag]) && <button type="button" onClick={() => setMoves(auto)} className="relative ml-1 cursor-pointer border-0 bg-transparent p-0 font-bold text-action underline before:absolute before:-inset-x-2 before:-inset-y-3 before:content-['']">Reset</button>}
             </span>
           )}
         </p>

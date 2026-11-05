@@ -142,6 +142,7 @@ function Eight({ rows }: { rows: EightRow[] }) {
         <span className="text-sm font-bold text-ink">8 stars</span>
         <span className="text-xs font-bold tabular-nums text-muted">{done} of {rows.length}</span>
       </div>
+      <p className="m-0 border-b border-hair px-3.5 py-2 text-xs font-semibold text-muted">8 stars in a season earns the CWL bonus.</p>
       <ol className="m-0 list-none">
         {(all ? rows : rows.slice(0, EIGHT_SHOWN)).map((r, i) => (
           <li key={r.tag}>

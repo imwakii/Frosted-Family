@@ -7,6 +7,7 @@ import { CLAN } from '../theme'
 import type { ClanName, Roster } from '../types'
 import { clanFacts } from './CwlTab'
 import { ClanBadge, Eyebrow, LeaguePill, RowChevron } from './ui'
+import Info from './Info'
 
 // A clan's card, as a player has one: its size and place, how strong it is at war and its town halls.
 
@@ -75,7 +76,7 @@ export default function ClanSheet({ clan, roster, wide, onClose }: { clan: ClanN
   const top15 = place >= 0 ? group?.table[place].strength : null
 
   const facts = [
-    { label: f.inCwl ? 'Core avg' : 'Top 15 avg', value: f.avg },
+    { label: f.inCwl ? 'Core avg score' : 'Top 15 avg score', value: f.avg },
     { label: 'Members', value: String(players.length) },
     ...(place >= 0 && group ? [{ label: 'CWL stars', value: String(group.table[place].stars) }] : []),
   ]
@@ -98,13 +99,13 @@ export default function ClanSheet({ clan, roster, wide, onClose }: { clan: ClanN
         </dl>
 
         <section aria-label="Strength" className="flex flex-col gap-1.5">
-          <Eyebrow>Strength</Eyebrow>
+          <span className="flex items-center justify-between px-0.5"><Eyebrow>Strength</Eyebrow><Info topic="clan" /></span>
           <dl className="m-0 grid grid-cols-6 gap-2">
             {[
               { label: 'Avg war stars', value: num(strength.warStars) },
-              { label: '3-star rate', value: pct(strength.threeStar) },
+              { label: '3★ rate', value: pct(strength.threeStar) },
               { label: 'Stars per attack', value: num(strength.stars, 2) },
-              { label: 'Attacks missed', value: pct(strength.missed) },
+              { label: 'Miss rate', value: pct(strength.missed) },
               { label: 'Stars given up', value: num(strength.conceded, 2) },
               { label: 'Bases 3-starred', value: pct(strength.threeStarred) },
               ...(top15 ? [

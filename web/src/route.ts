@@ -88,6 +88,35 @@ function place(path: string, player: string | null): Omit<Route, 'clan' | 'rival
   return { tab: 'war', sub: 'latest', kind: null, player, base: '#/war' }
 }
 
+// Closing a sheet goes back to the page under it rather than adding a page to the history, so the phone's back button
+// can't reopen what was just closed. Each history entry notes its place, and a sheet's entry notes the page it opened over.
+// A sheet opened straight from a link gets that page slipped in beneath it, so it always has one to go back to.
+type Mark = { at: number; home: number | null }
+let at = 0
+let last: { base: string; home: number | null; over: boolean } | null = null
+let closing = false
+
+function mark(r: Route) {
+  const over = !!(r.player || r.clan || r.rival || r.upgrade || r.compare || r.history || r.attacks)
+  const had = history.state as Mark | null
+  closing = false
+  if (had?.at) {
+    at = had.at
+    last = { base: r.base, home: had.home, over }
+    return
+  }
+  let home = !over || last?.base !== r.base ? null : last.over ? last.home : at
+  at += 1
+  if (over && home === null) {
+    const sheet = window.location.hash
+    history.replaceState({ at, home: null } satisfies Mark, '', r.base)
+    home = at
+    at += 1
+    history.pushState({ at, home } satisfies Mark, '', sheet)
+  } else history.replaceState({ at, home } satisfies Mark, '')
+  last = { base: r.base, home, over }
+}
+
 export function useRoute() {
   const [route, setRoute] = useState(parse)
   useEffect(() => {
@@ -95,7 +124,8 @@ export function useRoute() {
       const r = parse()
       // Rewrite an old link in place, so the address bar shows the new route.
       const want = r.base + (r.clan ? `/c/${r.clan}` : '') + (r.rival ? `/e/${r.rival.clan}/${encodeURIComponent(r.rival.tag.slice(1))}` : '') + (r.history ? historyPath(r.history.tag, r.history.days) : '') + (r.attacks ? attacksPath(r.attacks.tag, r.attacks.days) : '') + (r.upgrade ? upgradePath(r.upgrade.cat, r.upgrade.tag, r.upgrade.unit) : '') + (r.compare ? comparePath(r.compare.a, r.compare.b) : '') + (r.player ? `/p/${encodeURIComponent(r.player.slice(1))}` : '')
-      if (want && window.location.hash !== want) history.replaceState(null, '', want)
+      if (want && window.location.hash !== want) history.replaceState(history.state, '', want)
+      mark(r)
       setRoute(r)
     }
     on()
@@ -154,7 +184,17 @@ export function returnToCard() {
 
 export const go = {
   to: (hash: string) => { window.location.hash = hash },
-  closePlayer: () => { window.location.hash = parse().base },
+  closePlayer: () => {
+    // Going back takes a moment, and a second tap in that moment must not go back again.
+    if (closing) return
+    const m = history.state as Mark | null
+    if (m?.at && m.home) {
+      closing = true
+      window.setTimeout(() => { closing = false }, 1000)
+      history.go(m.home - m.at)
+    }
+    else window.location.replace(parse().base)
+  },
   drill: (hash: string, d: Drill) => {
     drill = d
     const parts = hash.replace(/^#\/?/, '')

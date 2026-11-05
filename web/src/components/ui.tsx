@@ -293,7 +293,9 @@ export function DayRow({ days = [], pick, onPick, live = 0, roster, drawnOnly }:
   const { navProps, slideStyle, slideMotion, grabbing } = useSlidePick<number | 'all' | null>(pick, items, (d) => { if (d !== null) onPick(d) })
   const grab = (on: boolean) => (on ? (grabbing ? 'cursor-grabbing' : 'cursor-grab') : '')
   return (
-    <nav {...navProps} aria-label="CWL day" className={`relative grid w-full max-w-[480px] touch-pan-y select-none gap-1 rounded-xl bg-well p-1 ${roster ? 'grid-cols-[1.7fr_repeat(7,1fr)]' : 'grid-cols-7'}`}>
+    <div className="flex w-full max-w-[480px] flex-col gap-1">
+    <Eyebrow className="px-0.5">CWL day</Eyebrow>
+    <nav {...navProps} aria-label="CWL day" className={`relative grid w-full touch-pan-y select-none gap-1 rounded-xl bg-well p-1 ${roster ? 'grid-cols-[1.7fr_repeat(7,1fr)]' : 'grid-cols-7'}`}>
       {slideStyle && <span aria-hidden="true" className={`absolute inset-y-1 left-0 rounded-[9px] bg-white shadow-[0_1px_3px_rgba(43,33,20,.12)] ${slideMotion}`} style={slideStyle} />}
       {roster && (
         <button type="button" aria-pressed={pick === 'all'} onClick={() => onPick('all')}
@@ -312,11 +314,13 @@ export function DayRow({ days = [], pick, onPick, live = 0, roster, drawnOnly }:
             className={`${cell} ${grab(pick === n)}`} style={{ background }}>
             <span className={`text-sm font-bold leading-tight ${prep ? 'text-[#B4451A]' : pick === n ? 'text-ink' : 'text-muted'}`}>{n}</span>
             {d && (over || fighting) && <span className={`text-[10px] font-bold leading-tight ${score}`}>{d.stars}–{d.opponent_stars}</span>}
+            {prep && <span className="text-[10px] font-bold leading-tight text-[#B4451A]">Prep</span>}
             {fighting && <span className="ff-live absolute right-1 top-1 size-1.5 rounded bg-[#16A34A]" />}
           </button>
         )
       })}
     </nav>
+    </div>
   )
 }
 

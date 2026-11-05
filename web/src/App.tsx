@@ -17,6 +17,7 @@ import LogTab from './components/LogTab'
 import Recap from './components/Recap'
 import PlanTab from './components/PlanTab'
 import PlayerSheet from './components/PlayerSheet'
+import ErrorBoundary from './components/ErrorBoundary'
 import WarTab from './components/WarTab'
 import { InstallHint, useInstallHint } from './components/InstallHint'
 import { JumpToYou, YouChip } from './components/You'
@@ -97,6 +98,7 @@ export default function App() {
 
       {roster && !live && <p role="status" className="m-0 px-4 py-1.5 text-center text-xs font-semibold text-muted">Can't reach the server, so this lineup may be out of date.</p>}
       <div key={route.tab} className="ff-fade">
+      <ErrorBoundary>
       {error ? (
         <div className="pt-16"><GoblinNote goblin="panic">Roster's under a shield. Try again shortly.</GoblinNote></div>
       ) : !roster ? (
@@ -106,10 +108,10 @@ export default function App() {
       ) : route.tab === 'war' ? (
         <>
           <SubNav items={WAR_SUBS} current={route.sub} wide={wide} />
-          <WarTab wide={wide} roster={roster} sub={route.sub} opened={route.kind} />
+          <WarTab wide={wide} roster={roster} sub={route.sub} opened={route.kind} q={q} setQ={setQ} />
         </>
       ) : route.tab === 'plan' ? (
-        <PlanTab sub={route.sub} roster={roster} onPublished={reload} me={auth.me} ready={auth.status === 'ready'} wide={wide} onSignOut={auth.signOut} />
+        <PlanTab sub={route.sub} roster={roster} onPublished={reload} me={auth.me} ready={auth.status === 'ready'} wide={wide} onSignOut={auth.signOut} q={q} setQ={setQ} />
       ) : route.tab === 'calendar' ? (
         <CalendarTab wide={wide} />
       ) : route.tab === 'log' ? (
@@ -125,6 +127,7 @@ export default function App() {
           {route.sub !== 'lineups' ? <CwlGroup wide={wide} /> : <CwlTab roster={roster} war={war} wide={wide} q={q} setQ={setQ} />}
         </>
       )}
+      </ErrorBoundary>
       </div>
 
       {!!auth.me.user && !!visits?.total && (
