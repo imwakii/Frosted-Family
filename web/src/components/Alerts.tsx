@@ -4,8 +4,8 @@ import { Eyebrow, SwitchRow } from './ui'
 import { useYou } from './You'
 
 // In Settings: one switch per alert. The first switched on asks the phone's permission; the last switched off signs the phone out.
-// The switches stay whatever the phone answers. If alerts are blocked, the steps for this phone sit under them; if this phone
-// cannot get alerts yet, the steps take their place. Coming back from the phone's settings checks again.
+// The switches stay whatever the phone answers. If alerts are blocked, the steps for this phone sit above them, greyed out; if this phone
+// cannot get alerts yet, the steps take their place. An iPhone or iPad not yet on the home screen is sent to the guide. Coming back from the phone's settings checks again.
 
 const CHOICES: { key: keyof AlertPrefs; label: string; line: string }[] = [
   { key: 'attacks', label: 'Attack left', line: '1 hour to go, attack unused' },
@@ -17,9 +17,6 @@ const ONE_TAP: AlertPrefs = { attacks: true, days: true, war: false }
 
 function steps(state: AlertState): string[] | null {
   const dev = device()
-  if (state === 'install') {
-    return ['Open this page in Safari', 'Tap Share, then Add to Home Screen', 'Open Frosted from your home screen', 'Come back to Settings and switch on an alert']
-  }
   if (state === 'blocked') {
     if (dev === 'iphone') return ["Open your iPhone's Settings", 'Tap Notifications, then Frosted', 'Turn on Allow Notifications', 'Come back to Settings']
     if (dev === 'android') return ['Tap the icon left of the web address', 'Tap Permissions, then Notifications', 'Choose Allow', 'Reload this page']
@@ -44,7 +41,7 @@ const Steps = ({ list }: { list: string[] }) => (
   </ol>
 )
 
-export default function Alerts() {
+export default function Alerts({ onGuide }: { onGuide?: () => void }) {
   const { yous } = useYou()
   const [state, setState] = useState<AlertState | null>(null)
   const [prefs, setLocal] = useState(readPrefs)
@@ -61,7 +58,21 @@ export default function Alerts() {
 
   if (!state) return null
   const guide = steps(state)
-  if (state === 'install' || state === 'hidden') {
+  if (state === 'install') {
+    return (
+      <section aria-label="Alerts" className="flex flex-col gap-1.5">
+        <Eyebrow>Alerts</Eyebrow>
+        <div className="flex items-center gap-3 rounded-xl border border-line bg-white p-3">
+          <span className="flex min-w-0 flex-auto flex-col">
+            <span className="text-[15px] font-bold text-ink">Get alerts on this phone</span>
+            <span className="text-[13px] text-muted">Add Frosted to your home screen first</span>
+          </span>
+          {onGuide && <button type="button" onClick={onGuide} className="min-h-9 flex-none cursor-pointer rounded-full border border-line bg-white px-3 text-[13px] font-bold text-ink-2 hover:bg-hover">Show me</button>}
+        </div>
+      </section>
+    )
+  }
+  if (state === 'hidden') {
     if (!guide) return null
     return (
       <section aria-label="Alerts" className="flex flex-col gap-1.5">
@@ -133,15 +144,6 @@ export default function Alerts() {
         <button type="button" disabled={busy} onClick={turnOnAll}
           className="min-h-11 flex-none cursor-pointer rounded-full border-0 bg-action text-sm font-bold text-white hover:bg-action-deep disabled:cursor-default disabled:opacity-60">Turn on alerts</button>
       )}
-      <ul className="m-0 flex list-none flex-col rounded-xl border border-line bg-white p-0">
-        {CHOICES.map((c) => (
-          <li key={c.key} className="border-b border-hair last:border-b-0">
-            <SwitchRow label={c.label} line={c.line} on={shown[c.key]} disabled={busy} onFlip={() => flip(c.key)} />
-          </li>
-        ))}
-      </ul>
-      {failed && <span className="text-xs font-semibold text-[#92400E]">Not saved. Try again.</span>}
-      {yous.length > 1 && <span className="text-xs text-muted">Covers all your accounts</span>}
       {state === 'blocked' && guide && (
         <div className="flex items-center gap-3 rounded-xl border border-line bg-white p-3">
           <img src="/icons/goblin-beg.png" alt="" className="h-20 w-auto flex-none" />
@@ -151,6 +153,15 @@ export default function Alerts() {
           </div>
         </div>
       )}
+      <ul className={`m-0 flex list-none flex-col rounded-xl border border-line bg-white p-0 ${state === 'blocked' ? 'opacity-60' : ''}`}>
+        {CHOICES.map((c) => (
+          <li key={c.key} className="border-b border-hair last:border-b-0">
+            <SwitchRow label={c.label} line={c.line} on={shown[c.key]} disabled={busy || state === 'blocked'} onFlip={() => flip(c.key)} />
+          </li>
+        ))}
+      </ul>
+      {failed && <span className="text-xs font-semibold text-[#92400E]">Not saved. Try again.</span>}
+      {yous.length > 1 && <span className="text-xs text-muted">Covers all your accounts</span>}
     </section>
   )
 }

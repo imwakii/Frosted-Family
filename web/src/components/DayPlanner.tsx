@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { loginHref, type Me } from '../auth'
+import type { Me } from '../auth'
 import { checkPlan, type DayBody, type DayPlans, getDays, getProposals, HttpError, type LineupBody, type PlanMove, type Proposal, publishDays, publishPlan, saveProposal, useWar, useWide, withdrawProposal } from '../data'
 import { type ClanDays, DAYS, DRAFT_KEY, earned, enemy, locked, missedThisSeason, onTrack, onTrial, repair, suggest, TARGET, TEAM, tier, type Wars, asPlanned } from '../dayplan'
 import { CLAN, CLANS } from '../theme'
@@ -81,7 +81,7 @@ function keepDays(k: KeptDays | null, ready: boolean) {
   } catch { /* private mode */ }
 }
 
-export default function DayPlanner({ roster: base, me, onPublished }: { roster: Roster; me: Me; onPublished: () => Promise<void> }) {
+export default function DayPlanner({ roster: base, me, onPublished, onLapsed }: { roster: Roster; me: Me; onPublished: () => Promise<void>; onLapsed: () => void }) {
   const [moves, setMoves] = useState<Moves>(() => readDraft(base))
   useEffect(() => { try { localStorage.setItem(DRAFT_KEY, JSON.stringify(moves)) } catch { /* private mode */ } }, [moves])
   const roster = useMemo<Roster>(() => ({ ...base, players: base.players.map((p) => asPlanned(moves[p.tag] ? { ...p, ...moves[p.tag] } : p)) }), [base, moves])
@@ -93,7 +93,7 @@ export default function DayPlanner({ roster: base, me, onPublished }: { roster: 
   const [override, setOverride] = useState(false)
   const [problems, setProblems] = useState<string[]>([])
   const [server, setServer] = useState<DayPlans | null>(null)
-  const [failed, setFailed] = useState<'load' | 'signin' | null>(null)
+  const [failed, setFailed] = useState(false)
   const [attempt, setAttempt] = useState(0)
   // What the board opened with, so only a leader's own changes count as edits to keep.
   const [origin, setOrigin] = useState<Plans | null>(null)
@@ -140,7 +140,7 @@ export default function DayPlanner({ roster: base, me, onPublished }: { roster: 
   })
 
   useEffect(() => {
-    setFailed(null)
+    setFailed(false)
     Promise.all([getDays(), getProposals<DayBody>('days').catch(() => null)]).then(
       ([s, p]) => {
         // A roster refresh must not touch days someone is working on, or move them to a new month.
@@ -166,7 +166,7 @@ export default function DayPlanner({ roster: base, me, onPublished }: { roster: 
         if (kept && !opened.current) setNote({ ok: true, text: 'Your unsaved changes are back' })
         opened.current = true
       },
-      (e) => { if (!opened.current) setFailed(e instanceof HttpError && e.status === 401 ? 'signin' : 'load') })
+      (e) => { if (!opened.current) { if (e instanceof HttpError && e.status === 401) onLapsed(); else setFailed(true) } })
     // Only when the published roster changes: moving a player must not throw away the days on the board.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [base, attempt])
@@ -185,10 +185,8 @@ export default function DayPlanner({ roster: base, me, onPublished }: { roster: 
   if (failed) {
     return (
       <main className="mx-auto flex max-w-[480px] flex-col items-center gap-2 px-4 pt-10">
-        <GoblinNote goblin="panic">{failed === 'signin' ? 'Your sign-in has run out. Nothing has changed.' : "The plan wouldn't load. Nothing has changed."}</GoblinNote>
-        {failed === 'signin'
-          ? <a href={loginHref()} className="flex min-h-11 items-center rounded-full bg-[#5865F2] px-4 text-sm font-bold text-white no-underline hover:bg-[#4752C4]">Sign in with Discord</a>
-          : <button type="button" onClick={() => setAttempt((n) => n + 1)} className="min-h-11 cursor-pointer rounded-full border border-line bg-white px-4 text-sm font-bold text-ink-2 hover:bg-hover">Try again</button>}
+        <GoblinNote goblin="panic">The plan wouldn't load. Nothing has changed.</GoblinNote>
+        <button type="button" onClick={() => setAttempt((n) => n + 1)} className="-mt-4 min-h-11 cursor-pointer rounded-full border border-line bg-white px-4 text-sm font-bold text-ink-2 hover:bg-hover">Try again</button>
       </main>
     )
   }

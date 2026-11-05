@@ -147,7 +147,8 @@ export default function App() {
           <span className="truncate">{roster.players.find((p) => p.tag === back.tag)?.name ?? 'Back'}'s card</span>
         </button>
       )}
-      {!route.player && (install.show ? <InstallHint onDismiss={install.dismiss} /> : wide && route.tab !== 'plan' && route.tab !== 'calendar' && <JumpToYou wide={wide} />)}
+      {!route.player && install.show && <InstallHint wide={wide} onDismiss={install.dismiss} />}
+      {!route.player && wide && route.tab !== 'plan' && route.tab !== 'calendar' && <JumpToYou wide={wide} />}
 
       {roster && <Welcome roster={roster} wide={wide} />}
       {roster && route.player &&<PlayerSheet tag={route.player} roster={roster} wide={wide} onClose={closeSheet} />}

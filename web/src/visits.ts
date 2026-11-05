@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { HttpError } from './data'
 
 // GET and POST /api/visits. A random id this browser keeps, reported once a UTC day with its time zone and tied to nothing.
 // Local development only reads, so testing never adds to the count. An older server has no such route, and the line stays hidden.
@@ -7,7 +8,7 @@ export type VisitsDaily = Visits & { days: { day: string; total: number; regions
 
 export async function getVisitsDaily(): Promise<VisitsDaily> {
   const r = await fetch('/api/visits/daily', { credentials: 'same-origin', headers: { Accept: 'application/json' } })
-  if (!r.ok || !r.headers.get('content-type')?.includes('json')) throw new Error(String(r.status))
+  if (!r.ok || !r.headers.get('content-type')?.includes('json')) throw new HttpError('/api/visits/daily', r.status)
   return r.json()
 }
 

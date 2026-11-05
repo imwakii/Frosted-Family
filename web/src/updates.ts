@@ -223,6 +223,41 @@ export const UPDATES: Update[] = [
       },
     ],
   },
+  {
+    id: '2026-11-05',
+    date: '5 Nov 2026',
+    highlights: [
+      { title: 'Home screen', line: 'See how to add Frosted to your phone.', icon: 'bell' },
+    ],
+    groups: [
+      {
+        title: 'War tab',
+        lines: [
+          'Added search to the current war.',
+          'Changed the war score wording.',
+          'Moved the clan switch beside the days.',
+        ],
+      },
+      {
+        title: 'Plan tab',
+        lines: [
+          'Added search to Who to yeet.',
+          'Added why Publish is blocked.',
+        ],
+      },
+      {
+        title: 'General',
+        lines: [
+          'Added a home screen guide.',
+          'Fixed back reopening closed cards.',
+          'Fixed blank pages after a crash.',
+          'Changed labels to match everywhere.',
+          'Added an explainer to clan cards.',
+          'Added what 8 stars earns.',
+        ],
+      },
+    ],
+  },
 ]
 
 export const LATEST = UPDATES[UPDATES.length - 1]

@@ -18,15 +18,18 @@ const per = (a: number, b: number) => (b ? a / b : null)
 /** The sheet a clan's card sits in: ours or a league group clan's. */
 export function CardSheet({ label, wide, onClose, head, children }: { label: string; wide: boolean; onClose: () => void; head: ReactNode; children: ReactNode }) {
   const close = useRef<HTMLButtonElement>(null)
+  // Runs once per sheet, so a page refresh behind it can't pull someone reading further down back to the top.
+  const latest = useRef(onClose)
+  latest.current = onClose
 
   useEffect(() => {
     const prev = document.activeElement as HTMLElement | null
     close.current?.focus()
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') latest.current() }
     window.addEventListener('keydown', onKey)
     document.body.style.overflow = 'hidden'
     return () => { window.removeEventListener('keydown', onKey); document.body.style.overflow = ''; prev?.focus?.() }
-  }, [onClose])
+  }, [])
 
   return (
     <div className="fixed inset-0 z-40">

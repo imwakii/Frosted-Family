@@ -1,5 +1,4 @@
-import { useState } from 'react'
-import { loginHref } from '../auth'
+import { useEffect, useState } from 'react'
 import { ACTIVITY_LABEL, type Activity, ago, type Candidate, reasonLabel, useMakeRoom } from '../leaders'
 import { go, playerHref } from '../route'
 import type { ClanName } from '../types'
@@ -31,11 +30,12 @@ function standing(p: Candidate) {
 }
 const upgradesLine = (p: Candidate) => (p.last_upgrade ? `${p.upgrades_30d} ${p.upgrades_30d === 1 ? 'upgrade' : 'upgrades'}, last ${ago(p.last_upgrade)}` : 'No upgrades yet')
 
-type Search = { q: string; setQ: (v: string) => void; wide: boolean }
+type Search = { q: string; setQ: (v: string) => void; wide: boolean; onLapsed: () => void }
 
-function WhoCouldGo({ q, setQ, wide }: Search) {
+function WhoCouldGo({ q, setQ, wide, onLapsed }: Search) {
   const [clan, setClan] = useState<ClanName>('Cake')
   const { data, loading, denied } = useMakeRoom(clan, true)
+  useEffect(() => { if (denied) onLapsed() }, [denied, onLapsed])
   const full = data && data.members >= data.cap
   const since = data?.players.map((p) => p.tracking_since).filter((t): t is string => !!t).sort()[0]
   // Wide pages here have no search box, so a search carried from another tab doesn't narrow them.
@@ -64,7 +64,7 @@ function WhoCouldGo({ q, setQ, wide }: Search) {
           {count && !nq && <div className="flex justify-end">{count}</div>}
         </>
       )}
-      {denied ? <SignIn /> : !data ? <Empty loading={loading} /> : !data.players.length ? (
+      {denied ? null : !data ? <Empty loading={loading} /> : !data.players.length ? (
         <div className="rounded-2xl border border-line bg-white p-4 text-sm text-faint">No one to show</div>
       ) : !groups.length ? (
         <GoblinNote box goblin="page">No one by that name in this village</GoblinNote>
@@ -109,20 +109,10 @@ function WhoCouldGo({ q, setQ, wide }: Search) {
   )
 }
 
-// The server refused: leader tools are locked and this browser is not signed in as a leader.
-function SignIn() {
-  return (
-    <div className="flex flex-col items-center gap-3 rounded-2xl border border-line bg-white px-6 py-12 text-center">
-      <span className="text-sm font-semibold text-muted">Leaders only</span>
-      <a href={loginHref()} className="flex min-h-11 items-center rounded-full bg-[#5865F2] px-4 text-sm font-bold text-white no-underline hover:bg-[#4752C4]">Sign in with Discord</a>
-    </div>
-  )
-}
-
-export default function LeadersTools({ q, setQ, wide }: Search) {
+export default function LeadersTools({ q, setQ, wide, onLapsed }: Search) {
   return (
     <section aria-label="Who to yeet" className={wide ? 'mx-auto flex max-w-[1360px] flex-col gap-4 px-[clamp(16px,3vw,32px)] pb-12 pt-5' : 'flex flex-col gap-3 px-4 pb-6 pt-1'}>
-      <WhoCouldGo q={q} setQ={setQ} wide={wide} />
+      <WhoCouldGo q={q} setQ={setQ} wide={wide} onLapsed={onLapsed} />
     </section>
   )
 }

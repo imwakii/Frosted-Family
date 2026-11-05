@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { HttpError } from '../data'
 import { getVisitsDaily, type VisitsDaily } from '../visits'
 import { Eyebrow } from './ui'
 
@@ -14,11 +15,11 @@ const colour = (region: string) => COLOURS[region] ?? REST
 const dayLabel = (day: string) => new Date(`${day}T00:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' })
 const CHART = 160
 
-export default function Usage() {
+export default function Usage({ onLapsed }: { onLapsed: () => void }) {
   const [data, setData] = useState<VisitsDaily | null>(null)
   const [failed, setFailed] = useState(false)
   const [picked, setPicked] = useState<number | null>(null)
-  useEffect(() => { getVisitsDaily().then(setData, () => setFailed(true)) }, [])
+  useEffect(() => { getVisitsDaily().then(setData, (e) => { if (e instanceof HttpError && e.status === 401) onLapsed(); else setFailed(true) }) }, [onLapsed])
 
   if (failed) return <main className="mx-auto max-w-[900px] px-[clamp(16px,3vw,32px)] pt-5 text-sm font-semibold text-muted">Not available. Try again.</main>
   if (!data) return <div aria-busy="true" aria-label="Loading" className="mx-auto mt-10 h-64 max-w-[900px] animate-pulse rounded-2xl bg-well" />

@@ -12,8 +12,10 @@ export function readPrefs(): AlertPrefs {
 }
 const savePrefs = (p: AlertPrefs) => { try { localStorage.setItem(PREFS, JSON.stringify(p)) } catch { /* private mode */ } }
 
+/** iPads running desktop-class Safari call themselves a Mac, so a touch screen gives them away. */
+export const onIpad = () => /ipad/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
 const supported = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window
-const isIos = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+const isIos = () => /iphone|ipod/i.test(navigator.userAgent) || onIpad()
 export const device = () => (isIos() ? 'iphone' : /android/i.test(navigator.userAgent) ? 'android' : 'other')
 const installed = () => window.matchMedia('(display-mode: standalone)').matches || (navigator as Navigator & { standalone?: boolean }).standalone === true
 

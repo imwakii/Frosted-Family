@@ -3,6 +3,8 @@ import { LATEST } from '../updates'
 import type { Roster } from '../types'
 import Alerts from './Alerts'
 import { CardSheet } from './ClanSheet'
+import InstallGuide from './InstallGuide'
+import { canInstall } from './InstallHint'
 import { Eyebrow, RowChevron, setUtc, SwitchRow, Th, useUtc } from './ui'
 import { Sparkle, useNews, WhatsNewCard } from './WhatsNew'
 import { useYou, YouPrompt } from './You'
@@ -58,6 +60,7 @@ export default function Settings({ wide, roster, leader, account }: { wide: bool
   const { yous } = useYou()
   const utc = useUtc()
   const [open, setOpen] = useState(false)
+  const [guide, setGuide] = useState(false)
   // Once someone has marked themselves, the button lights until they have been in here and seen alerts.
   const [visited, setVisited] = useState(() => { try { return !!localStorage.getItem(VISITED) } catch { return true } })
   const openSheet = () => {
@@ -85,12 +88,23 @@ export default function Settings({ wide, roster, leader, account }: { wide: bool
             </span>
             <RowChevron />
           </button>
+          {canInstall() && (
+            <button type="button" onClick={() => { setOpen(false); setGuide(true) }}
+              className="flex min-h-[60px] w-full flex-none cursor-pointer items-center gap-3 rounded-xl border border-line bg-white px-3 py-2 text-left hover:bg-page">
+              <img src="/app-icon-192.png" alt="" width={36} height={36} className="flex-none rounded-[9px]" />
+              <span className="flex min-w-0 flex-auto flex-col">
+                <span className="text-[15px] font-bold text-ink">Add to home screen</span>
+                <span className="truncate text-[13px] text-muted">Opens like an app</span>
+              </span>
+              <RowChevron />
+            </button>
+          )}
           {roster && <Accounts roster={roster} />}
-          <Alerts />
+          <Alerts onGuide={() => { setOpen(false); setGuide(true) }} />
           <section aria-label="Time" className="flex flex-col gap-1.5">
             <Eyebrow>Time</Eyebrow>
             <div className="rounded-xl border border-line bg-white">
-              <SwitchRow label="Show UTC" line="Show calendar times in UTC" on={utc} onFlip={() => setUtc(!utc)} />
+              <SwitchRow label="Show UTC" line="On the calendar" on={utc} onFlip={() => setUtc(!utc)} />
             </div>
           </section>
           {account && (
@@ -105,6 +119,7 @@ export default function Settings({ wide, roster, leader, account }: { wide: bool
           )}
         </CardSheet>
       )}
+      {guide && <InstallGuide wide={wide} onClose={() => setGuide(false)} />}
       {news.open && <WhatsNewCard wide={wide} leader={leader} onClose={news.close} onSettings={openSheet} />}
     </>
   )

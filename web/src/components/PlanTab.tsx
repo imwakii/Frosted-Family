@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { loginHref, signinError, type Me } from '../auth'
 import { checkPlan, getProposals, HttpError, type LineupBody, type PlanMove, type Proposal, publishPlan, saveProposal, withdrawProposal } from '../data'
 import { CLAN, CLANS, GROUPS, coreAvg, fmtScore } from '../theme'
@@ -374,6 +374,7 @@ function Gate({ me, onSignOut }: { me: Me; onSignOut: () => void }) {
         {!me.user && (failed
           ? <p role="status" className="m-0 text-balance text-sm font-semibold text-[#B4451A]">{failed === 'denied' ? "Nice try goblin, but that account isn't a leader or co-leader." : "The Clan Castle gate jammed. Try again."}</p>
           : <p className="m-0 text-sm text-ink-2">When we're not being deadbeats, we plan</p>)}
+        {(me.user || !failed) && <p className="m-0 text-xs font-semibold text-muted">Leaders and co-leaders only</p>}
         {me.user ? (
           <>
             <span className="text-sm text-faint">Signed in as {me.user.name}</span>
@@ -395,6 +396,23 @@ function Gate({ me, onSignOut }: { me: Me; onSignOut: () => void }) {
   )
 }
 
+// A leader whose session ended while the app stayed open: the server has refused them, though this page still knows their role.
+function SignInAgain() {
+  return (
+    <main className="mx-auto flex max-w-[1360px] justify-center px-4 pt-16">
+      <section className="flex w-full max-w-[380px] flex-col items-center gap-3 rounded-[20px] border border-line bg-white px-6 py-8 text-center">
+        <img src="/icons/goblin-panic.png" alt="" className="h-24 w-auto" />
+        <h2 className="font-display m-0 text-[24px] text-brand">War room</h2>
+        <p role="status" className="m-0 text-balance text-sm text-ink-2">Your shield ran out. Sign back in.</p>
+        <a href={loginHref()}
+          className="mt-1 flex min-h-11 w-full items-center justify-center gap-2.5 rounded-full bg-[#5865F2] text-sm font-bold text-white no-underline hover:bg-[#4752C4]">
+          <Discord />Sign in with Discord
+        </a>
+      </section>
+    </main>
+  )
+}
+
 type PlanProps = { roster: Roster; me: Me; ready: boolean; wide: boolean; onSignOut: () => void }
 
 const SUBS = [
@@ -404,13 +422,16 @@ const SUBS = [
 ]
 
 export default function PlanTab({ sub, roster, onPublished, me, ready, wide, onSignOut, q, setQ }: PlanProps & { sub: string; onPublished: () => Promise<void>; q: string; setQ: (v: string) => void }) {
+  const [lapsed, setLapsed] = useState(false)
+  const onLapsed = useCallback(() => setLapsed(true), [])
   if (!ready) return <div aria-busy="true" aria-label="Loading" className="mx-auto mt-16 h-48 max-w-[380px] animate-pulse rounded-[20px] bg-well" />
   // Anyone who is not a signed-in leader sees the sign-in card alone, on every section.
   if (!me.role) return <Gate me={me} onSignOut={onSignOut} />
+  if (lapsed) return <SignInAgain />
   return (
     <>
       <SubNav items={SUBS} current={sub} wide={wide} />
-      {sub === 'usage' ? <Usage /> : sub === 'members' ? <LeadersTools q={q} setQ={setQ} wide={wide} /> : sub === 'days' ? <DayPlanner roster={roster} me={me} onPublished={onPublished} /> : <Plan roster={roster} me={me} onPublished={onPublished} />}
+      {sub === 'usage' ? <Usage onLapsed={onLapsed} /> : sub === 'members' ? <LeadersTools q={q} setQ={setQ} wide={wide} onLapsed={onLapsed} /> : sub === 'days' ? <DayPlanner roster={roster} me={me} onPublished={onPublished} onLapsed={onLapsed} /> : <Plan roster={roster} me={me} onPublished={onPublished} />}
     </>
   )
 }
