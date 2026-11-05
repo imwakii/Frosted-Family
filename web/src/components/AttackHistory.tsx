@@ -3,6 +3,7 @@ import { loadPlayerAll, type PlayerCard, playerNow } from '../data'
 import { markFromCard, openedFromCard, playerHref } from '../route'
 import type { Roster } from '../types'
 import { CardSheet } from './ClanSheet'
+import { SheetTitle } from './FitName'
 import { chip, Stars, Th, GoblinNote } from './ui'
 
 // One player's attacks over the last 7 or 30 days, a war at a time. Opens from Latest attacks on their card.
@@ -34,19 +35,17 @@ export default function AttackHistory({ tag, days: start, roster, wide, onClose 
   hits.forEach((a) => byWar.set(a.war_key, [...(byWar.get(a.war_key) ?? []), a]))
   return (
     <CardSheet label={`${p?.name ?? 'Player'}'s attacks`} wide={wide} onClose={onClose} head={<>
+      <a href={playerHref(tag)} className="flex min-w-0 flex-auto items-center gap-3 text-ink no-underline">
+        <SheetTitle th={p?.th} name={p?.name ?? tag} sub={card ? `${hits.length} ${hits.length === 1 ? 'attack' : 'attacks'} · ${stars}★` : ' '} />
+      </a>
+      {/* Holds the back button's place, so a long name is one size on every card. */}
+      {!fromCard && <span aria-hidden="true" className="size-11 flex-none" />}
       {fromCard && (
         <button type="button" aria-label="Back to the player card" onClick={() => window.history.back()}
-          className="-ml-1 flex size-11 flex-none cursor-pointer items-center justify-center rounded-full border-0 bg-[#F6EEDC] text-muted hover:bg-well">
+          className="flex size-11 flex-none cursor-pointer items-center justify-center rounded-full border-0 bg-[#F6EEDC] text-muted hover:bg-well">
           <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M15 6l-6 6 6 6" /></svg>
         </button>
       )}
-      <a href={playerHref(tag)} className="flex min-w-0 flex-auto items-center gap-2.5 text-ink no-underline">
-        {p && <Th th={p.th} />}
-        <span className="flex min-w-0 flex-col">
-          <span className="font-display truncate text-[22px] leading-tight">{p?.name ?? tag}</span>
-          <span className="text-xs text-muted">{card ? `${hits.length} ${hits.length === 1 ? 'attack' : 'attacks'} · ${stars}★` : ' '}</span>
-        </span>
-      </a>
     </>}>
       <div role="group" aria-label="Range" className="flex flex-none gap-1.5">
         {([7, 30] as const).map((d) => <button key={d} type="button" aria-pressed={d === days} onClick={() => setDays(d)} className={chip(d === days)}>{d} days</button>)}

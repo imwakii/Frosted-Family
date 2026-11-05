@@ -16,7 +16,7 @@ const WHATS_NEW = 'ff-whats-new'
 export const firstVisit = (() => {
   try {
     return !localStorage.getItem('ff-you') && !localStorage.getItem(WHATS_NEW) && !localStorage.getItem(WELCOMED)
-      && !/\/(p|c|e|u)\//.test(window.location.hash)
+      && !/\/(p|c|e|u|s|l|a|v)\//.test(window.location.hash)
   } catch { return false }
 })()
 

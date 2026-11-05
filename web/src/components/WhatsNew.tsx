@@ -60,7 +60,7 @@ const Groups = ({ update, quiet, leader }: { update: Update; quiet?: boolean; le
 
 export function useNews() {
   const [fresh, setFresh] = useState(() => !seen() && !firstVisit)
-  const [open, setOpen] = useState(() => !seen() && !firstVisit && !/\/(p|c|e|u)\//.test(window.location.hash))
+  const [open, setOpen] = useState(() => !seen() && !firstVisit && !/\/(p|c|e|u|s|l|a|v)\//.test(window.location.hash))
   const close = useCallback(() => {
     setOpen(false)
     setFresh(false)

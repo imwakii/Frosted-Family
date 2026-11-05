@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { BADGES, TIER_LOOK, TIERS, type Tier } from '../badges'
 import { competitionRanks } from '../explore'
-import { go, playerHref } from '../route'
+import { go, statHref } from '../route'
 import { CLAN } from '../theme'
 import type { ClanName } from '../types'
 import { norm, PhoneSearch, SearchBox } from './CwlTab'
@@ -13,11 +13,11 @@ import { YouTag } from './You'
 // GET /api/explore/badges. Everyone's badges as a medal table, gold first, then silver, then bronze; or who holds one
 // badge, best first. Only members with a badge are listed.
 
-type Earned = { id: string; label: string; tier: Tier; detail: string; value: number }
-type Row = { tag: string; name: string; clan: ClanName; th: number | null; badges: Earned[] }
+export type Earned = { id: string; label: string; tier: Tier; detail: string; value: number }
+export type Row = { tag: string; name: string; clan: ClanName; th: number | null; badges: Earned[] }
 
-const medals = (r: Row, t: Tier) => r.badges.filter((b) => b.tier === t).length
-const medalScore = (r: Row) => medals(r, 'gold') * 10_000 + medals(r, 'silver') * 100 + medals(r, 'bronze')
+export const medals = (r: Row, t: Tier) => r.badges.filter((b) => b.tier === t).length
+export const medalScore = (r: Row) => medals(r, 'gold') * 10_000 + medals(r, 'silver') * 100 + medals(r, 'bronze')
 // A phone row holds this many, best first, and counts the rest.
 
 export default function BadgesBoard({ q, setQ, wide }: { q: string; setQ: (v: string) => void; wide: boolean }) {
@@ -70,7 +70,7 @@ export default function BadgesBoard({ q, setQ, wide }: { q: string; setQ: (v: st
         <ol className="m-0 w-full list-none rounded-2xl border border-line bg-white py-1">
           {shown.map((x, i) => (
             <li key={x.r.tag}>
-              <a href={playerHref(x.r.tag)} className={`flex min-h-[52px] items-center gap-2.5 px-3.5 py-1.5 text-ink no-underline hover:bg-hover ${i ? 'border-t border-hair' : ''}`}>
+              <a href={statHref('badges', x.r.tag, pick)} className={`flex min-h-[52px] items-center gap-2.5 px-3.5 py-1.5 text-ink no-underline hover:bg-hover ${i ? 'border-t border-hair' : ''}`}>
                 <span className="w-6 flex-none text-right text-xs font-bold tabular-nums text-faint">{place.get(x) ?? '—'}</span>
                 <Th th={x.r.th} />
                 <span className="flex min-w-0 flex-auto flex-col gap-0.5">
@@ -105,7 +105,7 @@ export default function BadgesBoard({ q, setQ, wide }: { q: string; setQ: (v: st
     </>
   )
 
-  const enter = () => { if (shown[0]) go.to(playerHref(shown[0].r.tag)) }
+  const enter = () => { if (shown[0]) go.to(statHref('badges', shown[0].r.tag, pick)) }
   return wide ? (
     <main className="mx-auto flex max-w-[1360px] flex-col gap-3.5 px-[clamp(16px,3vw,32px)] pb-12 pt-5">
       <div className="flex items-center justify-between gap-4">

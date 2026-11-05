@@ -224,12 +224,44 @@ export const UPDATES: Update[] = [
     ],
   },
   {
-    id: '2026-11-05',
+    id: '2026-11-05-b',
     date: '5 Nov 2026',
     highlights: [
+      { title: 'See how they got there', line: 'Tap a name on Stats for the breakdown.', href: '#/stats/players/overall', icon: 'hero' },
+      { title: 'A better Recap', line: 'Awards open cards. See who came and went.', href: '#/log/recap', icon: 'league' },
       { title: 'Home screen', line: 'See how to add Frosted to your phone.', icon: 'bell' },
     ],
     groups: [
+      {
+        title: 'Stats tab',
+        lines: [
+          'Added breakdown cards to Overall.',
+          'Added Donations and Capital cards.',
+          'Added a card for each Badges row.',
+        ],
+      },
+      {
+        title: 'Log tab',
+        lines: [
+          'Changed Recap awards to open cards.',
+          'Changed the clan race to one table.',
+          'Added names to comings and goings.',
+          'Added dates to Recap milestones.',
+          'Changed upgrade rows to open in place.',
+          'Fixed Most upgrades ignoring the kind.',
+        ],
+      },
+      {
+        title: 'Player cards',
+        lines: [
+          'Added category chips to upgrade cards.',
+          'Changed badges to open the badges card.',
+          'Changed Back to keep your place.',
+          'Changed long names to fit one line.',
+          'Changed all cards to one height.',
+          'Removed This is me from the card.',
+        ],
+      },
       {
         title: 'War tab',
         lines: [
@@ -239,23 +271,33 @@ export const UPDATES: Update[] = [
         ],
       },
       {
+        title: 'CWL tab',
+        lines: [
+          'Changed the clan card to be bigger.',
+        ],
+      },
+      {
         title: 'Plan tab',
         lines: [
           'Added search to Who to yeet.',
-          'Added why Publish is blocked.',
+          'Changed Publish to say why it waits.',
+          'Removed the Preview button.',
         ],
       },
       {
         title: 'General',
         lines: [
           'Added a home screen guide.',
-          'Changed visitors to leave out bots.',
           'Added a switch for counting visits.',
-          'Fixed back reopening closed cards.',
-          'Fixed blank pages after a crash.',
-          'Changed labels to match everywhere.',
+          'Changed visitors to leave out bots.',
+          'Moved the privacy note behind an i.',
+          'Changed the score explainer to maths.',
           'Added an explainer to clan cards.',
           'Added what 8 stars earns.',
+          'Changed list rows to one height.',
+          'Changed labels to match everywhere.',
+          'Fixed Back reopening closed cards.',
+          'Fixed blank pages after a crash.',
         ],
       },
     ],

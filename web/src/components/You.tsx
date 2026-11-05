@@ -5,7 +5,7 @@ import { CLAN, SLOT_TEXT } from '../theme'
 import { playerHref } from '../route'
 import { SearchIcon, Th } from './ui'
 
-// Which accounts are this person's: their main and any alts. Added from the header's Add me, changed from any player's sheet,
+// Which accounts are this person's: their main and any alts. Added from the header's Add me, changed in Settings,
 // and shown on every list. Kept in this browser; the server only hears of them if this phone turns alerts on, and nobody else sees them.
 
 const YOU_KEY = 'ff-you'

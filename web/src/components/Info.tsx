@@ -1,21 +1,55 @@
-import { type MouseEvent, useEffect, useState } from 'react'
+import { type MouseEvent, type ReactNode, useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useWide } from '../data'
 
 // The small "i": a tap opens a short explanation, formulas first. On the body, because a sheet's animation would otherwise trap it inside the sheet.
 // These follow docs/specs/01-scoring-core.md, docs/specs/02-allocation-rules.md and web/src/dayplan.ts: change them together.
 
-const TOPICS: Record<string, { title: string; formulas?: string[]; lines?: string[] }> = {
+// Maths set as maths, in MathML, which every current browser draws without a library.
+const Eq = ({ label, children }: { label: string; children: ReactNode }) => (
+  <math display="block" aria-label={label} className="m-0 overflow-x-auto text-[14px] text-ink [scrollbar-width:none]"><mrow>{children}</mrow></math>
+)
+const V = ({ children }: { children: string }) => <mi>{children}</mi>
+const O = ({ children }: { children: string }) => <mo>{children}</mo>
+const N = ({ children }: { children: string }) => <mn>{children}</mn>
+const Frac = ({ top, bottom }: { top: ReactNode; bottom: ReactNode }) => <mfrac><mrow>{top}</mrow><mrow>{bottom}</mrow></mfrac>
+const Capped = ({ v, cap }: { v: string; cap: string }) => <><mi mathvariant="normal">min</mi><O>(</O><Frac top={<V>{v}</V>} bottom={<N>{cap}</N>} /><O>,</O><N>1</N><O>)</O></>
+const Key = ({ rows }: { rows: [string, string][] }) => (
+  <dl className="m-0 grid grid-cols-[auto_minmax(0,1fr)] gap-x-2.5 gap-y-1 text-[13px] leading-[1.35] text-ink-2">
+    {rows.map(([v, what]) => <div key={v} className="contents"><dt className="font-serif italic text-ink">{v}</dt><dd className="m-0">{what}</dd></div>)}
+  </dl>
+)
+
+const SCORE_MATH = (
+  <>
+    <Eq label="Score equals attack plus defence"><V>Score</V><O>=</O><V>A</V><O>+</O><V>D</V></Eq>
+    <Eq label="Attack equals three-star rate, times one minus miss rate, times attacks over 25 capped at 1, times one plus 0.05 times town hall gap">
+      <V>A</V><O>=</O><V>t</V><O>×</O><O>(</O><N>1</N><O>−</O><V>m</V><O>)</O><O>×</O><Capped v="n" cap="25" /><O>×</O><O>(</O><N>1</N><O>+</O><N>0.05</N><V>g</V><O>)</O>
+    </Eq>
+    <Eq label="Defence equals three minus stars taken, over three, times 100, times defences over 20 capped at 1, times one plus 0.05 times town hall minus 15">
+      <V>D</V><O>=</O><Frac top={<><N>3</N><O>−</O><V>s</V></>} bottom={<N>3</N>} /><O>×</O><N>100</N><O>×</O><Capped v="d" cap="20" /><O>×</O><O>(</O><N>1</N><O>+</O><N>0.05</N><V>h</V><O>)</O>
+    </Eq>
+  </>
+)
+const SCORE_KEY = (
+  <Key rows={[
+    ['t', '3★ rate, as a % of attacks made'],
+    ['m', 'Miss rate, missed ÷ (attacks + missed)'],
+    ['n', 'Attacks made'],
+    ['g', 'Average TH you hit − your TH'],
+    ['s', 'Average stars taken off you'],
+    ['d', 'Defences'],
+    ['h', 'Your TH − 15'],
+  ]} />
+)
+
+const TOPICS: Record<string, { title: string; formulas?: string[]; math?: ReactNode; key?: ReactNode; lines?: string[] }> = {
   score: {
     title: 'How the score works',
-    formulas: [
-      'Score = Attack + Defence',
-      'Attack = 3★ rate % × (1 − miss rate) × attacks ÷ 25 × (1 + 5% × TH gap)',
-      'Defence = (3 − avg stars taken) ÷ 3 × 100 × defences ÷ 20 × (1 + 5% × (TH − 15))',
-    ],
+    math: SCORE_MATH,
+    key: SCORE_KEY,
     lines: [
-      'Attacks ÷ 25 and defences ÷ 20 stop at 1. TH gap is the town hall you hit minus your own.',
-      'Covers about the last 3 to 4 months of wars. Half the family is above 50. The top tenth is above 95.',
+      'Covers about the last 3 to 4 months of wars, on a rolling basis. Half the family is above 50. The top tenth is above 95.',
     ],
   },
   who: {
@@ -88,7 +122,7 @@ const TOPICS: Record<string, { title: string; formulas?: string[]; lines?: strin
     title: 'How to read these charts',
     lines: [
       'One point a month, so these only move when a new month comes in.',
-      'Scores and rates cover about the last 3 to 4 months of wars. Hero progress starts in November.',
+      'Scores and rates cover about the last 3 to 4 months of wars, on a rolling basis. Hero progress starts in November.',
     ],
   },
 }
@@ -121,6 +155,8 @@ export default function Info({ topic, extra }: { topic: keyof typeof TOPICS; ext
                 {t.formulas.map((f) => <span key={f} className="text-[13px] font-bold leading-[1.35] tabular-nums text-ink">{f}</span>)}
               </div>
             )}
+            {t.math && <div className="flex flex-col gap-3 rounded-xl bg-[#F6EEDC] px-2 py-3">{t.math}</div>}
+            {t.key}
             {t.lines?.map((l) => <p key={l} className="m-0 text-sm leading-[1.4] text-ink-2">{l}</p>)}
             <button type="button" autoFocus onClick={() => setOpen(false)} className="min-h-11 flex-none cursor-pointer rounded-full border border-line bg-white text-sm font-bold text-ink-2 hover:bg-hover">Got it, chief</button>
           </section>

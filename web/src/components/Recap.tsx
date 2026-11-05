@@ -1,54 +1,65 @@
 import { useEffect, useState } from 'react'
-import { useRecap, type Recap as Month, type RecapPlace } from '../leaders'
-import { playerHref } from '../route'
-import { CLAN } from '../theme'
-import type { ClanName } from '../types'
-import { COLOR } from './ClansBoard'
+import { type LogEvent, useClanLog, useRecap, type Recap as Month, type RecapPlace } from '../leaders'
+import { attacksHref, historyHref, markFromCard, statHref } from '../route'
+import { CLAN, CLANS } from '../theme'
+import type { ClanName, Roster } from '../types'
 import Info from './Info'
-import { MilestoneRow } from './LogTab'
+import { EventRow, MilestoneRow } from './LogTab'
 import { fit, shareCanvas } from './WarRecap'
-import { Eyebrow, GoblinNote, Picker, Th } from './ui'
+import { Eyebrow, GoblinNote, Picker, RowChevron, Th } from './ui'
 
 // One month in the family, to look back on and post in Discord. The month in progress updates as it goes.
 
 const monthName = (m: string) => new Date(`${m}-01T00:00:00Z`).toLocaleDateString('en-GB', { month: 'short', year: 'numeric', timeZone: 'UTC' })
 const count = (n: number) => n.toLocaleString('en-GB')
 const pct = (p: RecapPlace) => `${Math.round((p.rate ?? 0) * 100)}%`
+const dayOf = (at: string) => new Date(at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' })
+const POSTED: Record<LogEvent['kind'], 'joined' | 'left' | 'moved' | null> = { joined: 'joined', rejoined: 'joined', left: 'left', moved: 'moved', visited: null, promoted: null, demoted: null }
 
-function Award({ title, places, value, why, none }: { title: string; places: RecapPlace[]; value: (p: RecapPlace) => string; why: (p: RecapPlace) => string; none: string }) {
+// Each award opens the card behind it, as a row on Stats does.
+function Award({ title, places, value, unit, href }: { title: string; places: RecapPlace[]; value: (p: RecapPlace) => string; unit: (p: RecapPlace) => string; href: (tag: string) => string }) {
   const [top, ...next] = places
+  const open = () => markFromCard(false)
   return (
-    <article className="flex min-w-0 flex-col gap-1.5 rounded-2xl border border-line bg-white px-3.5 py-3">
+    <article className="flex min-w-0 flex-col gap-1 rounded-2xl border border-line bg-white px-3.5 py-3">
       <h3 className="font-display m-0 text-lg font-normal leading-tight text-[#92400E]">{title}</h3>
-      {!top ? <p className="m-0 text-[13px] text-muted">{none}</p> : <>
-        <a href={playerHref(top.tag)} className="flex min-h-11 items-center gap-2.5 text-ink no-underline">
-          <Th th={top.th} />
-          <span className="flex min-w-0 flex-auto flex-col leading-tight">
-            <span className="truncate text-[15px] font-bold">{top.name}</span>
-            <span className="text-xs font-bold" style={{ color: CLAN[top.clan].deep }}>{top.clan}</span>
-          </span>
-          <span className="font-display flex-none text-[26px] tabular-nums">{value(top)}</span>
-        </a>
-        <p className="m-0 text-[13px] text-ink-2">{why(top)}</p>
-        {next.length > 0 && <p className="m-0 truncate text-xs text-muted">Next: {next.map((p) => `${p.name} ${value(p)}`).join(', ')}</p>}
-      </>}
+      <a href={href(top.tag)} onClick={open} className="flex min-h-11 items-center gap-2.5 text-ink no-underline">
+        <Th th={top.th} />
+        <span className="flex min-w-0 flex-auto flex-col leading-tight">
+          <span className="truncate text-[15px] font-bold">{top.name}</span>
+          <span className="text-xs font-bold" style={{ color: CLAN[top.clan].deep }}>{top.clan}</span>
+        </span>
+        <span className="flex flex-none flex-col items-end leading-tight">
+          <span className="font-display text-[26px] leading-none tabular-nums">{value(top)}</span>
+          <span className="text-xs text-muted">{unit(top)}</span>
+        </span>
+        <RowChevron />
+      </a>
+      {next.length > 0 && (
+        <p className="m-0 flex flex-wrap items-center gap-x-1 text-xs text-muted">
+          Next
+          {next.map((p) => <a key={p.tag} href={href(p.tag)} onClick={open} className="flex min-h-8 items-center rounded-full px-1.5 font-semibold text-ink-2 no-underline hover:bg-hover">{p.name}&nbsp;<span className="font-bold tabular-nums">{value(p)}</span></a>)}
+        </p>
+      )}
     </article>
   )
 }
 
-function Race({ title, totals }: { title: string; totals: Record<ClanName, number> }) {
-  const rows = (Object.entries(totals) as [ClanName, number][]).sort((a, b) => b[1] - a[1])
-  const top = Math.max(1, rows[0][1])
+// One row a race, the clans in their usual order, with the month's leader picked out.
+function Races({ rows }: { rows: { title: string; totals: Record<ClanName, number> }[] }) {
   return (
-    <div className="flex min-w-0 flex-col gap-1.5 rounded-2xl border border-line bg-white px-3.5 py-3">
-      <span className="text-sm font-bold text-ink">{title}</span>
-      {rows.map(([clan, n]) => (
-        <div key={clan} className="grid grid-cols-[48px_minmax(0,1fr)_54px] items-center gap-2 text-xs">
-          <span className="font-semibold text-ink-2">{clan}</span>
-          <span className="h-2.5 overflow-hidden rounded-full bg-hair"><span className="ff-grow block h-full rounded-full" style={{ width: `${Math.max((n / top) * 100, 1.5)}%`, background: COLOR[clan] }} /></span>
-          <span className="text-right text-[13px] font-bold tabular-nums">{count(n)}</span>
-        </div>
-      ))}
+    <div className="grid grid-cols-[minmax(0,1fr)_repeat(3,minmax(58px,auto))] items-center rounded-2xl border border-line bg-white px-3.5 py-2 text-sm">
+      <span />
+      {CLANS.map((k) => <span key={k} className="py-1 text-right text-xs font-bold" style={{ color: CLAN[k].deep }}>{k}</span>)}
+      {rows.map(({ title, totals }) => {
+        const top = Math.max(...CLANS.map((k) => totals[k]))
+        return [
+          <span key={title} className="min-w-0 truncate border-t border-hair py-2 font-semibold text-ink">{title}</span>,
+          ...CLANS.map((k) => (
+            <span key={`${title}-${k}`} className={`border-t border-hair py-2 pl-2 text-right tabular-nums ${totals[k] === top && top > 0 ? 'font-extrabold text-ink' : 'text-muted'}`}>{count(totals[k])}</span>
+          )),
+        ]
+      })}
     </div>
   )
 }
@@ -104,7 +115,7 @@ async function saveImage(r: Month) {
 
 const FIT = '[grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr))]'
 
-export default function Recap({ wide }: { wide: boolean }) {
+export default function Recap({ wide, roster }: { wide: boolean; roster: Roster }) {
   const [month, setMonth] = useState<string | null>(null)
   const [visit, setVisit] = useState(0)
   // Coming back to an app left open fetches again, so a new month never reads as the old one.
@@ -122,7 +133,7 @@ export default function Recap({ wide }: { wide: boolean }) {
     <>
       {shown && <Header r={shown} picked={month ?? shown.month} canSave={!missed && !loading} onMonth={setMonth} />}
       {(missed || (!shown && !loading)) ? <GoblinNote box goblin="panic">The Recap's under a shield. Try again shortly.</GoblinNote>
-        : shown ? <div className={`flex flex-col gap-4 ${loading ? 'opacity-60' : ''}`}><Page r={shown} /></div>
+        : shown ? <div className={`flex flex-col gap-4 ${loading ? 'opacity-60' : ''}`}><Page r={shown} roster={roster} /></div>
         : <div aria-busy="true" aria-label="Loading" className="h-64 animate-pulse rounded-2xl bg-well" />}
     </>
   )
@@ -147,11 +158,25 @@ function Header({ r, picked, canSave, onMonth }: { r: Month; picked: string; can
   )
 }
 
-function Page({ r }: { r: Month }) {
+function Page({ r, roster }: { r: Month; roster: Roster }) {
   const { awards, race, comings, milestones } = r
   const { wars, built, gave } = has(r)
   const raced = wars || built || gave
   const came = comings.joined + comings.left + comings.moved > 0
+  const [who, setWho] = useState<'joined' | 'left' | 'moved' | null>(null)
+  useEffect(() => setWho(null), [r.month])
+  // The names behind the counts come from the Log, which has every member event on record.
+  const log = useClanLog()
+  const here = new Set(roster.players.map((p) => p.tag))
+  const people = !who ? [] : (log.data?.events ?? []).filter((e) => e.at.slice(0, 7) === r.month && POSTED[e.kind] === who)
+  const list = [
+    { title: 'Three-Star General', places: awards.three_star, value: pct, unit: (p: RecapPlace) => `${p.three} of ${p.attacks} attacks`, href: (t: string) => attacksHref(t, 30), none: `Nobody reached ${r.min_attacks} attacks` },
+    { title: 'Master Builder', places: awards.builder, value: (p: RecapPlace) => count(p.n ?? 0), unit: () => 'upgrades', href: (t: string) => historyHref(t, 30), none: 'No upgrades' },
+    { title: 'Friend in Need', places: awards.donor, value: (p: RecapPlace) => count(p.n ?? 0), unit: () => 'donated', href: (t: string) => statHref('donations', t), none: 'No donations' },
+  ]
+  // Who won comes first; an award nobody has won yet is a line under them.
+  const won = list.filter((a) => a.places.length).map(({ none: _, ...a }) => a)
+  const none = list.filter((a) => !a.places.length)
   if (!raced && !came) return <GoblinNote box goblin="bored">All quiet in the village</GoblinNote>
   return (
     <>
@@ -159,18 +184,17 @@ function Page({ r }: { r: Month }) {
         <section aria-label="Awards" className="flex flex-col gap-1.5">
           <span className="flex items-center justify-between px-0.5"><Eyebrow>Awards</Eyebrow><Info topic="recap" /></span>
           <div className={`grid gap-2 ${FIT}`}>
-            <Award title="Three-Star General" places={awards.three_star} value={pct} why={(p) => `${p.three} of ${p.attacks} attacks`} none={`Nobody reached ${r.min_attacks} attacks`} />
-            <Award title="Master Builder" places={awards.builder} value={(p) => count(p.n ?? 0)} why={() => 'upgrades'} none="No upgrades" />
-            <Award title="Friend in Need" places={awards.donor} value={(p) => count(p.n ?? 0)} why={() => 'donated'} none="No donations" />
+            {won.map(({ title, ...a }) => <Award key={title} title={title} {...a} />)}
           </div>
+          {none.map(({ title, none: why }) => <p key={title} className="m-0 px-0.5 text-xs text-muted"><span className="font-semibold text-ink-2">{title}</span> · {why}</p>)}
         </section>
         <section aria-label="Clan race" className="flex flex-col gap-1.5">
           <Eyebrow>Clan race</Eyebrow>
-          <div className={`grid gap-2 ${FIT}`}>
-            {wars && <Race title="War stars" totals={race.war_stars} />}
-            {built && <Race title="Upgrades" totals={race.upgrades} />}
-            {gave && <Race title="Donations" totals={race.donations} />}
-          </div>
+          <Races rows={[
+            ...(wars ? [{ title: 'War stars', totals: race.war_stars }] : []),
+            ...(built ? [{ title: 'Upgrades', totals: race.upgrades }] : []),
+            ...(gave ? [{ title: 'Donations', totals: race.donations }] : []),
+          ]} />
         </section>
       </>}
       {came && (
@@ -178,12 +202,18 @@ function Page({ r }: { r: Month }) {
           <Eyebrow>Comings and goings</Eyebrow>
           <div className="grid grid-cols-3 gap-2">
             {([[comings.joined, 'joined'], [comings.left, 'left'], [comings.moved, 'moved']] as const).map(([n, label]) => (
-              <div key={label} className="flex flex-col items-center rounded-2xl border border-line bg-white px-2 py-2.5">
-                <span className="font-display text-2xl tabular-nums">{count(n)}</span>
+              <button key={label} type="button" disabled={!n} aria-expanded={who === label} onClick={() => setWho((w) => (w === label ? null : label))}
+                className={`flex cursor-pointer flex-col items-center rounded-2xl border px-2 py-2.5 disabled:cursor-default ${who === label ? 'border-ink bg-[#F6EEDC]' : 'border-line bg-white'} ${n ? 'hover:bg-hover' : ''}`}>
+                <span className="font-display text-2xl tabular-nums text-ink">{count(n)}</span>
                 <span className="text-xs text-muted">{label}</span>
-              </div>
+              </button>
             ))}
           </div>
+          {who && (log.loading && !people.length ? <div aria-busy="true" aria-label="Loading" className="h-20 animate-pulse rounded-2xl bg-well" /> : (
+            <ol className="m-0 grid list-none grid-cols-1 gap-1 p-0 md:grid-cols-2">
+              {people.map((e) => <li key={`${e.kind}-${e.tag}-${e.at}`} className="min-w-0"><EventRow e={e} onRoster={here.has(e.tag)} /></li>)}
+            </ol>
+          ))}
         </section>
       )}
       {milestones.length > 0 && (
@@ -192,7 +222,7 @@ function Page({ r }: { r: Month }) {
           <ol className="m-0 flex list-none flex-col gap-1 p-0">
             {milestones.map((m) => (
               <li key={`${m.kind}-${m.tag}-${m.at}-${m.unit ?? ''}`} className="min-w-0 bg-[#F7E8BC]">
-                <MilestoneRow tag={m.tag} name={m.name}>{m.kind === 'hero' ? `Maxed ${m.unit}` : `${count(m.stars ?? 0)} war stars`}</MilestoneRow>
+                <MilestoneRow tag={m.tag} name={m.name} day={dayOf(m.at)}>{m.kind === 'hero' ? `Maxed ${m.unit}` : `${count(m.stars ?? 0)} war stars`}</MilestoneRow>
               </li>
             ))}
           </ol>

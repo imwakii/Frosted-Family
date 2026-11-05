@@ -7,6 +7,7 @@ import ClanSheet from './components/ClanSheet'
 import AttackHistory from './components/AttackHistory'
 import CompareSheet from './components/CompareSheet'
 import RivalSheet from './components/RivalSheet'
+import StatSheet from './components/StatSheet'
 import UpgradeHistory from './components/UpgradeHistory'
 import UpgradeSheet from './components/UpgradeSheet'
 import Welcome from './components/Welcome'
@@ -117,7 +118,7 @@ export default function App() {
       ) : route.tab === 'log' ? (
         <>
           <SubNav items={LOG_SUBS} current={route.sub} wide={wide} />
-          {route.sub === 'recap' ? <Recap wide={wide} /> : <LogTab roster={roster} q={q} setQ={setQ} wide={wide} />}
+          {route.sub === 'recap' ? <Recap wide={wide} roster={roster} /> : <LogTab roster={roster} q={q} setQ={setQ} wide={wide} />}
         </>
       ) : route.tab === 'explore' ? (
         <ExploreTab sub={route.sub} kind={route.kind} q={q} setQ={setQ} wide={wide} />
@@ -140,7 +141,7 @@ export default function App() {
         <a href="https://supercell.com/en/fan-content-policy/" target="_blank" rel="noopener noreferrer" className="text-faint underline hover:text-muted">Fan Content Policy</a>
       </footer>
 
-      {roster && back && !route.player && !route.upgrade && !route.compare && !route.history && !route.attacks && (
+      {roster && back && !route.player && !route.upgrade && !route.compare && !route.history && !route.attacks && !route.stat && (
         <button type="button" onClick={returnToCard}
           className={`ff-rise fixed left-4 z-20 flex min-h-11 max-w-[60vw] cursor-pointer items-center gap-1.5 rounded-full border-0 bg-ink px-4 text-sm font-bold text-white shadow-[0_4px_14px_rgba(43,33,20,.3)] ${wide ? 'bottom-6' : 'bottom-[72px]'}`}>
           <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" className="flex-none"><path d="M15 6l-6 6 6 6" /></svg>
@@ -154,9 +155,10 @@ export default function App() {
       {roster && route.player &&<PlayerSheet tag={route.player} roster={roster} wide={wide} onClose={closeSheet} />}
       {roster && route.clan && !route.player && <ClanSheet clan={route.clan} roster={roster} wide={wide} onClose={closeSheet} />}
       {roster && route.compare && !route.player && <CompareSheet roster={roster} {...route.compare} wide={wide} onClose={closeSheet} />}
-      {route.upgrade && !route.player && <UpgradeSheet {...route.upgrade} wide={wide} onClose={closeSheet} />}
+      {route.upgrade && !route.player && <UpgradeSheet key={`${route.upgrade.cat}-${route.upgrade.tag}`} {...route.upgrade} wide={wide} onClose={closeSheet} />}
       {roster && route.attacks && !route.player && <AttackHistory key={route.attacks.tag} {...route.attacks} roster={roster} wide={wide} onClose={closeSheet} />}
       {roster && route.history && !route.player && <UpgradeHistory key={route.history.tag} {...route.history} roster={roster} wide={wide} onClose={closeSheet} />}
+      {route.stat && !route.player && <StatSheet key={`${route.stat.kind}-${route.stat.tag}`} {...route.stat} wide={wide} onClose={closeSheet} />}
       {route.rival && !route.player && <RivalSheet clan={route.rival.clan} tag={route.rival.tag} wide={wide} onClose={closeSheet} />}
 
       {!wide && (

@@ -20,7 +20,7 @@ import { useYou, YouTag } from './You'
 type View = 'all' | 'members' | 'upgrades'
 const DAYS_SHOWN = 2
 const VIEWS: { id: View; label: string }[] = [{ id: 'all', label: 'All' }, { id: 'members', label: 'Members' }, { id: 'upgrades', label: 'Upgrades' }]
-const KINDS: { id: UpgradeCategory | 'all'; label: string }[] = [
+export const KINDS: { id: UpgradeCategory | 'all'; label: string }[] = [
   { id: 'all', label: 'All' }, { id: 'hero', label: 'Heroes' }, { id: 'equipment', label: 'Equipment' }, { id: 'troop', label: 'Troops' },
   { id: 'spell', label: 'Spells' }, { id: 'pet', label: 'Pets' }, { id: 'siege', label: 'Sieges' }, { id: 'town_hall', label: 'Town hall' },
 ]
@@ -108,9 +108,11 @@ const change = (u: Upgrade) => (u.change === 'unlock'
   ? <b className="font-bold text-ink">unlocked</b>
   : <>{u.from} → <b className="font-bold text-ink">{u.to}</b></>)
 
+const name = (u: Upgrade) => (u.category === 'town_hall' ? 'Town Hall' : u.unit)
+
 const ROW = 'flex min-h-[52px] w-full items-center gap-3 px-3.5 py-1.5 text-left text-ink no-underline'
 
-function EventRow({ e, onRoster }: { e: LogEvent; onRoster: boolean }) {
+export function EventRow({ e, onRoster }: { e: LogEvent; onRoster: boolean }) {
   const m = MARK[e.kind]
   const cls = `flex min-h-10 w-full items-center gap-2 text-[13px] text-ink no-underline ${m.point?.cls ?? 'px-3'}`
   // The word says what happened in its colour; only a new town hall gets a band.
@@ -129,12 +131,12 @@ function EventRow({ e, onRoster }: { e: LogEvent; onRoster: boolean }) {
     : <div className={cls} style={style}>{body}</div>
 }
 
-export function MilestoneRow({ tag, name, at, children }: { tag: string; name: string | null; at?: string; children: ReactNode }) {
+export function MilestoneRow({ tag, name, at, day, children }: { tag: string; name: string | null; at?: string; day?: string; children: ReactNode }) {
   return (
     <a href={playerHref(tag)} className="flex min-h-10 w-full items-center gap-2 px-3 text-[13px] text-ink no-underline hover:brightness-95">
       <span className="min-w-0 flex-auto truncate font-semibold"><YouTag tag={tag} />{name}</span>
       <span className="flex-none whitespace-nowrap text-xs font-semibold text-[#92400E]">★ {children}</span>
-      {at && <span className="flex-none whitespace-nowrap text-[11px] font-semibold text-faint">{ago(at)}</span>}
+      {(day || at) && <span className="flex-none whitespace-nowrap text-[11px] font-semibold text-faint">{day ?? ago(at!)}</span>}
     </a>
   )
 }
@@ -242,7 +244,7 @@ function UpgradeChart({ counts, clan, kind }: { counts: UpgradeCount[]; clan: Cl
   )
 }
 
-function UpgradeRow({ ups, showClan, open, onToggle }: { ups: Upgrade[]; showClan: boolean; open: boolean; onToggle: () => void }) {
+function UpgradeRow({ ups, showClan, kind, open, onToggle }: { ups: Upgrade[]; showClan: boolean; kind: UpgradeCategory | null; open: boolean; onToggle: () => void }) {
   const u = ups[0]
   const who = (
     <span className="flex min-w-0 items-center gap-1.5">
@@ -251,27 +253,14 @@ function UpgradeRow({ ups, showClan, open, onToggle }: { ups: Upgrade[]; showCla
     </span>
   )
   const when = <span className="flex-none whitespace-nowrap text-xs font-semibold text-faint">{ago(u.at)}</span>
-  if (ups.length === 1) {
-    return (
-      <a href={playerHref(u.tag)} className={`${ROW} hover:bg-hover`}>
-        <UpgradeIcon u={u} />
-        <span className="flex min-w-0 flex-auto flex-col">
-          {who}
-          <span className="truncate text-[13px] leading-[1.3] text-muted">{u.category === 'town_hall' ? 'Town Hall' : u.unit} {change(u)}</span>
-        </span>
-        {when}
-        {/* The same arrow as a group's, at every width, so each row's time lines up: this one opens the card. */}
-        <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#A3957C" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" className="flex-none"><path d="M9 6l6 6-6 6" /></svg>
-      </a>
-    )
-  }
+  // One upgrade or many, a row opens in place the same way: what they upgraded, then where to go next.
   return (
     <>
       <button type="button" aria-expanded={open} onClick={onToggle} className={`${ROW} cursor-pointer border-0 bg-transparent hover:bg-hover`}>
         <UpgradeIcon u={u} />
         <span className="flex min-w-0 flex-auto flex-col">
           {who}
-          <span className="truncate text-[13px] leading-[1.3] text-muted">{ups.length} upgrades</span>
+          <span className="truncate text-[13px] leading-[1.3] text-muted">{ups.length === 1 ? <>{name(u)} {change(u)}</> : `${ups.length} upgrades`}</span>
         </span>
         {when}
         <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#A3957C" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" className={`flex-none transition-transform ${open ? 'rotate-90' : ''}`}><path d="M9 6l6 6-6 6" /></svg>
@@ -281,13 +270,16 @@ function UpgradeRow({ ups, showClan, open, onToggle }: { ups: Upgrade[]; showCla
           <ul className="m-0 flex list-none flex-col rounded-xl border border-line p-0">
             {ups.map((x, i) => (
               <li key={`${x.unit}-${x.to}`} className={`flex min-h-10 items-center gap-2.5 px-2.5 py-1 text-[13px] text-muted ${i ? 'border-t border-hair' : ''}`}>
-                <UnitIcon name={x.unit} size={26} />
-                <span className="min-w-0 flex-auto truncate">{x.unit}</span>
+                {x.category === 'town_hall' ? <img src={thIcon(x.to) ?? undefined} alt="" width={26} height={26} className="size-[26px] flex-none object-contain" /> : <UnitIcon name={x.unit} size={26} />}
+                <span className="min-w-0 flex-auto truncate">{name(x)}</span>
                 <span className="flex-none tabular-nums">{change(x)}</span>
               </li>
             ))}
           </ul>
-          <a href={playerHref(u.tag)} className="flex min-h-9 items-center justify-center rounded-full text-[13px] font-bold text-action no-underline hover:bg-hover">View card</a>
+          <div className="grid grid-cols-2 gap-1">
+            <a href={historyHref(u.tag, 30, kind)} onClick={() => markFromCard(false)} className="flex min-h-9 items-center justify-center rounded-full text-[13px] font-bold text-action no-underline hover:bg-hover">Their upgrades</a>
+            <a href={playerHref(u.tag)} className="flex min-h-9 items-center justify-center rounded-full text-[13px] font-bold text-action no-underline hover:bg-hover">Full card</a>
+          </div>
         </div>
       )}
     </>
@@ -314,7 +306,7 @@ function MostUpgrades({ board, clan, kind, nq }: { board: UpgradeLeader[]; clan:
         <ol className="m-0 list-none rounded-2xl border border-line bg-white py-1">
           {shown.map((r, i) => (
             <li key={r.tag}>
-              <a href={historyHref(r.tag, days)} onClick={() => markFromCard(false)} data-tag={r.tag} className={`flex min-h-[52px] items-center gap-3 px-3.5 py-1.5 text-ink no-underline hover:bg-hover ${i ? 'border-t border-hair' : ''}`}>
+              <a href={historyHref(r.tag, days, kind === 'all' ? null : kind)} onClick={() => markFromCard(false)} data-tag={r.tag} className={`flex min-h-[52px] items-center gap-3 px-3.5 py-1.5 text-ink no-underline hover:bg-hover ${i ? 'border-t border-hair' : ''}`}>
                 <span className="w-6 flex-none text-right text-xs font-bold tabular-nums text-faint">{ranked.findIndex((x) => n(x) === n(r)) + 1}</span>
                 <Th th={r.th} />
                 <span className="flex min-w-0 flex-auto flex-col gap-1">
@@ -421,7 +413,7 @@ export default function LogTab({ roster, q, setQ, wide }: { roster: Roster; q: s
                 <ol className="m-0 list-none divide-y divide-hair rounded-2xl border border-line bg-white py-1">
                   {groups.map(([key, rows]) => {
                     const id = `${d}-${key}`
-                    return <li key={id}><UpgradeRow ups={rows} showClan={clan === 'All'} open={open === id} onToggle={() => setOpen((o) => (o === id ? null : id))} /></li>
+                    return <li key={id}><UpgradeRow ups={rows} showClan={clan === 'All'} kind={view === 'upgrades' && kind !== 'all' ? kind : null} open={open === id} onToggle={() => setOpen((o) => (o === id ? null : id))} /></li>
                   })}
                 </ol>
               )}

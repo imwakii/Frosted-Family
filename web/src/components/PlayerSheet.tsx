@@ -1,61 +1,35 @@
-import { type ReactNode, useEffect, useRef, useState } from 'react'
+import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { sheetVisit, useSheetMotion } from '../sheetMotion'
 import { loadPlayerAll, type PlayerCard, playerNow, stillToMove } from '../data'
-import { BADGES, TIER_LOOK, TIERS } from '../badges'
+import { BADGES, TIER_LOOK } from '../badges'
 import { ago } from '../leaders'
 import { CATS } from '../explore'
-import { attacksHref, compareHref, go, historyHref, markFromCard, playerHref, upgradeHref } from '../route'
+import { attacksHref, compareHref, go, historyHref, markFromCard, markStatFromCard, playerHref, statHref, upgradeHref } from '../route'
 import Info from './Info'
 import { StarBurst, useCountUp, useNewIds, useOnce } from './Motion'
 import { Bar } from './OverallBoard'
+import { SheetTitle } from './FitName'
 import { useYou } from './You'
 import { CLAN, cycleLong, cycleShort, fmtScore, fmtWindow } from '../theme'
 import type { Player, Roster } from '../types'
 import { Arrow, PlayDays, RowChevron, Stars, StatusPill, Th, UnitIcon } from './ui'
 
 // Explained on hover with a mouse, and on tap on a phone. Tapping elsewhere closes it.
-function Badges({ badges, fresh = [] }: { badges: NonNullable<PlayerCard['badges']>; fresh?: string[] }) {
-  const [hover, setHover] = useState<string | null>(null)
-  const [pinned, setPinned] = useState<string | null>(null)
-  const open = badges.find((b) => b.id === (hover ?? pinned))
-  const box = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    if (!pinned) return
-    const away = (e: PointerEvent) => { if (!box.current?.contains(e.target as Node)) setPinned(null) }
-    document.addEventListener('pointerdown', away)
-    return () => document.removeEventListener('pointerdown', away)
-  }, [pinned])
+let scrolled: { tag: string; top: number; visit: number } | null = null
+
+// Each badge opens the badges card with that badge marked; Back returns here.
+function Badges({ tag, badges, fresh = [] }: { tag: string; badges: NonNullable<PlayerCard['badges']>; fresh?: string[] }) {
   return (
-    <div ref={box} className="relative">
-      <ul aria-label="Badges" className="m-0 flex list-none flex-wrap gap-1.5 p-0">
-        {badges.map((b) => (
-          <li key={b.id}>
-            <button type="button" aria-expanded={open?.id === b.id}
-              onPointerEnter={(e) => { if (e.pointerType === 'mouse') setHover(b.id) }}
-              onPointerLeave={(e) => { if (e.pointerType === 'mouse') setHover(null) }}
-              onClick={() => setPinned((p) => (p === b.id ? null : b.id))}
-              className={`${fresh.includes(`${b.id}-${b.tier}`) ? 'ff-shine' : ''} flex min-h-9 cursor-pointer items-center gap-1.5 rounded-full border px-3 text-[13px] font-bold ${TIER_LOOK[b.tier ?? 'silver'][open?.id === b.id ? 'on' : 'chip']}`}>
-              {BADGES[b.id]?.label ?? b.label}
-            </button>
-          </li>
-        ))}
-      </ul>
-      {open && (
-        <div role="tooltip" className="absolute inset-x-0 top-full z-10 mt-1.5 flex flex-col gap-0.5 rounded-xl bg-ink px-3 py-2.5 text-white shadow-[0_8px_24px_rgba(43,33,20,.3)]">
-          <span className="text-[13px] font-bold">{BADGES[open.id]?.label ?? open.label}{open.tier && <span style={{ color: TIER_LOOK[open.tier].ink }}> · {TIER_LOOK[open.tier].name}</span>}</span>
-          {BADGES[open.id] && <span className="text-xs">{BADGES[open.id].means}</span>}
-          {open.tier && BADGES[open.id] && (
-            <span className="mt-0.5 grid grid-cols-3 gap-1 text-[11px]">
-              {TIERS.map((t, i) => (
-                <span key={t} className={`rounded-md px-1.5 py-1 text-center ${t === open.tier ? 'bg-white/15 font-bold' : 'text-white/60'}`} style={t === open.tier ? { color: TIER_LOOK[t].ink } : undefined}>
-                  {TIER_LOOK[t].name}<br />{BADGES[open.id].ladder[i]}
-                </span>
-              ))}
-            </span>
-          )}
-          <span className="text-xs font-semibold" style={{ color: open.tier ? TIER_LOOK[open.tier].ink : '#FDE68A' }}>{open.detail}</span>
-        </div>
-      )}
-    </div>
+    <ul aria-label="Badges" className="m-0 flex list-none flex-wrap gap-1.5 p-0">
+      {badges.map((b) => (
+        <li key={b.id}>
+          <a href={statHref('badges', tag, b.id)} onClick={() => markStatFromCard(true)}
+            className={`${fresh.includes(`${b.id}-${b.tier}`) ? 'ff-shine' : ''} flex min-h-9 items-center gap-1.5 rounded-full border px-3 text-[13px] font-bold no-underline ${TIER_LOOK[b.tier ?? 'silver'].chip}`}>
+            {BADGES[b.id]?.label ?? b.label}
+          </a>
+        </li>
+      ))}
+    </ul>
   )
 }
 
@@ -148,10 +122,21 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
   const [extra, setExtra] = useState<Partial<Player> | null>(() => playerNow(tag)?.extra ?? null)
   const [card, setCard] = useState<PlayerCard | null>(() => playerNow(tag)?.card ?? null)
   const [cardLoading, setCardLoading] = useState(() => !playerNow(tag))
-  const { yous, addYou, removeYou } = useYou()
+  const { yous } = useYou()
   const isMine = yous.includes(tag)
   const accounts = roster.players.filter((x) => yous.includes(x.tag))
   const close = useRef<HTMLButtonElement>(null)
+  const motion = useSheetMotion()
+  // Back from a card opened from this one lands where the reader left it.
+  const body = useRef<HTMLElement>(null)
+  const [returnTo] = useState(() => (motion.sheet === '' && scrolled?.tag === tag && scrolled.visit === sheetVisit() ? scrolled.top : 0))
+  const restored = useRef(false)
+
+  useLayoutEffect(() => {
+    if (cardLoading || restored.current) return
+    restored.current = true
+    if (body.current && returnTo) body.current.scrollTop = returnTo
+  }, [cardLoading, returnTo])
 
   useEffect(() => {
     let live = true
@@ -165,7 +150,7 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
 
   useEffect(() => {
     const prev = document.activeElement as HTMLElement | null
-    close.current?.focus()
+    close.current?.focus({ preventScroll: true })
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', onKey)
     document.body.style.overflow = 'hidden'
@@ -192,32 +177,14 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
 
   return (
     <div className="fixed inset-0 z-40">
-      <div className="ff-fade absolute inset-0 bg-[rgba(43,33,20,.35)]" onClick={onClose} aria-hidden="true" />
-      <section role="dialog" aria-modal="true" aria-label={p?.name ?? 'Player'}
+      <div className={`${motion.fade} absolute inset-0 bg-[rgba(43,33,20,.35)]`} onClick={onClose} aria-hidden="true" />
+      <section ref={body} onScroll={(e) => { scrolled = { tag, top: e.currentTarget.scrollTop, visit: sheetVisit() } }} role="dialog" aria-modal="true" aria-label={p?.name ?? 'Player'}
         className={wide
-          ? 'ff-sheet absolute left-1/2 top-1/2 flex h-[min(720px,90vh)] w-[min(440px,calc(100%-32px))] -translate-x-1/2 -translate-y-1/2 flex-col gap-4 overflow-auto rounded-[22px] bg-white p-6 shadow-[0_20px_50px_rgba(43,33,20,.25)]'
-          : 'ff-sheet absolute inset-x-0 bottom-0 flex h-[calc(100dvh-64px)] flex-col gap-4 overflow-auto rounded-t-[22px] bg-white px-5 pb-[max(24px,env(safe-area-inset-bottom))] pt-2.5 shadow-[0_-8px_30px_rgba(43,33,20,.18)]'}>
+          ? `${motion.sheet} absolute left-1/2 top-1/2 flex h-[min(720px,90vh)] w-[min(440px,calc(100%-32px))] -translate-x-1/2 -translate-y-1/2 flex-col gap-4 overflow-auto [scrollbar-gutter:stable] rounded-[22px] bg-white p-6 shadow-[0_20px_50px_rgba(43,33,20,.25)]`
+          : `${motion.sheet} absolute inset-x-0 bottom-0 flex h-[calc(100dvh-64px)] flex-col gap-4 overflow-auto [scrollbar-gutter:stable] rounded-t-[22px] bg-white px-5 pb-[max(24px,env(safe-area-inset-bottom))] pt-2.5 shadow-[0_-8px_30px_rgba(43,33,20,.18)]`}>
         {!wide && <span aria-hidden="true" className="h-[5px] w-10 flex-none self-center rounded-[3px] bg-[#D5C8AC]" />}
         <div className="flex items-center gap-3">
-          {p && <Th th={p.th} size="lg" />}
-          <div className="flex min-w-0 flex-auto flex-col">
-            <span className="flex min-w-0 items-center gap-2">
-              <span className="font-display min-w-0 truncate text-[26px] leading-tight">{p?.name ?? 'Not on the roster'}</span>
-              {p && isMine && (
-                <button type="button" aria-label="This is not me" title="This is not me" onClick={() => removeYou(tag)}
-                  className="relative before:absolute before:-inset-x-1 before:-inset-y-2 before:content-[''] flex min-h-9 flex-none cursor-pointer items-center gap-1 whitespace-nowrap rounded-full border-0 bg-ink px-3 text-[13px] font-bold text-white">
-                  You<span aria-hidden="true" className="text-[13px] leading-none opacity-70">×</span>
-                </button>
-              )}
-              {p && !isMine && (
-                <button type="button" onClick={() => addYou(tag)}
-                  className="relative before:absolute before:-inset-x-1 before:-inset-y-2 before:content-[''] min-h-9 flex-none cursor-pointer whitespace-nowrap rounded-full border-0 bg-[#EFE6D2] px-3 text-[13px] font-bold text-ink-2 hover:bg-well">
-                  {yous.length ? 'Also me' : 'This is me'}
-                </button>
-              )}
-            </span>
-            <span className="truncate text-[13px] text-faint">{p ? `${p.inClan ?? p.clan} · ` : ''}{tag}</span>
-          </div>
+          <SheetTitle th={p?.th} name={p?.name ?? 'Not on the roster'} sub={<>{p ? `${p.inClan ?? p.clan} · ` : ''}{tag}</>} />
           {/* The picker lists your own accounts first, so comparing with yourself stays one tap and anyone else is a search away. */}
           {p && (
             <a href={compareHref(tag)} onClick={() => markFromCard(true)} aria-label="Compare with another player" title="Compare with another player"
@@ -296,7 +263,7 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
             <div className="ff-fade flex flex-none flex-col gap-4">
             <Trend p={p} cycles={roster.cycles} />
             <StarBurst show={reached} />
-            {card?.badges?.length ? <Badges badges={card.badges} fresh={freshBadges} /> : null}
+            {card?.badges?.length ? <Badges tag={tag} badges={card.badges} fresh={freshBadges} /> : null}
             {isMine && card?.next_badge && (
               <div className="flex flex-col gap-1.5 rounded-xl bg-[#F6EEDC] px-3 py-2.5">
                 <span className="flex items-baseline justify-between gap-2">

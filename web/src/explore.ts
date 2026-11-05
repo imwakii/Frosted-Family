@@ -37,12 +37,12 @@ function normalise(d: Raw): Matrix {
 
 // An answer is kept a few minutes, so moving between boards is instant. A failed load isn't kept, so the next look tries again.
 const KEEP_MS = 5 * 60_000
-type Kept<V> = Map<string, { at: number; loading: Promise<V | null> }>
+type Kept<V> = Map<string, { at: number; loading: Promise<V | null>; value?: V }>
 
 function keep<V>(store: Kept<V>, key: string, load: () => Promise<V | null>) {
   const had = store.get(key)
   if (had && Date.now() - had.at < KEEP_MS) return had.loading
-  const entry = { at: Date.now(), loading: load().then((v) => { if (!v && store.get(key) === entry) store.delete(key); return v }) }
+  const entry = { at: Date.now(), loading: load().then((v) => { if (!v && store.get(key) === entry) store.delete(key); if (v) (entry as { value?: V }).value = v; return v }) }
   store.set(key, entry)
   return entry.loading
 }
@@ -58,16 +58,24 @@ function fetchMatrix(cat: Cat): Promise<Matrix | null> {
       .catch(() => null)))
 }
 
+function matrixNow(cat: Cat) {
+  const data = cache.get(cat)?.value ?? null
+  return { cat, data, loading: !data }
+}
+
 export function useMatrix(cat: Cat) {
-  const [state, setState] = useState<{ cat: Cat; data: Matrix | null; loading: boolean }>({ cat, data: null, loading: true })
+  const [state, setState] = useState<{ cat: Cat; data: Matrix | null; loading: boolean }>(() => matrixNow(cat))
   useEffect(() => {
     let live = true
-    setState({ cat, data: null, loading: true })
+    setState(matrixNow(cat))
     fetchMatrix(cat).then((data) => { if (live) setState({ cat, data, loading: false }) })
     return () => { live = false }
   }, [cat])
-  return state.cat === cat ? state : { cat, data: null, loading: true }
+  return state.cat === cat ? state : matrixNow(cat)
 }
+
+/** Loads every category ahead of time, so switching between them never waits. */
+export const preloadMatrices = () => { CATS.forEach((c) => { void fetchMatrix(c.id) }) }
 
 /** A share to one decimal, rounded down, so 100.0% only ever means maxed. Places go by this figure, so a tie always reads as one. */
 export const tenth = (v: number) => Math.floor(v * 10) / 10

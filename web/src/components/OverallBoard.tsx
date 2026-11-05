@@ -1,7 +1,7 @@
 import { YouTag } from './You'
 import { useMemo, useState } from 'react'
 import { CATS, type Cat, competitionRanks, type Matrix, progress, useMatrix, tenth } from '../explore'
-import { go, playerHref } from '../route'
+import { go, statHref } from '../route'
 import { CLAN, CLANS } from '../theme'
 import type { ClanName } from '../types'
 import { COLOR } from './ClansBoard'
@@ -10,10 +10,10 @@ import { CategoryNav, ClanFilter, Empty, useClanPick } from './ExploreTab'
 import { ShowAll, topRows, useShowAll } from './Top'
 import { KEY_ROW, Star, Th, RowChevron } from './ui'
 
-type Row = { tag: string; name: string; clan: ClanName; th: number | null; overall: number; cats: Partial<Record<Cat, number>> }
+export type Row = { tag: string; name: string; clan: ClanName; th: number | null; overall: number; cats: Partial<Record<Cat, number>> }
 
 // Each category counts equally, so hero levels (max ~100) don't drown out spells (max ~12).
-function combine(boards: (Matrix | null)[]): Row[] {
+export function combine(boards: (Matrix | null)[]): Row[] {
   const rows = new Map<string, Row>()
   boards.forEach((m) => {
     if (!m) return
@@ -29,7 +29,7 @@ function combine(boards: (Matrix | null)[]): Row[] {
 }
 
 const pct = (v: number | undefined) => (v === undefined ? '—' : `${Math.round(v)}%`)
-const pct1 = (v: number) => `${tenth(v).toFixed(1)}%`
+export const pct1 = (v: number) => `${tenth(v).toFixed(1)}%`
 
 // The one progress bar on the Stats boards, in the clan's soft colour.
 export function Bar({ v, color }: { v: number; color: string }) {
@@ -55,7 +55,7 @@ export default function OverallBoard({ q, setQ, wide }: { q: string; setQ: (v: s
   const asOf = boards.map((b) => b.data?.as_of).filter((v): v is string => !!v).sort().pop()
   const stamp = asOf ? `${new Date(asOf).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'UTC' })} UTC` : null
   const listed = wide ? shown : topRows(shown, (r) => r.tag, top.yous, top.all || !!nq)
-  const enter = () => { if (shown[0]) go.to(playerHref(shown[0].tag)) }
+  const enter = () => { if (shown[0]) go.to(statHref('overall', shown[0].tag)) }
   const cols: { id: Cat | 'overall'; label: string }[] = [{ id: 'overall', label: 'Overall' }, ...CATS.map((c) => ({ id: c.id, label: c.label }))]
 
   const board = !all.length ? <Empty loading={loading} /> : wide ? (
@@ -77,12 +77,12 @@ export default function OverallBoard({ q, setQ, wide }: { q: string; setQ: (v: s
         </thead>
         <tbody>
           {shown.map((r) => (
-            <tr key={r.tag} onClick={() => go.to(playerHref(r.tag))} className="group cursor-pointer">
+            <tr key={r.tag} onClick={() => go.to(statHref('overall', r.tag))} className="group cursor-pointer">
               <td className="sticky left-0 z-[1] border-b border-hair bg-white py-1.5 pl-4 pr-1 font-bold tabular-nums text-faint group-hover:bg-hover">{place.get(r) ?? '—'}</td>
               <td className="sticky left-12 z-[1] whitespace-nowrap border-b border-hair bg-white px-2 py-1.5 group-hover:bg-hover">
                 <span className="flex items-center gap-2.5">
                   <Th th={r.th} />
-                  <a href={playerHref(r.tag)} onClick={(e) => e.stopPropagation()} className="font-semibold text-ink no-underline"><YouTag tag={r.tag} />{r.name}</a>
+                  <a href={statHref('overall', r.tag)} onClick={(e) => e.stopPropagation()} className="font-semibold text-ink no-underline"><YouTag tag={r.tag} />{r.name}</a>
                   {clan === 'All' && <span className="text-[11px] font-bold" style={{ color: CLAN[r.clan].deep }}>{r.clan}</span>}
                 </span>
               </td>
@@ -99,7 +99,7 @@ export default function OverallBoard({ q, setQ, wide }: { q: string; setQ: (v: s
     <ol className="m-0 list-none rounded-2xl border border-line bg-white py-1">
       {listed.map((r, i) => (
         <li key={r.tag}>
-          <a href={playerHref(r.tag)} className={`flex min-h-[52px] items-center gap-3 px-3.5 py-1.5 text-ink no-underline hover:bg-hover ${i ? 'border-t border-hair' : ''}`}>
+          <a href={statHref('overall', r.tag)} className={`flex min-h-[52px] items-center gap-3 px-3.5 py-1.5 text-ink no-underline hover:bg-hover ${i ? 'border-t border-hair' : ''}`}>
             <span className="w-6 flex-none text-right text-xs font-bold tabular-nums text-faint">{place.get(r) ?? '—'}</span>
             <Th th={r.th} />
             <span className="flex min-w-0 flex-auto flex-col gap-1">

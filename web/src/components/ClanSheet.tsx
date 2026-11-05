@@ -1,4 +1,5 @@
 import { type ReactNode, useEffect, useMemo, useRef } from 'react'
+import { useSheetMotion } from '../sheetMotion'
 import { thIcon, useClans } from '../clash'
 import { useWarBoard } from '../explore'
 import { setWarClan, useCwlGroups } from '../leaders'
@@ -16,7 +17,9 @@ const pct = (v: number | null) => (v === null ? '—' : `${Math.round(v)}%`)
 const per = (a: number, b: number) => (b ? a / b : null)
 
 /** The sheet a clan's card sits in: ours or a league group clan's. */
+// Every sheet is the player card's height, whatever is inside, so moving between them never shifts the card.
 export function CardSheet({ label, wide, onClose, head, children }: { label: string; wide: boolean; onClose: () => void; head: ReactNode; children: ReactNode }) {
+  const motion = useSheetMotion()
   const close = useRef<HTMLButtonElement>(null)
   // Runs once per sheet, so a page refresh behind it can't pull someone reading further down back to the top.
   const latest = useRef(onClose)
@@ -33,11 +36,11 @@ export function CardSheet({ label, wide, onClose, head, children }: { label: str
 
   return (
     <div className="fixed inset-0 z-40">
-      <div className="ff-fade absolute inset-0 bg-[rgba(43,33,20,.35)]" onClick={onClose} aria-hidden="true" />
+      <div className={`${motion.fade} absolute inset-0 bg-[rgba(43,33,20,.35)]`} onClick={onClose} aria-hidden="true" />
       <section role="dialog" aria-modal="true" aria-label={label}
         className={wide
-          ? 'ff-sheet absolute left-1/2 top-1/2 flex max-h-[min(720px,90vh)] w-[min(440px,calc(100%-32px))] -translate-x-1/2 -translate-y-1/2 flex-col gap-4 overflow-auto rounded-[22px] bg-white p-6 shadow-[0_20px_50px_rgba(43,33,20,.25)]'
-          : 'ff-sheet absolute inset-x-0 bottom-0 flex max-h-[calc(100dvh-64px)] flex-col gap-4 overflow-auto rounded-t-[22px] bg-white px-5 pb-[max(24px,env(safe-area-inset-bottom))] pt-2.5 shadow-[0_-8px_30px_rgba(43,33,20,.18)]'}>
+          ? `${motion.sheet} absolute left-1/2 top-1/2 flex h-[min(720px,90vh)] w-[min(440px,calc(100%-32px))] -translate-x-1/2 -translate-y-1/2 flex-col gap-4 overflow-auto [scrollbar-gutter:stable] rounded-[22px] bg-white p-6 shadow-[0_20px_50px_rgba(43,33,20,.25)]`
+          : `${motion.sheet} absolute inset-x-0 bottom-0 flex h-[calc(100dvh-64px)] flex-col gap-4 overflow-auto [scrollbar-gutter:stable] rounded-t-[22px] bg-white px-5 pb-[max(24px,env(safe-area-inset-bottom))] pt-2.5 shadow-[0_-8px_30px_rgba(43,33,20,.18)]`}>
         {!wide && <span aria-hidden="true" className="h-[5px] w-10 flex-none self-center rounded-[3px] bg-[#D5C8AC]" />}
         <div className="flex items-center gap-3">
           {head}
@@ -137,7 +140,7 @@ export default function ClanSheet({ clan, roster, wide, onClose }: { clan: ClanN
         </section>
 
         <button type="button" onClick={() => { setWarClan(clan); go.to('#/war/log') }}
-          className="flex min-h-11 w-full cursor-pointer items-center justify-between gap-2 rounded-xl border-0 bg-[#F6EEDC] px-3 text-left text-sm font-bold text-ink hover:bg-well">
+          className="mt-auto flex min-h-11 w-full flex-none cursor-pointer items-center justify-between gap-2 rounded-xl border-0 bg-[#F6EEDC] px-3 text-left text-sm font-bold text-ink hover:bg-well">
           War log
           <RowChevron />
         </button>

@@ -31,8 +31,8 @@ const SUBS = [
   { id: 'history', label: 'History', href: '#/stats/history' },
 ]
 
-type Gift = { donated: number; received: number } | null
-type Cap = { contributed: number | null; raid_loot: number | null; raid_attacks: number | null } | null
+export type Gift = { donated: number; received: number } | null
+export type Cap = { contributed: number | null; raid_loot: number | null; raid_attacks: number | null } | null
 const DONATION_COLS: RankCol[] = [
   { key: 'donated', label: 'Donated', value: (r) => (r.donations as Gift)?.donated ?? null },
   { key: 'received', label: 'Received', value: (r) => (r.donations as Gift)?.received ?? null },
