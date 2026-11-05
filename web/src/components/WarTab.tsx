@@ -29,6 +29,8 @@ const left = (ms: number) => {
   return m < 60 ? `${m}m` : `${Math.floor(m / 60)}h ${m % 60}m`
 }
 const ENEMY = '#D5C8AC'
+// On a wide screen the day strip sits where it does on the CWL tab, with the clan switch level with it on the right. Kept this tall with no strip too, so the switch stays put.
+const WIDE_ROW = 'flex min-h-[70px] items-end justify-between gap-4'
 const ENEMY_ROW = '#F1E8D3'
 
 // Where each spark flies from the point of impact, in px, and its colour.
@@ -372,7 +374,7 @@ export default function WarTab({ wide, roster, sub, opened, q, setQ }: { wide: b
     const logClan = (linkClan as ClanName) ?? clan?.clan ?? pick ?? 'Fire'
     return (
       <main className={wide ? 'mx-auto flex max-w-[1360px] flex-col gap-4 px-[clamp(16px,3vw,32px)] pb-12 pt-5' : 'flex flex-col gap-3 px-4 pb-6 pt-1'}>
-        <div className={wide ? '' : STICKY_SWITCH}><ClanSwitch value={logClan} onPick={(c) => { setWarClan(c); go.to('#/war/log') }} /></div>
+        <div className={wide ? WIDE_ROW : STICKY_SWITCH}><div className={wide ? 'ml-auto w-[clamp(270px,30vw,400px)] flex-none' : ''}><ClanSwitch value={logClan} onPick={(c) => { setWarClan(c); go.to('#/war/log') }} /></div></div>
         {linkKey ? (
           <>
             <a href="#/war/log" className="flex min-h-9 items-center gap-1 self-start text-[13px] font-bold text-action no-underline">
@@ -392,16 +394,17 @@ export default function WarTab({ wide, roster, sub, opened, q, setQ }: { wide: b
   )
   // Wide pages here have no search box, so a search carried from another tab doesn't narrow them.
   const search = wide ? '' : q
+  const strip = onCwl && <DayRow days={days} pick={picked ?? clan.war!.day ?? null} onPick={setDayPick} drawnOnly />
   return (
     <main className={wide ? 'mx-auto flex max-w-[1360px] flex-col gap-4 px-[clamp(16px,3vw,32px)] pb-12 pt-5' : 'flex flex-col gap-3 px-4 pb-6 pt-1'}>
-      {wide ? switcher : <PhoneSearch q={q} setQ={setQ} onEnter={() => (document.activeElement as HTMLElement | null)?.blur()} className="-mx-4 -mb-1 -mt-1">{switcher}</PhoneSearch>}
+      {wide ? <div className={WIDE_ROW}>{strip}<div className="ml-auto w-[clamp(270px,30vw,400px)] flex-none">{switcher}</div></div> : <PhoneSearch q={q} setQ={setQ} onEnter={() => (document.activeElement as HTMLElement | null)?.blur()} className="-mx-4 -mb-1 -mt-1">{switcher}</PhoneSearch>}
       {!data ? (
         loading ? <div aria-busy="true" className="h-64 animate-pulse rounded-2xl bg-well" /> : <div className="rounded-2xl border border-line bg-white p-5 text-sm text-faint">Unavailable right now</div>
       ) : !clan ? (
         <div className="rounded-2xl border border-line bg-white px-6 py-14 text-center text-sm font-semibold text-faint">No war on</div>
       ) : (
         <>
-          {onCwl && <DayRow days={days} pick={picked ?? clan.war!.day ?? null} onPick={setDayPick} drawnOnly />}
+          {!wide && strip}
           {nearby ? <WarBoard key={nearby.war_key} clan={clan.clan} war={nearby} now={now} roster={roster} q={search} /> : other ? <OtherDay clan={clan.clan} warKey={other.war_key} now={now} roster={roster} q={search} /> : null}
         </>
       )}

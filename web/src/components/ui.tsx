@@ -324,7 +324,7 @@ export function DayRow({ days = [], pick, onPick, live = 0, roster, drawnOnly }:
   )
 }
 
-/** The clan switch on every tab: same look, same place, directly under the sub-tabs. */
+/** The clan switch on every tab: same look, directly under the sub-tabs. A wide War tab keeps it right, level with the day strip. */
 /** A phone page's clan switch follows the scroll, in the place it would sit anyway. */
 export const STICKY_SWITCH = 'sticky top-0 z-10 -mx-4 -mb-1 -mt-1 bg-page px-4 pb-1 pt-1'
 

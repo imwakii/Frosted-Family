@@ -255,7 +255,7 @@ function Phone({ roster, war, q, setQ, lock }: Omit<Props, 'wide'>) {
   const days = useCwlGroups().data?.clans.find((c) => c.clan === clan)?.group?.days
   return (
     <>
-      <PhoneSearch q={q} setQ={setQ} className="pb-2.5" onEnter={() => { if (results[0]) window.location.hash = href(results[0]) }}>
+      <PhoneSearch q={q} setQ={setQ} className="pb-4" onEnter={() => { if (results[0]) window.location.hash = href(results[0]) }}>
         <ClanSwitch<ClanName> value={clan} onPick={lock?.onPick ?? setOwn} options={lock?.options} />
       </PhoneSearch>
       <div className="flex flex-col gap-3 px-4 pb-6">
