@@ -1,11 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Me } from '../auth'
-import { checkPlan, type DayBody, type DayPlans, getDays, getProposals, HttpError, type LineupBody, type PlanMove, type Proposal, publishDays, publishPlan, saveProposal, useWar, useWide, withdrawProposal } from '../data'
+import { checkPlan, type DayBody, type DayPlans, getDays, getProposals, HttpError, type LineupBody, type PlanMove, type Proposal, publishDays, publishPlan, saveProposal, useWide, withdrawProposal } from '../data'
 import { type ClanDays, DAYS, DRAFT_KEY, earned, enemy, locked, missedThisSeason, onTrack, onTrial, repair, suggest, TARGET, TEAM, tier, type Wars, asPlanned } from '../dayplan'
 import { CLAN, CLANS } from '../theme'
 import type { ClanName, Player, Roster, Slot } from '../types'
 import Info from './Info'
-import CwlTab from './CwlTab'
 import PlanActivity from './PlanActivity'
 import { lineupBoard, type Moves, type Place, PlaceSelect, placeLabel, PlanRow, readDraft, toList } from './PlanTab'
 import { ProposalBar, useProposals } from './Proposals'
@@ -108,10 +107,13 @@ export default function DayPlanner({ roster: base, me, onPublished, onLapsed }: 
   const [busy, setBusy] = useState(false)
   const [confirming, setConfirming] = useState(false)
   const [note, setNote] = useState<{ ok: boolean; text: string; lines?: string[]; undo?: Plans; rebuild?: boolean } | null>(null)
-  const [preview, setPreview] = useState(false)
-  const [q, setQ] = useState('')
-  const war = useWar()
+  const [toast, setToast] = useState(false)
   const wide = useWide()
+  useEffect(() => {
+    if (!toast) return
+    const t = window.setTimeout(() => setToast(false), 6000)
+    return () => window.clearTimeout(t)
+  }, [toast])
   const proposals = useProposals<DayBody>('days')
   const [viewId, setViewId] = useState<number | null>(null)
   const viewing = proposals.open.find((p) => p.id === viewId) ?? null
@@ -173,15 +175,6 @@ export default function DayPlanner({ roster: base, me, onPublished, onLapsed }: 
 
   // Your own plan, or the proposal you have open.
   const shown = viewing && plans ? whole(viewing.body.clans, plans) : plans
-  // Lineups as members would see it with the plan on screen; nothing is saved by looking.
-  const previewRoster = useMemo<Roster>(() => ({
-    ...roster,
-    players: roster.players.map((p) => {
-      if (p.clan === 'Flakes') return p
-      const days = shown?.[p.clan as CwlClan]
-      return { ...p, days: days ? DAYS.filter((d) => days[d]?.includes(p.tag)) : p.days }
-    }),
-  }), [roster, shown])
   if (failed) {
     return (
       <main className="mx-auto flex max-w-[480px] flex-col items-center gap-2 px-4 pt-10">
@@ -281,6 +274,13 @@ export default function DayPlanner({ roster: base, me, onPublished, onLapsed }: 
   const lineupBad = checks.filter((k) => (k.tone === 'bad' || k.tone === 'warn') && !(k.key === 'valve' && canPublish))
   const notIn = base.players.filter((p) => { const at = placeOf(p.tag); return at.clan === view && at.slot === 'OUT' })
   const inFlakes = base.players.filter((p) => placeOf(p.tag).clan === 'Flakes')
+  // Publish stays tappable while blocked, so a phone can be told why: the reason comes up as a toast.
+  const short = CWL.flatMap((c) => {
+    const ds = DAYS.filter((d) => bad.includes(`${c} day ${d}`))
+    return ds.length ? [`${c} ${ds.length === 1 ? 'day' : 'days'} ${ds.join(', ')}`] : []
+  })
+  const blocked = short.length > 0 || lineupBad.length > 0
+  const whyBlocked = [short.length ? `${short.join(' and ')} need 15 players.` : '', lineupBad.length ? `Check ${lineupBad.map((k) => k.label).join(', ')}.` : ''].filter(Boolean).join(' ')
   const openConfirm = async () => {
     setOverride(false)
     setProblems([])
@@ -309,7 +309,6 @@ export default function DayPlanner({ roster: base, me, onPublished, onLapsed }: 
     }
   }
 
-  const Outer = preview ? 'div' : 'main'
   const propose = () => run(async () => {
     await saveProposal('days', season, { clans: plans }, me.csrf)
     setOrigin(plans)
@@ -336,29 +335,23 @@ export default function DayPlanner({ roster: base, me, onPublished, onLapsed }: 
   const btn = 'min-h-9 cursor-pointer rounded-full border border-line bg-white px-3 text-[13px] font-bold text-ink-2 hover:bg-hover disabled:cursor-default disabled:opacity-60'
   return (
     <>
-    <Outer className={`mx-auto flex flex-col gap-3.5 px-[clamp(16px,3vw,32px)] pt-1 md:pt-5 max-w-[1360px] ${preview ? '' : 'pb-12'}`}>
-      {!preview && <ClanSwitch<ClanName> value={view} onPick={setClan} options={CLANS} flag={CWL.filter((c) => DAYS.some((d) => !locked(wars(c)[d]) && (shown[c][d]?.length ?? 0) !== TEAM))} />}
+    <main className="mx-auto flex max-w-[1360px] flex-col gap-3.5 px-[clamp(16px,3vw,32px)] pb-12 pt-1 md:pt-5">
+      <ClanSwitch<ClanName> value={view} onPick={setClan} options={CLANS} flag={CWL.filter((c) => DAYS.some((d) => !locked(wars(c)[d]) && (shown[c][d]?.length ?? 0) !== TEAM))} />
       <div className="flex flex-wrap items-center gap-1.5">
-        <button type="button" aria-pressed={preview} className={btn} onClick={() => setPreview((v) => !v)}>{preview ? 'Grid' : 'Preview'}</button>
         <span className="ml-auto flex items-center gap-1.5">
-        {!preview && !viewing && view !== 'Flakes' && <Info topic="suggest" />}
-        {!preview && !viewing && view !== 'Flakes' && <button type="button" className={btn} onClick={() => offer(sorted(repair(pools[clan], w, plans[clan])), false)}>Suggest</button>}
+        {!viewing && view !== 'Flakes' && <Info topic="suggest" />}
+        {!viewing && view !== 'Flakes' && <button type="button" className={btn} onClick={() => offer(sorted(repair(pools[clan], w, plans[clan])), false)}>Suggest</button>}
         {!viewing && <button type="button" className={btn} disabled={readOnly || busy || (!dirty && !nMoves)} onClick={propose}>
           {dirty || nMoves || !saved ? 'Propose' : 'Proposed'}
         </button>}
         {canPublish && !viewing && (
-          <button type="button" onClick={openConfirm} disabled={busy || bad.length > 0 || lineupBad.length > 0 || (!!published && !nMoves)}
-            title={[...bad.map((b) => `Not 15: ${b}`), ...lineupBad.map((k) => k.label)].join(' · ') || undefined}
-            className="min-h-9 cursor-pointer rounded-full border-0 bg-action px-3 text-[13px] font-bold text-white hover:bg-action-deep disabled:cursor-not-allowed disabled:bg-[#E3D8BF] disabled:text-faint">
-            {published && !nMoves ? 'Published' : 'Publish'}
+          <button type="button" onClick={blocked ? () => setToast(true) : openConfirm} disabled={busy || (!blocked && !!published && !nMoves)} aria-disabled={blocked || undefined}
+            className={`min-h-9 cursor-pointer rounded-full border-0 px-3 text-[13px] font-bold disabled:cursor-not-allowed disabled:bg-[#E3D8BF] disabled:text-faint ${blocked ? 'bg-[#E3D8BF] text-faint' : 'bg-action text-white hover:bg-action-deep'}`}>
+            {published && !nMoves && !blocked ? 'Published' : 'Publish'}
           </button>
         )}
         </span>
       </div>
-
-      {canPublish && !viewing && !preview && (bad.length > 0 || lineupBad.length > 0) && (
-        <p className="m-0 text-xs font-semibold text-[#92400E]">Can't publish yet: {[...bad.map((b) => `Not 15: ${b}`), ...lineupBad.map((k) => k.label)].join(' · ')}</p>
-      )}
 
       {note && (
         <div role="status" className={`flex flex-col justify-center rounded-[14px] px-4 py-1 text-sm font-bold ${note.ok ? 'bg-[#DCFCE7] text-[#166534]' : 'bg-[#FEF3C7] text-[#92400E]'}`}>
@@ -386,7 +379,7 @@ export default function DayPlanner({ roster: base, me, onPublished, onLapsed }: 
           onAccepted={() => window.location.reload()} />
       )}
 
-      {!preview && ((col.inCwl && col.core !== 15) || col.count > 50 || nMoves > 0) && (
+      {((col.inCwl && col.core !== 15) || col.count > 50 || nMoves > 0) && (
         <p className="m-0 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs font-semibold tabular-nums text-muted">
           {col.inCwl && col.core !== 15 && <span className="font-bold text-[#B45309]">{col.core}/15 core</span>}
           {col.count > 50 && <span className="font-bold text-[#B91C1C]">{col.count}/50 members</span>}
@@ -400,7 +393,7 @@ export default function DayPlanner({ roster: base, me, onPublished, onLapsed }: 
         </p>
       )}
 
-      {!preview && view !== 'Flakes' && <>
+      {view !== 'Flakes' && <>
       {(swapOut.length > 0 || swapIn.length > 0) && (
         <p role="status" className="m-0 w-full rounded-[14px] bg-[#FEF3C7] px-4 py-2.5 text-sm font-bold text-[#92400E]">
           Day {prep} in game: {swapOut.length > 0 && swapIn.length > 0 ? `swap ${swapOut.join(', ')} for ${swapIn.join(', ')}` : swapIn.length > 0 ? `add ${swapIn.join(', ')}` : `take out ${swapOut.join(', ')}`}
@@ -416,7 +409,7 @@ export default function DayPlanner({ roster: base, me, onPublished, onLapsed }: 
       </>}
 
       {/* On a wide screen the side lists sit beside the board. With nothing to list, the board takes the width. */}
-      {!preview && <div className="flex flex-col gap-3.5 xl:flex-row xl:items-start">
+      <div className="flex flex-col gap-3.5 xl:flex-row xl:items-start">
       {view === 'Flakes' && (
         <ul className="m-0 grid w-full min-w-0 flex-auto list-none gap-x-2 rounded-2xl border border-line bg-white p-1.5 [grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr))]">
           {inFlakes.map((p) => <PlanRow key={p.tag} p={p} at={placeOf(p.tag)} onPlace={(v) => place(p, v)} locked={!!viewing} />)}
@@ -505,8 +498,17 @@ export default function DayPlanner({ roster: base, me, onPublished, onLapsed }: 
         )}
         <PlanActivity days={proposals} lineup={lineup} published={server?.published} />
       </aside>
-      </div>}
-    </Outer>
+      </div>
+    </main>
+    {toast && blocked && !viewing && (
+      <div role="status" className={`ff-fade fixed z-30 flex items-start gap-2 rounded-2xl bg-ink py-2.5 pl-3.5 pr-1.5 text-white shadow-[0_8px_24px_rgba(43,33,20,.3)] ${wide ? 'bottom-4 right-4 w-[380px]' : 'inset-x-3 bottom-[calc(66px+env(safe-area-inset-bottom))]'}`}>
+        <span className="flex min-w-0 flex-auto flex-col gap-0.5 text-[13px]">
+          <span className="font-bold">Can't publish yet</span>
+          <span className="text-white/80">{whyBlocked}</span>
+        </span>
+        <button type="button" aria-label="Dismiss" onClick={() => setToast(false)} className="flex size-9 flex-none cursor-pointer items-center justify-center rounded-full border-0 bg-transparent text-lg leading-none text-white/70 hover:text-white">×</button>
+      </div>
+    )}
     {confirming && (
       <div className="ff-fade fixed inset-0 z-50 flex items-center justify-center bg-[rgba(43,33,20,.4)] p-4" onClick={(e) => { if (e.target === e.currentTarget) setConfirming(false) }}>
         <section role="dialog" aria-modal="true" aria-label="Publish to members"
@@ -547,12 +549,6 @@ export default function DayPlanner({ roster: base, me, onPublished, onLapsed }: 
               className="min-h-11 cursor-pointer rounded-full border-0 bg-action px-4 text-sm font-bold text-white hover:bg-action-deep disabled:opacity-60">Publish</button>
           </div>
         </section>
-      </div>
-    )}
-    {/* Row links would leave the planner, so a preview keeps its rows in place. */}
-    {preview && (
-      <div onClickCapture={(e) => { if ((e.target as HTMLElement).closest('a')) e.preventDefault() }}>
-        <CwlTab roster={previewRoster} war={war} wide={wide} q={q} setQ={setQ} lock={{ clan, options: CWL, onPick: (c) => setClan(c as CwlClan) }} />
       </div>
     )}
     </>

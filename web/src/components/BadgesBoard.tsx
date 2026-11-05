@@ -70,7 +70,7 @@ export default function BadgesBoard({ q, setQ, wide }: { q: string; setQ: (v: st
         <ol className="m-0 w-full list-none rounded-2xl border border-line bg-white py-1">
           {shown.map((x, i) => (
             <li key={x.r.tag}>
-              <a href={playerHref(x.r.tag)} className={`flex min-h-[56px] items-center gap-2.5 px-3.5 py-1.5 text-ink no-underline hover:bg-hover ${i ? 'border-t border-hair' : ''}`}>
+              <a href={playerHref(x.r.tag)} className={`flex min-h-[52px] items-center gap-2.5 px-3.5 py-1.5 text-ink no-underline hover:bg-hover ${i ? 'border-t border-hair' : ''}`}>
                 <span className="w-6 flex-none text-right text-xs font-bold tabular-nums text-faint">{place.get(x) ?? '—'}</span>
                 <Th th={x.r.th} />
                 <span className="flex min-w-0 flex-auto flex-col gap-0.5">

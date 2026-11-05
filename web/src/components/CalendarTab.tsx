@@ -103,7 +103,7 @@ function Row({ item, now, utc }: { item: Item; now: number; utc: boolean }) {
       </span>
     </>
   )
-  const cls = 'flex min-h-[56px] items-center gap-2.5 px-3 py-2 text-ink no-underline'
+  const cls = 'flex min-h-[52px] items-center gap-2.5 px-3 py-1.5 text-ink no-underline'
   return (
     <li className="border-t border-hair first:border-t-0">
       {href ? <a href={href} {...(external ? { target: '_blank', rel: 'noopener noreferrer' } : {})} className={`${cls} hover:bg-hover`}>{body}</a> : <div className={cls}>{body}</div>}

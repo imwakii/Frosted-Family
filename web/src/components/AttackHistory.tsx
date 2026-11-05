@@ -62,7 +62,7 @@ export default function AttackHistory({ tag, days: start, roster, wide, onClose 
             </span>
             <ul className="m-0 list-none divide-y divide-hair rounded-2xl border border-line bg-white p-0">
               {rows.map((a, i) => (
-                <li key={i} className="flex min-h-12 items-center gap-2.5 px-3 py-1.5 text-sm">
+                <li key={i} className="flex min-h-[52px] items-center gap-2.5 px-3 py-1.5 text-sm">
                   <Th th={a.target_th} />
                   <span className="min-w-0 flex-auto truncate font-semibold text-ink">{a.target ?? 'Unknown'}</span>
                   <Stars n={a.stars} />

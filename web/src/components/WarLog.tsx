@@ -46,7 +46,7 @@ export default function WarLog({ clan }: { clan: ClanName }) {
           const result = dayWon(w)
           return (
             <li key={w.war_key} className={i ? 'border-t border-hair lg:[&:nth-child(2)]:border-t-0' : ''}>
-              <a href={warLogHref(clan, w.war_key)} className="flex min-h-[52px] items-center gap-2.5 px-3 py-2 text-ink no-underline hover:bg-hover">
+              <a href={warLogHref(clan, w.war_key)} className="flex min-h-[52px] items-center gap-2.5 px-3 py-1.5 text-ink no-underline hover:bg-hover">
                 <ClanBadge src={w.opponent_badge} size={32} />
                 <span className="flex min-w-0 flex-auto flex-col gap-0.5">
                   <bdi className="text-left truncate text-sm font-bold">{w.opponent}</bdi>

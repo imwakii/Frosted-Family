@@ -4,6 +4,7 @@ import type { Roster } from '../types'
 import { countingOn, setCounting } from '../visits'
 import Alerts from './Alerts'
 import { CardSheet } from './ClanSheet'
+import Info from './Info'
 import InstallGuide from './InstallGuide'
 import { canInstall } from './InstallHint'
 import { Eyebrow, RowChevron, setUtc, SwitchRow, Th, useUtc } from './ui'
@@ -110,13 +111,10 @@ export default function Settings({ wide, roster, leader, account }: { wide: bool
             </div>
           </section>
           <section aria-label="Privacy" className="flex flex-col gap-1.5">
-            <Eyebrow>Privacy</Eyebrow>
+            <span className="flex items-center justify-between px-0.5"><Eyebrow>Privacy</Eyebrow><Info topic="privacy" /></span>
             <div className="rounded-xl border border-line bg-white">
               <SwitchRow label="Count my visits" line="A random ID and your time zone" on={counted} onFlip={() => { setCounting(!counted); setCounted(!counted) }} />
             </div>
-            <p className="m-0 px-1 text-xs leading-[1.45] text-muted">
-              Your accounts stay on this device unless you turn on alerts. Discord sign-in uses a cookie, and fonts come from Google. No ads or trackers.
-            </p>
           </section>
           {account && (
             <section aria-label="Leader sign-in" className="flex flex-col gap-1.5">

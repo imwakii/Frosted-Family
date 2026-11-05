@@ -255,9 +255,9 @@ function UpgradeRow({ ups, showClan, open, onToggle }: { ups: Upgrade[]; showCla
     return (
       <a href={playerHref(u.tag)} className={`${ROW} hover:bg-hover`}>
         <UpgradeIcon u={u} />
-        <span className="flex min-w-0 flex-auto flex-col gap-0.5">
+        <span className="flex min-w-0 flex-auto flex-col">
           {who}
-          <span className="truncate text-[13px] text-muted">{u.category === 'town_hall' ? 'Town Hall' : u.unit} {change(u)}</span>
+          <span className="truncate text-[13px] leading-[1.3] text-muted">{u.category === 'town_hall' ? 'Town Hall' : u.unit} {change(u)}</span>
         </span>
         {when}
         {/* The same arrow as a group's, at every width, so each row's time lines up: this one opens the card. */}
@@ -269,9 +269,9 @@ function UpgradeRow({ ups, showClan, open, onToggle }: { ups: Upgrade[]; showCla
     <>
       <button type="button" aria-expanded={open} onClick={onToggle} className={`${ROW} cursor-pointer border-0 bg-transparent hover:bg-hover`}>
         <UpgradeIcon u={u} />
-        <span className="flex min-w-0 flex-auto flex-col gap-0.5">
+        <span className="flex min-w-0 flex-auto flex-col">
           {who}
-          <span className="truncate text-[13px] text-muted">{ups.length} upgrades</span>
+          <span className="truncate text-[13px] leading-[1.3] text-muted">{ups.length} upgrades</span>
         </span>
         {when}
         <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#A3957C" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" className={`flex-none transition-transform ${open ? 'rotate-90' : ''}`}><path d="M9 6l6 6-6 6" /></svg>
@@ -314,7 +314,7 @@ function MostUpgrades({ board, clan, kind, nq }: { board: UpgradeLeader[]; clan:
         <ol className="m-0 list-none rounded-2xl border border-line bg-white py-1">
           {shown.map((r, i) => (
             <li key={r.tag}>
-              <a href={historyHref(r.tag, days)} onClick={() => markFromCard(false)} data-tag={r.tag} className={`flex min-h-[56px] items-center gap-3 px-3.5 py-1.5 text-ink no-underline hover:bg-hover ${i ? 'border-t border-hair' : ''}`}>
+              <a href={historyHref(r.tag, days)} onClick={() => markFromCard(false)} data-tag={r.tag} className={`flex min-h-[52px] items-center gap-3 px-3.5 py-1.5 text-ink no-underline hover:bg-hover ${i ? 'border-t border-hair' : ''}`}>
                 <span className="w-6 flex-none text-right text-xs font-bold tabular-nums text-faint">{ranked.findIndex((x) => n(x) === n(r)) + 1}</span>
                 <Th th={r.th} />
                 <span className="flex min-w-0 flex-auto flex-col gap-1">

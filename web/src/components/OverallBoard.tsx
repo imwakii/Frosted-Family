@@ -99,7 +99,7 @@ export default function OverallBoard({ q, setQ, wide }: { q: string; setQ: (v: s
     <ol className="m-0 list-none rounded-2xl border border-line bg-white py-1">
       {listed.map((r, i) => (
         <li key={r.tag}>
-          <a href={playerHref(r.tag)} className={`flex min-h-[56px] items-center gap-3 px-3.5 py-1.5 text-ink no-underline hover:bg-hover ${i ? 'border-t border-hair' : ''}`}>
+          <a href={playerHref(r.tag)} className={`flex min-h-[52px] items-center gap-3 px-3.5 py-1.5 text-ink no-underline hover:bg-hover ${i ? 'border-t border-hair' : ''}`}>
             <span className="w-6 flex-none text-right text-xs font-bold tabular-nums text-faint">{place.get(r) ?? '—'}</span>
             <Th th={r.th} />
             <span className="flex min-w-0 flex-auto flex-col gap-1">

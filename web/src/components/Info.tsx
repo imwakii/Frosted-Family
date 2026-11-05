@@ -58,6 +58,17 @@ const TOPICS: Record<string, { title: string; formulas?: string[]; lines?: strin
     ],
     lines: ['Avg score is the average score of the core, or of the top 15 when the clan is out of CWL.'],
   },
+  privacy: {
+    title: 'Your privacy',
+    lines: [
+      'The accounts you mark as yours and your settings stay on this device.',
+      'To count visits, we keep a random ID, the date, your time zone, your clock offset and whether you used the home screen app. No name goes with it. The switch here turns it off.',
+      "If you turn on alerts, our server keeps your phone's push address, your marked accounts and which alerts you chose.",
+      'Signing in with Discord sets a cookie to keep you signed in. For leaders, we also keep your Discord ID, name, picture and last sign-in.',
+      "Our hosting and Google Fonts can see your connection's address, as with any website.",
+      'No ads or trackers.',
+    ],
+  },
   warBoard: {
     title: 'Reading this list',
     formulas: ['Miss rate = missed ÷ (attacks + missed)'],

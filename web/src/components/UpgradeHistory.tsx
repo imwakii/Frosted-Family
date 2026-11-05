@@ -59,7 +59,7 @@ export default function UpgradeHistory({ tag, days: start, roster, wide, onClose
             <span className="px-1 text-xs font-bold uppercase tracking-[0.06em] text-faint">{dayLabel(d)}</span>
             <ul className="m-0 list-none divide-y divide-hair rounded-2xl border border-line bg-white p-0">
               {rows.map((u) => (
-                <li key={`${u.unit}-${u.to}`} className="flex min-h-12 items-center gap-2.5 px-3 py-1.5 text-sm">
+                <li key={`${u.unit}-${u.to}`} className="flex min-h-[52px] items-center gap-2.5 px-3 py-1.5 text-sm">
                   {u.category === 'town_hall'
                     ? <img src={thIcon(u.to) ?? undefined} alt="" width={30} height={30} className="size-[30px] flex-none object-contain" />
                     : <UnitIcon name={u.unit} size={30} />}
