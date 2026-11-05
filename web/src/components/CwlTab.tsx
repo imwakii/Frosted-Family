@@ -65,11 +65,11 @@ function ClanCard({ roster, clan, meta, compact, below }: { roster: Roster; clan
   const f = clanFacts(roster, clan, meta)
   const c = CLAN[clan]
   return (
-    <div className={`flex flex-col gap-1.5 ${compact ? 'px-4 py-2' : 'rounded-2xl px-3 py-1.5'}`} style={{ background: c.tint }}>
+    <div className={`flex flex-col gap-1.5 ${compact ? 'px-4 py-3' : 'rounded-2xl px-3.5 py-3'}`} style={{ background: c.tint }}>
       <a href={clanHref(clan)} aria-label={`${f.name} card`} className="flex min-w-0 items-center gap-2.5 no-underline">
-        <ClanBadge src={f.badge} size={34} className="drop-shadow-[0_2px_4px_rgba(43,33,20,.18)]" />
+        <ClanBadge src={f.badge} size={48} className="drop-shadow-[0_2px_4px_rgba(43,33,20,.18)]" />
         <span className="flex min-w-0 flex-auto flex-col gap-0.5">
-          <span className="font-display truncate text-[17px] leading-none" style={{ color: c.deep }}>{f.name}</span>
+          <span className="font-display truncate text-[22px] leading-none" style={{ color: c.deep }}>{f.name}</span>
           <LeaguePill league={f.league} text={f.format.replace('League ', '')} />
         </span>
         <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#A3957C" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" className="flex-none"><path d="M9 6l6 6-6 6" /></svg>
