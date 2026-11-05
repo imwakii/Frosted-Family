@@ -60,12 +60,12 @@ function WhoCouldGo() {
                   <span>{ACTIVITY_LABEL[g.activity]}</span><span>{g.rows.length}</span>
                 </div>
               )}
-              <ol className="m-0 list-none rounded-2xl border border-line bg-white py-1">
+              <ol className="m-0 grid list-none gap-x-4 rounded-2xl border border-line bg-white py-1 lg:grid-cols-2">
                 {g.rows.map(({ p, n }, i) => {
                   const others = p.reasons.filter((r) => r.code !== 'inactive_days' && r.code !== 'sitting_out').map((r) => reasonLabel(r).text)
                   return (
-                    <li key={p.tag}>
-                      <a href={playerHref(p.tag)} className={`flex min-h-[58px] items-center gap-2.5 px-3.5 py-2 text-ink no-underline hover:bg-hover ${i ? 'border-t border-hair' : ''}`}>
+                    <li key={p.tag} className="min-w-0">
+                      <a href={playerHref(p.tag)} className={`flex h-full min-h-[58px] items-center gap-2.5 px-3.5 py-2 text-ink no-underline hover:bg-hover ${i ? 'border-t border-hair' : ''} ${i === 1 ? 'lg:border-t-0' : ''}`}>
                         <span className="w-6 flex-none text-right text-xs font-bold tabular-nums text-faint">{n}</span>
                         <Th th={p.th} />
                         <span className="flex min-w-0 flex-auto flex-col gap-0.5">
@@ -101,10 +101,10 @@ function SignIn() {
   )
 }
 
-export default function LeadersTools({ wide }: { wide: boolean }) {
+export default function LeadersTools() {
   return (
     <section aria-label="Who to yeet" className="mx-auto flex max-w-[1360px] flex-col gap-4 px-[clamp(16px,3vw,32px)] pb-12 pt-5">
-      <div className={wide ? 'max-w-[900px]' : ''}><WhoCouldGo /></div>
+      <WhoCouldGo />
     </section>
   )
 }

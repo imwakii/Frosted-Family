@@ -410,7 +410,7 @@ export default function PlanTab({ sub, roster, onPublished, me, ready, wide, onS
   return (
     <>
       <SubNav items={SUBS} current={sub} wide={wide} />
-      {sub === 'usage' ? <Usage /> : sub === 'members' ? <LeadersTools wide={wide} /> : sub === 'days' ? <DayPlanner roster={roster} me={me} onPublished={onPublished} /> : <Plan roster={roster} me={me} onPublished={onPublished} />}
+      {sub === 'usage' ? <Usage /> : sub === 'members' ? <LeadersTools /> : sub === 'days' ? <DayPlanner roster={roster} me={me} onPublished={onPublished} /> : <Plan roster={roster} me={me} onPublished={onPublished} />}
     </>
   )
 }
