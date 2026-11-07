@@ -141,21 +141,40 @@ def daily(conn, clan_tags: list[str]) -> list[dict]:
     return _daily[key]
 
 
+_points: dict[tuple, dict | None] = {}
+
+
 def _daily_uncached(conn, clan_tags: list[str]) -> list[dict]:
     days = [r[0] for r in conn.execute("SELECT DISTINCT snapshot_date FROM member_snapshots ORDER BY 1")]
     known = cycles()
+    files = (tuple(c[2] for c in known), str(baseline.raw_dir()), conn.execute("PRAGMA database_list").fetchone()["file"])
+    open_from = conn.execute("SELECT MIN(substr(start_time, 1, 8)) FROM wars WHERE state <> 'warEnded'").fetchone()[0]
+    settled_before = min(days[-1] if days else "", f"{open_from[:4]}-{open_from[4:6]}-{open_from[6:8]}" if open_from else "9999")
+    if len(_points) > 4000:  # a new cycle's exports leave the old keys behind
+        _points.clear()
     out = []
     for d in days:
         current = [c for c in known if c[2] <= d]
         if not current:
             continue
-        base = base_of(current[-1][1])
-        counts = {t: add(base.players.get(t), r) for t, r in recorded_upto(conn, d, base.pull_dates).items()}
-        counts = {**base.players, **counts}
-        p = clan_point(counts, members_on(conn, d, clan_tags))
+        key = (tuple(clan_tags), d, files)
+        if d < settled_before:
+            if key not in _points:
+                _points[key] = _day_point(conn, d, current[-1], clan_tags)
+            p = _points[key]
+        else:
+            p = _day_point(conn, d, current[-1], clan_tags)
         if p:
-            out.append({"date": d, "cycle": current[-1][0], **p})
+            out.append(p)
     return out
+
+
+def _day_point(conn, d: str, cycle: tuple, clan_tags: list[str]) -> dict | None:
+    base = base_of(cycle[1])
+    counts = {t: add(base.players.get(t), r) for t, r in recorded_upto(conn, d, base.pull_dates).items()}
+    counts = {**base.players, **counts}
+    p = clan_point(counts, members_on(conn, d, clan_tags))
+    return {"date": d, "cycle": cycle[0], **p} if p else None
 
 
 def trend(conn, clan_tags: list[str]) -> dict:

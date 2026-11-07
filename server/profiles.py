@@ -7,6 +7,7 @@ per-town-hall caps that is both official and current, so the site's rushed check
 from __future__ import annotations
 
 import json
+import os
 import sqlite3
 from datetime import datetime, timedelta, timezone
 from importlib import resources
@@ -15,7 +16,7 @@ from math import ceil
 from fastapi import HTTPException
 
 from frosted.config import TAG_TO_CLAN
-from server import baseline
+from server import baseline, db
 from server.db import FRIENDLY, clean_name, has_column
 
 # Hourly: about 115 calls a pass, well inside the API's limits. Due after 55 minutes so it lands on the 10-minute
@@ -256,6 +257,10 @@ def api_day(t: str | None) -> str | None:
 
 
 def war_record(conn, scope: str = "all") -> dict:
+    return db.memo(conn, f"war_record:{scope}", WAR_INPUTS, lambda: _war_record(conn, scope), baseline_files())
+
+
+def _war_record(conn, scope: str = "all") -> dict:
     """GET /explore/war?scope=all|cwl. Every current member's all-time war stars (profile) and their war record.
 
     scope=all: the tally's clashspot export (baseline.py) plus the recorded wars that started after each
@@ -405,8 +410,30 @@ def tier_by_rank(rank: int | None, lines) -> str | None:
     return reached[-1] if reached else None
 
 
+# What the war record and badges read. Wars are updated in place, so their updated_at stands in for their rowid.
+WAR_INPUTS = ("SELECT MAX(rowid) FROM attacks", "SELECT MAX(updated_at) FROM wars", "SELECT MAX(rowid) FROM war_members",
+              "SELECT MAX(seen_at) FROM member_snapshots", "SELECT MAX(fetched_at) FROM player_profiles",
+              "SELECT MAX(finished_at) FROM polls", "SELECT MAX(started_at) FROM profile_runs")
+
+
+def baseline_files() -> tuple:
+    """The exports on disk, so a new cycle's files clear anything kept from the old ones."""
+    d = baseline.raw_dir()
+    return (str(d), tuple(sorted(os.listdir(d))) if d.is_dir() else ())
+
+
 def badge_context(conn, record: dict | None = None) -> dict:
-    """What the badges compare against, worked out once so a whole family's badges can share it."""
+    """What the badges compare against, worked out once so a whole family's badges can share it. Its upgrade count
+    covers a rolling window, so it is also kept no longer than the hour."""
+    from server import leaders  # leaders imports this module
+    if record is not None and record.get("scope", "all") != "all":
+        return _badge_context(conn, record)  # only the all-wars record is kept
+    hour = leaders.now().strftime("%Y-%m-%dT%H")
+    return db.memo(conn, "badge_context", WAR_INPUTS + leaders.UPGRADE_INPUTS, lambda: _badge_context(conn, record),
+                   (hour, baseline_files()))
+
+
+def _badge_context(conn, record: dict | None = None) -> dict:
     from server import leaders  # leaders imports this module
     rows = (record or war_record(conn))["players"]
     members = current_members(conn)

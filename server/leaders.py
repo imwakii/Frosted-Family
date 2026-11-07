@@ -16,7 +16,7 @@ from datetime import date, datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, HTTPException
 
 from frosted.config import CLAN_TAGS, TAG_TO_CLAN
-from server import baseline, plan, profiles
+from server import baseline, db, plan, profiles
 from server.auth import Leader, current_leader
 
 INACTIVE_DAYS = 7          # make-room flags a member idle this long
@@ -74,9 +74,18 @@ def returned_on(conn) -> dict[str, set[str]]:
     return out
 
 
+UPGRADE_INPUTS = ("SELECT MAX(rowid) FROM player_unit_history", "SELECT MAX(rowid) FROM profile_snapshots",
+                  "SELECT MAX(rowid) FROM member_snapshots")
+
+
 def upgrade_events(conn) -> list[tuple]:
     """Every upgrade on record as (tag, unit, category, from, to, at, change), whether or not the player is still here.
-    What a player levelled while away arrives all at once when they return, so it counts no more than their first fetch does."""
+    What a player levelled while away arrives all at once when they return, so it counts no more than their first fetch does.
+    Log, Recap and the player card each read it several times, so it is kept until a fetch adds to what it reads."""
+    return db.memo(conn, "upgrade_events", UPGRADE_INPUTS, lambda: _upgrade_events(conn))
+
+
+def _upgrade_events(conn) -> list[tuple]:
     start = first_seen(conn)
     back = returned_on(conn)
     events = []

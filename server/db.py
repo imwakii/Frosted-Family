@@ -364,6 +364,25 @@ ADDED_COLUMNS = (("cwl_group_wars", "clan_attacks"), ("cwl_group_wars", "opponen
                  ("player_profiles", "clan_games"), ("profile_snapshots", "clan_games"))
 
 
+_memo: dict[tuple, tuple] = {}
+
+
+def memo(conn: sqlite3.Connection | None, name: str, checks: tuple[str, ...], work, extra: tuple = ()):
+    """`work()`'s result, kept until any of `checks` (each a query returning one value, such as a table's MAX(rowid)) or
+    `extra` changes. One slot per name and database file, so old results are replaced rather than piling up, and tests
+    on different files never share a result."""
+    if conn is None:
+        return work()
+    slot = (name, conn.execute("PRAGMA database_list").fetchone()["file"])
+    stamp = (extra, *(conn.execute(q).fetchone()[0] for q in checks))
+    held = _memo.get(slot)
+    if held and held[0] == stamp:
+        return held[1]
+    result = work()
+    _memo[slot] = (stamp, result)
+    return result
+
+
 def has_column(conn: sqlite3.Connection, table: str, col: str) -> bool:
     return col in {r["name"] for r in conn.execute(f"PRAGMA table_info({table})")}
 
