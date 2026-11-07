@@ -26,7 +26,7 @@ import { fetchPlayer, useRoster, useWar, useWide } from './data'
 import { useCwlGroups } from './leaders'
 import { useVisits } from './visits'
 import { cardToReturnTo, returnToCard, decodeTag, go, onDrill, useRoute } from './route'
-import { GoblinNote, SubNav } from './components/ui'
+import { CalendarButton, GoblinNote, SubNav } from './components/ui'
 
 const CURRENT = { id: 'latest', label: 'Current', href: '#/war' }
 const ROSTER = { id: 'roster', label: 'Roster', href: '#/war/roster' }
@@ -38,7 +38,6 @@ const TABS = [
   { id: 'war', label: 'War', href: '#/war', icon: <path d="M5 5l14 14M19 5L5 19M4 16l4 4M20 16l-4 4" /> },
   { id: 'log', label: 'Log', href: '#/log', icon: <path d="M4 6h16M4 12h16M4 18h10" /> },
   { id: 'explore', label: 'Stats', href: '#/stats/players', icon: <path d="M5 20V10M12 20V4M19 20v-7" /> },
-  { id: 'calendar', label: 'Calendar', href: '#/calendar', icon: <path d="M7 3v4M17 3v4M4 10h16M6 5h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z" /> },
   { id: 'plan', label: 'Plan', href: '#/plan/days', icon: <path d="M7 4v16M17 4v16M3 8h8M13 16h8" /> },
 ] as const
 
@@ -76,8 +75,8 @@ export default function App() {
   const { tap, goblin } = useGoblin()
   const leaderAccount = auth.me.user ? { name: auth.me.user.name, onSignOut: auth.signOut } : null
   const corner = wide
-    ? <span className="flex items-center gap-2">{you}<Settings wide roster={roster} leader={!!auth.me.role} account={leaderAccount} /></span>
-    : <span className="flex min-w-0 items-center gap-2">{you}<Settings wide={false} roster={roster} leader={!!auth.me.role} account={leaderAccount} /></span>
+    ? <span className="flex items-center gap-2">{you}<CalendarButton current={route.tab === 'calendar'} /><Settings wide roster={roster} leader={!!auth.me.role} account={leaderAccount} /></span>
+    : <span className="flex min-w-0 items-center gap-2">{you}<CalendarButton current={route.tab === 'calendar'} /><Settings wide={false} roster={roster} leader={!!auth.me.role} account={leaderAccount} /></span>
 
   return (
     <div className={`min-h-dvh ${wide ? '' : 'pb-[calc(58px+env(safe-area-inset-bottom))]'}`}>

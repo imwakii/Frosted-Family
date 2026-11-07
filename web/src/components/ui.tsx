@@ -180,6 +180,16 @@ export function Picker<T extends string>({ label, value, options, onPick }: { la
   )
 }
 
+/** The header's way to the calendar. */
+export function CalendarButton({ current }: { current: boolean }) {
+  return (
+    <a href="#/calendar" aria-label="Calendar" title="Calendar" aria-current={current ? 'page' : undefined}
+      className={`flex size-9 flex-none items-center justify-center rounded-full border no-underline ${current ? 'border-gold bg-[#F6EEDC] text-ink' : 'border-line bg-white text-ink-2 hover:bg-page'}`}>
+      <svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M7 3v4M17 3v4M4 10h16M6 5h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z" /></svg>
+    </a>
+  )
+}
+
 // The seven CWL days, filled where the published day plan has the player in.
 export function PlayDays({ days, clan, size = 15 }: { days: number[]; clan: ClanName; size?: number }) {
   return (

@@ -342,7 +342,6 @@ export const UPDATES: Update[] = [
         title: 'General',
         lines: [
           'Removed the CWL tab.',
-          'Moved Calendar to the tab bar.',
         ],
       },
     ],
