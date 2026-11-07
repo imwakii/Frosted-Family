@@ -307,7 +307,7 @@ export const UPDATES: Update[] = [
     ],
   },
   {
-    id: '2026-11-07',
+    id: '2026-11-07-b',
     date: '7 Nov 2026',
     highlights: [
       { title: 'CWL is now in War', line: 'Roster and Group sit beside the live war.', href: '#/war/roster', icon: 'swords' },
@@ -341,6 +341,7 @@ export const UPDATES: Update[] = [
         title: 'General',
         lines: [
           'Removed the CWL tab.',
+          'Moved Calendar to the tab bar.',
         ],
       },
     ],
