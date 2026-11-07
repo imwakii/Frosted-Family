@@ -178,7 +178,11 @@ export const noteShownClan = (c: ClanName) => { shownClan = c }
 export const warClanOr = (fallback: ClanName) => warClan ?? shownClan ?? fallback
 
 export const useCwlGroups = () => usePolled('groups', loadCwlGroups)
-export const useFighting = (): ClanName[] => (useWarBoard().data?.clans ?? []).filter((c) => c.war?.state === 'inWar').map((c) => c.clan)
+// On every clan switch on War, clans at war blink green; those still preparing hold a steady dot in the Prep pill's orange.
+export const useWarDots = (): { live: ClanName[]; prep: ClanName[] } => {
+  const clans = useWarBoard().data?.clans ?? []
+  return { live: clans.filter((c) => c.war?.state === 'inWar').map((c) => c.clan), prep: clans.filter((c) => c.war?.state === 'preparation').map((c) => c.clan) }
+}
 export const useCalendar = (month: string) => usePolled(`cal${month}`, () => getJson<CalMonth>(`/api/calendar?month=${month}`))
 export const useWarLog = (clan: ClanName) => usePolled(`log${clan}`, () => getJson<{ clan: ClanName; wars: LogWar[] }>(`/api/war/log?clan=${clan}`))
 export const useCwlDay = (clan: ClanName, key: string) =>

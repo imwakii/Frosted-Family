@@ -5,7 +5,7 @@ import WarRecap from './WarRecap'
 import { useYou, YouTag } from './You'
 import { useClans } from '../clash'
 import { useWide } from '../data'
-import { ago, type ClanWar, setDayPick, setWarClan, noteShownClan, useCwlDay, useCwlGroups, useDayPick, useFighting, useWarLog, useWarBoard, useWarClan, type WarAttack, type WarBase } from '../leaders'
+import { ago, type ClanWar, setDayPick, setWarClan, noteShownClan, useCwlDay, useCwlGroups, useDayPick, useWarDots, useWarLog, useWarBoard, useWarClan, type WarAttack, type WarBase } from '../leaders'
 import { clanHref, go, playerHref, rivalHref } from '../route'
 import { CLAN, CLANS } from '../theme'
 import type { ClanName, Roster } from '../types'
@@ -380,7 +380,7 @@ function LogSearch({ clan, roster, q }: { clan: ClanName; roster: Roster; q: str
 export default function WarTab({ wide, roster, sub, opened, q, setQ }: { wide: boolean; roster: Roster; sub: string; opened: string | null; q: string; setQ: (v: string) => void }) {
   const { data, loading } = useWarBoard()
   const pick = useWarClan()
-  const fighting = useFighting()
+  const dots = useWarDots()
   const { yous } = useYou()
   const now = useNow(30_000)
   const wars = (data?.clans ?? []).filter((c) => c.war)
@@ -408,8 +408,8 @@ export default function WarTab({ wide, roster, sub, opened, q, setQ }: { wide: b
     return (
       <main className={wide ? 'mx-auto flex max-w-[1360px] flex-col gap-4 px-[clamp(16px,3vw,32px)] pb-12 pt-5' : 'flex flex-col gap-3 px-4 pb-6 pt-1'}>
         {wide
-          ? <div className={WIDE_ROW}><div className="ml-auto w-[clamp(270px,30vw,400px)] flex-none"><ClanSwitch value={logClan} onPick={(c) => { setWarClan(c); go.to('#/war/log') }} live={fighting} /></div></div>
-          : <PhoneSearch q={q} setQ={setQ} onEnter={() => (document.activeElement as HTMLElement | null)?.blur()} className="-mx-4 -mb-1 -mt-1"><ClanSwitch value={logClan} onPick={(c) => { setWarClan(c); go.to('#/war/log') }} live={fighting} /></PhoneSearch>}
+          ? <div className={WIDE_ROW}><div className="ml-auto w-[clamp(270px,30vw,400px)] flex-none"><ClanSwitch value={logClan} onPick={(c) => { setWarClan(c); go.to('#/war/log') }} {...dots} /></div></div>
+          : <PhoneSearch q={q} setQ={setQ} onEnter={() => (document.activeElement as HTMLElement | null)?.blur()} className="-mx-4 -mb-1 -mt-1"><ClanSwitch value={logClan} onPick={(c) => { setWarClan(c); go.to('#/war/log') }} {...dots} /></PhoneSearch>}
         {linkKey ? (
           <>
             <a href="#/war/log" className="flex min-h-9 items-center gap-1 self-start text-[13px] font-bold text-action no-underline">
@@ -424,7 +424,7 @@ export default function WarTab({ wide, roster, sub, opened, q, setQ }: { wide: b
   }
   const switcher = (
     <ClanSwitch value={clan?.clan ?? 'Fire'} onPick={setWarClan}
-      live={fighting}
+      {...dots}
       off={data ? CLANS.filter((k) => !wars.some((c) => c.clan === k)) : []} />
   )
   // A clan out of CWL while the others are in keeps the row, greyed out, so switching clans doesn't reshape the page.

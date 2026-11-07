@@ -1,7 +1,7 @@
 import Info from './Info'
 import { useMemo, useState } from 'react'
 import { useClans, thIcon } from '../clash'
-import { type CwlRow, type EightRow, setWarClan, useCwlGroups, useFighting, useWarBoard, useWarClan, warClanOr } from '../leaders'
+import { type CwlRow, type EightRow, setWarClan, useCwlGroups, useWarDots, useWarBoard, useWarClan, warClanOr } from '../leaders'
 import { clanHref, playerHref, rivalHref } from '../route'
 import { CLAN, CLANS } from '../theme'
 import type { ClanName } from '../types'
@@ -200,12 +200,12 @@ export default function CwlGroup({ wide, roster, q, setQ }: { wide: boolean; ros
   const { data, loading } = useCwlGroups()
   const own = useWarClan() ?? warClanOr(readClan())
   const setOwn = setWarClan
-  const fighting = useFighting()
+  const dots = useWarDots()
   const groups = useMemo(() => (data?.clans ?? []).filter((c) => c.group), [data])
   const shown = groups.find((c) => c.clan === own) ?? groups[0]
   // Wide pages here have no search box, as on Current, so a search carried from another tab doesn't hide the table.
   const hits = familyHits(roster, wide ? '' : norm(q.trim()))
-  const switcher = <ClanSwitch<ClanName> value={shown?.clan ?? own} onPick={setOwn} live={fighting} off={data ? CLANS.filter((k) => !groups.some((c) => c.clan === k)) : []} />
+  const switcher = <ClanSwitch<ClanName> value={shown?.clan ?? own} onPick={setOwn} {...dots} off={data ? CLANS.filter((k) => !groups.some((c) => c.clan === k)) : []} />
   return (
     <main className={wide ? 'mx-auto flex max-w-[1360px] flex-col gap-4 px-[clamp(16px,3vw,32px)] pb-12 pt-5' : 'flex flex-col gap-3 px-4 pb-6 pt-1'}>
       {wide ? switcher : <PhoneSearch q={q} setQ={setQ} onEnter={() => { if (hits[0]) window.location.hash = playerHref(hits[0].tag) }} className="-mx-4 -mb-1 -mt-1">{switcher}</PhoneSearch>}

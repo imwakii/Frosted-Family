@@ -4,7 +4,7 @@ import { clanHref, playerHref } from '../route'
 import type { ClanName, LiveWar, Player, Roster } from '../types'
 import { useClans, type ClanMeta } from '../clash'
 import { stillToMove } from '../data'
-import { setDayPick, setWarClan, useCwlGroups, useDayPick, useFighting, useWarClan, warClanOr } from '../leaders'
+import { setDayPick, setWarClan, useCwlGroups, useDayPick, useWarDots, useWarClan, warClanOr } from '../leaders'
 import { jumpToYou, useYou, YouTag } from './You'
 import { ClanBadge, ClanSwitch, DayRow, Eyebrow, LeaguePill, PlayDays, SearchIcon, StatusDot, StatusKey, Th, useNow, RowChevron, GoblinNote } from './ui'
 
@@ -285,11 +285,11 @@ function Phone({ roster, war, q, setQ, lock }: Omit<Props, 'wide'>) {
   const clans = useClans()
   const { planned, day, setDay, live } = useDay(roster, war)
   const days = useCwlGroups().data?.clans.find((c) => c.clan === clan)?.group?.days
-  const fighting = useFighting()
+  const dots = useWarDots()
   return (
     <>
       <PhoneSearch q={q} setQ={setQ} className="pb-4" onEnter={() => { if (results[0]) window.location.hash = href(results[0]) }}>
-        <ClanSwitch<ClanName> value={clan} onPick={lock?.onPick ?? setOwn} options={lock?.options} live={fighting} />
+        <ClanSwitch<ClanName> value={clan} onPick={lock?.onPick ?? setOwn} options={lock?.options} {...dots} />
       </PhoneSearch>
       <div className="flex flex-col gap-3 px-4 pb-6">
         {nq ? <FamilyHits roster={roster} hits={results} /> : (

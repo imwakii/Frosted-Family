@@ -319,8 +319,8 @@ export function DayRow({ days = [], pick, onPick, live = 0, roster, drawnOnly, o
 /** A phone page's clan switch follows the scroll, in the place it would sit anyway. */
 export const STICKY_SWITCH = 'sticky top-0 z-10 -mx-4 -mb-1 -mt-1 bg-page px-4 pb-1 pt-1'
 
-export function ClanSwitch<T extends ClanName | 'All'>({ value, onPick, options, live = [], flag = [], off = [] }: {
-  value: T; onPick: (c: T) => void; options?: readonly T[]; live?: ClanName[]; flag?: ClanName[]; off?: ClanName[]
+export function ClanSwitch<T extends ClanName | 'All'>({ value, onPick, options, live = [], prep = [], flag = [], off = [] }: {
+  value: T; onPick: (c: T) => void; options?: readonly T[]; live?: ClanName[]; prep?: ClanName[]; flag?: ClanName[]; off?: ClanName[]
 }) {
   const clans = useClans()
   const list = (options ?? CLANS) as readonly T[]
@@ -334,11 +334,13 @@ export function ClanSwitch<T extends ClanName | 'All'>({ value, onPick, options,
         const clan = k === 'All' ? null : (k as ClanName)
         return (
           <button key={k} type="button" aria-pressed={on} disabled={!!clan && off.includes(clan)} onClick={() => onPick(k)}
+            aria-label={clan && live.includes(clan) ? `${k}, at war` : clan && prep.includes(clan) ? `${k}, preparing` : undefined}
             className={`relative flex min-h-[42px] min-w-0 cursor-pointer items-center justify-center gap-1 rounded-[9px] border-0 bg-transparent px-1 text-[15px] font-bold transition-colors duration-200 disabled:cursor-default disabled:opacity-40 motion-reduce:transition-none ${on ? (grabbing ? 'cursor-grabbing' : 'cursor-grab') : 'text-muted'}`}
             style={on && clan ? { color: CLAN[clan].deep } : undefined}>
             {clan && <ClanBadge src={clans[clan]?.badge} size={20} />}
             {k}
-            {clan && live.includes(clan) && <span className="ff-live size-1.5 flex-none rounded bg-[#16A34A]" />}
+            {clan && live.includes(clan) && <span aria-hidden="true" title="At war" className="ff-live size-1.5 flex-none rounded bg-[#16A34A]" />}
+            {clan && !live.includes(clan) && prep.includes(clan) && <span aria-hidden="true" title="Preparing" className="size-1.5 flex-none rounded bg-[#B4451A]" />}
             {clan && flag.includes(clan) && <span title="A day is not 15" className="size-2 flex-none rounded-full bg-[#DC2626]" />}
           </button>
         )

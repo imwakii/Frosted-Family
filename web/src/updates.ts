@@ -324,6 +324,7 @@ export const UPDATES: Update[] = [
           'Added Not in CWL to the day strip.',
           'Added search to Group and War log.',
           'Added attacks left to Group.',
+          'Added a dot for clans preparing.',
           'Changed CWL open bases to unhit only.',
           'Removed the war MVP.',
         ],
