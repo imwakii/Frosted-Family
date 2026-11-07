@@ -14,6 +14,25 @@ def row(tag, stars, pct):
     return {"tag": tag, "stars": stars, "destructionPercentage": pct}
 
 
+def test_a_war_being_fought_says_how_many_attacks_each_side_has_left(tmp_path):
+    conn = db.connect(tmp_path / "x.db")
+    setup(conn, [fight({**row(FIRE, 12, 40.0), "attacks": 9}, {**row("#B", 3, 10.0), "attacks": 14}, state="inWar", end=LATER),
+                 fight(row("#C", 20, 70.0), row("#D", 20, 80.0))])
+    t = {r["tag"]: r for r in table(conn)}
+    assert (t[FIRE]["left"], t["#B"]["left"], t["#C"]["left"]) == (6, 1, None)
+
+
+def test_a_database_from_before_attack_counts_gains_the_columns(tmp_path):
+    import sqlite3
+    old = sqlite3.connect(tmp_path / "x.db")
+    old.execute("CREATE TABLE cwl_group_wars (war_tag TEXT PRIMARY KEY, season TEXT, round INTEGER, state TEXT, team_size INTEGER, end_time TEXT,"
+                " clan_tag TEXT, clan_stars INTEGER, clan_destruction REAL, opponent_tag TEXT, opponent_stars INTEGER, opponent_destruction REAL, updated_at TEXT)")
+    old.commit()
+    old.close()
+    conn = db.connect(tmp_path / "x.db")
+    assert {"clan_attacks", "opponent_attacks"} <= {r["name"] for r in conn.execute("PRAGMA table_info(cwl_group_wars)")}
+
+
 def fight(a, b, state="warEnded", end=ENDED):
     return {"state": state, "teamSize": 15, "endTime": end, "clan": a, "opponent": b}
 

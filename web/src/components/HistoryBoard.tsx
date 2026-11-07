@@ -70,7 +70,7 @@ export default function HistoryBoard({ q, setQ, wide }: { q: string; setQ: (v: s
   const body = !data ? <Empty loading={loading} /> : (
     <div className="grid w-full items-start gap-3.5 lg:grid-cols-2 lg:items-stretch">
       {!nq && <div className="flex flex-col gap-3.5">
-        <Section title="How it began">
+        <Section title="Clan History">
           <ol className="m-0 flex list-none flex-col rounded-2xl border border-line bg-white p-3">
             {data.clans.map((c, i) => (
               <li key={c.clan} className="flex gap-3">
@@ -88,7 +88,7 @@ export default function HistoryBoard({ q, setQ, wide }: { q: string; setQ: (v: s
           </ol>
         </Section>
 
-        <Section title="New faces each year" note="First time in the family">
+        <Section title="New members by year" note="First time in the family">
           <div className="flex flex-col gap-2 rounded-2xl border border-line bg-white p-3">
             <div aria-label="Key" className={KEY_ROW}>
               {shownClans.map((c) => <span key={c} className="flex items-center gap-1"><span className="size-2.5 rounded-sm" style={{ background: BAR[c] }} />{c}</span>)}

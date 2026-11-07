@@ -4,7 +4,7 @@ import { clanHref, playerHref } from '../route'
 import type { ClanName, LiveWar, Player, Roster } from '../types'
 import { useClans, type ClanMeta } from '../clash'
 import { stillToMove } from '../data'
-import { setDayPick, useCwlGroups, useDayPick } from '../leaders'
+import { setDayPick, setWarClan, useCwlGroups, useDayPick, useFighting, useWarClan, warClanOr } from '../leaders'
 import { jumpToYou, useYou, YouTag } from './You'
 import { ClanBadge, ClanSwitch, DayRow, Eyebrow, LeaguePill, PlayDays, SearchIcon, StatusDot, StatusKey, Th, useNow, RowChevron, GoblinNote } from './ui'
 
@@ -61,7 +61,8 @@ export function clanFacts(roster: Roster, clan: ClanName, meta?: ClanMeta) {
 }
 
 // Badge, name and league, opening the clan's card.
-function ClanCard({ roster, clan, meta, compact, below }: { roster: Roster; clan: ClanName; meta?: ClanMeta; compact?: boolean; below?: ReactNode }) {
+// `stripSaysCwl`: the greyed day strip above already says the clan is out of CWL, so the pill gives the league alone.
+function ClanCard({ roster, clan, meta, compact, below, stripSaysCwl }: { roster: Roster; clan: ClanName; meta?: ClanMeta; compact?: boolean; below?: ReactNode; stripSaysCwl?: boolean }) {
   const f = clanFacts(roster, clan, meta)
   const c = CLAN[clan]
   return (
@@ -70,7 +71,7 @@ function ClanCard({ roster, clan, meta, compact, below }: { roster: Roster; clan
         <ClanBadge src={f.badge} size={48} className="drop-shadow-[0_2px_4px_rgba(43,33,20,.18)]" />
         <span className="flex min-w-0 flex-auto flex-col gap-0.5">
           <span className="font-display truncate text-[22px] leading-none" style={{ color: c.deep }}>{f.name}</span>
-          <LeaguePill league={f.league} text={f.format.replace('League ', '')} />
+          <LeaguePill league={f.league} text={(stripSaysCwl && !f.inCwl && f.league ? f.league : f.format).replace('League ', '')} />
         </span>
         <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#A3957C" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" className="flex-none"><path d="M9 6l6 6-6 6" /></svg>
       </a>
@@ -141,7 +142,7 @@ function FromPill({ p, roster }: { p: Player; roster: Roster }) {
   )
 }
 
-// Joined date for a new member. Lineups is public, so the suggested slot stays in the leaders' builder.
+// Joined date for a new member. Roster is public, so the suggested slot stays in the leaders' builder.
 function NewLine({ p }: { p: Player }) {
   // joined_at may be a date or a full timestamp.
   const at = p.joinedAt ? new Date(p.joinedAt.length === 10 ? p.joinedAt + 'T00:00:00Z' : p.joinedAt) : null
@@ -236,6 +237,37 @@ function useDay(roster: Roster, war: Props['war']) {
   return { planned, day: (planned ? pick ?? 'all' : 'all') as DayPick, setDay: setDayPick, live: liveDay(war) }
 }
 
+// The phone search on every War view: family members by name or tag, each opening their card.
+export const familyHits = (roster: Roster, nq: string) => (nq ? roster.players.filter((p) => matches(p, nq)).slice(0, 12) : [])
+
+export function FamilyHits({ roster, hits, quiet }: { roster: Roster; hits: Player[]; quiet?: boolean }) {
+  if (!hits.length && quiet) return null
+  return (
+    <ul className="m-0 list-none rounded-2xl border border-line bg-white py-1">
+      {hits.map((p, i) => (
+        <li key={p.tag}>
+          <a href={href(p)}
+            className={`flex min-h-[52px] items-center gap-3 px-3.5 py-1.5 text-ink no-underline hover:bg-hover ${i ? 'border-t border-hair' : ''}`}>
+            <Th th={p.th} />
+            <span className="flex min-w-0 flex-auto items-center gap-1.5">
+              <span className="min-w-0 truncate text-[15px] font-semibold">{p.name}</span>
+              <FromPill p={p} roster={roster} />
+            </span>
+            <span className="flex flex-none flex-col items-end gap-0.5">
+              <span className="whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-bold" style={{ background: CLAN[p.clan].tint, color: CLAN[p.clan].deep }}>
+                {p.clan} · {roster.clans[p.clan]?.inCwl ? SLOT_TEXT[p.slot] : 'Not in'}
+              </span>
+              {p.days && <PlayDays days={p.days} clan={p.clan} />}
+            </span>
+            <RowChevron />
+          </a>
+        </li>
+      ))}
+      {!hits.length && <li><GoblinNote goblin="page">No one by that name in this village</GoblinNote></li>}
+    </ul>
+  )
+}
+
 export function readClan(): ClanName {
   try {
     const v = sessionStorage.getItem('ff-clan')
@@ -244,48 +276,26 @@ export function readClan(): ClanName {
 }
 
 function Phone({ roster, war, q, setQ, lock }: Omit<Props, 'wide'>) {
-  const [own, setOwn] = useState<ClanName>(readClan)
-  useEffect(() => { try { sessionStorage.setItem('ff-clan', own) } catch { /* private mode */ } }, [own])
+  const own = useWarClan() ?? warClanOr(readClan())
+  const setOwn = setWarClan
   const clan = lock?.clan ?? own
   const inCwl = !!roster.clans[clan]?.inCwl
   const nq = norm(q.trim())
-  const results = nq ? roster.players.filter((p) => matches(p, nq)).slice(0, 12) : []
+  const results = familyHits(roster, nq)
   const clans = useClans()
   const { planned, day, setDay, live } = useDay(roster, war)
   const days = useCwlGroups().data?.clans.find((c) => c.clan === clan)?.group?.days
+  const fighting = useFighting()
   return (
     <>
       <PhoneSearch q={q} setQ={setQ} className="pb-4" onEnter={() => { if (results[0]) window.location.hash = href(results[0]) }}>
-        <ClanSwitch<ClanName> value={clan} onPick={lock?.onPick ?? setOwn} options={lock?.options} />
+        <ClanSwitch<ClanName> value={clan} onPick={lock?.onPick ?? setOwn} options={lock?.options} live={fighting} />
       </PhoneSearch>
       <div className="flex flex-col gap-3 px-4 pb-6">
-        {nq ? (
-          <ul className="m-0 list-none rounded-2xl border border-line bg-white py-1">
-            {results.map((p, i) => (
-              <li key={p.tag}>
-                <a href={href(p)}
-                  className={`flex min-h-[52px] items-center gap-3 px-3.5 py-1.5 text-ink no-underline hover:bg-hover ${i ? 'border-t border-hair' : ''}`}>
-                  <Th th={p.th} />
-                  <span className="flex min-w-0 flex-auto items-center gap-1.5">
-                    <span className="min-w-0 truncate text-[15px] font-semibold">{p.name}</span>
-                    <FromPill p={p} roster={roster} />
-                  </span>
-                  <span className="flex flex-none flex-col items-end gap-0.5">
-                    <span className="whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-bold" style={{ background: CLAN[p.clan].tint, color: CLAN[p.clan].deep }}>
-                      {p.clan} · {roster.clans[p.clan]?.inCwl ? SLOT_TEXT[p.slot] : 'Not in'}
-                    </span>
-                    {p.days && <PlayDays days={p.days} clan={p.clan} />}
-                  </span>
-                  <RowChevron />
-                </a>
-              </li>
-            ))}
-            {!results.length && <li><GoblinNote goblin="page">No one by that name in this village</GoblinNote></li>}
-          </ul>
-        ) : (
+        {nq ? <FamilyHits roster={roster} hits={results} /> : (
           <>
-            {planned && inCwl && <DayRow days={days} pick={day} onPick={setDay} live={live} roster />}
-            <ClanCard roster={roster} clan={clan} meta={clans[clan]} below={inCwl ? <Countdown roster={roster} war={war} slim /> : undefined} />
+            {planned && (inCwl ? <DayRow days={days} pick={day} onPick={setDay} live={live} roster /> : <DayRow out roster pick={null} onPick={() => {}} />)}
+            <ClanCard roster={roster} clan={clan} meta={clans[clan]} below={inCwl ? <Countdown roster={roster} war={war} slim /> : undefined} stripSaysCwl={planned} />
             <Groups roster={roster} clan={clan} day={day} />
             <StatusKey className="px-1" extra={planned && inCwl ? <span className="flex flex-none items-center gap-1 md:gap-1.5">Filled number: plays that day</span> : undefined} />
           </>

@@ -264,7 +264,7 @@ function Plan({ roster, me, onPublished }: { roster: Roster; me: Me; onPublished
         {result && (
           <div role="status" className={`flex min-h-12 items-center gap-2.5 rounded-[14px] px-4 text-sm font-bold ${result.ok ? 'bg-[#DCFCE7] text-[#166534]' : 'bg-[#FEF3C7] text-[#92400E]'}`}>
             <span className="flex-auto">{result.ok ? `Published · ${result.n} ${result.n === 1 ? 'change' : 'changes'} on CWL` : result.why}</span>
-            {result.ok && <a href="#/cwl" className="flex min-h-9 items-center rounded-full bg-white px-3 text-[13px] font-bold text-[#166534] no-underline">Open CWL</a>}
+            {result.ok && <a href="#/war/roster" className="flex min-h-9 items-center rounded-full bg-white px-3 text-[13px] font-bold text-[#166534] no-underline">Open roster</a>}
           </div>
         )}
 

@@ -1,12 +1,13 @@
 import Info from './Info'
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useClans, thIcon } from '../clash'
-import { type CwlRow, type EightRow, useCwlGroups, useWarBoard } from '../leaders'
+import { type CwlRow, type EightRow, setWarClan, useCwlGroups, useFighting, useWarBoard, useWarClan, warClanOr } from '../leaders'
 import { clanHref, playerHref, rivalHref } from '../route'
 import { CLAN, CLANS } from '../theme'
 import type { ClanName } from '../types'
-import { readClan } from './CwlTab'
-import { chip, ClanBadge, ClanSwitch, dayWon, LeaguePill, RowChevron, STICKY_SWITCH, Th, useNow } from './ui'
+import { familyHits, FamilyHits, norm, PhoneSearch, readClan } from './CwlTab'
+import type { Roster } from '../types'
+import { chip, ClanBadge, ClanSwitch, dayWon, LeaguePill, RowChevron, Th, useNow } from './ui'
 
 // A clan's league group, ranked as the game ranks it, three ways: who is winning, with each clan's days; signed-up town
 // halls; strength. Then who has the 8 stars for the bonus. Each day's war is on the War tab.
@@ -16,6 +17,8 @@ const EIGHT_SHOWN = 5
 const COLS = 'grid-cols-[14px_minmax(0,1fr)_repeat(5,30px)] md:grid-cols-[18px_minmax(0,1fr)_repeat(5,44px)]'
 const POWER_COLS = 'grid-cols-[14px_minmax(0,1fr)_repeat(3,58px)] md:grid-cols-[18px_minmax(0,1fr)_repeat(3,76px)]'
 const STANDING_COLS = 'grid-cols-[14px_minmax(0,1fr)_34px_30px_58px] md:grid-cols-[18px_minmax(0,1fr)_repeat(7,38px)_52px_44px_72px]'
+// While a day is being fought, a column for the attacks each clan has left sits beside the stars.
+const LIVE_COLS = 'grid-cols-[14px_minmax(0,1fr)_34px_30px_28px_58px] md:grid-cols-[18px_minmax(0,1fr)_repeat(7,38px)_52px_44px_44px_72px]'
 const DAYS = [1, 2, 3, 4, 5, 6, 7]
 const POWER = [{ k: 'war_stars', label: 'War stars' }, { k: 'heroes', label: 'Heroes' }, { k: 'equipment', label: 'Equipment' }] as const
 
@@ -46,18 +49,21 @@ function Standings({ rows, clan }: { rows: CwlRow[]; clan: ClanName }) {
   const { tint } = CLAN[clan]
   const league = useClans()[clan]?.league
   const head = 'text-center text-[10px] font-bold leading-tight text-muted md:text-xs'
+  const live = rows.some((r) => r.left != null)
+  const cols = live ? LIVE_COLS : STANDING_COLS
   return (
     <section aria-label="Standings" className="overflow-hidden rounded-2xl border border-line bg-white">
-      <div className={`grid h-11 items-center gap-x-1 border-b border-hair px-2.5 md:gap-x-1.5 md:px-3.5 ${STANDING_COLS}`}>
+      <div className={`grid h-11 items-center gap-x-1 border-b border-hair px-2.5 md:gap-x-1.5 md:px-3.5 ${cols}`}>
         <span className="col-span-2 min-w-0 whitespace-nowrap">{league ? <LeaguePill league={league} text={league.replace('League ', '')} /> : null}</span>
         {DAYS.map((d) => <span key={d} className={`${head} max-md:hidden`}>Day {d}</span>)}
         <span className={head}>Won</span>
         <span className="text-center text-gold" aria-label="Stars">★</span>
+        {live && <span className={head}>Left</span>}
         <span className={head}>Destruction</span>
       </div>
       <ol className="m-0 list-none">
         {rows.map((r, n) => (
-          <li key={r.tag} className={`grid h-[52px] items-center gap-x-1 px-2.5 md:gap-x-1.5 md:px-3.5 ${STANDING_COLS} ${n ? 'border-t border-hair' : ''}`} style={r.ours ? { background: tint } : undefined}>
+          <li key={r.tag} className={`grid h-[52px] items-center gap-x-1 px-2.5 md:gap-x-1.5 md:px-3.5 ${cols} ${n ? 'border-t border-hair' : ''}`} style={r.ours ? { background: tint } : undefined}>
             <span className="text-right text-xs font-bold tabular-nums text-faint">{n + 1}</span>
             <ClanLink r={r} clan={clan} />
             {DAYS.map((d) => {
@@ -72,6 +78,7 @@ function Standings({ rows, clan }: { rows: CwlRow[]; clan: ClanName }) {
             })}
             <span className="text-center text-[13px] font-bold tabular-nums text-ink-2">{r.won}–{r.lost}</span>
             <span className="font-display text-center text-[17px] tabular-nums text-ink">{r.stars}</span>
+            {live && <span aria-label={r.left == null ? 'No war on' : `${r.left} attacks left`} className={`text-center text-[13px] font-bold tabular-nums ${r.left ? 'text-ink-2' : 'text-[#C9BCA0]'}`}>{r.left == null ? '·' : r.left}</span>}
             <span className="text-center text-xs font-semibold tabular-nums text-muted">{Math.round(r.destruction).toLocaleString('en-GB')}%</span>
           </li>
         ))}
@@ -189,16 +196,22 @@ function Board({ rows, clan }: { rows: CwlRow[]; clan: ClanName }) {
   )
 }
 
-export default function CwlGroup({ wide }: { wide: boolean }) {
+export default function CwlGroup({ wide, roster, q, setQ }: { wide: boolean; roster: Roster; q: string; setQ: (v: string) => void }) {
   const { data, loading } = useCwlGroups()
-  const [own, setOwn] = useState<ClanName>(readClan)
-  useEffect(() => { try { sessionStorage.setItem('ff-clan', own) } catch { /* private mode */ } }, [own])
+  const own = useWarClan() ?? warClanOr(readClan())
+  const setOwn = setWarClan
+  const fighting = useFighting()
   const groups = useMemo(() => (data?.clans ?? []).filter((c) => c.group), [data])
   const shown = groups.find((c) => c.clan === own) ?? groups[0]
+  // Wide pages here have no search box, as on Current, so a search carried from another tab doesn't hide the table.
+  const hits = familyHits(roster, wide ? '' : norm(q.trim()))
+  const switcher = <ClanSwitch<ClanName> value={shown?.clan ?? own} onPick={setOwn} live={fighting} off={data ? CLANS.filter((k) => !groups.some((c) => c.clan === k)) : []} />
   return (
     <main className={wide ? 'mx-auto flex max-w-[1360px] flex-col gap-4 px-[clamp(16px,3vw,32px)] pb-12 pt-5' : 'flex flex-col gap-3 px-4 pb-6 pt-1'}>
-      <div className={wide ? '' : STICKY_SWITCH}><ClanSwitch<ClanName> value={shown?.clan ?? own} onPick={setOwn} off={data ? CLANS.filter((k) => !groups.some((c) => c.clan === k)) : []} /></div>
-      {!data ? (
+      {wide ? switcher : <PhoneSearch q={q} setQ={setQ} onEnter={() => { if (hits[0]) window.location.hash = playerHref(hits[0].tag) }} className="-mx-4 -mb-1 -mt-1">{switcher}</PhoneSearch>}
+      {!wide && q.trim() ? (
+        <FamilyHits roster={roster} hits={hits} />
+      ) : !data ? (
         loading ? <div aria-busy="true" className="h-64 animate-pulse rounded-2xl bg-well" /> : <div className="rounded-2xl border border-line bg-white p-5 text-sm text-faint">Unavailable right now</div>
       ) : !shown?.group ? (
         <div className="rounded-2xl border border-line bg-white px-6 py-14 text-center text-sm font-semibold text-faint">No CWL group yet</div>

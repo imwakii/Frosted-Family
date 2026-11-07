@@ -3,15 +3,15 @@ import type { Cat } from './explore'
 import type { UpgradeCategory } from './leaders'
 import type { ClanName } from './types'
 
-// Hash routes: #/war[/log[/<clan>/<war key>]] (where the app opens), #/cwl[/group], #/calendar, #/log[/recap], #/stats/<sub>[/<category>], #/plan/<sub>. A player sheet opens over
+// Hash routes: #/war[/roster|/group|/log[/<clan>/<war key>]] (where the app opens), #/calendar, #/log[/recap], #/stats/<sub>[/<category>], #/plan/<sub>. A player sheet opens over
 // Lineups or Stats by appending /p/<tag without #>, and closes by dropping it; a clan card the same way with /c/<clan>,
 // a league group clan's card with /e/<our clan>/<its tag without #>,
 // one player in one upgrade category with /u/<category>/<tag without #>[/<unit to mark>],
 // two players side by side with /v/<tag>[/<other tag>], tags without #,
-// and how one player came to a Stats figure with /s/<overall|donations|capital|badges>/<tag without #>[/<badge to mark>].
+// and how one player came to a Stats figure with /s/<overall|donations|capital|games|badges>/<tag without #>[/<badge to mark>].
 // Old links (#/explore/<kind>, #/leaders/<sub>) are rewritten to their new place.
-export type Tab = 'cwl' | 'calendar' | 'explore' | 'log' | 'war' | 'plan'
-export type StatKind = 'overall' | 'donations' | 'capital' | 'badges'
+export type Tab = 'calendar' | 'explore' | 'log' | 'war' | 'plan'
+export type StatKind = 'overall' | 'donations' | 'capital' | 'games' | 'badges'
 export type Route = { tab: Tab; sub: string; kind: string | null; player: string | null; clan: ClanName | null; rival: { clan: ClanName; tag: string } | null; upgrade: { cat: Cat; tag: string; unit: string | null } | null; compare: { a: string; b: string | null } | null; history: { tag: string; days: 7 | 30; kind: UpgradeCategory | null } | null; attacks: { tag: string; days: 7 | 30 } | null; stat: { kind: StatKind; tag: string; focus: string | null } | null; base: string }
 
 export const STATS_SUBS = ['players', 'badges', 'war', 'trends', 'history'] as const
@@ -49,7 +49,7 @@ function parse(): Route {
   const logTag = log ? decodeTag(log[1]) : null
   const fights = head.match(/(?:^|\/)a\/([^/]+)\/(7|30)$/)
   const fightsTag = fights ? decodeTag(fights[1]) : null
-  const figure = head.match(/(?:^|\/)s\/(overall|donations|capital|badges)\/([^/]+)(?:\/([^/]+))?$/)
+  const figure = head.match(/(?:^|\/)s\/(overall|donations|capital|games|badges)\/([^/]+)(?:\/([^/]+))?$/)
   const figureTag = figure ? decodeTag(figure[2]) : null
   const cut = enemy ?? card ?? stat ?? versus ?? log ?? fights ?? figure
   return {
@@ -84,10 +84,10 @@ function place(path: string, player: string | null): Omit<Route, 'clan' | 'rival
   if (parts[0] === 'log') return parts[1] === 'recap'
     ? { tab: 'log', sub: 'recap', kind: null, player, base: '#/log/recap' }
     : { tab: 'log', sub: 'feed', kind: null, player, base: '#/log' }
-  if (parts[0] === 'cwl') {
-    const sub = parts[1] === 'group' || parts[1] === 'standings' ? 'group' : 'lineups'  // Standings joined Group on 4 Nov 2026
-    return { tab: 'cwl', sub, kind: null, player, base: sub === 'lineups' ? '#/cwl' : `#/cwl/${sub}` }
-  }
+  // CWL joined War on 7 Nov 2026; Standings joined Group on 4 Nov 2026.
+  if (parts[0] === 'cwl') parts = ['war', parts[1] === 'group' || parts[1] === 'standings' ? 'group' : 'roster']
+  if (parts[0] === 'war' && parts[1] === 'lineup') parts = ['war', 'roster']
+  if (parts[0] === 'war' && (parts[1] === 'roster' || parts[1] === 'group')) return { tab: 'war', sub: parts[1], kind: null, player, base: `#/war/${parts[1]}` }
   if (parts[0] === 'war' && parts[1] === 'log') {
     const kind = parts[2] && parts[3] ? `${parts[2]}/${parts[3]}` : null
     return { tab: 'war', sub: 'log', kind, player, base: `#/war/log${kind ? '/' + kind : ''}` }

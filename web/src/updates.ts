@@ -306,6 +306,45 @@ export const UPDATES: Update[] = [
       },
     ],
   },
+  {
+    id: '2026-11-07',
+    date: '7 Nov 2026',
+    highlights: [
+      { title: 'CWL is now in War', line: 'Roster and Group sit beside the live war.', href: '#/war/roster', icon: 'swords' },
+      { title: 'Clan Games points', line: 'Points per member, monthly from now.', href: '#/stats/players/games', icon: 'league' },
+      { title: 'Attacks left', line: 'Group shows who still has hits to come.', href: '#/war/group', icon: 'calendar' },
+    ],
+    groups: [
+      {
+        title: 'War tab',
+        lines: [
+          'Moved CWL Lineups here as Roster.',
+          'Moved CWL Group here.',
+          'Changed clan and day to stay picked.',
+          'Added Not in CWL to the day strip.',
+          'Added search to Group and War log.',
+          'Added attacks left to Group.',
+          'Changed CWL open bases to unhit only.',
+          'Removed the war MVP.',
+        ],
+      },
+      {
+        title: 'Stats tab',
+        lines: [
+          'Added Clan Games rankings.',
+          'Added a Score column to War.',
+          'Changed rates to need 10 attacks.',
+          'Renamed two History headings.',
+        ],
+      },
+      {
+        title: 'General',
+        lines: [
+          'Removed the CWL tab.',
+        ],
+      },
+    ],
+  },
 ]
 
 export const LATEST = UPDATES[UPDATES.length - 1]

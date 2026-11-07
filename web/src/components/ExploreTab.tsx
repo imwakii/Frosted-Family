@@ -5,8 +5,9 @@ import OverallBoard, { Bar } from './OverallBoard'
 import RankBoard, { type RankCol } from './RankBoard'
 import { CATS, type Cat, competitionRanks, HIGH_MISS, isMaxed, type MatrixPlayer, missRate, progress, useMatrix, useWarBoard, type WarRow, type WarScope, tenth, sinceDay } from '../explore'
 import { go, onDrill, playerHref, upgradeHref, useDrill } from '../route'
-import { CLAN, CLANS } from '../theme'
-import type { ClanName } from '../types'
+import { CLAN, CLANS, fmtScore } from '../theme'
+import type { ClanName, Roster } from '../types'
+import Info from './Info'
 import { norm, PhoneSearch, SearchBox } from './CwlTab'
 import BadgesBoard from './BadgesBoard'
 import ClansBoard, { COLOR } from './ClansBoard'
@@ -15,11 +16,12 @@ import { ShowAll, topRows, useShowAll } from './Top'
 import { ClanSwitch, Picker, Star, StatusKey, SubNav, Th, UnitIcon, RowChevron, chip, GoblinNote } from './ui'
 
 export type ClanPick = ClanName | 'All'
-type BoardProps = { q: string; setQ: (v: string) => void; wide: boolean }
+type BoardProps = { q: string; setQ: (v: string) => void; wide: boolean; roster?: Roster }
 
 // Players: all upgrades together, one unit matrix per category, then past a divider the two rankings that are not upgrades.
 const NAV: { id: string; label: string; icon: string | null }[] = [
   { id: 'overall', label: 'Overall', icon: null }, ...CATS, { id: 'donations', label: 'Donations', icon: null }, { id: 'capital', label: 'Capital', icon: null },
+  { id: 'games', label: 'Clan Games', icon: null },
 ]
 
 const SUBS = [
@@ -32,6 +34,13 @@ const SUBS = [
 
 export type Gift = { donated: number; received: number } | null
 export type Cap = { contributed: number | null; raid_loot: number | null; raid_attacks: number | null } | null
+export type Games = { month: number | null; last_month: number | null; total: number } | null
+// All-time leads: a month reads zero for everyone until that month's games, around the 22nd to the 28th.
+const GAMES_COLS: RankCol[] = [
+  { key: 'total', label: 'All-time', value: (r) => (r.games as Games)?.total ?? null },
+  { key: 'month', label: 'This month', value: (r) => (r.games as Games)?.month ?? null },
+  { key: 'last', label: 'Last month', value: (r) => (r.games as Games)?.last_month ?? null },
+]
 const DONATION_COLS: RankCol[] = [
   { key: 'donated', label: 'Donated', value: (r) => (r.donations as Gift)?.donated ?? null },
   { key: 'received', label: 'Received', value: (r) => (r.donations as Gift)?.received ?? null },
@@ -102,6 +111,7 @@ export default function ExploreTab({ sub, kind, ...rest }: BoardProps & { sub: s
     : id === 'overall' ? <OverallBoard {...rest} />
     : id === 'donations' ? <RankBoard key="donations" kind="donations" cols={DONATION_COLS} note="This season" {...rest} />
     : id === 'capital' ? <RankBoard key="capital" kind="capital" cols={CAPITAL_COLS} {...rest} />
+    : id === 'games' ? <RankBoard key="games" kind="games" cols={GAMES_COLS} {...rest} />
     : <MatrixBoard cat={id as Cat} {...rest} />
   return <><SubNav items={SUBS} current={sub} wide={rest.wide} />{board}</>
 }
@@ -310,7 +320,16 @@ type WarCol = { key: string; label: string; value: (r: WarRow) => number | null;
 const pct = (v: number) => `${Math.round(v)}%`
 // Lifetime is the count on a player's profile, which a season's view has no use for.
 const isStars = (key: string) => key === 'total' || key === 'stars'
+// Score and Lifetime have spans of their own, so they sit apart from the columns under the window's heading.
+const apart = (key: string) => key === 'score' || key === 'total'
+// A rate from a handful of attacks says little, so rates rank only members with this many, and the rest follow unranked.
+const TESTED = 10
+const isRate = (key: string) => key === 'rate' || key === 'triple' || key === 'avg' || key === 'dest'
+// Miss rate counts misses too; the other rates come from attacks made.
+const tested = (r: WarRow, key: string) => (r.war ? r.war.attacks + (key === 'rate' ? r.war.missed : 0) : 0) >= TESTED
+const UNTESTED = `Under ${TESTED} attacks · not ranked`
 const WAR_COLS: WarCol[] = [
+  { key: 'score', label: 'Score', value: (r) => r.score ?? null, fmt: (v) => fmtScore(v) },
   { key: 'total', label: 'Lifetime ★', value: (r) => r.war_stars ?? null, fmt: (v) => v.toLocaleString('en-GB') },
   { key: 'stars', label: 'Tracked ★', value: (r) => r.war?.stars ?? null, fmt: (v) => v.toLocaleString('en-GB') },
   { key: 'attacks', label: 'Attacks', value: (r) => r.war?.attacks ?? null, fmt: String },
@@ -331,16 +350,22 @@ function MissDot({ r }: { r: WarRow }) {
 
 const sinceLabel = (d: string | null) => (d ? `Since ${new Date(d + 'T00:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' })}` : null)
 
-function WarBoardView({ q, setQ, wide }: BoardProps) {
+function WarBoardView({ q, setQ, wide, roster }: BoardProps) {
   const [scope, setScope] = useState<WarScope>(() => (read('ff-war-scope') as WarScope) || 'all')
   const pickScope = (s: WarScope) => { setScope(s); write('ff-war-scope', s) }
   // The CWL toggle shows once the API filters by scope and has recorded a CWL war this season.
   const allBoard = useWarBoard('all').data
   const scoped = allBoard?.scope != null && !!allBoard.season
-  const { data, loading } = useWarBoard(scoped ? scope : 'all')
+  const { data: board, loading } = useWarBoard(scoped ? scope : 'all')
+  // The CWL score is on the roster, beside each member's war figures.
+  const data = useMemo(() => {
+    if (!board) return board
+    const scores = new Map(roster?.players.map((p) => [p.tag, p.score]))
+    return { ...board, players: board.players.map((r) => ({ ...r, score: scores.get(r.tag) ?? null })) }
+  }, [board, roster])
   const [clan, setClan] = useClanPick()
   const top = useShowAll(`${scope}-${clan}`)
-  const cols = useMemo(() => WAR_COLS.filter((c) => !(c.key === 'total' && scoped && scope === 'cwl') && (!data || data.players.some((r) => c.value(r) !== null))), [data, scoped, scope])
+  const cols = useMemo(() => WAR_COLS.filter((c) => !(apart(c.key) && scoped && scope === 'cwl') && (!data || data.players.some((r) => c.value(r) !== null))), [data, scoped, scope])
   const [sortKey, setSortKey] = useState<{ key: string; asc: boolean } | null>(null)
   const sort = sortKey && cols.some((c) => c.key === sortKey.key) ? sortKey : { key: cols[0]?.key ?? 'attacks', asc: !!cols[0]?.low }
   const col = cols.find((c) => c.key === sort.key) ?? cols[0]
@@ -356,10 +381,11 @@ function WarBoardView({ q, setQ, wide }: BoardProps) {
     return data.players
       .filter((r) => clan === 'All' || r.clan === clan)
       .map((r) => ({ r, v: col.value(r) }))
-      .sort((a, b) => (a.v === null ? (b.v === null ? 0 : 1) : b.v === null ? -1 : sort.asc ? a.v - b.v : b.v - a.v) || a.r.name.localeCompare(b.r.name))
+      .sort((a, b) => (isRate(col.key) ? Number(tested(b.r, col.key)) - Number(tested(a.r, col.key)) : 0) || (a.v === null ? (b.v === null ? 0 : 1) : b.v === null ? -1 : sort.asc ? a.v - b.v : b.v - a.v) || a.r.name.localeCompare(b.r.name))
   }, [data, clan, col, sort.asc])
-  const placeCol = cols[0]
-  const place = useMemo(() => competitionRanks(ranked.map((x) => x.r), (r) => (wide ? placeCol : col)?.value(r) ?? null, !wide && !!col?.low), [ranked, placeCol, col, wide])
+  const place = useMemo(() => competitionRanks(ranked.map((x) => x.r), (r) => (col && isRate(col.key) && !tested(r, col.key) ? null : col?.value(r) ?? null), !!col?.low),
+    [ranked, col])
+  const splitAt = (rows: { r: WarRow }[], i: number) => !!col && isRate(col.key) && !tested(rows[i].r, col.key) && (i === 0 || tested(rows[i - 1].r, col.key))
   const shown = ranked.filter(({ r }) => !nq || norm(r.name).includes(nq) || r.tag.toLowerCase().includes(nq))
   const since = data?.windowFrom ? sinceDay(data.windowFrom) : sinceLabel(data?.since ?? null)
   // Destruction comes from recorded wars only, which can start later than the window.
@@ -368,6 +394,7 @@ function WarBoardView({ q, setQ, wide }: BoardProps) {
     const rows = ranked.map((x) => x.r)
     const ws = rows.map((r) => r.war?.stars).filter((v): v is number => v !== null && v !== undefined)
     const all = rows.map((r) => r.war_stars).filter((v): v is number => v !== null && v !== undefined)
+    const scores = rows.map((r) => r.score).filter((v): v is number => v !== null && v !== undefined)
     let attacks = 0, missed = 0, three = 0, stars = 0, destSum = 0, destN = 0
     for (const r of rows) {
       const w = r.war
@@ -381,6 +408,7 @@ function WarBoardView({ q, setQ, wide }: BoardProps) {
       warStarsMean: ws.length ? ws.reduce((a, b) => a + b, 0) / ws.length : null,
       total: all.length ? all.reduce((a, b) => a + b, 0) : null,
       totalMean: all.length ? all.reduce((a, b) => a + b, 0) / all.length : null,
+      scoreMean: scores.length ? scores.reduce((a, b) => a + b, 0) / scores.length : null,
       attacks, missed, three, stars,
       triple: attacks ? (100 * three) / attacks : null,
       avgStars: attacks ? stars / attacks : null,
@@ -397,6 +425,7 @@ function WarBoardView({ q, setQ, wide }: BoardProps) {
       triple: `${summary.three} × 3★`, avg: `${Math.round(summary.stars).toLocaleString('en-GB')}★`, dest: '',
     } },
     { label: `Average · ${who}`, cell: {
+      score: summary.scoreMean === null ? '' : fmtScore(summary.scoreMean),
       total: summary.totalMean === null ? '' : `${Math.round(summary.totalMean).toLocaleString('en-GB')}★`,
       stars: summary.warStarsMean === null ? '' : `${Math.round(summary.warStarsMean).toLocaleString('en-GB')}★`,
       attacks: '', rate: summary.missRate === null ? '' : `${Math.round(summary.missRate)}%`,
@@ -418,10 +447,12 @@ function WarBoardView({ q, setQ, wide }: BoardProps) {
     </div>
   )
   // Lifetime has no window, so on a phone its view says nothing of one.
-  const sinceChip = since && col?.key !== 'total' && <span className="flex-none text-xs font-semibold text-faint">{since}</span>
+  const sinceChip = col?.key === 'score' ? <Info topic="score" /> : since && col?.key !== 'total' && <span className="flex-none text-xs font-semibold text-faint">{since}</span>
   const key = <StatusKey only={['active', 'highMiss']} className="!text-xs" />
-  // Lifetime stands apart from the columns that cover the rolling window, which share one heading over them.
-  const lifetime = cols[0]?.key === 'total' ? cols[0] : null
+  // Score and Lifetime stand apart from the columns that cover the rolling window, which share one heading over them.
+  const alone = cols.filter((c) => apart(c.key))
+  const windowed = cols.filter((c) => !apart(c.key))
+  const lifetime = alone.length > 0
   const head = (c: WarCol, rows = 1, top = 'top-0') => (
     <th key={c.key} rowSpan={rows} className={`sticky ${top} z-[2] border-b border-line p-0 text-right ${c.key === sort.key ? 'bg-[#F1E8D3]' : 'bg-white'}`} aria-sort={c.key === sort.key ? (sort.asc ? 'ascending' : 'descending') : undefined}>
                       <button type="button" onClick={() => pick(c)} title={c.recordedOnly ? recordedTip : undefined}
@@ -442,7 +473,7 @@ function WarBoardView({ q, setQ, wide }: BoardProps) {
           <div className="w-[clamp(220px,28vw,340px)] flex-none"><SearchBox q={q} setQ={setQ} onEnter={enter} /></div>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          {scopeToggle}{!lifetime && sinceChip}{key}
+          {scopeToggle}{!lifetime && sinceChip}{col?.key === 'score' && <Info topic="score" />}{key}
         </div>
         {!data || !col ? <Empty loading={loading} /> : (
           <section className="max-h-[calc(100dvh-210px)] overflow-auto rounded-2xl border border-line bg-white">
@@ -452,15 +483,17 @@ function WarBoardView({ q, setQ, wide }: BoardProps) {
                   <th rowSpan={lifetime ? 2 : 1} className="sticky left-0 top-0 z-[4] w-12 min-w-12 border-b border-line bg-white py-2.5 pl-4 pr-1 font-bold">#</th>
                   <th rowSpan={lifetime ? 2 : 1} className="sticky left-12 top-0 z-[4] min-w-[220px] border-b border-line bg-white px-2 font-bold">PLAYER</th>
                   {lifetime ? <>
-                    {head(lifetime, 2)}
-                    <th colSpan={cols.length - 1} className="sticky top-0 z-[2] h-[26px] border-b border-hair bg-white px-4 text-center text-[11px] font-bold text-muted">{since}</th>
+                    {alone.map((c) => head(c, 2))}
+                    <th colSpan={windowed.length} className="sticky top-0 z-[2] h-[26px] border-b border-hair bg-white px-4 text-center text-[11px] font-bold text-muted">{since}</th>
                   </> : cols.map((c) => head(c))}
                 </tr>
-                {lifetime && <tr className="text-left text-xs font-bold text-faint">{cols.slice(1).map((c) => head(c, 1, 'top-[26px]'))}</tr>}
+                {lifetime && <tr className="text-left text-xs font-bold text-faint">{windowed.map((c) => head(c, 1, 'top-[26px]'))}</tr>}
               </thead>
               <tbody>
-                {shown.map(({ r }) => (
-                  <tr key={r.tag} data-tag={r.tag} onClick={() => go.to(playerHref(r.tag))} className="group cursor-pointer">
+                {shown.map(({ r }, i) => (
+                  <Fragment key={r.tag}>
+                  {splitAt(shown, i) && <tr><td colSpan={2 + cols.length} className="border-b border-hair bg-[#F6EEDC] px-4 py-1 text-[11px] font-bold uppercase tracking-[0.06em] text-muted">{UNTESTED}</td></tr>}
+                  <tr data-tag={r.tag} onClick={() => go.to(playerHref(r.tag))} className="group cursor-pointer">
                     <td className="sticky left-0 z-[1] w-12 min-w-12 border-b border-hair bg-white py-1.5 pl-4 pr-1 font-bold tabular-nums text-faint group-hover:bg-hover">{place.get(r) ?? '—'}</td>
                     <td className="sticky left-12 z-[1] whitespace-nowrap border-b border-hair bg-white px-2 py-1.5 group-hover:bg-hover">
                       <span className="flex items-center gap-2.5">
@@ -480,6 +513,7 @@ function WarBoardView({ q, setQ, wide }: BoardProps) {
                       )
                     })}
                   </tr>
+                  </Fragment>
                 ))}
                 {!shown.length && <tr><td colSpan={2 + cols.length}><GoblinNote goblin="page">No one by that name in this village</GoblinNote></td></tr>}
               </tbody>
@@ -508,7 +542,7 @@ function WarBoardView({ q, setQ, wide }: BoardProps) {
   }
 
   // The figures under each name cover the window, so sorting by Lifetime shows none, and Lifetime is never among them.
-  const rest = col && col.key !== 'total' ? cols.filter((c) => c.key !== col.key && c.key !== 'total').slice(0, 2) : []
+  const rest = col && !apart(col.key) ? cols.filter((c) => c.key !== col.key && !apart(c.key)).slice(0, 2) : []
   const listed = topRows(shown, (x) => x.r.tag, top.yous, top.all || !!nq)
   return (
     <div className="flex flex-col gap-2.5 pb-6">
@@ -521,13 +555,16 @@ function WarBoardView({ q, setQ, wide }: BoardProps) {
       {!data || !col ? <div className="px-4"><Empty loading={loading} /></div> : (
         <>
           <p aria-label={`${who} summary`} className="m-0 mx-4 text-xs font-semibold tabular-nums text-muted">
-            {col.key === 'total'
+            {col.key === 'score'
+              ? `${summary.scoreMean === null ? '—' : fmtScore(summary.scoreMean)} average score`
+              : col.key === 'total'
               ? `${(summary.total ?? 0).toLocaleString('en-GB')}★ in total · ${Math.round(summary.totalMean ?? 0).toLocaleString('en-GB')}★ average`
               : <>{summary.triple === null ? '—' : pct(summary.triple)} 3★ rate · {summary.avgStars === null ? '—' : summary.avgStars.toFixed(2)} avg ★ · {summary.attacks.toLocaleString('en-GB')} attacks</>}
           </p>
           <ol className="m-0 mx-4 list-none rounded-2xl border border-line bg-white py-1">
             {listed.map(({ r, v }, i) => (
               <li key={r.tag} data-tag={r.tag}>
+                {splitAt(listed, i) && <div className="border-y border-hair bg-[#F6EEDC] px-3.5 py-1 text-[11px] font-bold uppercase tracking-[0.06em] text-muted">{UNTESTED}</div>}
                 <a href={playerHref(r.tag)} className={`flex min-h-[52px] items-center gap-2.5 px-3.5 py-1.5 text-ink no-underline hover:bg-hover ${i ? 'border-t border-hair' : ''}`}>
                   <span className="w-6 flex-none text-right text-xs tabular-nums text-faint">{place.get(r) ?? '—'}</span>
                   <Th th={r.th} />

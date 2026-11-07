@@ -1,17 +1,17 @@
 import { type CSSProperties, Fragment, useEffect, useRef, useState } from 'react'
-import { norm, PhoneSearch } from './CwlTab'
+import { familyHits, FamilyHits, norm, PhoneSearch } from './CwlTab'
 import WarLog from './WarLog'
 import WarRecap from './WarRecap'
 import { useYou, YouTag } from './You'
 import { useClans } from '../clash'
 import { useWide } from '../data'
-import { ago, type ClanWar, setDayPick, setWarClan, useCwlDay, useCwlGroups, useDayPick, useWarBoard, useWarClan, type WarAttack, type WarBase } from '../leaders'
+import { ago, type ClanWar, setDayPick, setWarClan, noteShownClan, useCwlDay, useCwlGroups, useDayPick, useFighting, useWarLog, useWarBoard, useWarClan, type WarAttack, type WarBase } from '../leaders'
 import { clanHref, go, playerHref, rivalHref } from '../route'
 import { CLAN, CLANS } from '../theme'
 import type { ClanName, Roster } from '../types'
 import Info from './Info'
 import { StarBurst, useOnce } from './Motion'
-import { ClanBadge, ClanSwitch, DayRow, GoblinNote, KEY_ROW, POINT, STICKY_SWITCH, Stars, Th, useNow } from './ui'
+import { ClanBadge, ClanSwitch, DayRow, GoblinNote, KEY_ROW, POINT, Stars, Th, useNow } from './ui'
 
 // Each clan's war, side by side: our bases and badge on the left, the enemy's on the right, facing by map position.
 // The attack log says who hit whom, how well and roughly when: we stay on the left and they on the right, and each row
@@ -29,7 +29,7 @@ const left = (ms: number) => {
   return m < 60 ? `${m}m` : `${Math.floor(m / 60)}h ${m % 60}m`
 }
 const ENEMY = '#D5C8AC'
-// On a wide screen the day strip sits where it does on the CWL tab, with the clan switch level with it on the right. Kept this tall with no strip too, so the switch stays put.
+// On a wide screen the day strip sits where it does on Roster, with the clan switch level with it on the right. Kept this tall with no strip too, so the switch stays put.
 const WIDE_ROW = 'flex min-h-[70px] items-end justify-between gap-4'
 const ENEMY_ROW = '#F1E8D3'
 
@@ -188,8 +188,8 @@ export function WarBoard({ clan, war, now, roster, q = '' }: { clan: ClanName; w
   const draw = war.stars === war.opponent_stars && war.destruction === war.opponent_destruction
   const toAttack = war.pairs.filter((p) => p.us && p.us.used < p.us.allowed).length
   const total = war.team_size * war.attacks_allowed
-  // Bases still worth hitting: not yet three-starred.
-  const open = war.pairs.filter((p) => p.them && p.them.best !== 3)
+  // Bases still open. In CWL each base takes one attack from the clan, so open means not hit yet; otherwise not yet three-starred.
+  const open = war.pairs.filter((p) => p.them && (war.kind === 'cwl' ? p.them.best === null : p.them.best !== 3))
   const nq = norm(q.trim())
   // A row picked under one search must not stay open and hidden under the next.
   useEffect(() => { setPicked(null) }, [nq])
@@ -273,7 +273,7 @@ export function WarBoard({ clan, war, now, roster, q = '' }: { clan: ClanName; w
                   </button>
                 )}
                 <button type="button" aria-pressed={openOnly} disabled={!open.length} onClick={() => { setOpenOnly((v) => !v); setPicked(null) }}
-                  className={`ml-auto min-h-9 cursor-pointer rounded-full border px-3 text-[13px] font-bold disabled:cursor-default disabled:opacity-50 ${openOnly ? 'border-ink bg-ink text-white' : 'border-line bg-white text-ink-2 hover:bg-page'}`}>
+                  className={`${mine ? 'ml-auto' : ''} min-h-9 cursor-pointer rounded-full border px-3 text-[13px] font-bold disabled:cursor-default disabled:opacity-50 ${openOnly ? 'border-ink bg-ink text-white' : 'border-line bg-white text-ink-2 hover:bg-page'}`}>
                   Open bases {open.length}
                 </button>
               </>
@@ -364,9 +364,23 @@ function OtherDay({ clan, warKey, now, roster, q }: { clan: ClanName; warKey: st
   return <WarBoard key={warKey} clan={clan} war={data} now={now} roster={roster} q={q} />
 }
 
+// Family members by name, then this clan's wars against an opponent of that name.
+function LogSearch({ clan, roster, q }: { clan: ClanName; roster: Roster; q: string }) {
+  const hits = familyHits(roster, norm(q.trim()))
+  const nq = norm(q.trim())
+  const wars = useWarLog(clan).data?.wars.filter((w) => norm(w.opponent ?? '').includes(nq)) ?? []
+  return (
+    <>
+      <FamilyHits roster={roster} hits={hits} quiet={wars.length > 0} />
+      <WarLog clan={clan} q={q} />
+    </>
+  )
+}
+
 export default function WarTab({ wide, roster, sub, opened, q, setQ }: { wide: boolean; roster: Roster; sub: string; opened: string | null; q: string; setQ: (v: string) => void }) {
   const { data, loading } = useWarBoard()
   const pick = useWarClan()
+  const fighting = useFighting()
   const { yous } = useYou()
   const now = useNow(30_000)
   const wars = (data?.clans ?? []).filter((c) => c.war)
@@ -376,6 +390,7 @@ export default function WarTab({ wide, roster, sub, opened, q, setQ }: { wide: b
     ?? wars.find((c) => c.war!.state === 'inWar') ?? wars.find((c) => c.war!.state === 'preparation') ?? wars[0]
   // During CWL a day's war runs while the next day's prepares; the day row reaches those and the days before them.
   const groups = useCwlGroups().data
+  if (clan) noteShownClan(clan.clan)
   const dayPick = useDayPick()
   const onCwl = clan?.war?.kind === 'cwl'
   const fallback = clan ? [clan.war, clan.next].flatMap((w) => (w?.day ? [{ ...w, day: w.day, war_key: w.war_key ?? '' }] : [])) : []
@@ -384,13 +399,17 @@ export default function WarTab({ wide, roster, sub, opened, q, setQ }: { wide: b
   const picked = onCwl && typeof dayPick === 'number' && days.some((d) => d.day === dayPick) ? dayPick : null
   const nearby = clan && (picked === null || picked === clan.war!.day ? clan.war! : picked === clan.next?.day ? clan.next : null)
   const other = !nearby && days.find((d) => d.day === picked)
+  // Wide pages here have no search box, so a search carried from another tab doesn't narrow them.
+  const search = wide ? '' : q
   if (sub === 'log') {
     // The clan is in the link to a past war, so the link opens the same war for anyone.
     const [linkClan, linkKey] = opened?.split('/') ?? []
     const logClan = (linkClan as ClanName) ?? clan?.clan ?? pick ?? 'Fire'
     return (
       <main className={wide ? 'mx-auto flex max-w-[1360px] flex-col gap-4 px-[clamp(16px,3vw,32px)] pb-12 pt-5' : 'flex flex-col gap-3 px-4 pb-6 pt-1'}>
-        <div className={wide ? WIDE_ROW : STICKY_SWITCH}><div className={wide ? 'ml-auto w-[clamp(270px,30vw,400px)] flex-none' : ''}><ClanSwitch value={logClan} onPick={(c) => { setWarClan(c); go.to('#/war/log') }} /></div></div>
+        {wide
+          ? <div className={WIDE_ROW}><div className="ml-auto w-[clamp(270px,30vw,400px)] flex-none"><ClanSwitch value={logClan} onPick={(c) => { setWarClan(c); go.to('#/war/log') }} live={fighting} /></div></div>
+          : <PhoneSearch q={q} setQ={setQ} onEnter={() => (document.activeElement as HTMLElement | null)?.blur()} className="-mx-4 -mb-1 -mt-1"><ClanSwitch value={logClan} onPick={(c) => { setWarClan(c); go.to('#/war/log') }} live={fighting} /></PhoneSearch>}
         {linkKey ? (
           <>
             <a href="#/war/log" className="flex min-h-9 items-center gap-1 self-start text-[13px] font-bold text-action no-underline">
@@ -399,18 +418,18 @@ export default function WarTab({ wide, roster, sub, opened, q, setQ }: { wide: b
             </a>
             <OtherDay clan={logClan} warKey={decodeURIComponent(linkKey)} now={now} roster={roster} />
           </>
-        ) : <WarLog clan={logClan} />}
+        ) : search.trim() ? <LogSearch clan={logClan} roster={roster} q={search} /> : <WarLog clan={logClan} />}
       </main>
     )
   }
   const switcher = (
     <ClanSwitch value={clan?.clan ?? 'Fire'} onPick={setWarClan}
-      live={wars.filter((c) => c.war!.state === 'inWar').map((c) => c.clan)}
+      live={fighting}
       off={data ? CLANS.filter((k) => !wars.some((c) => c.clan === k)) : []} />
   )
-  // Wide pages here have no search box, so a search carried from another tab doesn't narrow them.
-  const search = wide ? '' : q
-  const strip = onCwl && <DayRow days={days} pick={picked ?? clan.war!.day ?? null} onPick={setDayPick} drawnOnly />
+  // A clan out of CWL while the others are in keeps the row, greyed out, so switching clans doesn't reshape the page.
+  const strip = onCwl ? <DayRow days={days} pick={picked ?? clan.war!.day ?? null} onPick={setDayPick} drawnOnly />
+    : clan && !roster.clans[clan.clan]?.inCwl && Object.values(roster.clans).some((c) => c?.inCwl) && <DayRow out pick={null} onPick={() => {}} />
   return (
     <main className={wide ? 'mx-auto flex max-w-[1360px] flex-col gap-4 px-[clamp(16px,3vw,32px)] pb-12 pt-5' : 'flex flex-col gap-3 px-4 pb-6 pt-1'}>
       {wide ? <div className={WIDE_ROW}>{strip}<div className="ml-auto w-[clamp(270px,30vw,400px)] flex-none">{switcher}</div></div> : <PhoneSearch q={q} setQ={setQ} onEnter={() => (document.activeElement as HTMLElement | null)?.blur()} className="-mx-4 -mb-1 -mt-1">{switcher}</PhoneSearch>}

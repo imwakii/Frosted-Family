@@ -95,6 +95,7 @@ export type WarScope = 'all' | 'cwl'
 export type WarRow = {
   tag: string; name: string; clan: ClanName; th: number | null
   war_stars?: number | null
+  score?: number | null
   war: { wars: number; attacks: number; stars: number; three_stars: number; missed: number; avg_destruction: number | null; from?: string | null; defense?: Defense | null } | null
 }
 type Defense = { defenses: number; stars_conceded: number; three_stars_conceded: number }

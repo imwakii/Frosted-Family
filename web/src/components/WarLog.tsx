@@ -1,6 +1,7 @@
 import { type LogWar, useWarLog } from '../leaders'
 import type { ClanName } from '../types'
 import { ClanBadge, dayWon, RowChevron } from './ui'
+import { norm } from './CwlTab'
 
 // Every finished war we hold for a clan, newest first. A row opens that war's board.
 
@@ -17,10 +18,12 @@ const month = (t: string | null) => {
 
 export const warLogHref = (clan: ClanName, key: string) => `#/war/log/${clan}/${encodeURIComponent(key)}`
 
-export default function WarLog({ clan }: { clan: ClanName }) {
+export default function WarLog({ clan, q = '' }: { clan: ClanName; q?: string }) {
   const { data, loading } = useWarLog(clan)
   if (!data) return loading ? <div aria-busy="true" className="h-64 animate-pulse rounded-2xl bg-well" /> : <div className="rounded-2xl border border-line bg-white p-5 text-sm text-faint">Unavailable right now</div>
-  const wars = data.wars
+  const nq = norm(q.trim())
+  const wars = nq ? data.wars.filter((w) => norm(w.opponent ?? '').includes(nq)) : data.wars
+  if (nq && !wars.length) return null
   if (!wars.length) return <div className="rounded-2xl border border-line bg-white px-6 py-14 text-center text-sm font-semibold text-faint">No wars yet</div>
   // A CWL's days stay together, under its month; the wars between CWLs under their own label.
   const runs: { label: string; wars: LogWar[] }[] = []

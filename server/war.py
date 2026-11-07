@@ -4,7 +4,7 @@ The war being fought, else the one in preparation, else the last one, however lo
 war runs while the next day's prepares, so a clan can also have a next war. Bases are paired by rank on the map (a CWL
 war's map positions have gaps, so each side is numbered 1 to its size), with a log of every attack, newest first: who hit whom, stars, damage, and when the collector first saw it,
 since the API gives no attack times. A war the collector last saw in progress whose end has passed is over,
-whatever state was stored. A war that is over has a recap: its MVP and any three-star on a town hall well above the attacker's.
+whatever state was stored. A war that is over has a recap: any three-star on a town hall well above the attacker's.
 """
 from __future__ import annotations
 
@@ -66,23 +66,14 @@ def brief(b: dict) -> dict:
 
 
 def recap(log: list[dict]) -> dict | None:
-    """The MVP has the most stars, then the most damage, then the shortest total attack time."""
-    hits: dict[str, list[dict]] = {}
-    for a in log:
-        if a["ours"]:
-            hits.setdefault(a["attacker"]["tag"], []).append(a)
-    if not hits:
+    """A finished war's upsets: our three-stars on a town hall well above the attacker's. The MVP went on 7 Nov 2026, as
+    no rule for it was fair to everyone."""
+    if not any(a["ours"] for a in log):
         return None
-    stars = lambda rows: sum(a["stars"] for a in rows)
-    damage = lambda rows: sum(a["destruction"] for a in rows)
-    took = lambda rows: sum(a["duration"] or 0 for a in rows) or float("inf")
-    best = min(hits.values(), key=lambda rows: (-stars(rows), -damage(rows), took(rows)))
     upsets = [a for a in log if a["ours"] and a["stars"] == 3 and a["attacker"]["th"] and a["defender"]["th"]
               and a["defender"]["th"] - a["attacker"]["th"] >= UPSET_TH_GAP]
     upsets.sort(key=lambda a: a["attacker"]["th"] - a["defender"]["th"])
     return {
-        "mvp": {**best[0]["attacker"], "stars": [a["stars"] for a in reversed(best)], "destruction": damage(best) / len(best),
-                "tied": sum(stars(r) == stars(best) and damage(r) == damage(best) for r in hits.values())},
         "upsets": [{"attacker": a["attacker"], "defender": a["defender"]} for a in upsets[:UPSETS_SHOWN]],
     }
 
@@ -128,16 +119,21 @@ def war_view(conn, w, clan_tag: str, over: bool) -> dict:
 
 
 def group_table(clans: list, wars: list, now_s: str) -> list[dict]:
-    """The group table as the game ranks it: stars, ten more for each win, then total destruction."""
-    rows = {c["clan_tag"]: {"tag": c["clan_tag"], "name": c["name"], "stars": 0, "destruction": 0.0, "won": 0, "lost": 0,
+    """The group table as the game ranks it: stars, ten more for each win, then total destruction. `left` is the attacks a
+    clan still has in a war being fought, since equal stars mean less while one side has more to come."""
+    rows = {c["clan_tag"]: {"tag": c["clan_tag"], "name": c["name"], "stars": 0, "destruction": 0.0, "won": 0, "lost": 0, "left": None,
                             "town_halls": json.loads(c["town_halls"])} for c in clans}
     for w in wars:
         sides = [(w["clan_tag"], w["clan_stars"], w["clan_destruction"]), (w["opponent_tag"], w["opponent_stars"], w["opponent_destruction"])]
         over = w["state"] == "warEnded" or bool(w["end_time"] and w["end_time"][:15] < now_s)
+        # Absent until the collector has added the columns, which the read-only API can't do itself.
+        used = {w["clan_tag"]: w["clan_attacks"], w["opponent_tag"]: w["opponent_attacks"]} if "clan_attacks" in w.keys() else {}
         for (tag, stars, pct), (_, their_stars, their_pct) in (sides, sides[::-1]):
             row = rows.get(tag)
             if not row:
                 continue
+            if w["state"] == "inWar" and not over and used.get(tag) is not None and w["team_size"]:
+                row["left"] = (row["left"] or 0) + w["team_size"] - used[tag]  # one attack each in CWL
             row["stars"] += stars
             row["destruction"] += pct * (w["team_size"] or 0)
             if over:

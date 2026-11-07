@@ -284,9 +284,10 @@ function useSlidePick<T>(value: T, items: readonly T[], onPick: (v: T) => void) 
   }
 }
 
-/** The seven CWL days, the same row on War and Lineups: each day's result once it has one. */
-export function DayRow({ days = [], pick, onPick, live = 0, roster, drawnOnly }: {
-  days?: DayFacts[]; pick: number | 'all' | null; onPick: (d: number | 'all') => void; live?: number; roster?: boolean; drawnOnly?: boolean
+/** The seven CWL days, the same row on War and Roster: each day's result once it has one. A clan out of this month's CWL
+ * gets the row greyed out, so switching to it keeps the page's shape. */
+export function DayRow({ days = [], pick, onPick, live = 0, roster, drawnOnly, out }: {
+  days?: DayFacts[]; pick: number | 'all' | null; onPick: (d: number | 'all') => void; live?: number; roster?: boolean; drawnOnly?: boolean; out?: boolean
 }) {
   const cell = 'relative flex min-h-[42px] min-w-0 cursor-pointer flex-col items-center justify-center rounded-[9px] border-0 tabular-nums disabled:cursor-default disabled:opacity-40'
   const items = useMemo<(number | 'all')[]>(() => [...(roster ? ['all' as const] : []), 1, 2, 3, 4, 5, 6, 7], [roster])
@@ -294,12 +295,12 @@ export function DayRow({ days = [], pick, onPick, live = 0, roster, drawnOnly }:
   const grab = (on: boolean) => (on ? (grabbing ? 'cursor-grabbing' : 'cursor-grab') : '')
   return (
     <div className="flex w-full max-w-[480px] flex-col gap-1">
-    <Eyebrow className="px-0.5">CWL day</Eyebrow>
-    <nav {...navProps} aria-label="CWL day" className={`relative grid w-full touch-pan-y select-none gap-1 rounded-xl bg-well p-1 ${roster ? 'grid-cols-[1.7fr_repeat(7,1fr)]' : 'grid-cols-7'}`}>
+    <Eyebrow className="px-0.5">{out ? 'Not in CWL' : 'CWL day'}</Eyebrow>
+    <nav {...(out ? {} : navProps)} aria-label={out ? 'Not in CWL' : 'CWL day'} className={`relative grid w-full touch-pan-y select-none gap-1 rounded-xl bg-well p-1 ${roster ? 'grid-cols-[1.7fr_repeat(7,1fr)]' : 'grid-cols-7'}`}>
       {slideStyle && <span aria-hidden="true" className={`absolute inset-y-1 left-0 rounded-[9px] bg-white shadow-[0_1px_3px_rgba(43,33,20,.12)] ${slideMotion}`} style={slideStyle} />}
       {roster && (
-        <button type="button" aria-pressed={pick === 'all'} onClick={() => onPick('all')}
-          className={`${cell} ${grab(pick === 'all')} bg-transparent text-[13px] font-bold transition-colors duration-200 motion-reduce:transition-none ${pick === 'all' ? 'text-ink' : 'text-muted'}`}>Roster</button>
+        <button type="button" aria-pressed={pick === 'all'} disabled={out} onClick={() => onPick('all')}
+          className={`${cell} ${grab(pick === 'all')} bg-transparent text-[13px] font-bold transition-colors duration-200 motion-reduce:transition-none ${pick === 'all' ? 'text-ink' : 'text-muted'}`}>All</button>
       )}
       {[1, 2, 3, 4, 5, 6, 7].map((n) => {
         const d = days.find((x) => x.day === n)
@@ -310,7 +311,7 @@ export function DayRow({ days = [], pick, onPick, live = 0, roster, drawnOnly }:
         const background = pick === n ? 'transparent' : over ? (won === true ? '#DCEFD5' : won === false ? '#F8D5CF' : '#EFE6D2') : prep ? '#FFEDD5' : fighting ? '#FFFBF1' : 'transparent'
         const score = fighting || (pick === n && won === true) ? 'text-[#15803D]' : pick === n && won === false ? 'text-[#B91C1C]' : 'text-ink-2'
         return (
-          <button key={n} type="button" aria-pressed={pick === n} aria-label={`Day ${n}${prep ? ', preparation' : ''}`} disabled={drawnOnly && !d} onClick={() => onPick(n)}
+          <button key={n} type="button" aria-pressed={pick === n} aria-label={`Day ${n}${prep ? ', preparation' : ''}`} disabled={out || (drawnOnly && !d)} onClick={() => onPick(n)}
             className={`${cell} ${grab(pick === n)}`} style={{ background }}>
             <span className={`text-sm font-bold leading-tight ${prep ? 'text-[#B4451A]' : pick === n ? 'text-ink' : 'text-muted'}`}>{n}</span>
             {d && (over || fighting) && <span className={`text-[10px] font-bold leading-tight ${score}`}>{d.stars}–{d.opponent_stars}</span>}

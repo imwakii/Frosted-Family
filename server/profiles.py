@@ -16,7 +16,7 @@ from fastapi import HTTPException
 
 from frosted.config import TAG_TO_CLAN
 from server import baseline
-from server.db import FRIENDLY, clean_name
+from server.db import FRIENDLY, clean_name, has_column
 
 # Hourly: about 115 calls a pass, well inside the API's limits. Due after 55 minutes so it lands on the 10-minute
 # pass nearest the hour instead of slipping to the next one.
@@ -55,20 +55,28 @@ def troop_kind(name: str) -> str:
     return "pet" if name in PETS else "siege" if name in SIEGE else "super_troop" if name in SUPER else "troop"
 
 
+def clan_games_of(p: dict) -> int | None:
+    """Lifetime Clan Games points: the game keeps them as the Games Champion achievement's value."""
+    return next((a.get("value") for a in p.get("achievements") or [] if a.get("name") == "Games Champion"), None)
+
+
 def upsert_profile(conn: sqlite3.Connection, p: dict, fetched_at: str) -> None:
     tag = p["tag"]
     league = (p.get("leagueTier") or p.get("league") or {}).get("name")
+    games = clan_games_of(p)
     conn.execute(
-        """INSERT INTO player_profiles VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        """INSERT INTO player_profiles (player_tag, fetched_at, name, clan_tag, town_hall, exp_level, trophies, best_trophies,
+             league, war_stars, attack_wins, defense_wins, donations, donations_received, capital_contributions, clan_games)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
            ON CONFLICT (player_tag) DO UPDATE SET fetched_at=excluded.fetched_at, name=excluded.name,
              clan_tag=excluded.clan_tag, town_hall=excluded.town_hall, exp_level=excluded.exp_level,
              trophies=excluded.trophies, best_trophies=excluded.best_trophies, league=excluded.league,
              war_stars=excluded.war_stars, attack_wins=excluded.attack_wins, defense_wins=excluded.defense_wins,
              donations=excluded.donations, donations_received=excluded.donations_received,
-             capital_contributions=excluded.capital_contributions""",
+             capital_contributions=excluded.capital_contributions, clan_games=excluded.clan_games""",
         (tag, fetched_at, clean_name(p.get("name")), (p.get("clan") or {}).get("tag"), p.get("townHallLevel"), p.get("expLevel"),
          p.get("trophies"), p.get("bestTrophies"), league, p.get("warStars"), p.get("attackWins"),
-         p.get("defenseWins"), p.get("donations"), p.get("donationsReceived"), p.get("clanCapitalContributions")),
+         p.get("defenseWins"), p.get("donations"), p.get("donationsReceived"), p.get("clanCapitalContributions"), games),
     )
     home = lambda xs: [x for x in xs or [] if x.get("village", "home") == "home"]
     heroes = home(p.get("heroes"))
@@ -87,13 +95,14 @@ def upsert_profile(conn: sqlite3.Connection, p: dict, fetched_at: str) -> None:
                      [(tag, k, u["name"], u["level"], fetched_at) for k, u, _ in units])
     counters = (p.get("townHallLevel"), p.get("expLevel"), p.get("trophies"), p.get("builderBaseTrophies"),
                 p.get("attackWins"), p.get("warStars"), p.get("donations"), p.get("donationsReceived"),
-                p.get("clanCapitalContributions"), sum(u["level"] for _, u, _ in units))
+                p.get("clanCapitalContributions"), sum(u["level"] for _, u, _ in units), games)
     last = conn.execute("""SELECT town_hall, exp_level, trophies, builder_trophies, attack_wins, war_stars, donations,
-                                  donations_received, capital_contributions, unit_levels FROM profile_snapshots
+                                  donations_received, capital_contributions, unit_levels, clan_games FROM profile_snapshots
                            WHERE player_tag=? ORDER BY fetched_at DESC LIMIT 1""", (tag,)).fetchone()
     if last is None or tuple(last) != counters:
-        conn.execute("INSERT OR REPLACE INTO profile_snapshots VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
-                     (tag, fetched_at, *counters))
+        conn.execute("""INSERT OR REPLACE INTO profile_snapshots (player_tag, fetched_at, town_hall, exp_level, trophies,
+                          builder_trophies, attack_wins, war_stars, donations, donations_received, capital_contributions,
+                          unit_levels, clan_games) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""", (tag, fetched_at, *counters))
 
 
 def upsert_raid(conn: sqlite3.Connection, clan_tag: str, season: dict) -> None:
@@ -125,9 +134,11 @@ def ranked(rows: list[dict], score) -> list[dict]:
 def current_members(conn) -> list[dict]:
     """Everyone in the latest member poll of each clan, with their profile if one has been fetched. The clan is the
     one the member poll saw, which is fresher than the profile's."""
+    # The read-only API can start before the collector has added clan_games.
+    games = "p.clan_games" if has_column(conn, "player_profiles", "clan_games") else "NULL AS clan_games"
     rows = conn.execute(
-        """SELECT s.player_tag AS tag, s.clan_tag, s.name AS snap_name, s.town_hall AS snap_th, p.name, p.town_hall,
-                  p.fetched_at, p.war_stars, p.donations, p.donations_received, p.capital_contributions
+        f"""SELECT s.player_tag AS tag, s.clan_tag, s.name AS snap_name, s.town_hall AS snap_th, p.name, p.town_hall,
+                  p.fetched_at, p.war_stars, p.donations, p.donations_received, p.capital_contributions, {games}
            FROM member_snapshots s
            JOIN (SELECT clan_tag, MAX(seen_at) AS seen_at FROM member_snapshots GROUP BY clan_tag) l
              USING (clan_tag, seen_at)
@@ -308,6 +319,40 @@ def capital(conn, ms):
     return ranked(rows, lambda r: r["capital"]["contributed"])
 
 
+def month_start(now: datetime, back: int = 0) -> str:
+    y, m = now.year, now.month - back
+    while m < 1:
+        y, m = y - 1, m + 12
+    return f"{y:04d}-{m:02d}-01"
+
+
+def games(conn, ms, now: datetime | None = None):
+    """Clan Games points by month. Clan Games run once a month and nothing else moves Games Champion, so a month's rise
+    in it is that month's games. A month counts from the last reading before it began, else its own first reading."""
+    now = now or datetime.now(timezone.utc)
+    this, last = month_start(now), month_start(now, 1)
+    seen: dict[str, list[tuple[str, int]]] = {}
+    if has_column(conn, "profile_snapshots", "clan_games"):
+        for r in conn.execute("SELECT player_tag, fetched_at, clan_games FROM profile_snapshots WHERE clan_games IS NOT NULL ORDER BY fetched_at"):
+            seen.setdefault(r[0], []).append((r[1], r[2]))
+
+    def start(rows, day, end):
+        before = [v for t, v in rows if t < day]
+        inside = [v for t, v in rows if day <= t < end]
+        return before[-1] if before else inside[0] if inside else None
+
+    rows = []
+    for m in ms:
+        mine, total = seen.get(m["tag"], []), m["clan_games"]
+        a, b = start(mine, this, "9999"), start(mine, last, this)
+        ended = [v for t, v in mine if t < this]
+        rows.append({**row(m), "games": None if total is None else {
+            "month": total - a if a is not None else None,
+            "last_month": ended[-1] - b if ended and b is not None else None,
+            "total": total}})
+    return ranked(rows, lambda r: r["games"]["month"] if r["games"] else None)
+
+
 def badges(conn, ms):
     """Every member's badges. The page ranks them, as it filters by clan and by badge."""
     ctx = badge_context(conn)
@@ -320,7 +365,7 @@ def badges(conn, ms):
 
 
 BOARDS = {"badges": badges, "heroes": heroes, "equipment": equipment, "army": army, "donations": donations,
-          "capital": capital}
+          "capital": capital, "games": games}
 
 
 # ─── The player card ──────────────────────────────────────────────────────────

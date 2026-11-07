@@ -6,7 +6,7 @@ import type { ClanName } from '../types'
 import { type Earned, medals, medalScore, type Row as BadgeRow } from './BadgesBoard'
 import { CardSheet } from './ClanSheet'
 import { COLOR } from './ClansBoard'
-import type { Cap, Gift } from './ExploreTab'
+import type { Cap, Games, Gift } from './ExploreTab'
 import { Bar, combine, pct1 } from './OverallBoard'
 import { type Row as BoardRow, useBoard } from './RankBoard'
 import { Facts } from './UpgradeSheet'
@@ -196,6 +196,40 @@ function CapitalSheet({ tag, wide, onClose }: { tag: string; wide: boolean; onCl
   )
 }
 
+function GamesSheet({ tag, wide, onClose }: { tag: string; wide: boolean; onClose: () => void }) {
+  const { data, loading } = useBoard('games')
+  if (loading) return <Sheet who={null} label="Clan Games" wide={wide} onClose={onClose}><Loading /></Sheet>
+  const r = data?.players.find((x) => x.tag === tag)
+  if (!data || !r) return <Sheet who={null} label="Clan Games" wide={wide} onClose={onClose}><Missing known={!!data} /></Sheet>
+  const g = (x: BoardRow) => x.games as Games
+  const month = (x: BoardRow) => g(x)?.month ?? null
+  const last = (x: BoardRow) => g(x)?.last_month ?? null
+  const total = (x: BoardRow) => g(x)?.total ?? null
+  const rank = (v: (x: BoardRow) => number | null) => competitionRanks(data.players, v).get(r)
+  const best = (v: (x: BoardRow) => number | null) => Math.max(1, ...data.players.map((x) => v(x) ?? 0))
+  const inFamily = data.players.filter((x) => total(x) !== null).length
+  const color = COLOR[r.clan]
+  const mine = month(r), before = last(r), all = total(r)
+  return (
+    <Sheet who={r} label="Clan Games" wide={wide} onClose={onClose}>
+      <Facts color={r.clan} facts={[
+        { label: 'All-time', value: all === null ? '—' : short(all) },
+        { label: `of ${inFamily} in family`, value: rank(total) ? `#${rank(total)}` : '—' },
+        { label: 'This month', value: mine === null ? '—' : num(mine) },
+      ]} />
+      {mine === null && before === null ? (
+        <GoblinNote box goblin="bored">No Clan Games on record for them yet</GoblinNote>
+      ) : (
+        <ul className={LIST}>
+          <Line label="This month" place={rank(month)} value={mine === null ? '—' : num(mine)} bar={mine === null ? undefined : (100 * mine) / best(month)} color={color} />
+          <Line label="Last month" place={rank(last)} value={before === null ? '—' : num(before)} bar={before === null ? undefined : (100 * before) / best(last)} color={color} />
+        </ul>
+      )}
+      <p className={NOTE}>The game keeps a lifetime count of Clan Games points, so a month is how far that count rose in it.</p>
+    </Sheet>
+  )
+}
+
 /** A badge's three tiers, with the one this player holds picked out. */
 function Ladder({ id, tier }: { id: string; tier?: Earned['tier'] }) {
   return (
@@ -266,5 +300,6 @@ export default function StatSheet({ kind, tag, focus, wide, onClose }: { kind: S
   if (kind === 'badges') return <BadgeSheet tag={tag} focus={focus} wide={wide} onClose={onClose} />
   if (kind === 'overall') return <OverallSheet tag={tag} wide={wide} onClose={onClose} />
   if (kind === 'donations') return <DonationSheet tag={tag} wide={wide} onClose={onClose} />
+  if (kind === 'games') return <GamesSheet tag={tag} wide={wide} onClose={onClose} />
   return <CapitalSheet tag={tag} wide={wide} onClose={onClose} />
 }

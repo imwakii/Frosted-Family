@@ -23,17 +23,19 @@ import WarTab from './components/WarTab'
 import { InstallHint, useInstallHint } from './components/InstallHint'
 import { JumpToYou, YouChip } from './components/You'
 import { fetchPlayer, useRoster, useWar, useWide } from './data'
+import { useCwlGroups } from './leaders'
 import { useVisits } from './visits'
 import { cardToReturnTo, returnToCard, decodeTag, go, onDrill, useRoute } from './route'
 import { CalendarButton, GoblinNote, SubNav } from './components/ui'
 
-const CWL_SUBS = [{ id: 'lineups', label: 'Lineups', href: '#/cwl' }, { id: 'group', label: 'Group', href: '#/cwl/group' }]
-const WAR_SUBS = [{ id: 'latest', label: 'Current', href: '#/war' }, { id: 'log', label: 'War log', href: '#/war/log' }]
+const CURRENT = { id: 'latest', label: 'Current', href: '#/war' }
+const ROSTER = { id: 'roster', label: 'Roster', href: '#/war/roster' }
+const GROUP = { id: 'group', label: 'Group', href: '#/war/group' }
+const WAR_LOG = { id: 'log', label: 'War log', href: '#/war/log' }
 const LOG_SUBS = [{ id: 'feed', label: 'Feed', href: '#/log' }, { id: 'recap', label: 'Recap', href: '#/log/recap' }]
 
 const TABS = [
   { id: 'war', label: 'War', href: '#/war', icon: <path d="M5 5l14 14M19 5L5 19M4 16l4 4M20 16l-4 4" /> },
-  { id: 'cwl', label: 'CWL', href: '#/cwl', icon: <path d="M8.5 20.5h7M12 15.5v5M7.5 4h9v6.5a4.5 4.5 0 0 1-9 0V4zM7.5 6.5H4.5c0 2 1 3.2 3 3.6M16.5 6.5h3c0 2-1 3.2-3 3.6" /> },
   { id: 'log', label: 'Log', href: '#/log', icon: <path d="M4 6h16M4 12h16M4 18h10" /> },
   { id: 'explore', label: 'Stats', href: '#/stats/players', icon: <path d="M5 20V10M12 20V4M19 20v-7" /> },
   { id: 'plan', label: 'Plan', href: '#/plan/days', icon: <path d="M7 4v16M17 4v16M3 8h8M13 16h8" /> },
@@ -42,8 +44,11 @@ const TABS = [
 export default function App() {
   const { roster, live, error, reload } = useRoster()
   const war = useWar()
+  // Roster shows while a clan is in this month's CWL, and Group while a league group is drawn.
+  const drawn = !!useCwlGroups().data?.clans.some((c) => c.group)
   const wide = useWide()
   const route = useRoute()
+  const warSubs = [CURRENT, ...(roster && Object.values(roster.clans).some((c) => c?.inCwl) || route.sub === 'roster' ? [ROSTER] : []), ...(drawn || route.sub === 'group' ? [GROUP] : []), WAR_LOG]
   const back = cardToReturnTo(route.tab)
   const auth = useAuth()
   const install = useInstallHint(wide)
@@ -101,15 +106,17 @@ export default function App() {
       <div key={route.tab} className="ff-fade">
       <ErrorBoundary>
       {error ? (
-        <div className="pt-16"><GoblinNote goblin="panic">Roster's under a shield. Try again shortly.</GoblinNote></div>
+        <div className="pt-16"><GoblinNote goblin="panic">Clan's under a shield. Try again shortly.</GoblinNote></div>
       ) : !roster ? (
         <div aria-busy="true" aria-label="Loading" className="mx-auto flex max-w-[1320px] flex-col gap-3 px-4 pt-4">
           {[48, 120, 46, 320].map((h, i) => <div key={i} className="animate-pulse rounded-2xl bg-well" style={{ height: h }} />)}
         </div>
       ) : route.tab === 'war' ? (
         <>
-          <SubNav items={WAR_SUBS} current={route.sub} wide={wide} />
-          <WarTab wide={wide} roster={roster} sub={route.sub} opened={route.kind} q={q} setQ={setQ} />
+          <SubNav items={warSubs} current={route.sub} wide={wide} />
+          {route.sub === 'roster' ? <CwlTab roster={roster} war={war} wide={wide} q={q} setQ={setQ} />
+            : route.sub === 'group' ? <CwlGroup wide={wide} roster={roster} q={q} setQ={setQ} />
+            : <WarTab wide={wide} roster={roster} sub={route.sub} opened={route.kind} q={q} setQ={setQ} />}
         </>
       ) : route.tab === 'plan' ? (
         <PlanTab sub={route.sub} roster={roster} onPublished={reload} me={auth.me} ready={auth.status === 'ready'} wide={wide} onSignOut={auth.signOut} q={q} setQ={setQ} />
@@ -120,13 +127,8 @@ export default function App() {
           <SubNav items={LOG_SUBS} current={route.sub} wide={wide} />
           {route.sub === 'recap' ? <Recap wide={wide} roster={roster} /> : <LogTab roster={roster} q={q} setQ={setQ} wide={wide} />}
         </>
-      ) : route.tab === 'explore' ? (
-        <ExploreTab sub={route.sub} kind={route.kind} q={q} setQ={setQ} wide={wide} />
       ) : (
-        <>
-          <SubNav items={CWL_SUBS} current={route.sub} wide={wide} />
-          {route.sub !== 'lineups' ? <CwlGroup wide={wide} /> : <CwlTab roster={roster} war={war} wide={wide} q={q} setQ={setQ} />}
-        </>
+        <ExploreTab sub={route.sub} kind={route.kind} q={q} setQ={setQ} wide={wide} roster={roster} />
       )}
       </ErrorBoundary>
       </div>

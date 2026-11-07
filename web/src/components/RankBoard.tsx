@@ -39,7 +39,7 @@ const num = (v: number) => v.toLocaleString('en-GB')
 
 /** A ranked table of members by one of several columns, with the clan filter and search the other boards have. */
 export default function RankBoard({ kind, cols, note, q, setQ, wide }: {
-  kind: 'donations' | 'capital'; cols: RankCol[]; note?: string; q: string; setQ: (v: string) => void; wide: boolean
+  kind: 'donations' | 'capital' | 'games'; cols: RankCol[]; note?: string; q: string; setQ: (v: string) => void; wide: boolean
 }) {
   const { data, loading } = useBoard(kind)
   const [clan, setClan] = useClanPick()

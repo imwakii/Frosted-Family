@@ -150,7 +150,9 @@ CREATE TABLE IF NOT EXISTS cwl_group_wars (
     opponent_tag TEXT,
     opponent_stars INTEGER,
     opponent_destruction REAL,
-    updated_at TEXT
+    updated_at TEXT,
+    clan_attacks INTEGER,
+    opponent_attacks INTEGER
 );
 
 -- Each group clan's likely lineup, for comparing with ours: the averages over its 15 strongest signed-up players.
@@ -241,7 +243,8 @@ CREATE TABLE IF NOT EXISTS player_profiles (
     defense_wins INTEGER,
     donations INTEGER,
     donations_received INTEGER,
-    capital_contributions INTEGER
+    capital_contributions INTEGER,
+    clan_games INTEGER                    -- lifetime Clan Games points: the Games Champion achievement
 );
 CREATE TABLE IF NOT EXISTS player_units (
     player_tag TEXT NOT NULL REFERENCES player_profiles (player_tag),
@@ -287,6 +290,7 @@ CREATE TABLE IF NOT EXISTS profile_snapshots (
     donations_received INTEGER,
     capital_contributions INTEGER,
     unit_levels INTEGER,                  -- sum of every home unit level; it only rises, so any upgrade moves it
+    clan_games INTEGER,
     PRIMARY KEY (player_tag, fetched_at)
 );
 
@@ -349,8 +353,28 @@ def connect(path: str | Path) -> sqlite3.Connection:
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA foreign_keys=ON")
     conn.executescript(SCHEMA)
+    _ensure_columns(conn)
     _ensure_missed_view(conn)
     return conn
+
+
+# Columns added after a table first shipped, which an existing database gains on connect. 7 Nov 2026: attacks used on each
+# side of a group war, so the group table can say who has attacks left; lifetime Clan Games points.
+ADDED_COLUMNS = (("cwl_group_wars", "clan_attacks"), ("cwl_group_wars", "opponent_attacks"),
+                 ("player_profiles", "clan_games"), ("profile_snapshots", "clan_games"))
+
+
+def has_column(conn: sqlite3.Connection, table: str, col: str) -> bool:
+    return col in {r["name"] for r in conn.execute(f"PRAGMA table_info({table})")}
+
+
+def _ensure_columns(conn: sqlite3.Connection) -> None:
+    for table, col in ADDED_COLUMNS:
+        if not has_column(conn, table, col):
+            try:
+                conn.execute(f"ALTER TABLE {table} ADD COLUMN {col} INTEGER")
+            except sqlite3.OperationalError:  # an overlapping pass added it first
+                pass
 
 
 def connect_readonly(path: str | Path) -> sqlite3.Connection:
@@ -415,10 +439,12 @@ def forget_groups(conn: sqlite3.Connection, before: str, current: str | None) ->
 def upsert_group_war(conn: sqlite3.Connection, war: dict, *, war_tag: str, season: str | None, round_no: int) -> None:
     clan, opp = war["clan"], war["opponent"]
     conn.execute(
-        """INSERT OR REPLACE INTO cwl_group_wars VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+        """INSERT OR REPLACE INTO cwl_group_wars (war_tag, season, round, state, team_size, end_time, clan_tag, clan_stars,
+             clan_destruction, opponent_tag, opponent_stars, opponent_destruction, updated_at, clan_attacks, opponent_attacks)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
         (war_tag, season, round_no, war.get("state"), war.get("teamSize"), war.get("endTime"),
          clan["tag"], clan.get("stars", 0), clan.get("destructionPercentage", 0),
-         opp["tag"], opp.get("stars", 0), opp.get("destructionPercentage", 0), utcnow()))
+         opp["tag"], opp.get("stars", 0), opp.get("destructionPercentage", 0), utcnow(), clan.get("attacks"), opp.get("attacks")))
 
 
 def upsert_war(conn: sqlite3.Connection, war: dict, *, kind: str, war_tag: str | None = None,

@@ -121,7 +121,7 @@ export function ago(iso: string | null, now = Date.now()) {
 // GET /api/war/board: each clan's war, its bases paired by map position.
 type WarSide = { tag: string; name: string; th: number | null; position: number | null }
 export type WarAttack = { order: number; ours: boolean; attacker: WarSide; defender: WarSide; stars: number; destruction: number; duration?: number | null; seen_at: string | null }
-export type WarRecap = { mvp: WarSide & { stars: number[]; destruction: number; tied: number }; upsets: { attacker: WarSide; defender: WarSide }[] }
+export type WarRecap = { upsets: { attacker: WarSide; defender: WarSide }[] }
 export type WarBase = WarSide & { used: number; allowed: number; best: number | null }
 export type ClanWar = {
   kind: string; state: 'inWar' | 'preparation' | 'warEnded'; day: number | null; team_size: number; updated_at: string
@@ -133,7 +133,7 @@ export type ClanWar = {
 export const loadWarBoard = () => getJson<{ clans: { clan: ClanName; war: ClanWar | null; next?: ClanWar | null }[]; last_poll: string | null }>('/api/war/board')
 
 /** Refetched every minute, keeping the last answer on screen meanwhile. */
-export type CwlRow = { tag: string; name: string; badge: string | null; ours: boolean; stars: number; destruction: number; won: number; lost: number; town_halls: number[]; strength: { war_stars: number; heroes: number; equipment: number } | null; profile?: CwlProfile | null; wars?: CwlClanWar[] }
+export type CwlRow = { tag: string; name: string; badge: string | null; ours: boolean; stars: number; destruction: number; won: number; lost: number; left?: number | null; town_halls: number[]; strength: { war_stars: number; heroes: number; equipment: number } | null; profile?: CwlProfile | null; wars?: CwlClanWar[] }
 export type CwlProfile = { level: number | null; war_wins: number | null; win_streak: number | null; war_league: string | null; members: number | null }
 export type CwlClanWar = { day: number; state: string; opponent_tag: string; opponent: string | null; opponent_badge: string | null; stars: number; opponent_stars: number; destruction: number; opponent_destruction: number }
 export type CwlDay = { day: number; war_key: string; state: string; opponent: string; opponent_badge: string | null; stars: number; opponent_stars: number; destruction: number; opponent_destruction: number }
@@ -164,12 +164,21 @@ const onDayPick = (run: () => void) => { dayListeners.add(run); return () => { d
 export const setDayPick = (d: number | 'all' | null) => { dayPick = d; dayListeners.forEach((run) => run()) }
 export const useDayPick = () => useSyncExternalStore(onDayPick, () => dayPick)
 
-// The clan picked on the War tab, which a clan card can also set. null opens on your own war.
+// The clan picked on any of War's views, which a clan card can also set. null opens on your own war.
 let warClan: ClanName | null = null
-export const setWarClan = (c: ClanName | null) => { warClan = c; dayListeners.forEach((run) => run()) }
+export const setWarClan = (c: ClanName | null) => {
+  warClan = c
+  try { if (c) sessionStorage.setItem('ff-clan', c) } catch { /* private mode */ }
+  dayListeners.forEach((run) => run())
+}
 export const useWarClan = () => useSyncExternalStore(onDayPick, () => warClan)
+// The clan Current last showed when nobody had picked one, so Roster and Group open on it without fixing Current to it.
+let shownClan: ClanName | null = null
+export const noteShownClan = (c: ClanName) => { shownClan = c }
+export const warClanOr = (fallback: ClanName) => warClan ?? shownClan ?? fallback
 
 export const useCwlGroups = () => usePolled('groups', loadCwlGroups)
+export const useFighting = (): ClanName[] => (useWarBoard().data?.clans ?? []).filter((c) => c.war?.state === 'inWar').map((c) => c.clan)
 export const useCalendar = (month: string) => usePolled(`cal${month}`, () => getJson<CalMonth>(`/api/calendar?month=${month}`))
 export const useWarLog = (clan: ClanName) => usePolled(`log${clan}`, () => getJson<{ clan: ClanName; wars: LogWar[] }>(`/api/war/log?clan=${clan}`))
 export const useCwlDay = (clan: ClanName, key: string) =>

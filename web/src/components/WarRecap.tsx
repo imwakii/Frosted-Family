@@ -4,10 +4,8 @@ import { CLAN } from '../theme'
 import type { ClanName } from '../types'
 import { RowChevron } from './ui'
 
-// When a war ends: who was best, any big upset, and an image of it to post in Discord. The score is on the board above.
+// When a war ends: any big upset, and an image of the result to post in Discord. The score is on the board above.
 
-const starText = (stars: number[]) => stars.map((n) => '★'.repeat(n) + '☆'.repeat(3 - n)).join(' ')
-const why = (r: Recap) => (r.mvp.tied > 1 ? `Fastest of ${r.mvp.tied} with this score` : `${Math.round(r.mvp.destruction)}% average`)
 const upsetText = (u: Recap['upsets'][number]) => `TH${u.attacker.th} on TH${u.defender.th} ${u.defender.name}`
 
 export function fit(ctx: CanvasRenderingContext2D, text: string, width: number) {
@@ -38,7 +36,7 @@ async function saveImage(clan: ClanName, war: ClanWar, result: string, r: Recap)
   const W = 1080, PAD = 64, ROW = 150, HEAD = 340
   const canvas = document.createElement('canvas')
   canvas.width = W
-  canvas.height = HEAD + ROW * (1 + r.upsets.length) + PAD
+  canvas.height = HEAD + ROW * r.upsets.length + PAD
   const ctx = canvas.getContext('2d')!
   const font = getComputedStyle(document.body).fontFamily
   const text = (s: string, x: number, y: number, size: number, weight: number, color: string, align: CanvasTextAlign = 'left', width = W - 2 * PAD, family = font) => {
@@ -62,8 +60,7 @@ async function saveImage(clan: ClanName, war: ClanWar, result: string, r: Recap)
     text(stars, W - PAD, y + 56, 34, 700, '#D97706', 'right', 400)
     text(note, W - PAD, y + 108, 30, 600, '#7A6C55', 'right', 400)
   }
-  row(0, 'MVP', r.mvp.name, starText(r.mvp.stars), why(r))
-  r.upsets.forEach((u, i) => row(i + 1, 'Upset', u.attacker.name, '★★★', upsetText(u)))
+  r.upsets.forEach((u, i) => row(i, 'Upset', u.attacker.name, '★★★', upsetText(u)))
   await shareCanvas(canvas, `frosted-${clan.toLowerCase()}-war-recap.png`)
 }
 
@@ -72,19 +69,8 @@ export default function WarRecap({ clan, war, result, recap }: { clan: ClanName;
   const stars = (s: string) => <span aria-hidden="true" className="whitespace-nowrap text-[13px] leading-none text-gold">{s}</span>
   return (
     <div aria-label="War recap">
-      <a href={playerHref(recap.mvp.tag)} className={`${row} hover:bg-hover`}>
-        <span className="flex min-w-0 flex-auto flex-col">
-          <span className="text-[11px] font-bold uppercase tracking-[0.06em] text-faint">MVP</span>
-          <span className="truncate text-[15px] font-bold">{recap.mvp.name}</span>
-        </span>
-        <span className="flex flex-none flex-col items-end gap-1">
-          {stars(starText(recap.mvp.stars))}
-          <span className="text-xs font-semibold text-muted">{why(recap)}</span>
-        </span>
-        <RowChevron />
-      </a>
-      {recap.upsets.map((u) => (
-        <div key={`${u.attacker.tag}-${u.defender.tag}`} className="border-t border-hair">
+      {recap.upsets.map((u, i) => (
+        <div key={`${u.attacker.tag}-${u.defender.tag}`} className={i ? 'border-t border-hair' : ''}>
         <a href={playerHref(u.attacker.tag)} className={`${row} hover:bg-hover`}>
           <span className="flex min-w-0 flex-auto flex-col">
             <span className="text-[11px] font-bold uppercase tracking-[0.06em] text-faint">Upset</span>
