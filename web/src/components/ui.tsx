@@ -291,18 +291,21 @@ export function DayRow({ days = [], pick, onPick, live = 0, roster, recap, drawn
 }) {
   const lead = roster ? 'All' : recap ? 'Recap' : null
   const cell = 'relative flex min-h-[42px] min-w-0 cursor-pointer flex-col items-center justify-center rounded-[9px] border-0 tabular-nums disabled:cursor-default disabled:opacity-40'
-  const items = useMemo<(number | 'all')[]>(() => [...(lead ? ['all' as const] : []), 1, 2, 3, 4, 5, 6, 7], [lead])
+  // All on Roster and Recap on Current sit as a chip beside the heading, so the seven days keep the strip's full width.
+  const items = useMemo<(number | 'all')[]>(() => [1, 2, 3, 4, 5, 6, 7], [])
   const { navProps, slideStyle, slideMotion, grabbing } = useSlidePick<number | 'all' | null>(pick, items, (d) => { if (d !== null) onPick(d) })
   const grab = (on: boolean) => (on ? (grabbing ? 'cursor-grabbing' : 'cursor-grab') : '')
   return (
     <div className="flex w-full max-w-[480px] flex-col gap-1">
-    <Eyebrow className="px-0.5">{label ?? (out ? 'Not in CWL' : 'CWL day')}</Eyebrow>
-    <nav {...(out ? {} : navProps)} aria-label={out ? 'Not in CWL' : 'CWL day'} className={`relative grid w-full touch-pan-y select-none gap-1 rounded-xl bg-well p-1 ${lead ? 'grid-cols-[2fr_repeat(7,1fr)]' : 'grid-cols-7'}`}>
-      {slideStyle && <span aria-hidden="true" className={`absolute inset-y-1 left-0 rounded-[9px] bg-white shadow-[0_1px_3px_rgba(43,33,20,.12)] ${slideMotion}`} style={slideStyle} />}
-      {lead && (
-        <button type="button" aria-pressed={pick === 'all'} disabled={out} onClick={() => onPick('all')}
-          className={`${cell} ${grab(pick === 'all')} bg-transparent text-[13px] font-bold transition-colors duration-200 motion-reduce:transition-none ${pick === 'all' ? 'text-ink' : 'text-muted'}`}>{lead}</button>
+    <div className="flex items-center justify-between gap-2 px-0.5">
+      <Eyebrow>{label ?? (out ? 'Not in CWL' : 'CWL day')}</Eyebrow>
+      {lead && !out && (
+        <button type="button" aria-pressed={pick === 'all'} aria-label={roster ? 'All days' : 'League recap'} onClick={() => onPick('all')}
+          className={`relative -my-1.5 flex-none cursor-pointer rounded-full border px-3 py-1 text-xs font-bold transition-colors duration-200 before:absolute before:-inset-2 before:content-[''] motion-reduce:transition-none ${pick === 'all' ? 'border-ink bg-ink text-white' : 'border-line bg-white text-ink-2 hover:bg-hover'}`}>{lead}</button>
       )}
+    </div>
+    <nav {...(out ? {} : navProps)} aria-label={out ? 'Not in CWL' : 'CWL day'} className="relative grid w-full touch-pan-y select-none grid-cols-7 gap-1 rounded-xl bg-well p-1">
+      {slideStyle && <span aria-hidden="true" className={`absolute inset-y-1 left-0 rounded-[9px] bg-white shadow-[0_1px_3px_rgba(43,33,20,.12)] ${slideMotion}`} style={slideStyle} />}
       {[1, 2, 3, 4, 5, 6, 7].map((n) => {
         const d = days.find((x) => x.day === n)
         const over = d?.state === 'warEnded', fighting = d?.state === 'inWar' || (!d && n === live), prep = d?.state === 'preparation'

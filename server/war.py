@@ -187,11 +187,14 @@ def group_clan_wars(conn, wars: list, tag: str, names: dict, now_s: str) -> list
     return rows
 
 
-def group_view(conn, clan_tag: str, now: datetime) -> dict | None:
-    latest = conn.execute("SELECT MAX(season) FROM cwl_group_clans WHERE our_clan_tag=?", (clan_tag,)).fetchone()[0]
+def group_view(conn, clan_tag: str, now: datetime, season: str | None = None) -> dict | None:
+    """A clan's league group: the latest, or the season asked for, from the War log."""
+    latest = season or conn.execute("SELECT MAX(season) FROM cwl_group_clans WHERE our_clan_tag=?", (clan_tag,)).fetchone()[0]
     if not latest:
         return None
     clans = conn.execute("SELECT * FROM cwl_group_clans WHERE season=? AND our_clan_tag=?", (latest, clan_tag)).fetchall()
+    if not clans:
+        return None
     tags = [c["clan_tag"] for c in clans]
     marks = ",".join("?" * len(tags))
     wars = conn.execute(f"SELECT * FROM cwl_group_wars WHERE season=? AND clan_tag IN ({marks})", (latest, *tags)).fetchall()
@@ -215,9 +218,9 @@ def group_view(conn, clan_tag: str, now: datetime) -> dict | None:
             "eight": eight_stars(conn, clan_tag, latest)}
 
 
-def cwl_groups(conn, now: datetime | None = None) -> dict:
+def cwl_groups(conn, now: datetime | None = None, season: str | None = None) -> dict:
     now = now or datetime.now(timezone.utc)
-    return {"clans": [{"clan": name, "group": group_view(conn, tag, now) if conn else None} for name, tag in CLAN_TAGS.items()]}
+    return {"clans": [{"clan": name, "group": group_view(conn, tag, now, season) if conn else None} for name, tag in CLAN_TAGS.items()]}
 
 
 def cwl_day(conn, clan: str, war_key: str, now: datetime | None = None) -> dict | None:
@@ -237,7 +240,10 @@ def war_log(conn, clan: str, now: datetime | None = None) -> dict | None:
         return None
     now_s = stamp(now or datetime.now(timezone.utc))
     rows = conn.execute("SELECT * FROM wars WHERE ? IN (clan_tag, opponent_tag) AND state<>'preparation' ORDER BY end_time DESC", (tag,)).fetchall() if conn else []
-    facts = ({**day_facts(conn, w, tag, now_s), "kind": w["kind"], "end_time": w["end_time"], "team_size": w["team_size"]} for w in rows)
+    # A CWL day carries its season, and whether that league's group is held, so the log can open its Recap.
+    held = {r[0] for r in conn.execute("SELECT DISTINCT season FROM cwl_group_clans WHERE our_clan_tag=?", (tag,))} if conn else set()
+    facts = ({**day_facts(conn, w, tag, now_s), "kind": w["kind"], "end_time": w["end_time"], "team_size": w["team_size"],
+              "season": w["season"], "recap": w["kind"] == "cwl" and w["season"] in held} for w in rows)
     return {"clan": clan, "wars": [f for f in facts if f["state"] == "warEnded"]}
 
 

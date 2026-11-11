@@ -35,7 +35,7 @@ import re
 import sqlite3
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Query, Request
 
 from frosted.config import CLAN_TAGS, TAG_TO_CLAN
 from server import auth, clanlog, days, db, events, history, leaders, members, plan, profiles, proposals, push, recap, stats, visits, war
@@ -178,8 +178,8 @@ def war_board():
 
 
 @app.get("/war/cwl")
-def war_cwl():
-    return war.cwl_groups(open_db())
+def war_cwl(season: str | None = Query(None, max_length=20)):
+    return war.cwl_groups(open_db(), season=season)
 
 
 @app.get("/war/log")

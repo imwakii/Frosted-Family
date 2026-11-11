@@ -5,7 +5,7 @@ import WarRecap from './WarRecap'
 import { useYou, YouTag } from './You'
 import { useClans } from '../clash'
 import { useWide } from '../data'
-import { ago, type ClanWar, setDayPick, setWarClan, noteShownClan, useCwlDay, useCwlGroups, useDayPick, useWarDots, useWarLog, useWarBoard, useWarClan, type WarAttack, type WarBase } from '../leaders'
+import { ago, type ClanWar, setDayPick, setWarClan, noteShownClan, useCwlDay, useCwlGroups, useCwlSeason, useDayPick, useWarDots, useWarLog, useWarBoard, useWarClan, type WarAttack, type WarBase } from '../leaders'
 import { clanHref, go, playerHref, rivalHref } from '../route'
 import { CLAN, CLANS } from '../theme'
 import type { ClanName, Roster } from '../types'
@@ -365,6 +365,23 @@ function OtherDay({ clan, warKey, now, roster, q }: { clan: ClanName; warKey: st
   return <WarBoard key={warKey} clan={clan} war={data} now={now} roster={roster} q={q} />
 }
 
+// A finished league from the War log, as Current showed it while it was on: the Recap first, each day a tap away.
+function PastCwl({ clan, season, now, roster, wide }: { clan: ClanName; season: string; now: number; roster: Roster; wide: boolean }) {
+  const { data, loading } = useCwlSeason(season)
+  const group = data?.clans.find((c) => c.clan === clan)?.group
+  const [pick, setPick] = useState<number | null>(null)
+  if (!data && loading) return <div aria-busy="true" className="h-64 animate-pulse rounded-2xl bg-well" />
+  if (!group) return <div className="rounded-2xl border border-line bg-white px-6 py-14 text-center text-sm font-semibold text-faint">This league's recap is no longer kept</div>
+  const day = pick === null ? null : group.days.find((d) => d.day === pick)
+  return (
+    <>
+      <DayRow days={group.days} pick={day ? day.day : 'all'} onPick={(d) => setPick(d === 'all' ? null : d)} recap drawnOnly label={leagueLabel(group)} />
+      {day ? <OtherDay key={day.war_key} clan={clan} warKey={day.war_key} now={now} roster={roster} />
+        : <CwlSeason group={group} clan={clan} wide={wide} over={seasonOver(group)} onDay={setPick} />}
+    </>
+  )
+}
+
 // Family members by name, then this clan's wars against an opponent of that name.
 function LogSearch({ clan, roster, q }: { clan: ClanName; roster: Roster; q: string }) {
   const hits = familyHits(roster, norm(q.trim()))
@@ -422,7 +439,8 @@ export default function WarTab({ wide, roster, sub, opened, q, setQ }: { wide: b
               <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M15 6l-6 6 6 6" /></svg>
               War log
             </a>
-            <OtherDay clan={logClan} warKey={decodeURIComponent(linkKey)} now={now} roster={roster} />
+            {decodeURIComponent(linkKey).startsWith('cwl:') ? <PastCwl clan={logClan} season={decodeURIComponent(linkKey).slice(4)} now={now} roster={roster} wide={wide} />
+              : <OtherDay clan={logClan} warKey={decodeURIComponent(linkKey)} now={now} roster={roster} />}
           </>
         ) : search.trim() ? <LogSearch clan={logClan} roster={roster} q={search} /> : <WarLog clan={logClan} />}
       </main>

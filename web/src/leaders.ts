@@ -137,7 +137,8 @@ export type CwlRow = { tag: string; name: string; badge: string | null; ours: bo
 export type CwlProfile = { level: number | null; war_wins: number | null; win_streak: number | null; war_league: string | null; members: number | null }
 export type CwlClanWar = { day: number; state: string; opponent_tag: string; opponent: string | null; opponent_badge: string | null; stars: number; opponent_stars: number; destruction: number; opponent_destruction: number }
 export type CwlDay = { day: number; war_key: string; state: string; opponent: string; opponent_badge: string | null; stars: number; opponent_stars: number; destruction: number; opponent_destruction: number }
-export type LogWar = CwlDay & { kind: string; end_time: string | null; team_size: number | null }
+// season and recap: a CWL day's league, and whether its Recap can still be opened (about three months).
+export type LogWar = CwlDay & { kind: string; end_time: string | null; team_size: number | null; season?: string | null; recap?: boolean }
 // used, missed, hits, damage, up and threes arrive with the season summary's server change; an older API leaves them out.
 export type EightRow = { tag: string; name: string; th: number | null; played: number; stars: number; used?: number; hits?: number; damage?: number; up?: number; threes?: number; missed?: number }
 export type CwlGroup = { season: string; table: CwlRow[]; days: CwlDay[]; before?: CwlDay | null; eight: EightRow[] }
@@ -179,6 +180,9 @@ export const noteShownClan = (c: ClanName) => { shownClan = c }
 export const warClanOr = (fallback: ClanName) => warClan ?? shownClan ?? fallback
 
 export const useCwlGroups = () => usePolled('groups', loadCwlGroups)
+// A past league's groups, for its Recap from the War log. A finished league can't change, so it loads once.
+export const useCwlSeason = (season: string) =>
+  useLoad(`groups${season}`, () => getJson<{ clans: { clan: ClanName; group: CwlGroup | null }[] }>(`/api/war/cwl?season=${encodeURIComponent(season)}`))
 // On every clan switch on War, clans at war blink green; those still preparing hold a steady dot in the Prep pill's orange.
 export const useWarDots = (): { live: ClanName[]; prep: ClanName[] } => {
   const clans = useWarBoard().data?.clans ?? []

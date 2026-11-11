@@ -205,6 +205,11 @@ def test_a_group_is_forgotten_after_a_while_and_our_wars_stay(tmp_path):
     db.forget_groups(conn, "2026-10-01", "2026-11-02")
     for name in ("cwl_group_strength", "cwl_group_profile"):
         assert conn.execute(f"SELECT COUNT(*) FROM {name}").fetchone()[0] == 0
+    # The group itself stays, so the War log can still open that league's Recap.
+    assert {r[0] for r in conn.execute("SELECT DISTINCT season FROM cwl_group_clans")} == {"2026-09-01", "2026-11-02"}
+    assert war.group_view(conn, FIRE, NOW, "2026-09-01")["season"] == "2026-09-01"
+    assert war.group_view(conn, FIRE, NOW, "2025-01-01") is None
+    db.forget_old_leagues(conn, "2026-10-01", "2026-11-02")  # three months on, the old league's Recap goes
     assert {r[0] for r in conn.execute("SELECT DISTINCT season FROM cwl_group_clans")} == {"2026-11-02"}
     assert conn.execute("SELECT COUNT(*) FROM wars WHERE war_key='w'").fetchone()[0] == 1
     db.forget_groups(conn, "2027-01-01", "2026-11-02")  # what the API is serving now is never dropped
@@ -221,6 +226,7 @@ def test_the_war_log_lists_a_clans_finished_wars_newest_first(tmp_path):
     assert [w["war_key"] for w in log] == ["b", "a"]
     assert (log[0]["opponent"], log[0]["stars"], log[0]["opponent_stars"], log[0]["day"]) == ("#Y", 5, 10, 0)
     assert war.war_log(conn, "Nobody", NOW) is None
+    assert log[0]["recap"] is False  # a regular war has no Recap
 
 
 def test_season_totals_use_the_games_attack_count_and_count_hits_up(tmp_path):

@@ -28,6 +28,7 @@ OUR_TAGS = set(CLAN_TAGS.values())
 OTHER_WARS_EVERY = timedelta(minutes=10)
 STRENGTH_EVERY = timedelta(days=1)
 GROUP_KEPT = timedelta(days=45)  # longer than the gap between two CWLs, so the last group shows until the next is drawn
+LEAGUE_KEPT = timedelta(days=92)  # about three leagues: how far back the War log offers a league's Recap
 LINEUP = 15
 NEWS_AGENT = "FrostedFamilyCalendar/1.0 (+https://frosted-family.vercel.app)"
 
@@ -139,6 +140,7 @@ def collect_group_profiles(conn, api: Api, group: dict) -> None:
 def collect_league_group(conn, api: Api, group: dict, our_clan_tag: str) -> None:
     season = group.get("season")
     db.forget_groups(conn, (datetime.now(timezone.utc) - GROUP_KEPT).strftime("%Y-%m-%d"), season)
+    db.forget_old_leagues(conn, (datetime.now(timezone.utc) - LEAGUE_KEPT).strftime("%Y-%m-%d"), season)
     # Other clans' wars only feed the group table, so they need not be as fresh as ours.
     others_from = (datetime.now(timezone.utc) - OTHER_WARS_EVERY).strftime("%Y-%m-%dT%H:%M:%SZ")
     for c in group.get("clans", []):

@@ -450,8 +450,15 @@ def store_badge(conn: sqlite3.Connection, clan: dict) -> None:
 
 
 def forget_groups(conn: sqlite3.Connection, before: str, current: str | None) -> None:
-    """Other clans' numbers only matter while we can still be compared with them. Our own wars are in `wars` and stay."""
-    for table in ("cwl_group_clans", "cwl_group_wars", "cwl_group_strength", "cwl_group_profile", "cwl_war_tags"):
+    """Other clans' strength and profiles only matter while a league is on. Each group's clans and scores are kept
+    longer, by forget_old_leagues, so the War log can open a past league's Recap."""
+    for table in ("cwl_group_strength", "cwl_group_profile"):
+        conn.execute(f"DELETE FROM {table} WHERE season<? AND season IS NOT ?", (before, current))
+
+
+def forget_old_leagues(conn: sqlite3.Connection, before: str, current: str | None) -> None:
+    """A league's group, and so its Recap, goes once it is older than the War log offers a Recap for."""
+    for table in ("cwl_group_clans", "cwl_group_wars", "cwl_war_tags"):
         conn.execute(f"DELETE FROM {table} WHERE season<? AND season IS NOT ?", (before, current))
 
 

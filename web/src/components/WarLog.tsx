@@ -43,7 +43,17 @@ export default function WarLog({ clan, q = '' }: { clan: ClanName; q?: string })
       </div>
       {runs.map((run) => (
         <div key={run.wars[0].war_key}>
-          <div className="border-b border-hair bg-[#F6EEDC] px-3.5 py-1 text-[11px] font-bold uppercase tracking-[0.06em] text-muted">{run.label}</div>
+          <div className="flex min-h-7 items-center justify-between gap-2 border-b border-hair bg-[#F6EEDC] px-3.5 py-1">
+            <span className="text-[11px] font-bold uppercase tracking-[0.06em] text-muted">{run.label}</span>
+            {/* A league still held opens as Current showed it, Recap first. */}
+            {(() => {
+              const season = run.wars.find((w) => w.recap)?.season
+              return season && (
+                <a href={warLogHref(clan, `cwl:${season}`)} aria-label={`Recap, ${run.label}`}
+                  className="-my-2 flex min-h-11 items-center gap-0.5 pl-3 text-[12px] font-bold text-action no-underline">Recap<RowChevron /></a>
+              )
+            })()}
+          </div>
           <ol className="m-0 grid list-none lg:grid-cols-2 lg:gap-x-6 lg:px-1">
         {run.wars.map((w, i) => {
           const result = dayWon(w)
