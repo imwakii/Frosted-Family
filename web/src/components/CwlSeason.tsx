@@ -102,7 +102,7 @@ export default function CwlSeason({ group, clan, wide, over, onDay, q = '' }: { 
       {/* Star count, then Bonus picks on a phone. Side by side, Bonus picks leads its column, and from 1280px each has
           a column of its own. */}
       <div className={`flex min-w-0 flex-col gap-3 ${wide ? 'lg:gap-4 xl:contents' : ''}`}>
-      {group.eight.some(match) && <div className={`min-w-0 ${wide ? 'lg:order-2 xl:col-start-3 xl:row-start-1' : ''}`}><StarCount rows={group.eight.filter(match)} limit={nq ? Infinity : fit?.[1]} card={starsCard} searching={!!nq} /></div>}
+      {group.eight.some(match) && <div className={`min-w-0 ${wide ? 'lg:order-2 xl:col-start-3 xl:row-start-1' : ''}`}><StarCount rows={group.eight.filter(match)} rank={(r) => group.eight.indexOf(r) + 1} limit={nq ? Infinity : fit?.[1]} card={starsCard} searching={!!nq} /></div>}
       <section ref={picksCard} aria-label="Bonus picks" className={`flex min-w-0 flex-col overflow-hidden rounded-2xl border border-line bg-white ${wide ? 'lg:order-1 xl:col-start-2 xl:row-start-1' : ''}`}>
         {/* The title and the column names share one row. */}
         <div className={`grid items-baseline gap-x-1.5 px-3 py-2.5 ${COLS}`}>
@@ -281,7 +281,8 @@ function useFitRows(wide: boolean, left: RefObject<HTMLDivElement>, cards: RefOb
   return fit
 }
 
-function StarCount({ rows, limit = EIGHT_SHOWN, card, searching }: { rows: EightRow[]; limit?: number; card?: RefObject<HTMLElement>; searching?: boolean }) {
+// Each row's place in the whole league's list, so a search keeps it.
+function StarCount({ rows, rank, limit = EIGHT_SHOWN, card, searching }: { rows: EightRow[]; rank: (r: EightRow) => number; limit?: number; card?: RefObject<HTMLElement>; searching?: boolean }) {
   const [all, setAll] = useState(false)
   // A search with no match here leaves the message to Bonus picks, so it shows once.
   if (searching && !rows.length) return null
@@ -292,6 +293,7 @@ function StarCount({ rows, limit = EIGHT_SHOWN, card, searching }: { rows: Eight
         {(all ? rows : rows.slice(0, limit)).map((r, i) => (
           <li key={r.tag}>
             <a href={playerHref(r.tag)} data-tag={r.tag} className={`flex min-h-[44px] items-center gap-2 px-3 text-ink no-underline hover:bg-hover ${i ? 'border-t border-hair' : ''}`}>
+              <span className="w-5 flex-none text-right text-xs font-bold tabular-nums text-faint">{rank(r)}</span>
               <Th th={r.th} />
               <span className="min-w-0 flex-auto truncate text-sm font-semibold">{r.name}</span>
               <span aria-hidden="true" className="flex flex-none gap-[3px]">

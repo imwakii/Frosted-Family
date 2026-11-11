@@ -372,6 +372,7 @@ export const UPDATES: Update[] = [
         title: 'General',
         lines: [
           'Changed the name picker to show clans.',
+          'Added Unlink account to your own card.',
         ],
       },
     ],

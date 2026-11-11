@@ -122,8 +122,10 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
   const [extra, setExtra] = useState<Partial<Player> | null>(() => playerNow(tag)?.extra ?? null)
   const [card, setCard] = useState<PlayerCard | null>(() => playerNow(tag)?.card ?? null)
   const [cardLoading, setCardLoading] = useState(() => !playerNow(tag))
-  const { yous } = useYou()
+  const { yous, addYou, removeYou } = useYou()
   const isMine = yous.includes(tag)
+  // Unlinked from this card: an Undo shows in its place until the card closes.
+  const [unlinked, setUnlinked] = useState(false)
   const accounts = roster.players.filter((x) => yous.includes(x.tag))
   const close = useRef<HTMLButtonElement>(null)
   const motion = useSheetMotion()
@@ -144,6 +146,7 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
     setExtra(now?.extra ?? null)
     setCard(now?.card ?? null)
     setCardLoading(!now)
+    setUnlinked(false)  // an Undo belongs to the card it was shown on
     if (!now) loadPlayerAll(tag).then((x) => { if (live) { setExtra(x.extra); setCard(x.card); setCardLoading(false) } })
     return () => { live = false }
   }, [tag])
@@ -375,6 +378,22 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
                   <Stat small label="Capital" value={num(card.capital)} onOpen={toCol('capital', 'contributed')} />
                 </div>
               </Section>
+            )}
+            {/* Your own card ends with a way to say it isn't yours. It only changes this device, as Settings does. */}
+            {(isMine || unlinked) && (
+              <div className="flex justify-center pt-1">
+                {isMine ? (
+                  <button type="button" onClick={() => { removeYou(tag); setUnlinked(true) }}
+                    className="min-h-11 cursor-pointer rounded-full border-0 bg-transparent px-4 text-[13px] font-bold text-muted transition-colors duration-200 hover:bg-[#FDECEA] hover:text-[#B91C1C] motion-reduce:transition-none">
+                    Unlink account
+                  </button>
+                ) : (
+                  <span role="status" className="flex min-h-11 items-center gap-3 text-[13px] font-semibold text-muted">
+                    Unlinked from this device
+                    <button type="button" onClick={() => { addYou(tag); setUnlinked(false) }} className="min-h-11 cursor-pointer border-0 bg-transparent px-2 font-bold text-action underline">Undo</button>
+                  </span>
+                )}
+              </div>
             )}
             </div>
             )}
