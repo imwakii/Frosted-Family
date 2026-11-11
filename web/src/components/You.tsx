@@ -1,9 +1,10 @@
 import { useEffect, useId, useSyncExternalStore, useState } from 'react'
 import { syncAccounts } from '../alerts'
 import type { Roster } from '../types'
-import { CLAN, SLOT_TEXT } from '../theme'
+import { CLAN } from '../theme'
 import { playerHref } from '../route'
 import { SearchIcon, Th } from './ui'
+import { useClans } from '../clash'
 
 // Which accounts are this person's: their main and any alts. Added from the header's Add me, changed in Settings,
 // and shown on every list. Kept in this browser; the server only hears of them if this phone turns alerts on, and nobody else sees them.
@@ -80,6 +81,7 @@ export function JumpToYou({ wide }: { wide: boolean }) {
 /** Finds a member by name and marks them as this person: their first account, or another one. */
 export function YouPrompt({ roster, onDone, autoFocus, bare }: { roster: Roster; onDone: () => void; autoFocus?: boolean; bare?: boolean }) {
   const { yous, addYou } = useYou()
+  const clans = useClans()
   const [q, setQ] = useState('')
   const id = useId()
   const adding = roster.players.some((p) => yous.includes(p.tag))
@@ -107,7 +109,7 @@ export function YouPrompt({ roster, onDone, autoFocus, bare }: { roster: Roster;
               <button type="button" onClick={() => { addYou(p.tag); onDone() }} className={`flex min-h-11 w-full cursor-pointer items-center gap-2.5 border-0 bg-transparent px-1 text-left hover:bg-hover ${i ? 'border-t border-hair' : ''}`}>
                 <Th th={p.th} />
                 <span className="min-w-0 flex-auto truncate text-sm font-semibold text-ink">{p.name}</span>
-                <span className="flex-none text-xs font-bold" style={{ color: CLAN[p.clan].deep }}>{p.clan} · {SLOT_TEXT[p.slot]}</span>
+                <span className="flex-none text-xs font-bold" style={{ color: CLAN[p.clan].deep }}>{clans[p.clan]?.name ?? `Frosted ${p.clan}`}</span>
               </button>
             </li>
           ))}

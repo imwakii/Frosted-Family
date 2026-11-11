@@ -286,21 +286,22 @@ function useSlidePick<T>(value: T, items: readonly T[], onPick: (v: T) => void) 
 
 /** The seven CWL days, the same row on War and Roster: each day's result once it has one. A clan out of this month's CWL
  * gets the row greyed out, so switching to it keeps the page's shape. */
-export function DayRow({ days = [], pick, onPick, live = 0, roster, drawnOnly, out }: {
-  days?: DayFacts[]; pick: number | 'all' | null; onPick: (d: number | 'all') => void; live?: number; roster?: boolean; drawnOnly?: boolean; out?: boolean
+export function DayRow({ days = [], pick, onPick, live = 0, roster, recap, drawnOnly, out, label }: {
+  days?: DayFacts[]; pick: number | 'all' | null; onPick: (d: number | 'all') => void; live?: number; roster?: boolean; recap?: boolean; drawnOnly?: boolean; out?: boolean; label?: string
 }) {
+  const lead = roster ? 'All' : recap ? 'Recap' : null
   const cell = 'relative flex min-h-[42px] min-w-0 cursor-pointer flex-col items-center justify-center rounded-[9px] border-0 tabular-nums disabled:cursor-default disabled:opacity-40'
-  const items = useMemo<(number | 'all')[]>(() => [...(roster ? ['all' as const] : []), 1, 2, 3, 4, 5, 6, 7], [roster])
+  const items = useMemo<(number | 'all')[]>(() => [...(lead ? ['all' as const] : []), 1, 2, 3, 4, 5, 6, 7], [lead])
   const { navProps, slideStyle, slideMotion, grabbing } = useSlidePick<number | 'all' | null>(pick, items, (d) => { if (d !== null) onPick(d) })
   const grab = (on: boolean) => (on ? (grabbing ? 'cursor-grabbing' : 'cursor-grab') : '')
   return (
     <div className="flex w-full max-w-[480px] flex-col gap-1">
-    <Eyebrow className="px-0.5">{out ? 'Not in CWL' : 'CWL day'}</Eyebrow>
-    <nav {...(out ? {} : navProps)} aria-label={out ? 'Not in CWL' : 'CWL day'} className={`relative grid w-full touch-pan-y select-none gap-1 rounded-xl bg-well p-1 ${roster ? 'grid-cols-[1.7fr_repeat(7,1fr)]' : 'grid-cols-7'}`}>
+    <Eyebrow className="px-0.5">{label ?? (out ? 'Not in CWL' : 'CWL day')}</Eyebrow>
+    <nav {...(out ? {} : navProps)} aria-label={out ? 'Not in CWL' : 'CWL day'} className={`relative grid w-full touch-pan-y select-none gap-1 rounded-xl bg-well p-1 ${lead ? 'grid-cols-[2fr_repeat(7,1fr)]' : 'grid-cols-7'}`}>
       {slideStyle && <span aria-hidden="true" className={`absolute inset-y-1 left-0 rounded-[9px] bg-white shadow-[0_1px_3px_rgba(43,33,20,.12)] ${slideMotion}`} style={slideStyle} />}
-      {roster && (
+      {lead && (
         <button type="button" aria-pressed={pick === 'all'} disabled={out} onClick={() => onPick('all')}
-          className={`${cell} ${grab(pick === 'all')} bg-transparent text-[13px] font-bold transition-colors duration-200 motion-reduce:transition-none ${pick === 'all' ? 'text-ink' : 'text-muted'}`}>All</button>
+          className={`${cell} ${grab(pick === 'all')} bg-transparent text-[13px] font-bold transition-colors duration-200 motion-reduce:transition-none ${pick === 'all' ? 'text-ink' : 'text-muted'}`}>{lead}</button>
       )}
       {[1, 2, 3, 4, 5, 6, 7].map((n) => {
         const d = days.find((x) => x.day === n)

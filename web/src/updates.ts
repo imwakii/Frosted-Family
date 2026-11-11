@@ -346,6 +346,32 @@ export const UPDATES: Update[] = [
       },
     ],
   },
+  {
+    id: '2026-11-11',
+    date: '11 Nov 2026',
+    highlights: [
+      { title: 'CWL recap', line: 'Where we finished and who earned bonuses.', href: '#/war', icon: 'league' },
+    ],
+    groups: [
+      {
+        title: 'War tab',
+        lines: [
+          'Added a CWL Recap to the day strip.',
+          'Added bonus picks to the Recap.',
+          'Added expected scores to the Recap.',
+          'Moved Star count into the Recap.',
+          "Added each clan's days to Standings.",
+          'Fixed Not in CWL staying all month.',
+        ],
+      },
+      {
+        title: 'General',
+        lines: [
+          'Changed the name picker to show clans.',
+        ],
+      },
+    ],
+  },
 ]
 
 export const LATEST = UPDATES[UPDATES.length - 1]

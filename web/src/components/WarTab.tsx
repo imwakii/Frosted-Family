@@ -11,6 +11,7 @@ import { CLAN, CLANS } from '../theme'
 import type { ClanName, Roster } from '../types'
 import Info from './Info'
 import { StarBurst, useOnce } from './Motion'
+import CwlSeason, { leagueLabel, seasonOver } from './CwlSeason'
 import { ClanBadge, ClanSwitch, DayRow, GoblinNote, KEY_ROW, POINT, Stars, Th, useNow } from './ui'
 
 // Each clan's war, side by side: our bases and badge on the left, the enemy's on the right, facing by map position.
@@ -397,6 +398,11 @@ export default function WarTab({ wide, roster, sub, opened, q, setQ }: { wide: b
   const group = groups?.clans.find((c) => c.clan === clan?.clan)?.group
   const days = group?.days ?? fallback
   const picked = onCwl && typeof dayPick === 'number' && days.some((d) => d.day === dayPick) ? dayPick : null
+  const done = onCwl && seasonOver(group) && clan!.war!.state === 'warEnded'
+  const [askedRecap, setAskedRecap] = useState(false)
+  // A day picked on Roster since wins over a Recap picked here.
+  const recap = onCwl && !!group && ((askedRecap && dayPick == null) || (done && picked === null))
+  const pickDay = (d: number | 'all') => { setAskedRecap(d === 'all'); setDayPick(d === 'all' ? null : d) }
   const nearby = clan && (picked === null || picked === clan.war!.day ? clan.war! : picked === clan.next?.day ? clan.next : null)
   const other = !nearby && days.find((d) => d.day === picked)
   // Wide pages here have no search box, so a search carried from another tab doesn't narrow them.
@@ -427,9 +433,11 @@ export default function WarTab({ wide, roster, sub, opened, q, setQ }: { wide: b
       {...dots}
       off={data ? CLANS.filter((k) => !wars.some((c) => c.clan === k)) : []} />
   )
-  // A clan out of CWL while the others are in keeps the row, greyed out, so switching clans doesn't reshape the page.
-  const strip = onCwl ? <DayRow days={days} pick={picked ?? clan.war!.day ?? null} onPick={setDayPick} drawnOnly />
-    : clan && !roster.clans[clan.clan]?.inCwl && Object.values(roster.clans).some((c) => c?.inCwl) && <DayRow out pick={null} onPick={() => {}} />
+  // A clan out of CWL keeps the row, greyed out, while another clan is on a CWL day or just finished one, so switching
+  // clans doesn't reshape the page. A day after the league's last war ends, it goes.
+  const cwlOn = wars.some((c) => c.war!.kind === 'cwl' && (c.war!.state !== 'warEnded' || now - (at(c.war!.end_time) ?? 0) < 86_400_000))
+  const strip = onCwl ? <DayRow days={days} pick={recap ? 'all' : picked ?? clan.war!.day ?? null} onPick={pickDay} recap drawnOnly label={done ? leagueLabel(group) : undefined} />
+    : clan && !roster.clans[clan.clan]?.inCwl && cwlOn && <DayRow out pick={null} onPick={() => {}} />
   return (
     <main className={wide ? 'mx-auto flex max-w-[1360px] flex-col gap-4 px-[clamp(16px,3vw,32px)] pb-12 pt-5' : 'flex flex-col gap-3 px-4 pb-6 pt-1'}>
       {wide ? <div className={WIDE_ROW}>{strip}<div className="ml-auto w-[clamp(270px,30vw,400px)] flex-none">{switcher}</div></div> : <PhoneSearch q={q} setQ={setQ} onEnter={() => (document.activeElement as HTMLElement | null)?.blur()} className="-mx-4 -mb-1 -mt-1">{switcher}</PhoneSearch>}
@@ -440,7 +448,7 @@ export default function WarTab({ wide, roster, sub, opened, q, setQ }: { wide: b
       ) : (
         <>
           {!wide && strip}
-          {nearby ? <WarBoard key={nearby.war_key} clan={clan.clan} war={nearby} now={now} roster={roster} q={search} /> : other ? <OtherDay clan={clan.clan} warKey={other.war_key} now={now} roster={roster} q={search} /> : null}
+          {recap && group ? <CwlSeason group={group} clan={clan.clan} wide={wide} over={done} onDay={pickDay} /> : nearby ? <WarBoard key={nearby.war_key} clan={clan.clan} war={nearby} now={now} roster={roster} q={search} /> : other ? <OtherDay clan={clan.clan} warKey={other.war_key} now={now} roster={roster} q={search} /> : null}
         </>
       )}
     </main>

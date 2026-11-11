@@ -221,3 +221,17 @@ def test_the_war_log_lists_a_clans_finished_wars_newest_first(tmp_path):
     assert [w["war_key"] for w in log] == ["b", "a"]
     assert (log[0]["opponent"], log[0]["stars"], log[0]["opponent_stars"], log[0]["day"]) == ("#Y", 5, 10, 0)
     assert war.war_log(conn, "Nobody", NOW) is None
+
+
+def test_season_totals_use_the_games_attack_count_and_count_hits_up(tmp_path):
+    conn = db.connect(tmp_path / "x.db")
+    for i, state in enumerate(("warEnded", "warEnded", "inWar")):
+        conn.execute("INSERT INTO wars (war_key, kind, season, round, state, clan_tag, opponent_tag, updated_at) VALUES (?,?,?,?,?,?,?,?)",
+                     (f"#K{i}", "cwl", "2026-11-02", i + 1, state, FIRE, "#B", ENDED))
+        conn.execute("INSERT INTO war_members (war_key, player_tag, clan_tag, name, town_hall, map_position, attacks_used) VALUES (?,?,?,?,?,?,?)",
+                     (f"#K{i}", "#ME", FIRE, "Me", 17, 1, 1 if i == 0 else 0))  # missed day 2, yet to attack on day 3
+        conn.execute("INSERT INTO war_members (war_key, player_tag, clan_tag, name, town_hall, map_position, attacks_used) VALUES (?,?,?,?,?,?,?)",
+                     (f"#K{i}", "#THEM", "#B", "Them", 18, 1, 1))
+    conn.execute("INSERT INTO attacks VALUES (?,?,?,?,?,?,?,?)", ("#K0", 1, "#ME", "#THEM", FIRE, 3, 100.0, 90))
+    (me,) = war.eight_stars(conn, FIRE, "2026-11-02")
+    assert (me["played"], me["used"], me["missed"], me["stars"], me["hits"], me["damage"], me["up"], me["threes"]) == (3, 1, 1, 3, 1, 100.0, 1, 1)

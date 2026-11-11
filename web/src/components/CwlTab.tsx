@@ -6,6 +6,7 @@ import { useClans, type ClanMeta } from '../clash'
 import { stillToMove } from '../data'
 import { setDayPick, setWarClan, useCwlGroups, useDayPick, useWarDots, useWarClan, warClanOr } from '../leaders'
 import { jumpToYou, useYou, YouTag } from './You'
+import { leagueLabel } from './CwlSeason'
 import { ClanBadge, ClanSwitch, DayRow, Eyebrow, LeaguePill, PlayDays, SearchIcon, StatusDot, StatusKey, Th, useNow, RowChevron, GoblinNote } from './ui'
 
 type Props = {
@@ -284,7 +285,9 @@ function Phone({ roster, war, q, setQ, lock }: Omit<Props, 'wide'>) {
   const results = familyHits(roster, nq)
   const clans = useClans()
   const { planned, day, setDay, live } = useDay(roster, war)
-  const days = useCwlGroups().data?.clans.find((c) => c.clan === clan)?.group?.days
+  const group = useCwlGroups().data?.clans.find((c) => c.clan === clan)?.group
+  const days = group?.days
+  const over = inCwl ? leagueLabel(group) : undefined
   const dots = useWarDots()
   return (
     <>
@@ -294,9 +297,10 @@ function Phone({ roster, war, q, setQ, lock }: Omit<Props, 'wide'>) {
       <div className="flex flex-col gap-3 px-4 pb-6">
         {nq ? <FamilyHits roster={roster} hits={results} /> : (
           <>
-            {planned && (inCwl ? <DayRow days={days} pick={day} onPick={setDay} live={live} roster /> : <DayRow out roster pick={null} onPick={() => {}} />)}
+            {/* Once the league is over the strip stays, greyed, under the month it was, so the page keeps its shape. */}
+            {planned && (inCwl && !over ? <DayRow days={days} pick={day} onPick={setDay} live={live} roster /> : <DayRow out roster label={over} pick={null} onPick={() => {}} />)}
             <ClanCard roster={roster} clan={clan} meta={clans[clan]} below={inCwl ? <Countdown roster={roster} war={war} slim /> : undefined} stripSaysCwl={planned} />
-            <Groups roster={roster} clan={clan} day={day} />
+            <Groups roster={roster} clan={clan} day={over ? 'all' : day} />
             <StatusKey className="px-1" extra={planned && inCwl ? <span className="flex flex-none items-center gap-1 md:gap-1.5">Filled number: plays that day</span> : undefined} />
           </>
         )}
@@ -311,6 +315,10 @@ function Desktop({ roster, war, q, setQ, lock }: Omit<Props, 'wide'>) {
   const clans = useClans()
   const hits = useMemo(() => (nq ? roster.players.filter((p) => matches(p, nq)) : []), [nq, roster])
   const { planned, day, setDay, live } = useDay(roster, war)
+  // The wide page shows every clan at once, so it says finished only once every clan's league is.
+  const groups = (useCwlGroups().data?.clans ?? []).flatMap((c) => (c.group ? [c.group] : []))
+  const finished = groups.length && groups.every((g) => leagueLabel(g)) ? leagueLabel(groups[0]) : undefined
+  const shownDay = finished ? 'all' : day
 
   useEffect(() => {
     if (!hits.length) return
@@ -323,7 +331,7 @@ function Desktop({ roster, war, q, setQ, lock }: Omit<Props, 'wide'>) {
       <div className="flex items-end justify-between gap-4">
         <div className="flex w-full min-w-0 max-w-[480px] flex-col gap-3 empty:hidden">
           <Countdown roster={roster} war={war} />
-          {planned && <DayRow pick={day} onPick={setDay} live={live} roster />}
+          {planned && (finished ? <DayRow out roster label={finished} pick={null} onPick={() => {}} /> : <DayRow pick={day} onPick={setDay} live={live} roster />)}
         </div>
         <div className="ml-auto flex w-[clamp(220px,28vw,340px)] flex-none flex-col gap-1">
           <SearchBox q={q} setQ={setQ} onEnter={() => { if (hits[0]) window.location.hash = href(hits[0]) }} />
@@ -335,7 +343,7 @@ function Desktop({ roster, war, q, setQ, lock }: Omit<Props, 'wide'>) {
           return (
             <section key={clan} aria-label={clan} className="overflow-hidden rounded-2xl border border-line bg-white pb-2.5">
               <ClanCard roster={roster} clan={clan} meta={clans[clan]} compact />
-              <Groups roster={roster} clan={clan} q={nq} dense day={day} />
+              <Groups roster={roster} clan={clan} q={nq} dense day={shownDay} />
             </section>
           )
         })}

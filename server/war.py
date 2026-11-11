@@ -145,12 +145,22 @@ def group_table(clans: list, wars: list, now_s: str) -> list[dict]:
 
 
 def eight_stars(conn, clan_tag: str, season: str) -> list[dict]:
-    """Each player's stars this season, toward the 8 for the CWL bonus."""
+    """Each player's season so far, toward the 8 stars for the CWL bonus and for the bonus picks once it is over. `used`
+    is the game's own attack count, so a missing attack row never reads as a miss, and `missed` counts ended wars only, so
+    today's war isn't a miss before it is over; `hits`, `damage` and `up` (hits on a
+    town hall at or above the attacker's) and `threes` come from the attacks stored."""
     rows = conn.execute(
-        """SELECT m.player_tag AS tag, MAX(m.name) AS name, MAX(m.town_hall) AS th, COUNT(DISTINCT m.war_key) AS played,
-                  COALESCE(SUM(a.stars), 0) AS stars
+        """SELECT m.player_tag AS tag, MAX(m.name) AS name, MAX(m.town_hall) AS th, COUNT(*) AS played, SUM(m.attacks_used) AS used,
+                  COALESCE(SUM(s.stars), 0) AS stars, COALESCE(SUM(s.hits), 0) AS hits, COALESCE(SUM(s.damage), 0) AS damage,
+                  COALESCE(SUM(s.up), 0) AS up, COALESCE(SUM(s.threes), 0) AS threes,
+                  SUM(w.state = 'warEnded' AND m.attacks_used = 0) AS missed
            FROM war_members m JOIN wars w ON w.war_key=m.war_key AND w.kind='cwl' AND w.season=? AND w.state<>'preparation'
-           LEFT JOIN attacks a ON a.war_key=m.war_key AND a.attacker_tag=m.player_tag
+           LEFT JOIN (SELECT a.war_key, a.attacker_tag, SUM(a.stars) AS stars, COUNT(*) AS hits, SUM(a.destruction) AS damage,
+                             SUM(COALESCE(d.town_hall >= b.town_hall, 0)) AS up, SUM(a.stars = 3) AS threes
+                      FROM attacks a
+                      LEFT JOIN war_members d ON d.war_key=a.war_key AND d.player_tag=a.defender_tag
+                      LEFT JOIN war_members b ON b.war_key=a.war_key AND b.player_tag=a.attacker_tag
+                      GROUP BY a.war_key, a.attacker_tag) s ON s.war_key=m.war_key AND s.attacker_tag=m.player_tag
            WHERE m.clan_tag=? GROUP BY m.player_tag ORDER BY stars DESC, played, name""", (season, clan_tag))
     return [dict(r) for r in rows]
 

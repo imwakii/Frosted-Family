@@ -138,7 +138,8 @@ export type CwlProfile = { level: number | null; war_wins: number | null; win_st
 export type CwlClanWar = { day: number; state: string; opponent_tag: string; opponent: string | null; opponent_badge: string | null; stars: number; opponent_stars: number; destruction: number; opponent_destruction: number }
 export type CwlDay = { day: number; war_key: string; state: string; opponent: string; opponent_badge: string | null; stars: number; opponent_stars: number; destruction: number; opponent_destruction: number }
 export type LogWar = CwlDay & { kind: string; end_time: string | null; team_size: number | null }
-export type EightRow = { tag: string; name: string; th: number | null; played: number; stars: number }
+// used, missed, hits, damage, up and threes arrive with the season summary's server change; an older API leaves them out.
+export type EightRow = { tag: string; name: string; th: number | null; played: number; stars: number; used?: number; hits?: number; damage?: number; up?: number; threes?: number; missed?: number }
 export type CwlGroup = { season: string; table: CwlRow[]; days: CwlDay[]; before?: CwlDay | null; eight: EightRow[] }
 const loadCwlGroups = () => getJson<{ clans: { clan: ClanName; group: CwlGroup | null }[] }>('/api/war/cwl')
 
