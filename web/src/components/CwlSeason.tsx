@@ -292,8 +292,9 @@ function StarCount({ rows, rank, limit = EIGHT_SHOWN, card, searching }: { rows:
       <ol className="m-0 list-none">
         {(all ? rows : rows.slice(0, limit)).map((r, i) => (
           <li key={r.tag}>
-            <a href={playerHref(r.tag)} data-tag={r.tag} className={`flex min-h-[44px] items-center gap-2 px-3 text-ink no-underline hover:bg-hover ${i ? 'border-t border-hair' : ''}`}>
-              <span className="w-5 flex-none text-right text-xs font-bold tabular-nums text-faint">{rank(r)}</span>
+            <a href={playerHref(r.tag)} data-tag={r.tag} className={`flex min-h-[44px] items-center gap-1.5 px-3 text-ink no-underline hover:bg-hover ${i ? 'border-t border-hair' : ''}`}>
+              {/* Same rank and badge columns as Bonus picks (COLS), so the two lists line up side by side. */}
+              <span className="w-4 flex-none text-right text-xs font-bold tabular-nums text-faint">{rank(r)}</span>
               <Th th={r.th} />
               <span className="min-w-0 flex-auto truncate text-sm font-semibold">{r.name}</span>
               <span aria-hidden="true" className="flex flex-none gap-[3px]">
