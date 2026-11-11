@@ -363,6 +363,7 @@ export const UPDATES: Update[] = [
           "Added each clan's days to Standings.",
           'Added CWL recaps to the War log.',
           'Fixed Not in CWL staying all month.',
+          'Added search to War on big screens.',
         ],
       },
       {

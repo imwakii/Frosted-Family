@@ -81,13 +81,13 @@ function ClanCard({ roster, clan, meta, compact, below, stripSaysCwl }: { roster
   )
 }
 
-export function SearchBox({ q, setQ, tall, onEnter, autoFocus }: { q: string; setQ: (v: string) => void; tall?: boolean; onEnter?: () => void; autoFocus?: boolean }) {
+export function SearchBox({ q, setQ, tall, onEnter, autoFocus, onFocus }: { q: string; setQ: (v: string) => void; tall?: boolean; onEnter?: () => void; autoFocus?: boolean; onFocus?: () => void }) {
   return (
     <div className="relative min-w-0">
       <label htmlFor="find" className="sr-only">Find name</label>
       <SearchIcon />
       <input
-        id="find" type="search" placeholder="Find name" value={q} autoComplete="off" spellCheck={false} autoFocus={autoFocus}
+        id="find" type="search" placeholder="Find name" value={q} autoComplete="off" spellCheck={false} autoFocus={autoFocus} onFocus={onFocus}
         onChange={(e) => setQ(e.target.value)}
         onKeyDown={(e) => { if (e.key === 'Enter') onEnter?.() }}
         className={`${tall ? 'h-[52px]' : 'h-[50px]'} w-full rounded-[14px] border border-line bg-white pl-[42px] pr-3.5 text-base text-ink placeholder:text-faint`}
@@ -96,29 +96,64 @@ export function SearchBox({ q, setQ, tall, onEnter, autoFocus }: { q: string; se
   )
 }
 
+/** Search behind an icon: open while asked for, or while a search carried from another tab is on. Closing clears it. */
+function useNameSearch(q: string, setQ: (v: string) => void) {
+  const [searching, setSearching] = useState(false)
+  // The box takes focus once, when the icon opens it, so moving between pages doesn't raise the keyboard again.
+  const [focusNext, setFocusNext] = useState(false)
+  const open = searching || !!q
+  return {
+    open, focus: focusNext, focused: () => setFocusNext(false),
+    toggle: () => { if (open) { setQ(''); setSearching(false) } else { setSearching(true); setFocusNext(true) } },
+  }
+}
+
+function SearchToggle({ open, onToggle }: { open: boolean; onToggle: () => void }) {
+  return (
+    <button type="button" aria-label={open ? 'Close search' : 'Find name'} aria-expanded={open} onClick={onToggle}
+      className="relative size-[50px] flex-none cursor-pointer rounded-xl border-0 bg-well text-muted hover:text-ink">
+      {open
+        ? <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" className="m-auto"><path d="M6 6l12 12M18 6L6 18" /></svg>
+        : <SearchIcon />}
+    </button>
+  )
+}
+
+/** The name box, with Find me beside it until something is typed. */
+function SearchRow({ q, setQ, onEnter, autoFocus, onFocus }: { q: string; setQ: (v: string) => void; onEnter?: () => void; autoFocus?: boolean; onFocus?: () => void }) {
+  const { yous } = useYou()
+  return (
+    <div className="flex items-center gap-2">
+      <div className="min-w-0 flex-auto"><SearchBox q={q} setQ={setQ} autoFocus={autoFocus} onFocus={onFocus} onEnter={onEnter} /></div>
+      {yous.length > 0 && !q && <button type="button" onClick={jumpToYou} className="h-[50px] flex-none cursor-pointer rounded-[14px] border-0 bg-ink px-3 text-sm font-bold text-white">Find me</button>}
+    </div>
+  )
+}
+
+/** A wide page's top row, the same on War, Log and Stats: the clan switch on the left, the name search on the right, so
+ * moving between tabs leaves both where they were. Anything in `extra` sits just left of the search. */
+export function WideHeader({ q, setQ, onEnter, extra, children }: { q: string; setQ: (v: string) => void; onEnter?: () => void; extra?: ReactNode; children: ReactNode }) {
+  return (
+    <div className="flex items-center justify-between gap-4">
+      {children}
+      <div className="ml-auto flex flex-none items-center gap-3">
+        {extra}
+        <div className="w-[clamp(220px,28vw,340px)] flex-none"><SearchBox q={q} setQ={setQ} onEnter={onEnter} /></div>
+      </div>
+    </div>
+  )
+}
+
 /** A phone page's clan switch with search behind an icon beside it, both following the scroll. A search carried from another tab keeps it open. */
 export function PhoneSearch({ q, setQ, onEnter, className = '', children }: { q: string; setQ: (v: string) => void; onEnter?: () => void; className?: string; children: ReactNode }) {
-  const [searching, setSearching] = useState(false)
-  const open = searching || !!q
-  const { yous } = useYou()
+  const { open, focus, focused, toggle } = useNameSearch(q, setQ)
   return (
     <div className={`sticky top-0 z-10 flex flex-col gap-2 bg-page px-4 pb-2 pt-1 ${className}`}>
       <div className="flex items-center gap-2">
         <div className="min-w-0 flex-auto">{children}</div>
-        <button type="button" aria-label={open ? 'Close search' : 'Find name'} aria-expanded={open}
-          onClick={() => { if (open) { setQ(''); setSearching(false) } else setSearching(true) }}
-          className="relative size-[50px] flex-none cursor-pointer rounded-xl border-0 bg-well text-muted hover:text-ink">
-          {open
-            ? <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" className="m-auto"><path d="M6 6l12 12M18 6L6 18" /></svg>
-            : <SearchIcon />}
-        </button>
+        <SearchToggle open={open} onToggle={toggle} />
       </div>
-      {open && (
-        <div className="flex items-center gap-2">
-          <div className="min-w-0 flex-auto"><SearchBox q={q} setQ={setQ} autoFocus={searching} onEnter={onEnter} /></div>
-          {yous.length > 0 && !q && <button type="button" onClick={jumpToYou} className="h-[50px] flex-none cursor-pointer rounded-[14px] border-0 bg-ink px-3 text-sm font-bold text-white">Find me</button>}
-        </div>
-      )}
+      {open && <SearchRow q={q} setQ={setQ} onEnter={onEnter} autoFocus={focus} onFocus={focused} />}
     </div>
   )
 }
@@ -328,8 +363,8 @@ function Desktop({ roster, war, q, setQ, lock }: Omit<Props, 'wide'>) {
 
   return (
     <main className="mx-auto flex max-w-[1360px] flex-col gap-4 px-[clamp(16px,3vw,32px)] pb-12 pt-5">
-      <div className="flex items-end justify-between gap-4">
-        <div className="flex w-full min-w-0 max-w-[480px] flex-col gap-3 empty:hidden">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex w-full min-w-0 max-w-[480px] flex-col gap-3 empty:hidden md:max-w-[552px]">
           <Countdown roster={roster} war={war} />
           {planned && (finished ? <DayRow out roster label={finished} pick={null} onPick={() => {}} /> : <DayRow pick={day} onPick={setDay} live={live} roster />)}
         </div>

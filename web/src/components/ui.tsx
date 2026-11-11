@@ -291,20 +291,29 @@ export function DayRow({ days = [], pick, onPick, live = 0, roster, recap, drawn
 }) {
   const lead = roster ? 'All' : recap ? 'Recap' : null
   const cell = 'relative flex min-h-[42px] min-w-0 cursor-pointer flex-col items-center justify-center rounded-[9px] border-0 tabular-nums disabled:cursor-default disabled:opacity-40'
-  // All on Roster and Recap on Current sit as a chip beside the heading, so the seven days keep the strip's full width.
+  // All on Roster and Recap on Current sit as a chip beside the heading on a phone, so the seven days keep the strip's full
+  // width. A wide screen has room, so there it is a cell of its own to the left of the strip.
   const items = useMemo<(number | 'all')[]>(() => [1, 2, 3, 4, 5, 6, 7], [])
   const { navProps, slideStyle, slideMotion, grabbing } = useSlidePick<number | 'all' | null>(pick, items, (d) => { if (d !== null) onPick(d) })
   const grab = (on: boolean) => (on ? (grabbing ? 'cursor-grabbing' : 'cursor-grab') : '')
   return (
-    <div className="flex w-full max-w-[480px] flex-col gap-1">
+    <div className="flex w-full max-w-[480px] flex-col gap-2 md:max-w-[552px] md:gap-1">
     <div className="flex items-center justify-between gap-2 px-0.5">
       <Eyebrow>{label ?? (out ? 'Not in CWL' : 'CWL day')}</Eyebrow>
-      {lead && !out && (
-        <button type="button" aria-pressed={pick === 'all'} aria-label={roster ? 'All days' : 'League recap'} onClick={() => onPick('all')}
-          className={`relative -my-1.5 flex-none cursor-pointer rounded-full border px-3 py-1 text-xs font-bold transition-colors duration-200 before:absolute before:-inset-2 before:content-[''] motion-reduce:transition-none ${pick === 'all' ? 'border-ink bg-ink text-white' : 'border-line bg-white text-ink-2 hover:bg-hover'}`}>{lead}</button>
+      {/* A greyed strip keeps its Recap or All, greyed too, so it has the same shape as a clan in the league. */}
+      {lead && (
+        <button type="button" aria-pressed={pick === 'all'} aria-label={roster ? 'All days' : 'League recap'} disabled={out} onClick={() => onPick('all')}
+          className={`relative -my-1 flex-none md:hidden cursor-pointer rounded-[9px] border px-3 py-1 text-xs font-bold transition-colors duration-200 before:absolute before:-inset-2 before:content-[''] disabled:cursor-default disabled:opacity-40 motion-reduce:transition-none ${pick === 'all' ? 'border-ink bg-ink text-white' : out ? 'border-line bg-well text-muted' : 'border-line bg-white text-ink-2 hover:bg-hover'}`}>{lead}</button>
       )}
     </div>
-    <nav {...(out ? {} : navProps)} aria-label={out ? 'Not in CWL' : 'CWL day'} className="relative grid w-full touch-pan-y select-none grid-cols-7 gap-1 rounded-xl bg-well p-1">
+    <div className="flex gap-1.5">
+    {lead && (
+      <div className="hidden flex-none rounded-xl bg-well p-1 md:flex">
+        <button type="button" aria-pressed={pick === 'all'} aria-label={roster ? 'All days' : 'League recap'} disabled={out} onClick={() => onPick('all')}
+          className={`${cell} w-16 text-sm font-bold transition-colors duration-200 motion-reduce:transition-none ${pick === 'all' ? 'bg-white text-ink shadow-[0_1px_3px_rgba(43,33,20,.12)]' : out ? 'text-muted' : 'text-muted hover:bg-hover'}`}>{lead}</button>
+      </div>
+    )}
+    <nav {...(out ? {} : navProps)} aria-label={out ? 'Not in CWL' : 'CWL day'} className="relative grid min-w-0 flex-1 touch-pan-y select-none grid-cols-7 gap-1 rounded-xl bg-well p-1">
       {slideStyle && <span aria-hidden="true" className={`absolute inset-y-1 left-0 rounded-[9px] bg-white shadow-[0_1px_3px_rgba(43,33,20,.12)] ${slideMotion}`} style={slideStyle} />}
       {[1, 2, 3, 4, 5, 6, 7].map((n) => {
         const d = days.find((x) => x.day === n)
@@ -326,10 +335,11 @@ export function DayRow({ days = [], pick, onPick, live = 0, roster, recap, drawn
       })}
     </nav>
     </div>
+    </div>
   )
 }
 
-/** The clan switch on every tab: same look, directly under the sub-tabs. A wide War tab keeps it right, level with the day strip. */
+/** The clan switch on every tab: same look, directly under the sub-tabs. A wide page keeps it top left, with the name search top right. */
 /** A phone page's clan switch follows the scroll, in the place it would sit anyway. */
 export const STICKY_SWITCH = 'sticky top-0 z-10 -mx-4 -mb-1 -mt-1 bg-page px-4 pb-1 pt-1'
 

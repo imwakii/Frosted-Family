@@ -1,11 +1,11 @@
 import { type CSSProperties, Fragment, useEffect, useRef, useState } from 'react'
-import { familyHits, FamilyHits, norm, PhoneSearch } from './CwlTab'
-import WarLog from './WarLog'
+import { familyHits, FamilyHits, norm, PhoneSearch, WideHeader } from './CwlTab'
+import WarLog, { warLogHref } from './WarLog'
 import WarRecap from './WarRecap'
 import { useYou, YouTag } from './You'
 import { useClans } from '../clash'
 import { useWide } from '../data'
-import { ago, type ClanWar, setDayPick, setWarClan, noteShownClan, useCwlDay, useCwlGroups, useCwlSeason, useDayPick, useWarDots, useWarLog, useWarBoard, useWarClan, type WarAttack, type WarBase } from '../leaders'
+import { ago, type ClanWar, type CwlGroup, setDayPick, setWarClan, noteShownClan, useCwlDay, useCwlGroups, useCwlSeason, useDayPick, useWarDots, useWarLog, useWarBoard, useWarClan, type WarAttack, type WarBase } from '../leaders'
 import { clanHref, go, playerHref, rivalHref } from '../route'
 import { CLAN, CLANS } from '../theme'
 import type { ClanName, Roster } from '../types'
@@ -30,8 +30,6 @@ const left = (ms: number) => {
   return m < 60 ? `${m}m` : `${Math.floor(m / 60)}h ${m % 60}m`
 }
 const ENEMY = '#D5C8AC'
-// On a wide screen the day strip sits where it does on Roster, with the clan switch level with it on the right. Kept this tall with no strip too, so the switch stays put.
-const WIDE_ROW = 'flex min-h-[70px] items-end justify-between gap-4'
 const ENEMY_ROW = '#F1E8D3'
 
 // Where each spark flies from the point of impact, in px, and its colour.
@@ -366,10 +364,25 @@ function OtherDay({ clan, warKey, now, roster, q }: { clan: ClanName; warKey: st
 }
 
 // A finished league from the War log, as Current showed it while it was on: the Recap first, each day a tap away.
-function PastCwl({ clan, season, now, roster, wide }: { clan: ClanName; season: string; now: number; roster: Roster; wide: boolean }) {
+// Whether a name search matches anyone in a clan's league, by name or tag.
+const inLeague = (g: CwlGroup | null | undefined, nq: string) => !!g?.eight.some((r) => norm(r.name).includes(nq) || r.tag.toLowerCase().includes(nq))
+
+function PastCwl({ clan, season, now, roster, wide, q }: { clan: ClanName; season: string; now: number; roster: Roster; wide: boolean; q: string }) {
   const { data, loading } = useCwlSeason(season)
   const group = data?.clans.find((c) => c.clan === clan)?.group
   const [pick, setPick] = useState<number | null>(null)
+  // A name from another clan's league opens that clan's recap for the same month, once per search, so a clan picked by
+  // hand afterwards stays.
+  const nq = norm(q.trim())
+  const handled = useRef('')
+  useEffect(() => {
+    if (!nq || !data || pick !== null || handled.current === nq) return
+    handled.current = nq
+    if (inLeague(group, nq)) return
+    const to = data.clans.find((c) => c.clan !== clan && inLeague(c.group, nq))
+    if (to) go.to(warLogHref(to.clan, `cwl:${season}`))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nq, !!data, pick])
   if (!data && loading) return <div aria-busy="true" className="h-64 animate-pulse rounded-2xl bg-well" />
   if (!group) return <div className="rounded-2xl border border-line bg-white px-6 py-14 text-center text-sm font-semibold text-faint">This league's recap is no longer kept</div>
   const day = pick === null ? null : group.days.find((d) => d.day === pick)
@@ -377,7 +390,7 @@ function PastCwl({ clan, season, now, roster, wide }: { clan: ClanName; season: 
     <>
       <DayRow days={group.days} pick={day ? day.day : 'all'} onPick={(d) => setPick(d === 'all' ? null : d)} recap drawnOnly label={leagueLabel(group)} />
       {day ? <OtherDay key={day.war_key} clan={clan} warKey={day.war_key} now={now} roster={roster} />
-        : <CwlSeason group={group} clan={clan} wide={wide} over={seasonOver(group)} onDay={setPick} />}
+        : <CwlSeason group={group} clan={clan} wide={wide} over={seasonOver(group)} onDay={setPick} q={q} />}
     </>
   )
 }
@@ -420,10 +433,21 @@ export default function WarTab({ wide, roster, sub, opened, q, setQ }: { wide: b
   // A day picked on Roster since wins over a Recap picked here.
   const recap = onCwl && !!group && ((askedRecap && dayPick == null) || (done && picked === null))
   const pickDay = (d: number | 'all') => { setAskedRecap(d === 'all'); setDayPick(d === 'all' ? null : d) }
+  // On the Recap, a name from another clan's league switches to that clan, as long as it is on a CWL day too. Once per
+  // search, so a clan picked by hand afterwards stays, and the minutely refresh doesn't switch it back.
+  const nq = norm(q.trim())
+  const handled = useRef('')
+  useEffect(() => {
+    if (!recap || !nq || !groups || !data || handled.current === nq) return
+    handled.current = nq
+    if (inLeague(group, nq)) return
+    const to = groups.clans.find((c) => c.clan !== clan?.clan && inLeague(c.group, nq) && wars.some((w) => w.clan === c.clan && w.war!.kind === 'cwl'))
+    if (to) setWarClan(to.clan)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nq, recap, !!groups, !!data])
   const nearby = clan && (picked === null || picked === clan.war!.day ? clan.war! : picked === clan.next?.day ? clan.next : null)
   const other = !nearby && days.find((d) => d.day === picked)
-  // Wide pages here have no search box, so a search carried from another tab doesn't narrow them.
-  const search = wide ? '' : q
+  const blur = () => (document.activeElement as HTMLElement | null)?.blur()
   if (sub === 'log') {
     // The clan is in the link to a past war, so the link opens the same war for anyone.
     const [linkClan, linkKey] = opened?.split('/') ?? []
@@ -431,18 +455,18 @@ export default function WarTab({ wide, roster, sub, opened, q, setQ }: { wide: b
     return (
       <main className={wide ? 'mx-auto flex max-w-[1360px] flex-col gap-4 px-[clamp(16px,3vw,32px)] pb-12 pt-5' : 'flex flex-col gap-3 px-4 pb-6 pt-1'}>
         {wide
-          ? <div className={WIDE_ROW}><div className="ml-auto w-[clamp(270px,30vw,400px)] flex-none"><ClanSwitch value={logClan} onPick={(c) => { setWarClan(c); go.to('#/war/log') }} {...dots} /></div></div>
-          : <PhoneSearch q={q} setQ={setQ} onEnter={() => (document.activeElement as HTMLElement | null)?.blur()} className="-mx-4 -mb-1 -mt-1"><ClanSwitch value={logClan} onPick={(c) => { setWarClan(c); go.to('#/war/log') }} {...dots} /></PhoneSearch>}
+          ? <WideHeader q={q} setQ={setQ} onEnter={blur}><ClanSwitch value={logClan} onPick={(c) => { setWarClan(c); go.to('#/war/log') }} {...dots} /></WideHeader>
+          : <PhoneSearch q={q} setQ={setQ} onEnter={blur} className="-mx-4 -mb-1 -mt-1"><ClanSwitch value={logClan} onPick={(c) => { setWarClan(c); go.to('#/war/log') }} {...dots} /></PhoneSearch>}
         {linkKey ? (
           <>
             <a href="#/war/log" className="flex min-h-9 items-center gap-1 self-start text-[13px] font-bold text-action no-underline">
               <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M15 6l-6 6 6 6" /></svg>
               War log
             </a>
-            {decodeURIComponent(linkKey).startsWith('cwl:') ? <PastCwl clan={logClan} season={decodeURIComponent(linkKey).slice(4)} now={now} roster={roster} wide={wide} />
+            {decodeURIComponent(linkKey).startsWith('cwl:') ? <PastCwl clan={logClan} season={decodeURIComponent(linkKey).slice(4)} now={now} roster={roster} wide={wide} q={q} />
               : <OtherDay clan={logClan} warKey={decodeURIComponent(linkKey)} now={now} roster={roster} />}
           </>
-        ) : search.trim() ? <LogSearch clan={logClan} roster={roster} q={search} /> : <WarLog clan={logClan} />}
+        ) : q.trim() ? <LogSearch clan={logClan} roster={roster} q={q} /> : <WarLog clan={logClan} />}
       </main>
     )
   }
@@ -455,10 +479,11 @@ export default function WarTab({ wide, roster, sub, opened, q, setQ }: { wide: b
   // clans doesn't reshape the page. A day after the league's last war ends, it goes.
   const cwlOn = wars.some((c) => c.war!.kind === 'cwl' && (c.war!.state !== 'warEnded' || now - (at(c.war!.end_time) ?? 0) < 86_400_000))
   const strip = onCwl ? <DayRow days={days} pick={recap ? 'all' : picked ?? clan.war!.day ?? null} onPick={pickDay} recap drawnOnly label={done ? leagueLabel(group) : undefined} />
-    : clan && !roster.clans[clan.clan]?.inCwl && cwlOn && <DayRow out pick={null} onPick={() => {}} />
+    : clan && !roster.clans[clan.clan]?.inCwl && cwlOn && <DayRow out recap pick={null} onPick={() => {}} />
   return (
     <main className={wide ? 'mx-auto flex max-w-[1360px] flex-col gap-4 px-[clamp(16px,3vw,32px)] pb-12 pt-5' : 'flex flex-col gap-3 px-4 pb-6 pt-1'}>
-      {wide ? <div className={WIDE_ROW}>{strip}<div className="ml-auto w-[clamp(270px,30vw,400px)] flex-none">{switcher}</div></div> : <PhoneSearch q={q} setQ={setQ} onEnter={() => (document.activeElement as HTMLElement | null)?.blur()} className="-mx-4 -mb-1 -mt-1">{switcher}</PhoneSearch>}
+      {/* A wide page's top row matches Log and Stats; the day strip sits on its own row below. */}
+      {wide ? <><WideHeader q={q} setQ={setQ} onEnter={blur}>{switcher}</WideHeader>{strip}</> : <PhoneSearch q={q} setQ={setQ} onEnter={blur} className="-mx-4 -mb-1 -mt-1">{switcher}</PhoneSearch>}
       {!data ? (
         loading ? <div aria-busy="true" className="h-64 animate-pulse rounded-2xl bg-well" /> : <div className="rounded-2xl border border-line bg-white p-5 text-sm text-faint">Unavailable right now</div>
       ) : !clan ? (
@@ -466,7 +491,7 @@ export default function WarTab({ wide, roster, sub, opened, q, setQ }: { wide: b
       ) : (
         <>
           {!wide && strip}
-          {recap && group ? <CwlSeason group={group} clan={clan.clan} wide={wide} over={done} onDay={pickDay} /> : nearby ? <WarBoard key={nearby.war_key} clan={clan.clan} war={nearby} now={now} roster={roster} q={search} /> : other ? <OtherDay clan={clan.clan} warKey={other.war_key} now={now} roster={roster} q={search} /> : null}
+          {recap && group ? <CwlSeason group={group} clan={clan.clan} wide={wide} over={done} onDay={pickDay} q={q} /> : nearby ? <WarBoard key={nearby.war_key} clan={clan.clan} war={nearby} now={now} roster={roster} q={q} /> : other ? <OtherDay clan={clan.clan} warKey={other.war_key} now={now} roster={roster} q={q} /> : null}
         </>
       )}
     </main>

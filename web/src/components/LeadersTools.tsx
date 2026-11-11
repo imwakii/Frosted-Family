@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { ACTIVITY_LABEL, type Activity, ago, type Candidate, reasonLabel, useMakeRoom } from '../leaders'
 import { go, playerHref } from '../route'
 import type { ClanName } from '../types'
-import { norm, PhoneSearch } from './CwlTab'
+import { norm, PhoneSearch, WideHeader } from './CwlTab'
 import { Empty } from './ExploreTab'
 import Info from './Info'
 import { ClanSwitch, GoblinNote, Th, RowChevron } from './ui'
@@ -38,8 +38,7 @@ function WhoCouldGo({ q, setQ, wide, onLapsed }: Search) {
   useEffect(() => { if (denied) onLapsed() }, [denied, onLapsed])
   const full = data && data.members >= data.cap
   const since = data?.players.map((p) => p.tracking_since).filter((t): t is string => !!t).sort()[0]
-  // Wide pages here have no search box, so a search carried from another tab doesn't narrow them.
-  const nq = wide ? '' : norm(q.trim())
+  const nq = norm(q.trim())
   // Filtered after grouping, so each player keeps their place in the removal order.
   const groups = groupByActivity(data?.players ?? [])
     .map((g) => ({ ...g, total: g.rows.length, rows: g.rows.filter(({ p }) => !nq || norm(p.name).includes(nq) || p.tag.toLowerCase().includes(nq)) }))
@@ -48,7 +47,7 @@ function WhoCouldGo({ q, setQ, wide, onLapsed }: Search) {
   const switcher = <ClanSwitch value={clan} onPick={setClan} />
   const count = data && (
     <span className="flex items-center gap-2.5">
-      <span className={`rounded-full px-3 py-1.5 text-[13px] font-bold tabular-nums ${full ? 'bg-[#FEF3C7] text-[#92400E]' : 'bg-[#EFE6D2] text-ink-2'}`}>
+      <span className={`whitespace-nowrap rounded-full px-3 py-1.5 text-[13px] font-bold tabular-nums ${full ? 'bg-[#FEF3C7] text-[#92400E]' : 'bg-[#EFE6D2] text-ink-2'}`}>
         {data.members}/{data.cap} members
       </span>
       <Info topic="who" />
@@ -57,7 +56,7 @@ function WhoCouldGo({ q, setQ, wide, onLapsed }: Search) {
   return (
     <div className="flex flex-col gap-3">
       {wide ? (
-        <div className="flex flex-wrap items-center justify-between gap-3">{switcher}{count}</div>
+        <WideHeader q={q} setQ={setQ} onEnter={enter} extra={count}>{switcher}</WideHeader>
       ) : (
         <>
           <PhoneSearch q={q} setQ={setQ} onEnter={enter} className="-mx-4 -mb-1 -mt-1">{switcher}</PhoneSearch>
