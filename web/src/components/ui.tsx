@@ -286,8 +286,10 @@ function useSlidePick<T>(value: T, items: readonly T[], onPick: (v: T) => void) 
 
 /** The seven CWL days, the same row on War and Roster: each day's result once it has one. A clan out of this month's CWL
  * gets the row greyed out, so switching to it keeps the page's shape. */
-export function DayRow({ days = [], pick, onPick, live = 0, roster, recap, drawnOnly, out, label }: {
-  days?: DayFacts[]; pick: number | 'all' | null; onPick: (d: number | 'all') => void; live?: number; roster?: boolean; recap?: boolean; drawnOnly?: boolean; out?: boolean; label?: string
+export function DayRow({ days = [], pick, onPick, live = 0, roster, recap, drawnOnly, out, label, bare }: {
+  days?: DayFacts[]; pick: number | 'all' | null; onPick: (d: number | 'all') => void; live?: number; roster?: boolean; recap?: boolean; drawnOnly?: boolean; out?: boolean
+  /** The heading: a word, or a control such as Roster's month switch. `bare` drops the heading row, for a page that says it above. */
+  label?: ReactNode; bare?: boolean
 }) {
   const lead = roster ? 'All' : recap ? 'Recap' : null
   const cell = 'relative flex min-h-[42px] min-w-0 cursor-pointer flex-col items-center justify-center rounded-[9px] border-0 tabular-nums disabled:cursor-default disabled:opacity-40'
@@ -298,14 +300,14 @@ export function DayRow({ days = [], pick, onPick, live = 0, roster, recap, drawn
   const grab = (on: boolean) => (on ? (grabbing ? 'cursor-grabbing' : 'cursor-grab') : '')
   return (
     <div className="flex w-full max-w-[480px] flex-col gap-2 md:max-w-[552px] md:gap-1">
-    <div className="flex items-center justify-between gap-2 px-0.5">
-      <Eyebrow>{label ?? (out ? 'Not in CWL' : 'CWL day')}</Eyebrow>
+    {!bare && <div className="flex items-center justify-between gap-2 px-0.5">
+      {typeof label === 'string' || !label ? <Eyebrow>{label ?? (out ? 'Not in CWL' : 'CWL day')}</Eyebrow> : label}
       {/* A greyed strip keeps its Recap or All, greyed too, so it has the same shape as a clan in the league. */}
       {lead && (
         <button type="button" aria-pressed={pick === 'all'} aria-label={roster ? 'All days' : 'League recap'} disabled={out} onClick={() => onPick('all')}
           className={`relative -my-1 flex-none md:hidden cursor-pointer rounded-[9px] border px-3 py-1 text-xs font-bold transition-colors duration-200 before:absolute before:-inset-2 before:content-[''] disabled:cursor-default disabled:opacity-40 motion-reduce:transition-none ${pick === 'all' ? 'border-ink bg-ink text-white' : out ? 'border-line bg-well text-muted' : 'border-line bg-white text-ink-2 hover:bg-hover'}`}>{lead}</button>
       )}
-    </div>
+    </div>}
     <div className="flex gap-1.5">
     {lead && (
       <div className="hidden flex-none rounded-xl bg-well p-1 md:flex">

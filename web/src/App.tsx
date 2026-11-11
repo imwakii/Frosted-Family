@@ -114,7 +114,7 @@ export default function App() {
       ) : route.tab === 'war' ? (
         <>
           <SubNav items={warSubs} current={route.sub} wide={wide} />
-          {route.sub === 'roster' ? <CwlTab roster={roster} war={war} wide={wide} q={q} setQ={setQ} />
+          {route.sub === 'roster' ? <CwlTab roster={roster} war={war} wide={wide} q={q} setQ={setQ} month={route.kind} />
             : route.sub === 'group' ? <CwlGroup wide={wide} roster={roster} q={q} setQ={setQ} />
             : <WarTab wide={wide} roster={roster} sub={route.sub} opened={route.kind} q={q} setQ={setQ} />}
         </>

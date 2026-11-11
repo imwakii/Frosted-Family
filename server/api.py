@@ -38,7 +38,7 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException, Query, Request
 
 from frosted.config import CLAN_TAGS, TAG_TO_CLAN
-from server import auth, clanlog, days, db, events, history, leaders, members, plan, profiles, proposals, push, recap, stats, visits, war
+from server import auth, clanlog, days, db, events, history, leaders, members, months, plan, profiles, proposals, push, recap, stats, visits, war
 
 DEFAULT_DB = "/opt/bots/frosted/data/frosted.db"
 ROSTER_FIELDS = ("tag", "name", "clan", "cwl_slot", "transferred_from", "tier", "final_score", "offense_score",
@@ -111,6 +111,13 @@ def roster():
     planned = days.member_days()
     for r in rows:
         r["days"] = planned.get(r["tag"]) if r["tag"] else None
+    # A published roster is kept under its month, so Roster can still show it once the next month's is published.
+    # Never fails the roster.
+    if meta.get("source") == "published":
+        try:
+            months.keep(rows, meta["published_at"], leaders.now())
+        except (sqlite3.Error, TypeError, ValueError):
+            pass
     return {"players": rows, "allocation": meta, "last_poll": last_poll(conn)}
 
 
@@ -281,6 +288,7 @@ def explore(board: str):
 app.include_router(auth.router)
 app.include_router(plan.router)
 app.include_router(days.router)
+app.include_router(months.router)
 app.include_router(proposals.router)
 app.include_router(leaders.router)
 app.include_router(visits.router)

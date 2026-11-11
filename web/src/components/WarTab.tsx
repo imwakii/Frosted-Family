@@ -5,7 +5,7 @@ import WarRecap from './WarRecap'
 import { useYou, YouTag } from './You'
 import { useClans } from '../clash'
 import { useWide } from '../data'
-import { ago, type ClanWar, type CwlGroup, setDayPick, setWarClan, noteShownClan, useCwlDay, useCwlGroups, useCwlSeason, useDayPick, useWarDots, useWarLog, useWarBoard, useWarClan, type WarAttack, type WarBase } from '../leaders'
+import { ago, type ClanWar, type CwlGroup, setDayPick, useRosterMonths, setWarClan, noteShownClan, useCwlDay, useCwlGroups, useCwlSeason, useDayPick, useWarDots, useWarLog, useWarBoard, useWarClan, type WarAttack, type WarBase } from '../leaders'
 import { clanHref, go, playerHref, rivalHref } from '../route'
 import { CLAN, CLANS } from '../theme'
 import type { ClanName, Roster } from '../types'
@@ -263,8 +263,8 @@ export function WarBoard({ clan, war, now, roster, q = '' }: { clan: ClanName; w
           </span>
         </div>}
         {!nq && over && war.recap && <WarRecap clan={clan} war={war} result={draw ? 'Draw' : won ? 'Won' : 'Lost'} recap={war.recap} />}
-        {!nq && !prep && <div className="flex min-h-[53px] items-center gap-2 border-b border-hair px-3 py-2">
-            {live ? (
+        {/* While the war is on: your own hits and the open bases. Once it ends the row goes. */}
+        {!nq && live && <div className="flex min-h-[53px] items-center gap-2 border-b border-hair px-3 py-2">
               <>
                 {mine && (
                   <button type="button" onClick={() => toggle(mine.tag)} className={`min-h-9 cursor-pointer rounded-full border-0 px-3 text-[13px] font-bold ${mineLeft ? 'bg-[#FEF3C7] text-[#92400E]' : 'bg-[#DCFCE7] text-[#166534]'}`}>
@@ -276,9 +276,6 @@ export function WarBoard({ clan, war, now, roster, q = '' }: { clan: ClanName; w
                   Open bases {open.length}
                 </button>
               </>
-            ) : (
-              <span className="text-[13px] font-semibold text-muted">{war.pairs.filter((p) => p.them?.best === 3).length} of {war.team_size} bases 3-starred</span>
-            )}
         </div>}
         {!nq && gaps.missing.length > 0 && (
           <div className="flex flex-col gap-1.5 border-b border-hair bg-[#FDF3D7] px-3 py-2.5">
@@ -448,6 +445,7 @@ export default function WarTab({ wide, roster, sub, opened, q, setQ }: { wide: b
   const nearby = clan && (picked === null || picked === clan.war!.day ? clan.war! : picked === clan.next?.day ? clan.next : null)
   const other = !nearby && days.find((d) => d.day === picked)
   const blur = () => (document.activeElement as HTMLElement | null)?.blur()
+  const rosterMonths = useRosterMonths().data
   if (sub === 'log') {
     // The clan is in the link to a past war, so the link opens the same war for anyone.
     const [linkClan, linkKey] = opened?.split('/') ?? []
@@ -459,10 +457,25 @@ export default function WarTab({ wide, roster, sub, opened, q, setQ }: { wide: b
           : <PhoneSearch q={q} setQ={setQ} onEnter={blur} className="-mx-4 -mb-1 -mt-1"><ClanSwitch value={logClan} onPick={(c) => { setWarClan(c); go.to('#/war/log') }} {...dots} /></PhoneSearch>}
         {linkKey ? (
           <>
-            <a href="#/war/log" className="flex min-h-9 items-center gap-1 self-start text-[13px] font-bold text-action no-underline">
-              <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M15 6l-6 6 6 6" /></svg>
-              War log
-            </a>
+            <div className="flex items-center justify-between gap-3">
+              <a href="#/war/log" className="flex min-h-9 items-center gap-1 text-[13px] font-bold text-action no-underline">
+                <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M15 6l-6 6 6 6" /></svg>
+                War log
+              </a>
+              {/* A past league's Recap links to that month's roster, while the server still keeps it. */}
+              {(() => {
+                const key = decodeURIComponent(linkKey)
+                const m = key.startsWith('cwl:') ? key.slice(4, 11) : null
+                if (!m || !rosterMonths?.months.some((x) => x.season === m)) return null
+                const name = new Date(`${m}-01T00:00:00Z`).toLocaleString('en-GB', { month: 'long', timeZone: 'UTC' })
+                return (
+                  <a href={m === rosterMonths.current ? '#/war/roster' : `#/war/roster/${m}`} className="flex min-h-9 items-center gap-1 text-[13px] font-bold text-action no-underline">
+                    {name} roster
+                    <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M9 6l6 6-6 6" /></svg>
+                  </a>
+                )
+              })()}
+            </div>
             {decodeURIComponent(linkKey).startsWith('cwl:') ? <PastCwl clan={logClan} season={decodeURIComponent(linkKey).slice(4)} now={now} roster={roster} wide={wide} q={q} />
               : <OtherDay clan={logClan} warKey={decodeURIComponent(linkKey)} now={now} roster={roster} />}
           </>

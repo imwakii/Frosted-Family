@@ -104,7 +104,7 @@ const TOPICS: Record<string, { title: string; formulas?: string[]; math?: ReactN
     ],
   },
   expected: {
-    title: 'How the expected score works',
+    title: 'How performance works',
     formulas: [
       'Our stars = what we usually get + what they usually concede − group average',
       'Their stars = what they usually get + what we usually concede − group average',
@@ -113,6 +113,7 @@ const TOPICS: Record<string, { title: string; formulas?: string[]; math?: ReactN
       "'Usually' means each clan's other wars in this group, with 2 average wars added so one odd day can't swing it.",
       'It shows once both clans have 3 other wars, and it updates as each day ends.',
       'A number in red went against us by 2 stars or more. Green went our way by as much.',
+      'The index beside Performance adds up every day: stars we took above expected, less stars they took above expected.',
     ],
   },
   picks: {

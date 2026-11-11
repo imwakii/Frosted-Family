@@ -1,6 +1,7 @@
 import type { CalMonth } from './calendar'
 import { useEffect, useState, useSyncExternalStore } from 'react'
 import type { ClanName } from './types'
+import { loadRosterMonth, loadRosterMonths } from './data'
 
 // GET /api/explore/upgrades and /api/leaders/*, all public for now.
 export type UpgradeCategory = 'hero' | 'equipment' | 'troop' | 'spell' | 'pet' | 'siege' | 'town_hall'
@@ -181,8 +182,11 @@ export const warClanOr = (fallback: ClanName) => warClan ?? shownClan ?? fallbac
 
 export const useCwlGroups = () => usePolled('groups', loadCwlGroups)
 // A past league's groups, for its Recap from the War log. A finished league can't change, so it loads once.
-export const useCwlSeason = (season: string) =>
-  useLoad(`groups${season}`, () => getJson<{ clans: { clan: ClanName; group: CwlGroup | null }[] }>(`/api/war/cwl?season=${encodeURIComponent(season)}`))
+// Roster's months: this month's and each earlier one the server keeps. Until the server has them, just this month.
+export const useRosterMonths = () => useLoad('rosterMonths', () => loadRosterMonths().catch(() => null))
+export const useRosterMonth = (season: string | null) => useLoad(season ? `rosterMonth${season}` : null, () => loadRosterMonth(season!))
+export const useCwlSeason = (season: string | null) =>
+  useLoad(season === null ? null : `groups${season}`, () => getJson<{ clans: { clan: ClanName; group: CwlGroup | null }[] }>(`/api/war/cwl?season=${encodeURIComponent(season ?? '')}`))
 // On every clan switch on War, clans at war blink green; those still preparing hold a steady dot in the Prep pill's orange.
 export const useWarDots = (): { live: ClanName[]; prep: ClanName[] } => {
   const clans = useWarBoard().data?.clans ?? []

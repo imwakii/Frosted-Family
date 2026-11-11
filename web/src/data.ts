@@ -98,6 +98,19 @@ function mergeRoster(api: { players: ApiPlayer[] }, base: Roster | null): Roster
   }
 }
 
+/** An earlier month's roster, as the server kept it. Its league has started, so no one is asked to move, and a clan is
+ * in that league when its players have days in that month's plan. */
+export function pastRoster(api: { players: ApiPlayer[] }, season: string): Roster {
+  const r = mergeRoster(api, null)
+  const inCwl = (c: ClanName) => ({ league: null, inCwl: r.players.some((p) => p.clan === c && p.days != null) })
+  return { ...r, cwlStart: `${season}-01T00:00:00Z`, clans: { Fire: inCwl('Fire'), Cake: inCwl('Cake'), Flakes: inCwl('Flakes') } }
+}
+
+export type RosterMonths = { current: string; months: { season: string; league: string | null }[] }
+export const loadRosterMonths = () => getJson<RosterMonths>('/api/roster/months')
+export const loadRosterMonth = (season: string) =>
+  getJson<{ season: string; players: ApiPlayer[]; league: string | null }>(`/api/roster/month/${season}`).then((a) => pastRoster(a, a.season))
+
 /** A player's clan in the game and on the allocation differ. It only asks for a move until CWL starts: a sub who has signed up may go home. */
 export const stillToMove = (p: Player, roster: Roster) =>
   !!p.inClan && p.inClan !== p.clan && !(roster.cwlStart && Date.parse(roster.cwlStart) <= Date.now())

@@ -87,6 +87,8 @@ function place(path: string, player: string | null): Omit<Route, 'clan' | 'rival
   // CWL joined War on 7 Nov 2026; Standings joined Group on 4 Nov 2026.
   if (parts[0] === 'cwl') parts = ['war', parts[1] === 'group' || parts[1] === 'standings' ? 'group' : 'roster']
   if (parts[0] === 'war' && parts[1] === 'lineup') parts = ['war', 'roster']
+  // An earlier month's roster has the month in its link: #/war/roster/2026-11.
+  if (parts[0] === 'war' && parts[1] === 'roster' && /^\d{4}-\d{2}$/.test(parts[2] ?? '')) return { tab: 'war', sub: 'roster', kind: parts[2], player, base: `#/war/roster/${parts[2]}` }
   if (parts[0] === 'war' && (parts[1] === 'roster' || parts[1] === 'group')) return { tab: 'war', sub: parts[1], kind: null, player, base: `#/war/${parts[1]}` }
   if (parts[0] === 'war' && parts[1] === 'log') {
     const kind = parts[2] && parts[3] ? `${parts[2]}/${parts[3]}` : null

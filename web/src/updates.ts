@@ -359,11 +359,13 @@ export const UPDATES: Update[] = [
           'Added a CWL Recap to the day strip.',
           'Added bonus picks to the Recap.',
           'Added expected scores to the Recap.',
+          'Added a performance index to the Recap.',
           'Moved Star count into the Recap.',
           "Added each clan's days to Standings.",
           'Added CWL recaps to the War log.',
           'Fixed Not in CWL staying all month.',
           'Added search to War on big screens.',
+          'Added past months to Roster.',
         ],
       },
       {

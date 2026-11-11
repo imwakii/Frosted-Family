@@ -1,16 +1,18 @@
 import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
 import { CLAN, CLANS, GROUPS, SLOT_TEXT, coreAvg, fmtScore, fmtStart } from '../theme'
-import { clanHref, playerHref } from '../route'
+import { clanHref, go, playerHref } from '../route'
 import type { ClanName, LiveWar, Player, Roster } from '../types'
 import { useClans, type ClanMeta } from '../clash'
 import { stillToMove } from '../data'
-import { setDayPick, setWarClan, useCwlGroups, useDayPick, useWarDots, useWarClan, warClanOr } from '../leaders'
+import { setDayPick, setWarClan, useCwlGroups, useCwlSeason, useDayPick, useRosterMonth, useRosterMonths, useWarDots, useWarClan, warClanOr } from '../leaders'
 import { jumpToYou, useYou, YouTag } from './You'
 import { leagueLabel } from './CwlSeason'
 import { ClanBadge, ClanSwitch, DayRow, Eyebrow, LeaguePill, PlayDays, SearchIcon, StatusDot, StatusKey, Th, useNow, RowChevron, GoblinNote } from './ui'
 
 type Props = {
   roster: Roster; war: Partial<Record<ClanName, LiveWar | null>>; wide: boolean; q: string; setQ: (v: string) => void
+  /** An earlier month to show, from the link (#/war/roster/2026-11); this month's roster without one. */
+  month?: string | null
   // A leader's preview: the clans being planned, with the clan picked in the planner.
   lock?: { clan: ClanName; options: readonly ClanName[]; onPick: (c: ClanName) => void }
 }
@@ -311,31 +313,102 @@ export function readClan(): ClanName {
   } catch { return 'Fire' }
 }
 
-function Phone({ roster, war, q, setQ, lock }: Omit<Props, 'wide'>) {
+// ─── months ───────────────────────────────────────────────────────────────────
+
+const cwlLabel = (season: string) => `${new Date(`${season}-01T00:00:00Z`).toLocaleString('en-GB', { month: 'long', timeZone: 'UTC' })} CWL`
+// Until the server lists the months: this month's league, or next month's from the 12th, as the server counts it.
+const guessMonth = () => { const d = new Date(); if (d.getUTCDate() >= 12) d.setUTCMonth(d.getUTCMonth() + 1, 1); return d.toISOString().slice(0, 7) }
+const monthHref = (season: string, current: string) => (season === current ? '#/war/roster' : `#/war/roster/${season}`)
+
+/** The month Roster shows: this month's, or an earlier one the server keeps, with the roster to show for it. An
+ * earlier month is as it was: its own lineup, slots and days, its league's results on the strip, and its own day pick. */
+function useMonth(roster: Roster, month: string | null | undefined) {
+  const { data } = useRosterMonths()
+  const current = data?.current ?? guessMonth()
+  const list = data?.months.map((m) => m.season) ?? [current]
+  const shown = month && list.includes(month) ? month : current
+  const past = shown !== current
+  const kept = useRosterMonth(past ? shown : null)
+  const league = useCwlSeason(past ? data?.months.find((m) => m.season === shown)?.league ?? null : null).data
+  // The day picked on an earlier month belongs to that month, so moving to another starts on All.
+  const [picked, setPicked] = useState<{ shown: string; day: DayPick }>({ shown, day: 'all' })
+  const pastDay = picked.shown === shown ? picked.day : 'all'
+  const setPastDay = (day: DayPick) => setPicked({ shown, day })
+  return { current, list, shown, past, roster: past ? kept.data : roster, loading: past && kept.loading, league, pastDay, setPastDay }
+}
+
+/** Steps between Roster's months. Wide, it holds the top row where other tabs have the clan switch; on a phone it is
+ * the day strip's heading. An arrow with no month that way is greyed, so the control keeps its place. */
+function MonthSwitch({ list, shown, current, compact }: { list: string[]; shown: string; current: string; compact?: boolean }) {
+  const i = list.indexOf(shown)
+  const older = list[i + 1], newer = i > 0 ? list[i - 1] : undefined
+  const arrow = (to: string | undefined, back: boolean) => (
+    <button type="button" disabled={!to} onClick={() => to && go.to(monthHref(to, current))}
+      aria-label={to ? cwlLabel(to) : back ? 'No earlier month' : 'No later month'}
+      className={`relative flex flex-none cursor-pointer items-center justify-center border-0 bg-transparent text-ink-2 before:absolute before:content-[''] hover:bg-white disabled:cursor-default disabled:opacity-30 disabled:hover:bg-transparent ${compact ? 'size-7 rounded-full before:-inset-2' : 'size-[42px] rounded-[9px]'}`}>
+      <svg aria-hidden="true" width={compact ? 14 : 16} height={compact ? 14 : 16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d={back ? 'M15 6l-6 6 6 6' : 'M9 6l6 6-6 6'} /></svg>
+    </button>
+  )
+  const past = shown !== current
+  if (compact) {
+    return (
+      <nav aria-label="CWL month" className="-my-1.5 -ml-1.5 flex items-center gap-0.5">
+        {arrow(older, true)}
+        <Eyebrow>{cwlLabel(shown)}{past ? ' · past' : ''}</Eyebrow>
+        {arrow(newer, false)}
+      </nav>
+    )
+  }
+  return (
+    <nav aria-label="CWL month" className="flex h-[50px] w-full min-w-0 max-w-[480px] items-center gap-1 rounded-xl bg-well p-1">
+      {arrow(older, true)}
+      <span className="flex min-w-0 flex-auto items-center justify-center gap-2 text-[15px] font-bold text-ink">
+        <span className="truncate">{cwlLabel(shown)}</span>
+        {past && <span className="flex-none rounded-full bg-white px-2 py-0.5 text-[11px] font-bold text-muted">Past</span>}
+      </span>
+      {arrow(newer, false)}
+    </nav>
+  )
+}
+
+function Phone({ roster: live0, war, q, setQ, lock, month }: Omit<Props, 'wide'>) {
   const own = useWarClan() ?? warClanOr(readClan())
   const setOwn = setWarClan
   const clan = lock?.clan ?? own
+  const m = useMonth(live0, month)
+  const roster = m.roster ?? live0
   const inCwl = !!roster.clans[clan]?.inCwl
   const nq = norm(q.trim())
   const results = familyHits(roster, nq)
   const clans = useClans()
-  const { planned, day, setDay, live } = useDay(roster, war)
-  const group = useCwlGroups().data?.clans.find((c) => c.clan === clan)?.group
+  const now = useDay(roster, war)
+  const { planned } = now
+  const groups = useCwlGroups().data
+  const group = (m.past ? m.league : groups)?.clans.find((c) => c.clan === clan)?.group
   const days = group?.days
-  const over = inCwl ? leagueLabel(group) : undefined
+  // This month's league once it is over, or any earlier month: the strip shows results, greyed here when it is over.
+  const over = !m.past && inCwl ? leagueLabel(group) : undefined
+  const day = m.past ? m.pastDay : now.day
   const dots = useWarDots()
+  const heading = <MonthSwitch compact list={m.list} shown={m.shown} current={m.current} />
   return (
     <>
       <PhoneSearch q={q} setQ={setQ} className="pb-4" onEnter={() => { if (results[0]) window.location.hash = href(results[0]) }}>
         <ClanSwitch<ClanName> value={clan} onPick={lock?.onPick ?? setOwn} options={lock?.options} {...dots} />
       </PhoneSearch>
       <div className="flex flex-col gap-3 px-4 pb-6">
-        {nq ? <FamilyHits roster={roster} hits={results} /> : (
+        {m.loading ? <div aria-busy="true" className="h-64 animate-pulse rounded-2xl bg-well" />
+          : !m.roster ? <div className="rounded-2xl border border-line bg-white px-6 py-14 text-center text-sm font-semibold text-faint">That month's roster is no longer kept</div>
+          : nq ? <FamilyHits roster={roster} hits={results} /> : (
           <>
-            {/* Once the league is over the strip stays, greyed, under the month it was, so the page keeps its shape. */}
-            {planned && (inCwl && !over ? <DayRow days={days} pick={day} onPick={setDay} live={live} roster /> : <DayRow out roster label={over} pick={null} onPick={() => {}} />)}
-            <ClanCard roster={roster} clan={clan} meta={clans[clan]} below={inCwl ? <Countdown roster={roster} war={war} slim /> : undefined} stripSaysCwl={planned} />
-            <Groups roster={roster} clan={clan} day={over ? 'all' : day} />
+            {/* The strip stays, greyed, once this month's league is over, so the page keeps its shape. Its heading is the month. */}
+            {planned ? (
+              m.past && inCwl ? <DayRow days={days} pick={day} onPick={m.setPastDay} roster drawnOnly={!!days} label={heading} />
+                : inCwl && !over ? <DayRow days={days} pick={day} onPick={now.setDay} live={now.live} roster label={heading} />
+                : <DayRow out roster label={heading} pick={null} onPick={() => {}} />
+            ) : <div className="px-0.5">{heading}</div>}
+            <ClanCard roster={roster} clan={clan} meta={clans[clan]} below={inCwl && !m.past ? <Countdown roster={roster} war={war} slim /> : undefined} stripSaysCwl={planned} />
+            <Groups roster={roster} clan={clan} day={over || !inCwl ? 'all' : day} />
             <StatusKey className="px-1" extra={planned && inCwl ? <span className="flex flex-none items-center gap-1 md:gap-1.5">Filled number: plays that day</span> : undefined} />
           </>
         )}
@@ -344,16 +417,22 @@ function Phone({ roster, war, q, setQ, lock }: Omit<Props, 'wide'>) {
   )
 }
 
-function Desktop({ roster, war, q, setQ, lock }: Omit<Props, 'wide'>) {
+function Desktop({ roster: live0, war, q, setQ, lock, month }: Omit<Props, 'wide'>) {
+  const m = useMonth(live0, month)
+  const roster = m.roster ?? live0
   const nq = norm(q.trim())
   const grid = useRef<HTMLDivElement>(null)
   const clans = useClans()
   const hits = useMemo(() => (nq ? roster.players.filter((p) => matches(p, nq)) : []), [nq, roster])
-  const { planned, day, setDay, live } = useDay(roster, war)
-  // The wide page shows every clan at once, so it says finished only once every clan's league is.
+  const now = useDay(roster, war)
+  const { planned, live } = now
+  // The wide page shows every clan at once, so this month's strip greys only once every clan's league is over.
   const groups = (useCwlGroups().data?.clans ?? []).flatMap((c) => (c.group ? [c.group] : []))
-  const finished = groups.length && groups.every((g) => leagueLabel(g)) ? leagueLabel(groups[0]) : undefined
+  const finished = !m.past && groups.length > 0 && groups.every((g) => leagueLabel(g))
+  const day = m.past ? m.pastDay : now.day
   const shownDay = finished ? 'all' : day
+  // An earlier month's strip shows the first of its clans' results; every clan played the same seven days.
+  const pastDays = m.league?.clans.find((c) => c.group)?.group?.days
 
   useEffect(() => {
     if (!hits.length) return
@@ -363,15 +442,21 @@ function Desktop({ roster, war, q, setQ, lock }: Omit<Props, 'wide'>) {
 
   return (
     <main className="mx-auto flex max-w-[1360px] flex-col gap-4 px-[clamp(16px,3vw,32px)] pb-12 pt-5">
+      {/* The top row matches the other tabs: the month where they have the clan switch, the search on the right. */}
       <div className="flex items-start justify-between gap-4">
-        <div className="flex w-full min-w-0 max-w-[480px] flex-col gap-3 empty:hidden md:max-w-[552px]">
-          <Countdown roster={roster} war={war} />
-          {planned && (finished ? <DayRow out roster label={finished} pick={null} onPick={() => {}} /> : <DayRow pick={day} onPick={setDay} live={live} roster />)}
-        </div>
+        <MonthSwitch list={m.list} shown={m.shown} current={m.current} />
         <div className="ml-auto flex w-[clamp(220px,28vw,340px)] flex-none flex-col gap-1">
           <SearchBox q={q} setQ={setQ} onEnter={() => { if (hits[0]) window.location.hash = href(hits[0]) }} />
           {nq && !hits.length && <span className="px-1 text-sm text-faint">No one by that name in this village</span>}
         </div>
+      </div>
+      {m.loading ? <div aria-busy="true" className="h-64 animate-pulse rounded-2xl bg-well" />
+        : !m.roster ? <div className="rounded-2xl border border-line bg-white px-6 py-14 text-center text-sm font-semibold text-faint">That month's roster is no longer kept</div> : <>
+      <div className="flex w-full min-w-0 max-w-[480px] flex-col gap-3 empty:hidden md:max-w-[552px]">
+        {!m.past && <Countdown roster={roster} war={war} />}
+        {planned && (m.past ? <DayRow bare days={pastDays} pick={day} onPick={m.setPastDay} roster drawnOnly={!!pastDays} />
+          : finished ? <DayRow bare out roster pick={null} onPick={() => {}} />
+          : <DayRow bare pick={day} onPick={now.setDay} live={live} roster />)}
       </div>
       <div ref={grid} className="grid items-start gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr))]">
         {(lock?.options ?? CLANS).map((clan) => {
@@ -384,6 +469,7 @@ function Desktop({ roster, war, q, setQ, lock }: Omit<Props, 'wide'>) {
         })}
       </div>
       <StatusKey />
+      </>}
     </main>
   )
 }

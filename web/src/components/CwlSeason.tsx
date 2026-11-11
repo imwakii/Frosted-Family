@@ -202,11 +202,23 @@ const said = (f: Fact) => {
 function OurWars({ group, me, onDay }: { group: CwlGroup; me: number; onDay: (d: number) => void }) {
   const list = facts(group, me)
   if (!list.length) return null
+  // The index: over every day with an expected score, the stars we took above expected less the stars they took above
+  // expected. Above zero, we did better than this league's numbers said we would.
+  const rated = list.filter((f) => f.expUs !== null && f.expThem !== null)
+  const index = rated.length ? Math.round(rated.reduce((t, f) => t + (f.day.stars - f.expUs!) - (f.day.opponent_stars - f.expThem!), 0)) : null
   return (
-    <section aria-label="Our wars" className="overflow-hidden rounded-2xl border border-line bg-white">
+    <section aria-label="Performance" className="overflow-hidden rounded-2xl border border-line bg-white">
       <div className={`grid items-baseline gap-x-2 px-3.5 py-2.5 ${COLS_WARS}`}>
-        <span className="col-span-2 text-sm font-bold text-ink">Our wars</span>
-        <span className="flex items-center justify-end gap-1 text-[11px] font-bold text-faint">Expected<Info topic="expected" /></span><span className="text-right text-[11px] font-bold text-faint">Result</span>
+        <span className="col-span-2 flex items-center gap-1.5 text-sm font-bold text-ink">
+          Performance<Info topic="expected" />
+          {index !== null && (
+            <span aria-label={`Performance index ${index > 0 ? 'plus ' : index < 0 ? 'minus ' : ''}${Math.abs(index)} stars`}
+              className={`rounded-full px-2 py-0.5 text-xs font-bold tabular-nums ${index > 0 ? 'bg-[#DCEFD5] text-[#166534]' : index < 0 ? 'bg-[#F8D5CF] text-[#991B1B]' : 'bg-well text-ink-2'}`}>
+              {index > 0 ? '+' : index < 0 ? '−' : ''}{Math.abs(index)}
+            </span>
+          )}
+        </span>
+        <span className="text-right text-[11px] font-bold text-faint">Expected</span><span className="text-right text-[11px] font-bold text-faint">Result</span>
       </div>
       <ol className="m-0 list-none">
         {list.map((f) => {
