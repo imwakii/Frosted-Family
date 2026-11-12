@@ -377,6 +377,27 @@ export const UPDATES: Update[] = [
       },
     ],
   },
+  {
+    id: '2026-11-12',
+    date: '12 Nov 2026',
+    highlights: [
+      { title: 'New address', line: 'Link your account and alerts again.', icon: 'bell' },
+    ],
+    groups: [
+      {
+        title: 'Log tab',
+        lines: [
+          'Counted upgrades by levels gained.',
+        ],
+      },
+      {
+        title: 'General',
+        lines: [
+          'Moved to frostedfamily.com.',
+        ],
+      },
+    ],
+  },
 ]
 
 export const LATEST = UPDATES[UPDATES.length - 1]

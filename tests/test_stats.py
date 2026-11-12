@@ -72,10 +72,10 @@ def test_discord_needs_only_the_six_lines(env, monkeypatch):
     monkeypatch.delenv("LEADER_PASSCODE", raising=False)
     monkeypatch.setenv("LEADERS_PUBLIC", "false")
     assert auth.config() is not None
-    assert auth.config().redirect_uri == "https://frosted-family.vercel.app/api/auth/callback"
+    assert auth.config().redirect_uri == "https://frostedfamily.com/api/auth/callback"
     assert client().get("/leaders/inactivity").status_code == 401  # locked, signed out
     c = client()
-    assert sign_in(c).headers["location"] == "https://frosted-family.vercel.app/#/plan"
+    assert sign_in(c).headers["location"] == "https://frostedfamily.com/#/plan"
     me = c.get("/auth/me").json()
     assert (me["configured"], me["role"], me["via"], me["passcode_enabled"]) == (True, "publisher", "discord", False)
     csrf = {"X-CSRF-Token": me["csrf"]}

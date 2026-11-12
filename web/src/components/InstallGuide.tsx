@@ -26,7 +26,7 @@ const Bar = ({ children, label }: { children: ReactNode; label?: string }) => (
     <span className="flex h-11 items-center justify-between gap-2 rounded-xl bg-white px-2.5 text-faint">{children}</span>
   </span>
 )
-const Address = () => <span className="flex h-7 min-w-0 flex-auto items-center justify-center truncate rounded-full bg-[#F6EEDC] px-2 text-[11px] font-semibold text-muted">frosted-family.vercel.app</span>
+const Address = () => <span className="flex h-7 min-w-0 flex-auto items-center justify-center truncate rounded-full bg-[#F6EEDC] px-2 text-[11px] font-semibold text-muted">frostedfamily.com</span>
 const Menu = ({ rows, pick, icon }: { rows: string[]; pick: string; icon?: ReactNode }) => (
   <span className="flex flex-col gap-1 rounded-xl bg-white p-1.5 text-[13px] text-faint">
     {rows.map((r) => (r === pick

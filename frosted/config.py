@@ -82,4 +82,4 @@ TREND_SERIES_HEX = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100",
                     "#e87ba4", "#008300", "#4a3aa7", "#e34948"]
 TREND_CONTEXT_HEX = "#c3c7cf"
 
-DASHBOARD_URL = "frosted-family.vercel.app"
+DASHBOARD_URL = "frostedfamily.com"

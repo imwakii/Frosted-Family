@@ -18,7 +18,7 @@ import sys
 import urllib.request
 from pathlib import Path
 
-URL = "https://frosted-family.vercel.app/api/allocation.csv"
+URL = "https://frostedfamily.com/api/allocation.csv"
 COLS = ("clan", "cwl_slot", "transferred_from")
 
 

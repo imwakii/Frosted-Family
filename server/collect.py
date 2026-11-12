@@ -30,7 +30,7 @@ STRENGTH_EVERY = timedelta(days=1)
 GROUP_KEPT = timedelta(days=45)  # longer than the gap between two CWLs, so the last group shows until the next is drawn
 LEAGUE_KEPT = timedelta(days=92)  # about three leagues: how far back the War log offers a league's Recap
 LINEUP = 15
-NEWS_AGENT = "FrostedFamilyCalendar/1.0 (+https://frosted-family.vercel.app)"
+NEWS_AGENT = "FrostedFamilyCalendar/1.0 (+https://frostedfamily.com)"
 
 
 class Api:

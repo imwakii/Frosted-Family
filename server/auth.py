@@ -1,7 +1,7 @@
 """Leader sign-in with Discord OAuth2 (authorization code flow, server side).
 
-The browser only ever talks to the site's origin: /api/auth/* on frosted-family.vercel.app is rewritten to /auth/* here,
-so the session cookie is a first-party cookie on the vercel.app origin. After Discord sends the leader back, the
+The browser only ever talks to the site's origin: /api/auth/* on frostedfamily.com is rewritten to /auth/* here,
+so the session cookie is a first-party cookie on the site's origin. After Discord sends the leader back, the
 callback reads their roles in the family server and signs them in only if they hold a configured leader or co-leader
 role. The Discord access token is used once and never stored.
 
@@ -37,7 +37,7 @@ from server import appdb, db
 DISCORD_API = "https://discord.com/api/v10"
 DISCORD_AUTHORIZE = "https://discord.com/oauth2/authorize"
 SCOPES = "identify guilds.members.read"
-DEFAULT_SITE = "https://frosted-family.vercel.app"
+DEFAULT_SITE = "https://frostedfamily.com"
 SESSION_COOKIE = "__Host-ff_session"   # __Host-: Secure, Path=/, no Domain, so no subdomain can set or read it
 STATE_COOKIE = "__Host-ff_oauth"
 MEMBER_COOKIE = "__Host-ff_member"

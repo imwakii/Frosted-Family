@@ -25,7 +25,7 @@ from frosted.config import CLAN_TAGS, TAG_TO_CLAN
 from server import db, push
 
 DEFAULT_DB = "/opt/bots/frosted/data/frosted.db"
-SITE = "https://frosted-family.vercel.app"
+SITE = "https://frostedfamily.com"
 ATTACK_WINDOW = timedelta(hours=1)
 STARTED_WINDOW = timedelta(minutes=30)
 STALE = timedelta(minutes=15)  # older than this, "has an attack left" may no longer be true

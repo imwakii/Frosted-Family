@@ -14,7 +14,7 @@ from fastapi.testclient import TestClient
 from server import api, auth, db, plan, profiles, pull_allocation
 from test_server import FIX, Recorder, poll  # tests/ is on sys.path (rootdir import mode)
 
-SITE = "https://frosted-family.vercel.app"
+SITE = "https://frostedfamily.com"
 LEADER_ROLE, OTHER_ROLE = "111", "999"
 PUBLISHER, COLEADER, OUTSIDER = "1001", "1002", "1003"
 USERS = {"good-code": PUBLISHER, "coleader-code": COLEADER, "outsider-code": OUTSIDER}
