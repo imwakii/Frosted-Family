@@ -117,9 +117,9 @@ def recap(conn, month: str | None = None) -> dict:
     out["awards"]["three_star"] = [{**row(t), **p, "rate": p["three"] / p["attacks"]} for t, p in ranked[:PLACES]]
 
     built: Counter = Counter()
-    for tag, _unit, _cat, _frm, _to, at, _change in leaders.upgrade_events(conn):
+    for tag, _unit, _cat, frm, to, at, _change in leaders.upgrade_events(conn):
         if at[:7] == month and tag in ms:
-            built[tag] += 1
+            built[tag] += leaders.levels(frm, to)
     top = sorted(built.items(), key=lambda x: (-x[1], row(x[0])["name"] or ""))
     out["awards"]["builder"] = [{**row(t), "n": n} for t, n in top[:PLACES]]
     for c in leaders.upgrade_counts(conn):

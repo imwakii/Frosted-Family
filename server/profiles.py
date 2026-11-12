@@ -442,7 +442,7 @@ def _badge_context(conn, record: dict | None = None) -> dict:
     givers = sorted((m for m in members if m["donations"]), key=lambda m: -m["donations"])
     upgrades: dict[str, int] = {}
     for u in leaders.upgrades(conn, BADGE_UPGRADE_DAYS)["upgrades"]:
-        upgrades[u["tag"]] = upgrades.get(u["tag"], 0) + 1
+        upgrades[u["tag"]] = upgrades.get(u["tag"], 0) + leaders.levels(u["from"], u["to"])
     # In attack order within each war: a cleanup is a three-star hit after a base's earlier attackers fell short.
     cleanups: dict[str, int] = {}
     best: dict[tuple, int] = {}

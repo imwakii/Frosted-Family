@@ -116,6 +116,20 @@ def test_upgrades_per_day_stay_with_the_clan_of_that_day_after_leaving(conn):
     ]
 
 
+def test_levels_seen_together_count_as_that_many_upgrades(conn):
+    from server import leaders
+    poll(conn, "2026-11-01T10:00:00Z", fire=["#A"])
+    poll(conn, "2026-11-03T10:00:00Z", fire=["#A"])
+    for kind, name, level, at in (("hero", "King", 80, "2026-10-31T10:00:00Z"), ("hero", "King", 83, "2026-11-01T12:00:00Z"),
+                                  ("equipment", "Fire Heart", 1, "2026-11-02T12:00:00Z"), ("equipment", "Fire Heart", 5, "2026-11-02T13:00:00Z")):
+        conn.execute("INSERT INTO player_unit_history (player_tag, kind, name, level, seen_at) VALUES ('#A',?,?,?,?)", (kind, name, level, at))
+    # King 80 to 83 in one look is three; Fire Heart found at 1 is one, then 1 to 5 is four.
+    assert leaders.upgrade_counts(conn) == [
+        {"day": "2026-11-01", "clan": "Fire", "category": "hero", "n": 3},
+        {"day": "2026-11-02", "clan": "Fire", "category": "equipment", "n": 5},
+    ]
+
+
 def stars_row(conn, tag, at, stars):
     conn.execute("INSERT INTO profile_snapshots (player_tag, fetched_at, war_stars) VALUES (?,?,?)", (tag, at, stars))
 

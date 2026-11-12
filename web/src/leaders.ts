@@ -9,6 +9,9 @@ export type Upgrade = {
   tag: string; name: string; clan: ClanName; th: number | null
   unit: string; category: UpgradeCategory; change: 'level_up' | 'unlock'; from: number; to: number; at: string
 }
+/** How many upgrades a change is, as the server counts them: several levels seen in one hourly look are that many. */
+export const upgradeLevels = (u: { from: number; to: number }) => Math.max(1, u.to - u.from)
+export const countUpgrades = (ups: { from: number; to: number }[]) => ups.reduce((n, u) => n + upgradeLevels(u), 0)
 export type Reason = { code: string; value: number | string | null }
 export type Activity = 'inactive_14_plus' | 'inactive_7_to_13' | 'inactive_3_to_6' | 'active'
 /** Make room, already in Ka Wai's removal order: activity bucket, then weakest heroes for the TH. */

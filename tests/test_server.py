@@ -412,7 +412,7 @@ def test_the_newer_badges_come_from_raids_upgrades_cleanups_and_stars(conn, monk
     from server import leaders, profiles
     monkeypatch.setattr(profiles, "war_record", lambda c: {"players": []})
     monkeypatch.setattr(profiles, "current_members", lambda c: [{"tag": "#VET", "donations": 0, "war_stars": 3500}, {"tag": "#B", "donations": 0, "war_stars": 100}])
-    monkeypatch.setattr(leaders, "upgrades", lambda c, d: {"upgrades": [{"tag": "#BOB"}] * 16})
+    monkeypatch.setattr(leaders, "upgrades", lambda c, d: {"upgrades": [{"tag": "#BOB", "from": 1, "to": 2}] * 16})
     with conn:
         _war(conn, "w", "2026-01")
         # A falls short on the base, B clears it, C hits it again already cleared.

@@ -1,6 +1,6 @@
 import { type PointerEvent, type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
 import { thIcon } from '../clash'
-import { ago, type LogEvent, type Milestone, type Upgrade, type UpgradeCategory, type UpgradeCount, type UpgradeLeader, useClanLog } from '../leaders'
+import { ago, countUpgrades, type LogEvent, type Milestone, type Upgrade, type UpgradeCategory, type UpgradeCount, type UpgradeLeader, useClanLog } from '../leaders'
 import { go, historyHref, markFromCard, playerHref, useDrill } from '../route'
 import { CLAN, CLANS } from '../theme'
 import type { ClanName, Roster } from '../types'
@@ -43,7 +43,7 @@ function SinceLastLook({ data, roster }: { data: { events: LogEvent[]; upgrades:
     try { localStorage.setItem(LAST_LOOK, JSON.stringify({ at: new Date().toISOString(), rank })) } catch { /* private mode */ }
   }, [rank])
   if (!last) return null
-  const ups = data.upgrades.filter((u) => u.at > last.at).length
+  const ups = countUpgrades(data.upgrades.filter((u) => u.at > last.at))
   const joined = data.events.filter((e) => e.at > last.at && (e.kind === 'joined' || e.kind === 'rejoined')).length
   const left = data.events.filter((e) => e.at > last.at && e.kind === 'left').length
   const moved = last.rank && rank ? last.rank - rank : 0
@@ -260,7 +260,7 @@ function UpgradeRow({ ups, showClan, kind, open, onToggle }: { ups: Upgrade[]; s
         <UpgradeIcon u={u} />
         <span className="flex min-w-0 flex-auto flex-col">
           {who}
-          <span className="truncate text-[13px] leading-[1.3] text-muted">{ups.length === 1 ? <>{name(u)} {change(u)}</> : `${ups.length} upgrades`}</span>
+          <span className="truncate text-[13px] leading-[1.3] text-muted">{ups.length === 1 ? <>{name(u)} {change(u)}</> : `${countUpgrades(ups)} upgrades`}</span>
         </span>
         {when}
         <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#A3957C" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" className={`flex-none transition-transform ${open ? 'rotate-90' : ''}`}><path d="M9 6l6 6-6 6" /></svg>

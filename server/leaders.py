@@ -108,6 +108,12 @@ def _upgrade_events(conn) -> list[tuple]:
     return events
 
 
+def levels(frm: int | None, to: int) -> int:
+    """How many upgrades a change is. The collector sees a unit once an hour, so several levels done in that time (a
+    run of equipment upgrades, or books on a hero) arrive as one change: King 80 to 83 is three upgrades, not one."""
+    return max(1, to - (frm or 0))
+
+
 def upgrade_counts(conn) -> list[dict]:
     """Upgrades per UTC day, clan and category, each under the clan the player was in that day, so past days stay put
     when people leave or move."""
@@ -115,13 +121,13 @@ def upgrade_counts(conn) -> list[dict]:
     for r in conn.execute("SELECT player_tag, snapshot_date, clan_tag FROM member_snapshots ORDER BY player_tag, seen_at"):
         clans.setdefault(r["player_tag"], []).append((r["snapshot_date"], r["clan_tag"]))
     counts: Counter = Counter()
-    for tag, _unit, cat, _frm, _to, at, _change in upgrade_events(conn):
+    for tag, _unit, cat, frm, to, at, _change in upgrade_events(conn):
         days = clans.get(tag)
         if days:
             before = [c for d, c in days if d <= at[:10]]
             clan = TAG_TO_CLAN.get(before[-1] if before else days[0][1])
             if clan:
-                counts[(at[:10], clan, cat)] += 1
+                counts[(at[:10], clan, cat)] += levels(frm, to)
     return [{"day": d, "clan": c, "category": k, "n": n} for (d, c, k), n in sorted(counts.items())]
 
 
@@ -151,13 +157,14 @@ def upgrade_board(conn) -> list[dict]:
     t = now()
     week, month = [(t - timedelta(days=n)).strftime("%Y-%m-%dT%H:%M:%SZ") for n in (7, 30)]
     tally: dict[str, dict] = {}
-    for tag, _unit, cat, _frm, _to, at, _change in upgrade_events(conn):
+    for tag, _unit, cat, frm, to, at, _change in upgrade_events(conn):
         if at < month:
             continue
+        n = levels(frm, to)
         r = tally.setdefault(tag, {"week": 0, "month": 0, "last": at, "kinds": {}})
         for c in (r, r["kinds"].setdefault(cat, {"week": 0, "month": 0, "last": at})):
-            c["month"] += 1
-            c["week"] += at >= week
+            c["month"] += n
+            c["week"] += n if at >= week else 0
             c["last"] = max(c["last"], at)
     ms = members_by_tag(conn)
     out = [{**profiles.row(ms[tag]), **r} for tag, r in tally.items() if tag in ms]

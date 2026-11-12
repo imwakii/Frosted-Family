@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { thIcon } from '../clash'
 import { loadPlayerAll, type PlayerCard, playerNow } from '../data'
-import { ago, type UpgradeCategory } from '../leaders'
+import { ago, countUpgrades, type UpgradeCategory } from '../leaders'
 import { markFromCard, openedFromCard, playerHref } from '../route'
 import type { Roster } from '../types'
 import { CardSheet } from './ClanSheet'
@@ -45,7 +45,7 @@ export default function UpgradeHistory({ tag, days: start, kind: startKind, rost
   return (
     <CardSheet label={`${p?.name ?? 'Player'}'s upgrades`} wide={wide} onClose={onClose} head={<>
       <a href={playerHref(tag)} className="flex min-w-0 flex-auto items-center gap-3 text-ink no-underline">
-        <SheetTitle th={p?.th} name={p?.name ?? tag} sub={card ? `${ups.length} ${ups.length === 1 ? 'upgrade' : 'upgrades'}` : ' '} />
+        <SheetTitle th={p?.th} name={p?.name ?? tag} sub={card ? `${countUpgrades(ups)} ${countUpgrades(ups) === 1 ? 'upgrade' : 'upgrades'}` : ' '} />
       </a>
       {/* Holds the back button's place, so a long name is one size on every card. */}
       {!fromCard && <span aria-hidden="true" className="size-11 flex-none" />}
