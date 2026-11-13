@@ -3,7 +3,7 @@ import type { Unit } from './explore'
 // Hero equipment by hero, in hero order; within each hero, commons (max 18)
 // then epics (max 27). Equipment the API adds before this list knows it goes
 // under null, shown last without a label.
-const BY_HERO: [string | null, string[]][] = [
+export const BY_HERO: [string | null, string[]][] = [
   ['Barbarian King', ['Barbarian Puppet', 'Rage Vial', 'Earthquake Boots', 'Vampstache', 'Giant Gauntlet', 'Spiky Ball', 'Snake Bracelet', 'Stick Horse']],
   ['Archer Queen', ['Archer Puppet', 'Invisibility Vial', 'Giant Arrow', 'Healer Puppet', 'Frozen Arrow', 'Magic Mirror', 'Action Figure', 'Monolith Arrow']],
   ['Grand Warden', ['Eternal Tome', 'Life Gem', 'Rage Gem', 'Healing Tome', 'Fireball', 'Lavaloon Puppet', 'Heroic Torch']],

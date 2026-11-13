@@ -16,7 +16,7 @@ from math import ceil
 from fastapi import HTTPException
 
 from frosted.config import TAG_TO_CLAN
-from server import baseline, db
+from server import baseline, db, gear
 from server.db import FRIENDLY, clean_name, has_column
 
 # Hourly: about 115 calls a pass, well inside the API's limits. Due after 55 minutes so it lands on the 10-minute
@@ -91,6 +91,7 @@ def upsert_profile(conn: sqlite3.Connection, p: dict, fetched_at: str) -> None:
     conn.executemany("INSERT OR REPLACE INTO player_units VALUES (?,?,?,?,?,?,?)",
                      [(tag, k, u["name"], u["level"], u.get("maxLevel"), hero, i)
                       for i, (k, u, hero) in enumerate(units)])
+    gear.record(conn, tag, worn, fetched_at)
     # A level already recorded adds nothing, so a pass with no upgrades writes no history.
     conn.executemany("INSERT OR IGNORE INTO player_unit_history VALUES (?,?,?,?,?)",
                      [(tag, k, u["name"], u["level"], fetched_at) for k, u, _ in units])

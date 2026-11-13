@@ -10,6 +10,7 @@ import type { ClanName, Roster } from '../types'
 import Info from './Info'
 import { norm, PhoneSearch, SearchBox } from './CwlTab'
 import BadgesBoard from './BadgesBoard'
+import GearBoard from './GearBoard'
 import ClansBoard, { COLOR } from './ClansBoard'
 import HistoryBoard from './HistoryBoard'
 import { ShowAll, topRows, useShowAll } from './Top'
@@ -27,6 +28,7 @@ const NAV: { id: string; label: string; icon: string | null }[] = [
 const SUBS = [
   { id: 'players', label: 'Players', href: '#/stats/players' },
   { id: 'badges', label: 'Badges', href: '#/stats/badges' },
+  { id: 'gear', label: 'Gear', href: '#/stats/gear' },
   { id: 'war', label: 'War', href: '#/stats/war' },
   { id: 'trends', label: 'Trends', href: '#/stats/trends' },
   { id: 'history', label: 'History', href: '#/stats/history' },
@@ -103,6 +105,7 @@ const cellTone = (l: number | null, max: number) =>
 export default function ExploreTab({ sub, kind, ...rest }: BoardProps & { sub: string; kind: string | null }) {
   const id = NAV.find((c) => c.id === kind)?.id ?? 'overall'
   const board = sub === 'badges' ? <BadgesBoard {...rest} />
+    : sub === 'gear' ? <GearBoard {...rest} />
     : sub === 'history' ? <HistoryBoard {...rest} />
     : sub === 'war' ? <WarBoardView {...rest} />
     : sub === 'trends' ? (

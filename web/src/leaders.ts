@@ -188,6 +188,15 @@ export const useCwlGroups = () => usePolled('groups', loadCwlGroups)
 // Roster's months: this month's and each earlier one the server keeps. Until the server has them, just this month.
 export const useRosterMonths = () => useLoad('rosterMonths', () => loadRosterMonths().catch(() => null))
 export const useRosterMonth = (season: string | null) => useLoad(season ? `rosterMonth${season}` : null, () => loadRosterMonth(season!))
+// GET /api/explore/gear: hero equipment members wear now, wore over the window, and own. Members only, with their clan.
+export type Gear = {
+  as_of: string | null; since: string | null; from: string | null; days: number
+  members: { tag: string; name: string; clan: ClanName; th: number | null }[]
+  now: [string, string, string[]][]
+  worn: [string, string, string[], number][]
+  owned: Record<string, [string, number, number | null][]>
+}
+export const useGear = (days: number) => useLoad(`gear${days}`, () => getJson<Gear>(`/api/explore/gear?days=${days}`))
 export const useCwlSeason = (season: string | null) =>
   useLoad(season === null ? null : `groups${season}`, () => getJson<{ clans: { clan: ClanName; group: CwlGroup | null }[] }>(`/api/war/cwl?season=${encodeURIComponent(season ?? '')}`))
 // On every clan switch on War, clans at war blink green; those still preparing hold a steady dot in the Prep pill's orange.

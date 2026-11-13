@@ -12,6 +12,7 @@ site through a Vercel rewrite.
     GET /log/recap  one month in the family: awards, the clan race, comings and goings, milestones
     GET /explore/upgrades?days=7&clan=   level-ups, unlocks and TH upgrades between profile snapshots
     GET /leaders/inactivity, /leaders/make-room?clan=   leaders only (passcode or Discord session), read-only
+    GET /explore/gear?days=30   hero equipment members wear now, what they wore over the window, and what they own
     GET /explore/war     every member's all-time war stars and their record over the recorded wars, plus this CWL season
     GET /explore/{board} ranked boards from player profiles: heroes, equipment, army, donations, capital
     GET /explore/matrix?cat=heroes|equipment|troops|spells|pets|sieges   every member's level in every unit
@@ -38,7 +39,7 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException, Query, Request
 
 from frosted.config import CLAN_TAGS, TAG_TO_CLAN
-from server import auth, clanlog, days, db, events, history, leaders, members, months, plan, profiles, proposals, push, recap, stats, visits, war
+from server import auth, clanlog, days, db, events, gear, history, leaders, members, months, plan, profiles, proposals, push, recap, stats, visits, war
 
 DEFAULT_DB = "/opt/bots/frosted/data/frosted.db"
 ROSTER_FIELDS = ("tag", "name", "clan", "cwl_slot", "transferred_from", "tier", "final_score", "offense_score",
@@ -268,6 +269,11 @@ def log_recap(month: str | None = None):
 @app.get("/explore/upgrades")  # before /explore/{board}, like war and matrix
 def explore_upgrades(days: int = 7, clan: str | None = None):
     return leaders.upgrades(open_db(), max(1, min(days, 90)), clan)
+
+
+@app.get("/explore/gear")  # before /explore/{board}, like war and matrix
+def explore_gear(days: int = 30):
+    return gear.view(open_db(), max(1, min(days, 90)))
 
 
 @app.get("/explore/war")  # before /explore/{board}, like matrix

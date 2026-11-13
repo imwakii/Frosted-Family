@@ -265,6 +265,15 @@ CREATE TABLE IF NOT EXISTS player_unit_history (
     seen_at TEXT NOT NULL,
     PRIMARY KEY (player_tag, kind, name, level)
 );
+-- Hero equipment worn: one look per hero with equipment on at each profile fetch, summed by day (server/gear.py).
+CREATE TABLE IF NOT EXISTS gear_worn (
+    day TEXT NOT NULL,                    -- UTC date of the profile fetch
+    player_tag TEXT NOT NULL,
+    hero TEXT NOT NULL,
+    pair TEXT NOT NULL,                   -- the equipped pieces, sorted and joined with " + "
+    looks INTEGER NOT NULL,               -- profile fetches that saw this pair on this hero that day
+    PRIMARY KEY (day, player_tag, hero, pair)
+);
 -- Each clan's latest raid weekend, polled with the profiles. One row per raider.
 CREATE TABLE IF NOT EXISTS raid_members (
     clan_tag TEXT NOT NULL,

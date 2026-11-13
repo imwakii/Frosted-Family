@@ -347,10 +347,13 @@ export const UPDATES: Update[] = [
     ],
   },
   {
-    id: '2026-11-11',
-    date: '11 Nov 2026',
+    // One entry gathers everything since 7 Nov, so a member opening it now sees all of it, not just the latest day.
+    id: '2026-11-13',
+    date: '13 Nov 2026',
     highlights: [
+      { title: 'New address', line: 'Link your account and alerts again.', icon: 'bell' },
       { title: 'CWL recap', line: 'Where we finished and who earned bonuses.', href: '#/war', icon: 'league' },
+      { title: 'Gear', line: 'The combos the family runs on each hero.', href: '#/stats/gear', icon: 'hero' },
     ],
     groups: [
       {
@@ -369,21 +372,13 @@ export const UPDATES: Update[] = [
         ],
       },
       {
-        title: 'General',
+        title: 'Stats tab',
         lines: [
-          'Changed the name picker to show clans.',
-          'Added Unlink account to your own card.',
+          'Added Gear: combos on each hero.',
+          'Added the most and least used pieces.',
+          'Added how long each combo was worn.',
         ],
       },
-    ],
-  },
-  {
-    id: '2026-11-12',
-    date: '12 Nov 2026',
-    highlights: [
-      { title: 'New address', line: 'Link your account and alerts again.', icon: 'bell' },
-    ],
-    groups: [
       {
         title: 'Log tab',
         lines: [
@@ -394,6 +389,8 @@ export const UPDATES: Update[] = [
         title: 'General',
         lines: [
           'Moved to frostedfamily.com.',
+          'Changed the name picker to show clans.',
+          'Added Unlink account to your own card.',
         ],
       },
     ],
