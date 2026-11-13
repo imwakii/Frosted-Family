@@ -130,6 +130,23 @@ def test_levels_seen_together_count_as_that_many_upgrades(conn):
     ]
 
 
+def test_an_upgrade_event_counts_its_days_on_their_own(conn, monkeypatch):
+    from server import leaders
+    monkeypatch.setattr(leaders, "now", lambda: datetime(2026, 11, 13, 12, tzinfo=timezone.utc))
+    monkeypatch.setattr(leaders, "members_by_tag", lambda c: {"#A": {"tag": "#A", "name": "a", "snap_name": "a", "clan_tag": FIRE, "town_hall": 16, "snap_th": 16}})
+    conn.executemany("INSERT INTO game_events VALUES ('post', ?, ?, ?, ?)", [
+        (0, "November Gold Pass", "2026-11-01", "2026-11-30"), (1, "Hammer Jam", "2026-11-01", "2026-11-15")])
+    poll(conn, "2026-10-29T10:00:00Z", fire=["#A"])
+    poll(conn, "2026-11-13T10:00:00Z", fire=["#A"])
+    for level, at in ((1, "2026-10-29T10:00:00Z"), (2, "2026-10-31T12:00:00Z"), (4, "2026-11-02T12:00:00Z"), (5, "2026-11-12T12:00:00Z")):
+        conn.execute("INSERT INTO player_unit_history (player_tag, kind, name, level, seen_at) VALUES ('#A','hero','King',?,?)", (level, at))
+    event = leaders.upgrade_event(conn)
+    assert event == {"name": "Hammer Jam", "start": "2026-11-01", "end": "2026-11-15"}
+    a = leaders.upgrade_board(conn, event)[0]
+    # 31 Oct is before the event; 2 to 4 on 2 Nov is two upgrades; 12 Nov is one more.
+    assert (a["event"], a["month"], a["week"]) == (3, 4, 1)
+
+
 def stars_row(conn, tag, at, stars):
     conn.execute("INSERT INTO profile_snapshots (player_tag, fetched_at, war_stars) VALUES (?,?,?)", (tag, at, stars))
 

@@ -151,11 +151,20 @@ export default function OverallBoard({ q, setQ, wide }: { q: string; setQ: (v: s
     <div className="flex flex-col gap-2.5 pb-6">
       <PhoneSearch q={q} setQ={setQ} onEnter={enter}><ClanFilter clan={clan} setClan={setClan} /></PhoneSearch>
       <CategoryNav current="overall" wide={false} />
+      {/* The same facts as the wide page: what the bars mean, how it's ranked, when it was updated, and the clan key. */}
       {all.length > 0 && (
-        <p className="m-0 flex items-baseline justify-between gap-2 px-4 text-xs font-semibold text-muted">
-          <span>% of max levels reached</span>
-          <span className="flex-none"><Star /> {maxedN} of {ranked.length} maxed</span>
-        </p>
+        <div className="flex flex-col gap-1 px-4">
+          <p className="m-0 flex items-baseline justify-between gap-2 text-xs font-semibold text-muted">
+            <span>% of max levels reached, ranked overall</span>
+            <span className="flex-none font-bold text-ink"><Star /> {maxedN} of {ranked.length} maxed</span>
+          </p>
+          {(stamp || clan === 'All') && (
+            <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+              {clan === 'All' ? legend : <span />}
+              {stamp && <span className="text-[11px] font-semibold text-faint">Updated {stamp}</span>}
+            </div>
+          )}
+        </div>
       )}
       <div className="flex flex-col gap-2 px-4">
         {board}

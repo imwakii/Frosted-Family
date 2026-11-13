@@ -129,7 +129,11 @@ export async function loadRoster(fresh = false): Promise<{ roster: Roster; live:
 }
 
 export type PlayerCard = {
-  heroes: { name: string; level: number; max: number | null; gear?: { name: string; level: number; max: number | null }[] }[]
+  heroes: {
+    name: string; level: number; max: number | null; gear?: { name: string; level: number; max: number | null }[]
+    /** The family's most-run pair on this hero now, how many of `of` members run it, and how many run this player's pair. */
+    family?: { top: string[]; runs: number; of: number; others: number } | null
+  }[]
   // Until the server has them, a card arrives without these.
   badges?: { id: string; label: string; detail: string; tier?: 'bronze' | 'silver' | 'gold' }[]
   next_badge?: { id: string; label: string; tier: 'bronze' | 'silver' | 'gold'; text: string; pct: number } | null

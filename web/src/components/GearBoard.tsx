@@ -118,7 +118,7 @@ function PieceRow({ p, view, tag = true }: { p: Piece; view: View; tag?: boolean
       </span>
       <span className="flex flex-none flex-col items-end">
         <span className="text-sm font-bold tabular-nums text-ink">{pct(p.share)}</span>
-        <span className="whitespace-nowrap text-[11px] font-semibold tabular-nums text-faint">{p.owners} own · lv {p.level ?? '—'}</span>
+        <span className="whitespace-nowrap text-[11px] font-semibold tabular-nums text-faint">{p.owners} own · avg level {p.level ?? '—'}</span>
       </span>
     </li>
   )
@@ -170,7 +170,7 @@ export default function GearBoard({ q, setQ, wide }: { q: string; setQ: (v: stri
       <div role="group" aria-label="View" className="flex gap-1.5 overflow-x-auto [scrollbar-width:none]">
         {VIEWS.map((v) => <button key={v.id} type="button" aria-pressed={view === v.id} onClick={() => setView(v.id)} className={chip(view === v.id)}>{v.label}</button>)}
       </div>
-      <p className="m-0 px-1 text-xs font-semibold text-faint">{view === 'now' ? 'Share of members running each combo, and of owners with each piece on' : `Share of the time each was on${started ? `, since ${day(data.since!)}` : ''}`}</p>
+      <p className="m-0 px-1 text-xs font-semibold text-faint">{view === 'now' ? 'Combos: share of members who run it. Pieces: share of owners who have it on.' : `How much of the time each was on${started ? `, since ${day(data.since!)}` : ''}`}</p>
       {nq ? (
         found.length ? (
           <ul className="m-0 flex list-none flex-col gap-2 p-0">

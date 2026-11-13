@@ -117,6 +117,25 @@ function Trend({ p, cycles }: { p: Player; cycles: string[] }) {
   )
 }
 
+/** Under a hero: whether this player runs the family's favourite pair on it, or what that pair is. Opens Stats › Gear. */
+function FamilyPick({ f, mine }: { f: NonNullable<PlayerCard['heroes'][number]['family']>; mine: string[] }) {
+  const same = [...mine].sort().join('+') === [...f.top].sort().join('+')
+  const others = f.others
+  return (
+    <a href="#/stats/gear" className="mt-0.5 flex min-h-7 min-w-0 items-center gap-1.5 text-[11px] font-semibold text-faint no-underline hover:text-ink-2">
+      {same ? (
+        <span className="truncate">The family's favourite · {f.runs} of {f.of} run it</span>
+      ) : (
+        <>
+          <span className="flex-none">Family's favourite</span>
+          <span className="flex flex-none -space-x-1">{f.top.map((p) => <UnitIcon key={p} name={p} size={18} />)}</span>
+          <span className="truncate">{f.runs} of {f.of}{others > 0 ? ` · ${others} ${others === 1 ? 'other runs' : 'others run'} yours` : ''}</span>
+        </>
+      )}
+    </a>
+  )
+}
+
 export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: string; roster: Roster; wide: boolean; onClose: () => void }) {
   const base = roster.players.find((p) => p.tag === tag)
   const [extra, setExtra] = useState<Partial<Player> | null>(() => playerNow(tag)?.extra ?? null)
@@ -281,7 +300,8 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
               <Section title="Heroes and equipment">
                 <ul className={LIST}>
                   {card.heroes.map((h, i) => (
-                    <li key={h.name} className={`flex items-center gap-2 px-3 py-1.5 ${i ? 'border-t border-hair' : ''}`}>
+                    <li key={h.name} className={`px-3 py-1.5 ${i ? 'border-t border-hair' : ''}`}>
+                    <div className="flex items-center gap-2">
                       <button type="button" title={h.name} aria-label={`${h.name}, level ${h.level}: see the ranking`} onClick={() => toUnit('heroes', h.name)} className="-ml-1 flex flex-none cursor-pointer items-center gap-1.5 rounded-lg border-0 bg-transparent p-1 hover:bg-hover">
                         <UnitIcon name={h.name} size={32} />
                         <span className={`w-[52px] text-left text-xs font-bold tabular-nums ${h.max && h.level >= h.max ? 'text-gold' : 'text-ink-2'}`}>{h.level}{h.max ? <span className="font-semibold text-faint">/{h.max}</span> : null}</span>
@@ -294,6 +314,8 @@ export default function PlayerSheet({ tag, roster, wide, onClose }: { tag: strin
                           </button>
                         ))}
                       </span>
+                    </div>
+                    {h.family && <FamilyPick f={h.family} mine={(h.gear ?? []).map((g) => g.name)} />}
                     </li>
                   ))}
                 </ul>

@@ -364,10 +364,12 @@ function OtherDay({ clan, warKey, now, roster, q }: { clan: ClanName; warKey: st
 // Whether a name search matches anyone in a clan's league, by name or tag.
 const inLeague = (g: CwlGroup | null | undefined, nq: string) => !!g?.eight.some((r) => norm(r.name).includes(nq) || r.tag.toLowerCase().includes(nq))
 
-function PastCwl({ clan, season, now, roster, wide, q }: { clan: ClanName; season: string; now: number; roster: Roster; wide: boolean; q: string }) {
+function PastCwl({ clan, season, now, roster, wide, q, day: linked }: { clan: ClanName; season: string; now: number; roster: Roster; wide: boolean; q: string; day: number | null }) {
   const { data, loading } = useCwlSeason(season)
   const group = data?.clans.find((c) => c.clan === clan)?.group
-  const [pick, setPick] = useState<number | null>(null)
+  // The open day is in the link, so a phone's Back steps from a day to the Recap rather than out of the league.
+  const pick = linked
+  const setPick = (d: number | null) => go.to(warLogHref(clan, `cwl:${season}`) + (d === null ? '' : `/${d}`))
   // A name from another clan's league opens that clan's recap for the same month, once per search, so a clan picked by
   // hand afterwards stays.
   const nq = norm(q.trim())
@@ -448,7 +450,7 @@ export default function WarTab({ wide, roster, sub, opened, q, setQ }: { wide: b
   const rosterMonths = useRosterMonths().data
   if (sub === 'log') {
     // The clan is in the link to a past war, so the link opens the same war for anyone.
-    const [linkClan, linkKey] = opened?.split('/') ?? []
+    const [linkClan, linkKey, linkDay] = opened?.split('/') ?? []
     const logClan = (linkClan as ClanName) ?? clan?.clan ?? pick ?? 'Fire'
     return (
       <main className={wide ? 'mx-auto flex max-w-[1360px] flex-col gap-4 px-[clamp(16px,3vw,32px)] pb-12 pt-5' : 'flex flex-col gap-3 px-4 pb-6 pt-1'}>
@@ -476,7 +478,7 @@ export default function WarTab({ wide, roster, sub, opened, q, setQ }: { wide: b
                 )
               })()}
             </div>
-            {decodeURIComponent(linkKey).startsWith('cwl:') ? <PastCwl clan={logClan} season={decodeURIComponent(linkKey).slice(4)} now={now} roster={roster} wide={wide} q={q} />
+            {decodeURIComponent(linkKey).startsWith('cwl:') ? <PastCwl clan={logClan} season={decodeURIComponent(linkKey).slice(4)} now={now} roster={roster} wide={wide} q={q} day={linkDay ? Number(linkDay) : null} />
               : <OtherDay clan={logClan} warKey={decodeURIComponent(linkKey)} now={now} roster={roster} />}
           </>
         ) : q.trim() ? <LogSearch clan={logClan} roster={roster} q={q} /> : <WarLog clan={logClan} />}

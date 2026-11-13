@@ -62,8 +62,9 @@ export default function CwlSeason({ group, clan, wide, over, onDay, q = '' }: { 
   const days = group.days.length
   const played = group.days.filter((d) => d.state === 'warEnded').length
   return (
-    // A wide screen sets the cards side by side: two columns, then three where each card still fills its width.
-    <div className={`grid items-start gap-3 ${wide ? 'lg:grid-cols-2 lg:gap-4 xl:grid-cols-3 xl:items-stretch' : ''}`}>
+    // A wide screen sets the cards side by side: two columns, then three where each card still fills its width. The three
+    // end level, except while a search narrows the lists, when a stretched card would be mostly empty.
+    <div className={`grid items-start gap-3 ${wide ? `lg:grid-cols-2 lg:gap-4 xl:grid-cols-3 ${nq ? '' : 'xl:items-stretch'}` : ''}`}>
       <div ref={left} className="flex min-w-0 flex-col gap-3 self-start">
       <section aria-label="Season result" className="overflow-hidden rounded-2xl border border-line bg-white">
         <div className="flex items-center gap-2.5 px-4 pb-3 pt-4" style={{ background: tint }}>
@@ -110,11 +111,11 @@ export default function CwlSeason({ group, clan, wide, over, onDay, q = '' }: { 
           {ready && picks.length > 0 && <><span className="text-right text-[11px] font-bold text-faint">★/hit</span><span className="text-right text-[11px] font-bold text-faint">Hits</span><span className="text-right text-[11px] font-bold text-faint">Avg</span></>}
         </div>
         {!ready ? (
-          <p className="m-0 px-3.5 py-6 text-center text-sm font-semibold text-faint">Picks appear after the next server update</p>
+          <p className="m-0 px-3.5 py-6 text-center text-sm font-semibold text-faint">Bonus picks aren't ready yet</p>
         ) : (
           <ol className="m-0 flex flex-auto list-none flex-col">
             {picks.length === 0 && !nq && <li className="border-t border-hair px-3.5 py-6 text-center text-sm font-semibold text-faint">No one has 8 stars without a miss</li>}
-            {nq && !shown.length && !restShown.length && <li className="border-t border-hair px-3.5 py-6 text-center text-sm font-semibold text-faint">No one by that name</li>}
+            {nq && !shown.length && !restShown.length && <li className="border-t border-hair px-3.5 py-6 text-center text-sm font-semibold text-faint">No one by that name in this village</li>}
             {shown.map((r) => { const i = picks.indexOf(r); return (
               <li key={r.tag} className="border-t border-hair">
                 <a href={playerHref(r.tag)} data-tag={r.tag}

@@ -126,8 +126,9 @@ def _milestones(conn, days: int | None) -> list[dict]:
 def clan_log(conn) -> dict:
     """GET /log: every member event on record, newest first, the last two weeks' upgrades and all upgrades by day."""
     if conn is None:
-        return {"since": None, "upgrade_days": UPGRADE_DAYS, "events": [], "upgrades": [], "upgrade_counts": [], "upgrade_board": [], "milestones": []}
+        return {"since": None, "upgrade_days": UPGRADE_DAYS, "events": [], "upgrades": [], "upgrade_counts": [], "upgrade_board": [], "upgrade_event": None, "milestones": []}
     since = conn.execute("SELECT MIN(snapshot_date) FROM member_snapshots").fetchone()[0]
+    event = leaders.upgrade_event(conn)
     return {"since": since, "upgrade_days": UPGRADE_DAYS, "events": member_events(conn),
             "upgrades": leaders.upgrades(conn, UPGRADE_DAYS)["upgrades"], "upgrade_counts": leaders.upgrade_counts(conn),
-            "upgrade_board": leaders.upgrade_board(conn), "milestones": milestones(conn)}
+            "upgrade_board": leaders.upgrade_board(conn, event), "upgrade_event": event, "milestones": milestones(conn)}

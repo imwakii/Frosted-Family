@@ -10,6 +10,8 @@ defenses move them while the player is idle, and a season reset of donations to 
 from __future__ import annotations
 
 import os
+import re
+import sqlite3
 from collections import Counter
 from datetime import date, datetime, timedelta, timezone
 
@@ -152,19 +154,39 @@ def upgrades(conn, days: int = 7, clan: str | None = None) -> dict:
     return {"days": days, "clan": clan, "as_of": as_of, "upgrades": out}
 
 
-def upgrade_board(conn) -> list[dict]:
-    """Current members with an upgrade in the last 30 days, most first: for Log's leaderboard and Who to yeet."""
+# An event in Supercell's news that is about upgrading, so the leaderboard can count its days on their own.
+# Builder Base events and cosmetics would match a bare "Builder", so only the names upgrade events go by.
+UPGRADE_EVENT = re.compile(r"\bHammer Jam\b|\bBuilder Boost\b|\bUpgrade (Event|Boost|Sale)\b", re.I)
+
+
+def upgrade_event(conn) -> dict | None:
+    """The latest upgrade event that has started in the last 30 days: {name, start, end}, dates inclusive."""
+    today = now().strftime("%Y-%m-%d")
+    since = (now() - timedelta(days=30)).strftime("%Y-%m-%d")
+    try:
+        rows = conn.execute("SELECT name, start_date, end_date FROM game_events WHERE start_date BETWEEN ? AND ? ORDER BY start_date DESC",
+                            (since, today)).fetchall()
+    except sqlite3.OperationalError:  # the collector has not made the calendar's tables yet
+        return None
+    return next(({"name": r["name"], "start": r["start_date"], "end": r["end_date"]} for r in rows if UPGRADE_EVENT.search(r["name"])), None)
+
+
+def upgrade_board(conn, event: dict | None = None) -> list[dict]:
+    """Current members with an upgrade in the last 30 days, most first: for Log's leaderboard and Who to yeet. With an
+    upgrade event, each tally also counts the upgrades made on its days."""
     t = now()
     week, month = [(t - timedelta(days=n)).strftime("%Y-%m-%dT%H:%M:%SZ") for n in (7, 30)]
     tally: dict[str, dict] = {}
     for tag, _unit, cat, frm, to, at, _change in upgrade_events(conn):
-        if at < month:
+        during = bool(event) and event["start"] <= at[:10] <= event["end"]
+        if at < month and not during:
             continue
         n = levels(frm, to)
-        r = tally.setdefault(tag, {"week": 0, "month": 0, "last": at, "kinds": {}})
-        for c in (r, r["kinds"].setdefault(cat, {"week": 0, "month": 0, "last": at})):
-            c["month"] += n
+        r = tally.setdefault(tag, {"week": 0, "month": 0, "event": 0, "last": at, "kinds": {}})
+        for c in (r, r["kinds"].setdefault(cat, {"week": 0, "month": 0, "event": 0, "last": at})):
+            c["month"] += n if at >= month else 0
             c["week"] += n if at >= week else 0
+            c["event"] += n if during else 0
             c["last"] = max(c["last"], at)
     ms = members_by_tag(conn)
     out = [{**profiles.row(ms[tag]), **r} for tag, r in tally.items() if tag in ms]

@@ -1,6 +1,6 @@
 import { type PointerEvent, type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
 import { thIcon } from '../clash'
-import { ago, countUpgrades, type LogEvent, type Milestone, type Upgrade, type UpgradeCategory, type UpgradeCount, type UpgradeLeader, useClanLog } from '../leaders'
+import { ago, countUpgrades, type LogEvent, type Milestone, type Upgrade, type UpgradeCategory, type UpgradeCount, type UpgradeEvent, type UpgradeLeader, useClanLog } from '../leaders'
 import { go, historyHref, markFromCard, playerHref, useDrill } from '../route'
 import { CLAN, CLANS } from '../theme'
 import type { ClanName, Roster } from '../types'
@@ -286,12 +286,21 @@ function UpgradeRow({ ups, showClan, kind, open, onToggle }: { ups: Upgrade[]; s
   )
 }
 
-/** Most upgrades in the last 7 or 30 days. Clan and search come from the page. */
-function MostUpgrades({ board, clan, kind, nq }: { board: UpgradeLeader[]; clan: ClanName | 'All'; kind: UpgradeCategory | 'all'; nq: string }) {
-  const [days, setDays] = useState<7 | 30>(7)
+const eventDays = (e: UpgradeEvent) => {
+  const d = (s: string) => new Date(`${s}T00:00:00Z`)
+  const day = (s: string) => d(s).toLocaleDateString('en-GB', { day: 'numeric', timeZone: 'UTC' })
+  const month = (s: string) => d(s).toLocaleDateString('en-GB', { month: 'short', timeZone: 'UTC' })
+  const span = month(e.start) === month(e.end) ? `${day(e.start)}–${day(e.end)} ${month(e.end)}` : `${day(e.start)} ${month(e.start)} – ${day(e.end)} ${month(e.end)}`
+  return new Date().toISOString().slice(0, 10) <= e.end ? `${span}, on now` : span
+}
+
+/** Most upgrades in the last 7 or 30 days, or during an upgrade event such as Hammer Jam. Clan and search come from the page. */
+function MostUpgrades({ board, event, clan, kind, nq }: { board: UpgradeLeader[]; event: UpgradeEvent | null; clan: ClanName | 'All'; kind: UpgradeCategory | 'all'; nq: string }) {
+  const [days, setDays] = useState<7 | 30 | 'event'>(7)
+  const range = days === 'event' && !event ? 7 : days
   const [everyone, setEveryone] = useState(false)
   const tally = (r: UpgradeLeader) => (kind === 'all' ? r : r.kinds?.[kind])
-  const n = (r: UpgradeLeader) => (days === 7 ? tally(r)?.week : tally(r)?.month) ?? 0
+  const n = (r: UpgradeLeader) => (range === 'event' ? tally(r)?.event : range === 7 ? tally(r)?.week : tally(r)?.month) ?? 0
   const last = (r: UpgradeLeader) => tally(r)?.last ?? r.last
   const ranked = board.filter((r) => (clan === 'All' || r.clan === clan) && n(r) > 0
     && (!nq || norm(r.name ?? '').includes(nq) || r.tag.toLowerCase().includes(nq))).sort((a, b) => n(b) - n(a) || last(b).localeCompare(last(a)))
@@ -299,14 +308,16 @@ function MostUpgrades({ board, clan, kind, nq }: { board: UpgradeLeader[]; clan:
   const most = ranked.length ? n(ranked[0]) : 1
   return (
     <div className="flex flex-col gap-2">
-      <div role="group" aria-label="Range" className="flex gap-1.5">
-        {([7, 30] as const).map((d) => <button key={d} type="button" aria-pressed={d === days} onClick={() => setDays(d)} className={chip(d === days)}>{d} days</button>)}
+      <div role="group" aria-label="Range" className="flex flex-wrap items-center gap-1.5">
+        {([7, 30] as const).map((d) => <button key={d} type="button" aria-pressed={d === range} onClick={() => setDays(d)} className={chip(d === range)}>{d} days</button>)}
+        {event && <button type="button" aria-pressed={range === 'event'} onClick={() => setDays('event')} className={chip(range === 'event')}>{event.name}</button>}
+        {range === 'event' && event && <span className="text-xs font-semibold text-faint">{eventDays(event)}</span>}
       </div>
       {!shown.length ? <GoblinNote box goblin={nq ? 'page' : 'coin'}>{nq ? 'No one by that name in this village' : 'No upgrades yet'}</GoblinNote> : (
         <ol className="m-0 list-none rounded-2xl border border-line bg-white py-1">
           {shown.map((r, i) => (
             <li key={r.tag}>
-              <a href={historyHref(r.tag, days, kind === 'all' ? null : kind)} onClick={() => markFromCard(false)} data-tag={r.tag} className={`flex min-h-[52px] items-center gap-3 px-3.5 py-1.5 text-ink no-underline hover:bg-hover ${i ? 'border-t border-hair' : ''}`}>
+              <a href={historyHref(r.tag, range === 'event' ? 30 : range, kind === 'all' ? null : kind)} onClick={() => markFromCard(false)} data-tag={r.tag} className={`flex min-h-[52px] items-center gap-3 px-3.5 py-1.5 text-ink no-underline hover:bg-hover ${i ? 'border-t border-hair' : ''}`}>
                 <span className="w-6 flex-none text-right text-xs font-bold tabular-nums text-faint">{ranked.findIndex((x) => n(x) === n(r)) + 1}</span>
                 <Th th={r.th} />
                 <span className="flex min-w-0 flex-auto flex-col gap-1">
@@ -324,7 +335,7 @@ function MostUpgrades({ board, clan, kind, nq }: { board: UpgradeLeader[]; clan:
           ))}
         </ol>
       )}
-      {!nq && ranked.length > TOP && <button type="button" onClick={() => setEveryone((v) => !v)} className="min-h-11 w-full cursor-pointer rounded-full border border-line bg-white text-sm font-bold text-action hover:bg-hover">{everyone ? 'Show less' : `Show all ${ranked.length}`}</button>}
+      {!nq && ranked.length > TOP && <button type="button" onClick={() => setEveryone((v) => !v)} className="min-h-11 w-full cursor-pointer rounded-full border border-line bg-white text-sm font-bold text-action hover:bg-hover">{everyone ? 'Show fewer' : `Show all ${ranked.length}`}</button>}
     </div>
   )
 }
@@ -384,7 +395,7 @@ export default function LogTab({ roster, q, setQ, wide }: { roster: Roster; q: s
   const leaders = view === 'upgrades' && !!data && (
     <section aria-label="Most upgrades" className="flex flex-col gap-1.5">
       <Eyebrow>Most upgrades</Eyebrow>
-      <MostUpgrades board={data.upgrade_board ?? []} clan={clan} kind={kind} nq={nq} />
+      <MostUpgrades board={data.upgrade_board ?? []} event={data.upgrade_event ?? null} clan={clan} kind={kind} nq={nq} />
     </section>
   )
   const first = events.find((e) => here.has(e.tag))?.tag ?? halls[0]?.tag ?? ups[0]?.tag

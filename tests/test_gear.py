@@ -39,3 +39,13 @@ def test_each_fetch_adds_a_look_and_the_view_sums_them(conn, monkeypatch):
 
 def test_no_database_is_empty():
     assert gear.view(None)["now"] == []
+
+
+def test_a_card_gets_the_familys_top_pair_and_how_many_share_its_own(conn):
+    for tag, pair in (("#A", ["Spiky Ball", "Earthquake Boots"]), ("#B", ["Earthquake Boots", "Spiky Ball"]), ("#C", ["Rage Vial", "Spiky Ball"])):
+        profiles.upsert_profile(conn, profile(tag, pair, "2026-11-13T10:00:00Z"), "2026-11-13T10:00:00Z")
+    counts = gear.pairs_now(conn, {"#A", "#B", "#C"})["Barbarian King"]
+    # #C runs Rage Vial + Spiky Ball alone; a visitor running it would have one other beside them.
+    assert gear.family_pick(counts, ["Spiky Ball", "Rage Vial"], True) == {"top": ["Earthquake Boots", "Spiky Ball"], "runs": 2, "of": 3, "others": 0}
+    assert gear.family_pick(counts, ["Spiky Ball", "Rage Vial"], False)["others"] == 1
+    assert gear.family_pick({}, ["Spiky Ball"], True) is None

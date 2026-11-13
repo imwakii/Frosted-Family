@@ -576,11 +576,15 @@ def player_card(conn, tag: str) -> dict:
     own = next((r["war"] for r in record["players"] if r["tag"] == tag), None)
     first = conn.execute("SELECT MIN(start_time) FROM wars WHERE start_time IS NOT NULL").fetchone()[0]
     prof = conn.execute("SELECT * FROM player_profiles WHERE player_tag=?", (tag,)).fetchone()
-    gear: dict[str, list[dict]] = {}
+    on_hero: dict[str, list[dict]] = {}
     for u in conn.execute("""SELECT * FROM player_units WHERE player_tag=? AND kind='equipment' AND hero IS NOT NULL
                              ORDER BY position""", (tag,)):
-        gear.setdefault(u["hero"], []).append({"name": u["name"], "level": u["level"], "max": u["max_level"]})
-    heroes = [{"name": u["name"], "level": u["level"], "max": u["max_level"], "gear": gear.get(u["name"], [])}
+        on_hero.setdefault(u["hero"], []).append({"name": u["name"], "level": u["level"], "max": u["max_level"]})
+    # Each hero's gear beside the family's: its most-run pair, and how many members run the same two as this player.
+    members = set(leaders.members_by_tag(conn))
+    fam = gear.pairs_now(conn, members)
+    heroes = [{"name": u["name"], "level": u["level"], "max": u["max_level"], "gear": on_hero.get(u["name"], []),
+               "family": gear.family_pick(fam.get(u["name"], {}), [g["name"] for g in on_hero.get(u["name"], [])], tag in members) if on_hero.get(u["name"]) else None}
               for u in conn.execute("SELECT * FROM player_units WHERE player_tag=? AND kind='hero' ORDER BY position", (tag,))]
     attacks = []
     for a in conn.execute(

@@ -91,7 +91,8 @@ function place(path: string, player: string | null): Omit<Route, 'clan' | 'rival
   if (parts[0] === 'war' && parts[1] === 'roster' && /^\d{4}-\d{2}$/.test(parts[2] ?? '')) return { tab: 'war', sub: 'roster', kind: parts[2], player, base: `#/war/roster/${parts[2]}` }
   if (parts[0] === 'war' && (parts[1] === 'roster' || parts[1] === 'group')) return { tab: 'war', sub: parts[1], kind: null, player, base: `#/war/${parts[1]}` }
   if (parts[0] === 'war' && parts[1] === 'log') {
-    const kind = parts[2] && parts[3] ? `${parts[2]}/${parts[3]}` : null
+    // A past league's Recap may name the day open in it (#/war/log/Fire/cwl%3A2026-11-02/3), so Back returns to the Recap.
+    const kind = parts[2] && parts[3] ? [parts[2], parts[3], ...(/^[1-7]$/.test(parts[4] ?? '') ? [parts[4]] : [])].join('/') : null
     return { tab: 'war', sub: 'log', kind, player, base: `#/war/log${kind ? '/' + kind : ''}` }
   }
   return { tab: 'war', sub: 'latest', kind: null, player, base: '#/war' }

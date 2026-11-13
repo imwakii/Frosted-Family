@@ -383,6 +383,7 @@ export const UPDATES: Update[] = [
         title: 'Log tab',
         lines: [
           'Counted upgrades by levels gained.',
+          'Added Hammer Jam to Most upgrades.',
         ],
       },
       {
@@ -391,6 +392,7 @@ export const UPDATES: Update[] = [
           'Moved to frostedfamily.com.',
           'Changed the name picker to show clans.',
           'Added Unlink account to your own card.',
+          'Added family gear picks to cards.',
         ],
       },
     ],

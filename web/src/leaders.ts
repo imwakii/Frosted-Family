@@ -59,10 +59,12 @@ export type LogEvent = {
   tag: string; name: string | null; th: number | null; clan: ClanName; from_clan?: ClanName; role?: string; at: string; approx: boolean
 }
 export type UpgradeCount = { day: string; clan: ClanName; category: UpgradeCategory; n: number }
-export type UpgradeTally = { week: number; month: number; last: string }
+export type UpgradeTally = { week: number; month: number; event?: number; last: string }
+/** An upgrade event from Supercell's news (Hammer Jam), its first and last days inclusive. */
+export type UpgradeEvent = { name: string; start: string; end: string }
 export type UpgradeLeader = UpgradeTally & { tag: string; name: string | null; clan: ClanName; th: number | null; kinds?: Partial<Record<UpgradeCategory, UpgradeTally>> }
 export type Milestone = { kind: 'hero' | 'war_stars'; tag: string; name: string | null; clan: string | null; at: string; unit?: string; stars?: number }
-export type ClanLog = { milestones?: Milestone[]; since: string | null; upgrade_days: number; events: LogEvent[]; upgrades: Upgrade[]; upgrade_counts?: UpgradeCount[]; upgrade_board?: UpgradeLeader[] }
+export type ClanLog = { milestones?: Milestone[]; since: string | null; upgrade_days: number; events: LogEvent[]; upgrades: Upgrade[]; upgrade_counts?: UpgradeCount[]; upgrade_board?: UpgradeLeader[]; upgrade_event?: UpgradeEvent | null }
 
 export type RecapPlace = { tag: string; name: string | null; clan: ClanName; th: number | null; n?: number; attacks?: number; three?: number; rate?: number }
 export type Recap = {
