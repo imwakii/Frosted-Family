@@ -8,9 +8,11 @@ import type { ClanName } from './types'
 export const snake = (name: string) =>
   name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '')
 
-export const unitIcon = (name: string) => `/icons/${snake(name)}.png`
+// Art named differently from the API: the P.E.K.K.A and Electro Titan squad, whose exact name is not known yet.
+const iconFile = (name: string) => (/squad/i.test(name) && /pekka|p_e_k_k_a|titan/.test(snake(name)) ? 'pekka_titan_squad' : snake(name))
+export const unitIcon = (name: string) => `/icons/${iconFile(name)}.png`
 
-const TH_ART = new Set([13, 14, 15, 16, 17, 18])
+const TH_ART = new Set([13, 14, 15, 16, 17, 18, 19])
 export const thIcon = (th: number | null) => (th && TH_ART.has(th) ? `/icons/th${th}.png` : null)
 
 const LEAGUE_ART = new Set(['champion_league_iii', 'master_league_ii', 'master_league_iii'])

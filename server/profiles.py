@@ -53,7 +53,9 @@ def profiles_due(conn: sqlite3.Connection, now: str) -> bool:
 
 
 def troop_kind(name: str) -> str:
-    return "pet" if name in PETS else "siege" if name in SIEGE else "super_troop" if name in SUPER else "troop"
+    # Squads (TH19, Nov 2026) come in the troops list too, each named "<troops> Squad".
+    return ("pet" if name in PETS else "siege" if name in SIEGE else "super_troop" if name in SUPER
+            else "squad" if name.endswith(" Squad") else "troop")
 
 
 def clan_games_of(p: dict) -> int | None:
@@ -88,6 +90,10 @@ def upsert_profile(conn: sqlite3.Connection, p: dict, fetched_at: str) -> None:
     units += [(troop_kind(t["name"]), t, None) for t in home(p.get("troops"))]
     units += [("spell", s, None) for s in home(p.get("spells"))]
     conn.execute("DELETE FROM player_units WHERE player_tag=?", (tag,))
+    # Squads were stored as troops before they had their own kind; move their history across so it is not seen again.
+    conn.execute("""UPDATE OR IGNORE player_unit_history SET kind='squad'
+                    WHERE player_tag=? AND kind='troop' AND name LIKE '% Squad'""", (tag,))
+    conn.execute("DELETE FROM player_unit_history WHERE player_tag=? AND kind='troop' AND name LIKE '% Squad'", (tag,))
     conn.executemany("INSERT OR REPLACE INTO player_units VALUES (?,?,?,?,?,?,?)",
                      [(tag, k, u["name"], u["level"], u.get("maxLevel"), hero, i)
                       for i, (k, u, hero) in enumerate(units)])
@@ -181,7 +187,7 @@ def equipment(conn, ms):
 
 def army(conn, ms):
     # Super troops are boosted copies of base troops, so they would double-count.
-    by = units_of(conn, ("troop", "spell", "pet", "siege"))
+    by = units_of(conn, ("troop", "squad", "spell", "pet", "siege"))
     rows = [{**row(m), "units": [{"name": u["name"], "group": u["kind"], "level": u["level"], "cap": None,
                                   "max": u["max_level"]} for u in by.get(m["tag"], [])]} for m in ms]
 
@@ -616,7 +622,7 @@ def player_card(conn, tag: str) -> dict:
 # ─── Matrix: every member against every unit of one category ─────────────────
 
 MATRIX = {"heroes": "hero", "equipment": "equipment", "troops": "troop", "spells": "spell", "pets": "pet",
-          "sieges": "siege"}
+          "sieges": "siege", "squads": "squad"}
 CLAN_ORDER = {"Fire": 0, "Cake": 1, "Flakes": 2}
 
 

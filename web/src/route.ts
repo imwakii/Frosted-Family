@@ -40,12 +40,12 @@ function parse(): Route {
   const card = head.match(/(?:^|\/)c\/(Fire|Cake|Flakes)$/)
   const enemy = head.match(/(?:^|\/)e\/(Fire|Cake|Flakes)\/([^/]+)$/)
   const rivalTag = enemy ? decodeTag(enemy[2]) : null
-  const stat = head.match(/(?:^|\/)u\/(heroes|equipment|troops|spells|pets|sieges)\/([^/]+)(?:\/([^/]+))?$/)
+  const stat = head.match(/(?:^|\/)u\/(heroes|equipment|troops|spells|pets|sieges|squads)\/([^/]+)(?:\/([^/]+))?$/)
   const statTag = stat ? decodeTag(stat[2]) : null
   const versus = head.match(/(?:^|\/)v\/([^/]+)(?:\/([^/]+))?$/)
   const versusA = versus ? decodeTag(versus[1]) : null
   const versusB = versus?.[2] ? decodeTag(versus[2]) : null
-  const log = head.match(/(?:^|\/)l\/([^/]+)\/(7|30)(?:\/(hero|equipment|troop|spell|pet|siege|town_hall))?$/)
+  const log = head.match(/(?:^|\/)l\/([^/]+)\/(7|30)(?:\/(hero|equipment|troop|spell|pet|siege|squad|town_hall))?$/)
   const logTag = log ? decodeTag(log[1]) : null
   const fights = head.match(/(?:^|\/)a\/([^/]+)\/(7|30)$/)
   const fightsTag = fights ? decodeTag(fights[1]) : null

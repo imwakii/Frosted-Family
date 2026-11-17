@@ -27,7 +27,7 @@ MIN_TH = {"Fire": 18, "Cake": 16}
 DONATIONS_SETTLE_DAY = 14  # before this day of the month, season donations have only just restarted and say little
 UNPROVEN_TIERS = ("NO DATA", "THIN RECORD")
 CATEGORY = {"hero": "hero", "equipment": "equipment", "troop": "troop", "spell": "spell", "pet": "pet",
-            "siege": "siege"}  # super troops are boosted copies and are left out
+            "siege": "siege", "squad": "squad"}  # super troops are boosted copies and are left out
 
 RETURN_GAP = 2  # days the collector ran without seeing a player before they count as having been away
 
@@ -93,12 +93,14 @@ def _upgrade_events(conn) -> list[tuple]:
     events = []
     prev: dict[tuple, int] = {}
     for u in conn.execute("SELECT * FROM player_unit_history ORDER BY player_tag, kind, name, level"):
-        key = (u["player_tag"], u["kind"], u["name"])
+        # A squad stored as a troop before squads had their own kind (players gone since then are never retagged).
+        kind = "squad" if u["kind"] == "troop" and u["name"].endswith(" Squad") else u["kind"]
+        key = (u["player_tag"], kind, u["name"])
         before = prev.get(key)
         prev[key] = u["level"]
-        if u["kind"] not in CATEGORY or u["seen_at"] <= start.get(u["player_tag"], "") or u["seen_at"][:10] in back.get(u["player_tag"], ()):
+        if kind not in CATEGORY or u["seen_at"] <= start.get(u["player_tag"], "") or u["seen_at"][:10] in back.get(u["player_tag"], ()):
             continue
-        events.append((u["player_tag"], u["name"], CATEGORY[u["kind"]], before or 0, u["level"], u["seen_at"],
+        events.append((u["player_tag"], u["name"], CATEGORY[kind], before or 0, u["level"], u["seen_at"],
                        "level_up" if before else "unlock"))
     th: dict[str, int] = {}
     for s in conn.execute("SELECT player_tag, fetched_at, town_hall FROM profile_snapshots ORDER BY player_tag, fetched_at"):

@@ -49,3 +49,24 @@ def test_a_card_gets_the_familys_top_pair_and_how_many_share_its_own(conn):
     assert gear.family_pick(counts, ["Spiky Ball", "Rage Vial"], True) == {"top": ["Earthquake Boots", "Spiky Ball"], "runs": 2, "of": 3, "others": 0}
     assert gear.family_pick(counts, ["Spiky Ball", "Rage Vial"], False)["others"] == 1
     assert gear.family_pick({}, ["Spiky Ball"], True) is None
+
+
+def test_squads_get_their_own_kind_and_old_troop_rows_move_across(conn):
+    p = profile("#A", ["Spiky Ball"], "2026-11-17T10:00:00Z")
+    p["troops"] = [{"name": "Barbarian", "level": 12, "maxLevel": 13, "village": "home"},
+                   {"name": "Barch Squad", "level": 2, "maxLevel": 5, "village": "home"}]
+    # Before squads had a kind, the collector filed them as troops.
+    conn.execute("INSERT INTO player_unit_history VALUES ('#A','troop','Barch Squad',1,'2026-11-17T08:00:00Z')")
+    profiles.upsert_profile(conn, p, "2026-11-17T10:00:00Z")
+    kinds = dict(conn.execute("SELECT name, kind FROM player_units WHERE player_tag='#A' AND name IN ('Barbarian','Barch Squad')").fetchall())
+    assert kinds == {"Barbarian": "troop", "Barch Squad": "squad"}
+    hist = conn.execute("SELECT kind, level FROM player_unit_history WHERE name='Barch Squad' ORDER BY level").fetchall()
+    assert [tuple(r) for r in hist] == [("squad", 1), ("squad", 2)]
+    assert [u["name"] for u in profiles.matrix(conn, "squads")["units"]] == ["Barch Squad"]
+
+
+def test_a_gone_players_squad_history_still_counts_as_squads(conn):
+    profiles.upsert_profile(conn, profile("#OLD", ["Spiky Ball"], "2026-11-15T10:00:00Z"), "2026-11-15T10:00:00Z")
+    conn.execute("INSERT INTO player_unit_history VALUES ('#OLD','troop','Barch Squad',1,'2026-11-16T14:00:00Z')")
+    ev = [e for e in leaders.upgrade_events(conn) if e[1] == "Barch Squad"]
+    assert [(e[2], e[6]) for e in ev] == [("squad", "unlock")]

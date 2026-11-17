@@ -53,10 +53,10 @@ const HOURS = 3600_000
 
 export async function mockUpgrades() {
   const roster: Roster = await fetch('/roster.json').then((r) => r.json())
-  const pool: [string, 'hero' | 'equipment' | 'troop' | 'spell' | 'pet' | 'siege' | 'town_hall', number][] = [
+  const pool: [string, 'hero' | 'equipment' | 'troop' | 'spell' | 'pet' | 'siege' | 'squad' | 'town_hall', number][] = [
     ['Archer Queen', 'hero', 110], ['Barbarian King', 'hero', 110], ['Grand Warden', 'hero', 85], ['Giant Gauntlet', 'equipment', 27],
     ['Fireball', 'equipment', 27], ['Electro Titan', 'troop', 4], ['Root Rider', 'troop', 3], ['Rage Spell', 'spell', 6],
-    ['Overgrowth Spell', 'spell', 3], ['Unicorn', 'pet', 10], ['Log Launcher', 'siege', 5], ['Town Hall', 'town_hall', 18],
+    ['Overgrowth Spell', 'spell', 3], ['Unicorn', 'pet', 10], ['Log Launcher', 'siege', 5], ['Barch Squad', 'squad', 3], ['Town Hall', 'town_hall', 18],
   ]
   const r = rnd('upgrades')
   const upgrades = Array.from({ length: 60 }, () => {

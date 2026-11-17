@@ -15,7 +15,7 @@ site through a Vercel rewrite.
     GET /explore/gear?days=30   hero equipment members wear now, what they wore over the window, and what they own
     GET /explore/war     every member's all-time war stars and their record over the recorded wars, plus this CWL season
     GET /explore/{board} ranked boards from player profiles: heroes, equipment, army, donations, capital
-    GET /explore/matrix?cat=heroes|equipment|troops|spells|pets|sieges   every member's level in every unit
+    GET /explore/matrix?cat=heroes|equipment|troops|spells|pets|sieges|squads   every member's level in every unit
     GET /war/board       each clan's war, side by side, with its attack log (server/war.py)
     GET /war/cwl         each clan's league group: table with town halls, days played, stars toward the 8
     GET /war/cwl/day     one of a clan's wars by its key, for the day row

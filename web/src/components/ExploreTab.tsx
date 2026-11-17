@@ -249,15 +249,17 @@ function MatrixBoard({ cat, q, setQ, wide }: BoardProps & { cat: Cat }) {
     )
   }
 
-  // Phone: one unit at a time, ranked.
-  const ui = unit !== null && unit < units.length ? unit : order[0]
-  const u = ui === undefined ? undefined : units[ui]
-  const sorted = u ? pool
-    .map((p) => ({ p, l: p.levels[ui] ?? 0 }))
-    .sort((a, b) => b.l - a.l || a.p.name.localeCompare(b.p.name)) : []
-  const unitPlace = competitionRanks(sorted, (x) => x.l)
+  // Phone: everyone ranked by progress across the category, as the wide table opens; a unit tile ranks that one unit.
+  const u = unit !== null && unit < units.length ? units[unit] : undefined
+  const catLabel = CATS.find((c) => c.id === cat)!.label.toLowerCase()
+  const sorted = !units.length ? [] : u ? pool
+    .map((p) => { const l = p.levels[unit!] ?? 0; return { p, v: l, bar: (100 * Math.min(l, u.max)) / u.max, text: l ? `${l}/${u.max}` : '', maxed: l >= u.max } })
+    .sort((a, b) => b.v - a.v || a.p.name.localeCompare(b.p.name)) : pool
+    .map((p) => { const pc = progress(p.levels, units); return { p, v: tenth(pc), bar: pc, text: `${tenth(pc).toFixed(1)}%`, maxed: units.every((x, i) => isMaxed(p.levels[i], x)) } })
+    .sort((a, b) => b.v - a.v || a.p.name.localeCompare(b.p.name))
+  const unitPlace = competitionRanks(sorted, (x) => x.v)
   const ranked = sorted.map((x) => ({ ...x, rank: unitPlace.get(x) ?? null }))
-  const maxedN = u ? ranked.filter((r) => r.l >= u.max).length : 0
+  const maxedN = ranked.filter((r) => r.maxed).length
   const shown = ranked.filter((r) => matchQ(r.p))
   const listed = topRows(shown, (r) => r.p.tag, top.yous, top.all || !!nq)
 
@@ -265,17 +267,22 @@ function MatrixBoard({ cat, q, setQ, wide }: BoardProps & { cat: Cat }) {
     <div className="flex flex-col gap-2.5 pb-6">
       <PhoneSearch q={q} setQ={setQ} onEnter={() => { if (shown[0]) go.to(upgradeHref(cat, shown[0].p.tag)) }}><ClanFilter clan={clan} setClan={setClan} /></PhoneSearch>
       <CategoryNav current={cat} wide={false} />
-      {!data || !u ? <div className="px-4"><Empty loading={loading} /></div> : (
+      {!data || !units.length ? <div className="px-4"><Empty loading={loading} /></div> : (
         <>
           <div ref={unitNav} role="listbox" aria-label="Unit" className="flex flex-none gap-2 overflow-x-auto px-4 pb-2 pt-1 [scrollbar-width:none]">
+            <button type="button" role="option" aria-selected={!u} aria-label={`All ${catLabel}`} onClick={() => setUnit(null)}
+              className={`flex size-[50px] flex-none cursor-pointer items-center justify-center rounded-2xl p-0 text-sm font-bold text-ink ${!u ? 'border-2 border-action bg-[#F6EEDC] shadow-[0_2px_8px_rgba(51,39,26,.2)]' : 'border border-line bg-white'}`}>
+              All
+            </button>
+            {byHero && <span aria-hidden="true" className="w-px flex-none self-stretch bg-line" />}
             {groups.map((g, gi) => (
               <Fragment key={g.hero ?? 'other'}>
                 {byHero && (g.hero
                   ? <span title={g.hero} className={`flex flex-none items-center ${gi ? 'border-l border-line pl-2' : ''}`}><UnitIcon name={g.hero} size={26} /></span>
                   : <span aria-hidden="true" className="w-px flex-none self-stretch bg-line" />)}
                 {g.idx.map((i) => { const x = units[i]; return (
-                  <button key={x.name} type="button" role="option" aria-selected={i === ui} aria-label={x.name} onClick={() => setUnit(i)}
-                    className={`flex size-[50px] flex-none cursor-pointer items-center justify-center rounded-2xl p-0 ${i === ui ? 'border-2 border-action bg-[#F6EEDC] shadow-[0_2px_8px_rgba(51,39,26,.2)]' : 'border border-line bg-white'}`}>
+                  <button key={x.name} type="button" role="option" aria-selected={i === unit} aria-label={x.name} onClick={() => setUnit(i)}
+                    className={`flex size-[50px] flex-none cursor-pointer items-center justify-center rounded-2xl p-0 ${i === unit ? 'border-2 border-action bg-[#F6EEDC] shadow-[0_2px_8px_rgba(51,39,26,.2)]' : 'border border-line bg-white'}`}>
                     <UnitIcon name={x.name} size={36} />
                   </button>
                 ) })}
@@ -283,15 +290,14 @@ function MatrixBoard({ cat, q, setQ, wide }: BoardProps & { cat: Cat }) {
             ))}
           </div>
           <div className="flex items-baseline justify-between gap-3 px-4">
-            <span className="font-display truncate text-xl">{u.name}</span>
+            <span className="font-display truncate text-xl">{u ? u.name : `All ${catLabel}`}</span>
             <span className="flex-none text-[13px] font-semibold text-muted"><Star /> {maxedN} of {ranked.length} maxed</span>
           </div>
           <ol className="m-0 mx-4 list-none rounded-2xl border border-line bg-white py-1">
-            {listed.map(({ p, l, rank }, i) => {
-              const maxed = l >= u.max
+            {listed.map(({ p, bar, text, maxed, rank }, i) => {
               return (
                 <li key={p.tag} data-tag={p.tag}>
-                  <a href={upgradeHref(cat, p.tag, u.name)} className={`flex min-h-[52px] items-center gap-2.5 px-3.5 py-1.5 text-ink no-underline hover:bg-hover ${i ? 'border-t border-hair' : ''}`}>
+                  <a href={upgradeHref(cat, p.tag, u?.name)} className={`flex min-h-[52px] items-center gap-2.5 px-3.5 py-1.5 text-ink no-underline hover:bg-hover ${i ? 'border-t border-hair' : ''}`}>
                     <span className="w-6 flex-none text-right text-xs tabular-nums text-faint">{rank ?? '—'}</span>
                     <Th th={p.th} />
                     <span className="flex min-w-0 flex-auto flex-col gap-1">
@@ -299,10 +305,10 @@ function MatrixBoard({ cat, q, setQ, wide }: BoardProps & { cat: Cat }) {
                         <span className="truncate text-[15px] font-semibold"><YouTag tag={p.tag} />{p.name}</span>
                         {clan === 'All' && <span className="flex-none text-[11px] font-bold" style={{ color: CLAN[p.clan].deep }}>{p.clan}</span>}
                       </span>
-                      <Bar v={(100 * Math.min(l, u.max)) / u.max} color={COLOR[p.clan]} />
+                      <Bar v={bar} color={COLOR[p.clan]} />
                     </span>
-                    <span className={`w-[78px] flex-none whitespace-nowrap text-right text-sm tabular-nums ${maxed ? 'font-extrabold text-ink' : l ? 'font-semibold text-muted' : 'text-[#D5C8AC]'}`}>
-                      {l ? `${l}/${u.max}` : '—'}{maxed && <span className="ml-0.5 text-gold">★</span>}
+                    <span className={`w-[78px] flex-none whitespace-nowrap text-right text-sm tabular-nums ${maxed ? 'font-extrabold text-ink' : text ? 'font-semibold text-muted' : 'text-[#D5C8AC]'}`}>
+                      {text || '—'}{maxed && <span className="ml-0.5 text-gold">★</span>}
                     </span>
                     <RowChevron />
                   </a>

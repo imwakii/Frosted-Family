@@ -248,7 +248,7 @@ CREATE TABLE IF NOT EXISTS player_profiles (
 );
 CREATE TABLE IF NOT EXISTS player_units (
     player_tag TEXT NOT NULL REFERENCES player_profiles (player_tag),
-    kind TEXT NOT NULL,                   -- hero, equipment, troop, super_troop, spell, pet, siege
+    kind TEXT NOT NULL,                   -- hero, equipment, troop, super_troop, squad, spell, pet, siege
     name TEXT NOT NULL,
     level INTEGER NOT NULL,
     max_level INTEGER,                    -- the game's max for the unit, not the player's town hall cap

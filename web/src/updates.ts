@@ -348,8 +348,8 @@ export const UPDATES: Update[] = [
   },
   {
     // One entry gathers everything since 7 Nov, so a member opening it now sees all of it, not just the latest day.
-    id: '2026-11-13',
-    date: '13 Nov 2026',
+    id: '2026-11-17',
+    date: '17 Nov 2026',
     highlights: [
       { title: 'New address', line: 'Link your account and alerts again.', icon: 'bell' },
       { title: 'CWL recap', line: 'Where we finished and who earned bonuses.', href: '#/war', icon: 'league' },
@@ -377,6 +377,8 @@ export const UPDATES: Update[] = [
           'Added Gear: combos on each hero.',
           'Added the most and least used pieces.',
           'Added how long each combo was worn.',
+          'Added Squads for TH19.',
+          'Changed phone boards to open on All.',
         ],
       },
       {
@@ -384,6 +386,7 @@ export const UPDATES: Update[] = [
         lines: [
           'Counted upgrades by levels gained.',
           'Added Hammer Jam to Most upgrades.',
+          'Added Squads to upgrades.',
         ],
       },
       {
@@ -393,6 +396,7 @@ export const UPDATES: Update[] = [
           'Changed the name picker to show clans.',
           'Added Unlink account to your own card.',
           'Added family gear picks to cards.',
+          'Added TH19 art.',
         ],
       },
     ],

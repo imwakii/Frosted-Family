@@ -7,6 +7,7 @@ export const CATS = [
   { id: 'heroes', label: 'Heroes', icon: 'Barbarian King' },
   { id: 'equipment', label: 'Equipment', icon: 'Giant Gauntlet' },
   { id: 'troops', label: 'Troops', icon: 'P.E.K.K.A' },
+  { id: 'squads', label: 'Squads', icon: 'Barch Squad' },
   { id: 'spells', label: 'Spells', icon: 'Lightning Spell' },
   { id: 'pets', label: 'Pets', icon: 'L.A.S.S.I' },
   { id: 'sieges', label: 'Sieges', icon: 'Log Launcher' },

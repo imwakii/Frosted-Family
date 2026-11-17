@@ -4,7 +4,7 @@ import type { ClanName } from './types'
 import { loadRosterMonth, loadRosterMonths } from './data'
 
 // GET /api/explore/upgrades and /api/leaders/*, all public for now.
-export type UpgradeCategory = 'hero' | 'equipment' | 'troop' | 'spell' | 'pet' | 'siege' | 'town_hall'
+export type UpgradeCategory = 'hero' | 'equipment' | 'troop' | 'spell' | 'pet' | 'siege' | 'squad' | 'town_hall'
 export type Upgrade = {
   tag: string; name: string; clan: ClanName; th: number | null
   unit: string; category: UpgradeCategory; change: 'level_up' | 'unlock'; from: number; to: number; at: string
